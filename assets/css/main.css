@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  body {
+    @apply bg-white text-gray-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300;
+  }
+  
+  .recipe-card {
+    @apply card p-6 cursor-pointer transform hover:scale-105 transition-transform duration-200;
+  }
+  
+  .category-card {
+    @apply card p-8 text-center cursor-pointer transform hover:scale-105 transition-all duration-300;
+  }
+  
+  .nav-link {
+    @apply text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200;
+  }
+  
+  .nav-link-active {
+    @apply text-primary-600 font-semibold;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  .gradient-bg {
+    background: linear-gradient(135deg, #83c7cf 0%, #64b9c3 100%);
+  }
+
+  .diagonal-bg {
+    background: linear-gradient(120deg, theme('colors.primary.500') 0% , theme('colors.primary.500') 60%, #fff 60%, #fff 100%);
+  }
+} 

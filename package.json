@@ -1,0 +1,24 @@
+{
+  "name": "boultons-recipes",
+  "version": "1.0.0",
+  "description": "Application de recettes des Boultons",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "nuxt": "^3.10.0",
+    "vue": "^3.4.0",
+    "@nuxtjs/tailwindcss": "^6.10.0",
+    "@pinia/nuxt": "^0.5.0",
+    "pinia": "^2.1.0",
+    "@nuxtjs/color-mode": "^3.3.0",
+    "@nuxt/image": "^1.0.0"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest"
+  }
+} 
