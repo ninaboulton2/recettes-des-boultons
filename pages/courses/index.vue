@@ -155,10 +155,29 @@
             :class="{ 'line-through text-gray-500': item.checked }"
           >
             <span class="font-medium">{{ item.name }}</span>
-            <span v-if="item.amount && item.unit" class="text-gray-500 ml-2">
-              {{ item.amount }} {{ item.unit }}
-            </span>
           </label>
+          
+          <!-- Quantité éditable -->
+          <div class="flex items-center gap-2">
+            <input
+              v-model.number="item.amount"
+              type="number"
+              min="0"
+              step="0.1"
+              class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              @change="updateItemQuantity(item)"
+              @blur="updateItemQuantity(item)"
+            >
+            <input
+              v-model="item.unit"
+              type="text"
+              placeholder="unité"
+              class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              @change="updateItemQuantity(item)"
+              @blur="updateItemQuantity(item)"
+            >
+          </div>
+          
           <button
             @click="removeItem(item.id)"
             class="text-red-500 hover:text-red-700 transition-colors duration-200"
@@ -211,7 +230,7 @@ const newItem = ref({
 // Computed properties
 const shoppingLists = computed(() => shoppingStore.shoppingLists)
 const currentList = computed(() => shoppingStore.currentList)
-const currentItems = computed(() => shoppingStore.currentItems)
+const currentItems = computed(() => shoppingStore.currentItemsGrouped)
 const checkedItems = computed(() => shoppingStore.checkedItems)
 const uncheckedItems = computed(() => shoppingStore.uncheckedItems)
 
@@ -250,6 +269,12 @@ const toggleItem = (itemId) => {
 
 const removeItem = (itemId) => {
   shoppingStore.removeItem(itemId)
+}
+
+const updateItemQuantity = (item) => {
+  // Mettre à jour tous les items originaux avec le même nom
+  const itemName = item.name.toLowerCase().trim()
+  shoppingStore.updateItemQuantity(itemName, item.amount, item.unit)
 }
 
 const clearChecked = () => {
@@ -370,7 +395,7 @@ const printShoppingList = () => {
         ${currentItems.value.map(item => `
           <div class="item ${item.checked ? 'checked' : ''}">
             <div class="item-name">${item.name}</div>
-            ${item.amount && item.unit ? `<div class="item-details">${item.amount} ${item.unit}</div>` : ''}
+            ${item.amount ? `<div class="item-details">${item.amount}${item.unit ? ' ' + item.unit : ''}</div>` : ''}
           </div>
         `).join('')}
       </div>

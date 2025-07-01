@@ -1,25 +1,85 @@
 import { defineStore } from 'pinia'
+import { ref, computed, onMounted, readonly } from 'vue'
+
+interface ShoppingItem {
+  id: string
+  name: string
+  amount?: number
+  unit?: string
+  checked: boolean
+  recipeId?: string
+}
+
+interface ShoppingList {
+  id: string
+  name: string
+  items: ShoppingItem[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface GroupedItem extends ShoppingItem {
+  originalIds: string[]
+}
 
 export const useShoppingStore = defineStore('shopping', () => {
-  const shoppingLists = ref([])
-  const currentList = ref(null)
+  const shoppingLists = ref<ShoppingList[]>([])
+  const currentList = ref<ShoppingList | null>(null)
 
   // Computed properties
   const currentItems = computed(() => {
     return currentList.value?.items || []
   })
 
+  const currentItemsGrouped = computed<GroupedItem[]>(() => {
+    if (!currentList.value?.items) return []
+    
+    const grouped: Record<string, GroupedItem> = {}
+    
+    currentList.value.items.forEach(item => {
+      const key = item.name.toLowerCase().trim()
+      
+      if (!grouped[key]) {
+        grouped[key] = {
+          ...item,
+          originalIds: [item.id]
+        }
+      } else {
+        // Additionner les quantités si elles existent
+        if (grouped[key].amount && item.amount) {
+          grouped[key].amount += item.amount
+        }
+        // Garder l'unité du premier item ou combiner si différentes
+        if (grouped[key].unit !== item.unit && item.unit) {
+          if (!grouped[key].unit) {
+            grouped[key].unit = item.unit
+          } else if (grouped[key].unit !== item.unit) {
+            // Si les unités sont différentes, garder la première et ajouter un commentaire
+            grouped[key].unit = `${grouped[key].unit} + ${item.unit}`
+          }
+        }
+        // Si l'un des items est coché, le groupe est considéré comme coché
+        if (item.checked) {
+          grouped[key].checked = true
+        }
+        grouped[key].originalIds.push(item.id)
+      }
+    })
+    
+    return Object.values(grouped)
+  })
+
   const checkedItems = computed(() => {
-    return currentItems.value.filter(item => item.checked)
+    return currentItemsGrouped.value.filter(item => item.checked)
   })
 
   const uncheckedItems = computed(() => {
-    return currentItems.value.filter(item => !item.checked)
+    return currentItemsGrouped.value.filter(item => !item.checked)
   })
 
   // Actions
-  const createList = (name) => {
-    const newList = {
+  const createList = (name: string) => {
+    const newList: ShoppingList = {
       id: Date.now().toString(),
       name,
       items: [],
@@ -32,10 +92,10 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
-  const addItem = (item) => {
+  const addItem = (item: Omit<ShoppingItem, 'id' | 'checked'>) => {
     if (!currentList.value) return
 
-    const newItem = {
+    const newItem: ShoppingItem = {
       ...item,
       id: Date.now().toString(),
       checked: false
@@ -46,23 +106,44 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
-  const toggleItem = (itemId) => {
+  const toggleItem = (itemId: string) => {
     if (!currentList.value) return
 
-    const item = currentList.value.items.find(i => i.id === itemId)
-    if (item) {
-      item.checked = !item.checked
+    // Trouver l'item groupé
+    const groupedItem = currentItemsGrouped.value.find(item => 
+      item.originalIds.includes(itemId)
+    )
+    
+    if (groupedItem) {
+      // Toggle tous les items originaux avec le même nom
+      const itemName = groupedItem.name.toLowerCase().trim()
+      currentList.value.items.forEach(item => {
+        if (item.name.toLowerCase().trim() === itemName) {
+          item.checked = !groupedItem.checked
+        }
+      })
       currentList.value.updatedAt = new Date()
       saveToLocalStorage()
     }
   }
 
-  const removeItem = (itemId) => {
+  const removeItem = (itemId: string) => {
     if (!currentList.value) return
 
-    currentList.value.items = currentList.value.items.filter(item => item.id !== itemId)
-    currentList.value.updatedAt = new Date()
-    saveToLocalStorage()
+    // Trouver l'item groupé
+    const groupedItem = currentItemsGrouped.value.find(item => 
+      item.originalIds.includes(itemId)
+    )
+    
+    if (groupedItem) {
+      // Supprimer tous les items avec le même nom
+      const itemName = groupedItem.name.toLowerCase().trim()
+      currentList.value.items = currentList.value.items.filter(item => 
+        item.name.toLowerCase().trim() !== itemName
+      )
+      currentList.value.updatedAt = new Date()
+      saveToLocalStorage()
+    }
   }
 
   const clearChecked = () => {
@@ -73,11 +154,11 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
-  const selectList = (listId) => {
+  const selectList = (listId: string) => {
     currentList.value = shoppingLists.value.find(list => list.id === listId) || null
   }
 
-  const deleteList = (listId) => {
+  const deleteList = (listId: string) => {
     shoppingLists.value = shoppingLists.value.filter(list => list.id !== listId)
     if (currentList.value?.id === listId) {
       currentList.value = shoppingLists.value[0] || null
@@ -85,16 +166,31 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
+  const updateItemQuantity = (itemName: string, newAmount: number, newUnit: string) => {
+    if (!currentList.value) return
+
+    // Mettre à jour tous les items avec le même nom
+    currentList.value.items.forEach(item => {
+      if (item.name.toLowerCase().trim() === itemName.toLowerCase().trim()) {
+        item.amount = newAmount
+        item.unit = newUnit
+      }
+    })
+    
+    currentList.value.updatedAt = new Date()
+    saveToLocalStorage()
+  }
+
   // Local storage
   const saveToLocalStorage = () => {
-    if (process.client) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('boultons-shopping-lists', JSON.stringify(shoppingLists.value))
       localStorage.setItem('boultons-current-list', JSON.stringify(currentList.value))
     }
   }
 
   const loadFromLocalStorage = () => {
-    if (process.client) {
+    if (typeof window !== 'undefined') {
       const savedLists = localStorage.getItem('boultons-shopping-lists')
       const savedCurrent = localStorage.getItem('boultons-current-list')
       
@@ -120,6 +216,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     
     // Computed
     currentItems,
+    currentItemsGrouped,
     checkedItems,
     uncheckedItems,
     
@@ -130,6 +227,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     removeItem,
     clearChecked,
     selectList,
-    deleteList
+    deleteList,
+    updateItemQuantity
   }
 }) 
