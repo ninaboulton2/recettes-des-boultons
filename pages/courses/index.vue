@@ -18,7 +18,7 @@
         </button>
       </div>
       <p class="text-xl text-gray-600">
-        Gérez vos listes de courses et ne manquez plus rien !
+        Gérez vos listes de courses.
       </p>
     </div>
 
@@ -39,8 +39,52 @@
               : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'"
           >
             <div class="flex justify-between items-start">
-              <div>
-                <h3 class="font-semibold text-gray-900">{{ list.name }}</h3>
+              <div class="flex-1">
+                <!-- Mode affichage du nom -->
+                <div v-if="editingListName !== list.id" class="flex items-center gap-2">
+                  <h3 class="font-semibold text-gray-900">{{ list.name }}</h3>
+                  <button
+                    @click.stop="startEditingListName(list)"
+                    class="text-gray-400 hover:text-primary-600 transition-colors duration-200"
+                    title="Modifier le nom"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Mode édition du nom -->
+                <div v-else class="flex items-center gap-2">
+                  <input
+                    v-model="editingListNameValue"
+                    type="text"
+                    class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    @keyup.enter="saveListName(list)"
+                    @blur="saveListName(list)"
+                    :data-list-id="list.id"
+                    ref="listNameInput"
+                  >
+                  <button
+                    @click.stop="saveListName(list)"
+                    class="text-green-600 hover:text-green-700 transition-colors duration-200"
+                    title="Sauvegarder"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click.stop="cancelListNameEdit(list)"
+                    class="text-red-500 hover:text-red-700 transition-colors duration-200"
+                    title="Annuler"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                
                 <p class="text-sm text-gray-500">
                   {{ list.items.length }} article{{ list.items.length > 1 ? 's' : '' }}
                 </p>
@@ -157,25 +201,76 @@
             <span class="font-medium">{{ item.name }}</span>
           </label>
           
-          <!-- Quantité éditable -->
+          <!-- Affichage/Édition de la quantité -->
           <div class="flex items-center gap-2">
-            <input
-              v-model.number="item.amount"
-              type="number"
-              min="0"
-              step="0.1"
-              class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              @change="updateItemQuantity(item)"
-              @blur="updateItemQuantity(item)"
-            >
-            <input
-              v-model="item.unit"
-              type="text"
-              placeholder="unité"
-              class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              @change="updateItemQuantity(item)"
-              @blur="updateItemQuantity(item)"
-            >
+            <!-- Mode affichage -->
+            <div v-if="!editingItems.has(item.id)" class="flex items-center gap-2">
+              <div class="text-sm text-gray-600">
+                <span v-if="item.amount">
+                  {{ item.amount }}{{ item.unit ? ' ' + item.unit : '' }}
+                </span>
+                <span v-if="item.note" class="text-xs text-gray-500 ml-2 italic">
+                  ({{ item.note }})
+                </span>
+              </div>
+              <button
+                @click="startEditing(item)"
+                class="text-gray-400 hover:text-primary-600 transition-colors duration-200"
+                title="Modifier la quantité"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Mode édition -->
+            <div v-else class="flex items-center gap-2">
+              <input
+                v-model.number="item.amount"
+                type="number"
+                min="0"
+                step="0.1"
+                class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                @keyup.enter="saveEditing(item)"
+                @blur="saveEditing(item)"
+                ref="quantityInput"
+              >
+              <input
+                v-model="item.unit"
+                type="text"
+                placeholder="unité"
+                class="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                @keyup.enter="saveEditing(item)"
+                @blur="saveEditing(item)"
+              >
+              <input
+                v-model="item.note"
+                type="text"
+                placeholder="note (optionnel)"
+                class="w-40 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                @keyup.enter="saveEditing(item)"
+                @blur="saveEditing(item)"
+              >
+              <button
+                @click="saveEditing(item)"
+                class="text-green-600 hover:text-green-700 transition-colors duration-200"
+                title="Sauvegarder"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </button>
+              <button
+                @click="cancelEditing(item)"
+                class="text-red-500 hover:text-red-700 transition-colors duration-200"
+                title="Annuler"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           
           <button
@@ -187,14 +282,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
             </svg>
           </button>
-        </div>
-      </div>
-
-      <!-- Summary -->
-      <div class="mt-6 pt-4 border-t border-gray-200">
-        <div class="flex justify-between text-sm text-gray-600">
-          <span>{{ uncheckedItems.length }} article{{ uncheckedItems.length > 1 ? 's' : '' }} à acheter</span>
-          <span>{{ checkedItems.length }} article{{ checkedItems.length > 1 ? 's' : '' }} acheté{{ checkedItems.length > 1 ? 's' : '' }}</span>
         </div>
       </div>
     </div>
@@ -226,6 +313,13 @@ const newItem = ref({
   amount: 1,
   unit: ''
 })
+
+// État d'édition pour chaque item
+const editingItems = ref(new Set())
+
+// État d'édition pour les noms de liste
+const editingListName = ref(null)
+const editingListNameValue = ref('')
 
 // Computed properties
 const shoppingLists = computed(() => shoppingStore.shoppingLists)
@@ -271,10 +365,38 @@ const removeItem = (itemId) => {
   shoppingStore.removeItem(itemId)
 }
 
-const updateItemQuantity = (item) => {
-  // Mettre à jour tous les items originaux avec le même nom
-  const itemName = item.name.toLowerCase().trim()
-  shoppingStore.updateItemQuantity(itemName, item.amount, item.unit)
+const startEditing = (item) => {
+  editingItems.value.add(item.id)
+  // Stocker les valeurs originales pour pouvoir annuler
+  item._originalAmount = item.amount
+  item._originalUnit = item.unit
+  item._originalNote = item.note
+}
+
+const saveEditing = (item) => {
+  editingItems.value.delete(item.id)
+  shoppingStore.updateItemQuantity(item.name.toLowerCase().trim(), item.amount, item.unit, item.note)
+  // Nettoyer les valeurs temporaires
+  delete item._originalAmount
+  delete item._originalUnit
+  delete item._originalNote
+}
+
+const cancelEditing = (item) => {
+  editingItems.value.delete(item.id)
+  // Restaurer les valeurs originales
+  if (item._originalAmount !== undefined) {
+    item.amount = item._originalAmount
+    delete item._originalAmount
+  }
+  if (item._originalUnit !== undefined) {
+    item.unit = item._originalUnit
+    delete item._originalUnit
+  }
+  if (item._originalNote !== undefined) {
+    item.note = item._originalNote
+    delete item._originalNote
+  }
 }
 
 const clearChecked = () => {
@@ -395,7 +517,10 @@ const printShoppingList = () => {
         ${currentItems.value.map(item => `
           <div class="item ${item.checked ? 'checked' : ''}">
             <div class="item-name">${item.name}</div>
-            ${item.amount ? `<div class="item-details">${item.amount}${item.unit ? ' ' + item.unit : ''}</div>` : ''}
+            <div class="item-details">
+              ${item.amount ? `${item.amount}${item.unit ? ' ' + item.unit : ''}` : ''}
+              ${item.note ? `<br><span style="font-style: italic; font-size: 12px;">${item.note}</span>` : ''}
+            </div>
           </div>
         `).join('')}
       </div>
@@ -417,6 +542,27 @@ const printShoppingList = () => {
   printWindow.focus()
   printWindow.print()
   printWindow.close()
+}
+
+const startEditingListName = (list) => {
+  editingListName.value = list.id
+  editingListNameValue.value = list.name
+  // Focus sur l'input après le prochain tick pour que le DOM soit mis à jour
+  nextTick(() => {
+    const input = document.querySelector(`[data-list-id="${list.id}"] input`)
+    if (input) input.focus()
+  })
+}
+
+const saveListName = (list) => {
+  if (editingListNameValue.value.trim()) {
+    shoppingStore.updateListName(list.id, editingListNameValue.value.trim())
+  }
+  editingListName.value = null
+}
+
+const cancelListNameEdit = (list) => {
+  editingListName.value = null
 }
 
 // SEO

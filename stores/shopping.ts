@@ -6,6 +6,7 @@ interface ShoppingItem {
   name: string
   amount?: number
   unit?: string
+  note?: string
   checked: boolean
   recipeId?: string
 }
@@ -57,6 +58,14 @@ export const useShoppingStore = defineStore('shopping', () => {
             // Si les unités sont différentes, garder la première et ajouter un commentaire
             grouped[key].unit = `${grouped[key].unit} + ${item.unit}`
           }
+        }
+        // Combiner les notes si elles existent
+        if (item.note && grouped[key].note) {
+          if (grouped[key].note !== item.note) {
+            grouped[key].note = `${grouped[key].note} | ${item.note}`
+          }
+        } else if (item.note && !grouped[key].note) {
+          grouped[key].note = item.note
         }
         // Si l'un des items est coché, le groupe est considéré comme coché
         if (item.checked) {
@@ -166,7 +175,21 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
-  const updateItemQuantity = (itemName: string, newAmount: number, newUnit: string) => {
+  const updateListName = (listId: string, newName: string) => {
+    const list = shoppingLists.value.find(list => list.id === listId)
+    if (list) {
+      list.name = newName
+      list.updatedAt = new Date()
+      // Si c'est la liste courante, mettre à jour aussi
+      if (currentList.value?.id === listId) {
+        currentList.value.name = newName
+        currentList.value.updatedAt = new Date()
+      }
+      saveToLocalStorage()
+    }
+  }
+
+  const updateItemQuantity = (itemName: string, newAmount: number, newUnit: string, newNote?: string) => {
     if (!currentList.value) return
 
     // Mettre à jour tous les items avec le même nom
@@ -174,6 +197,9 @@ export const useShoppingStore = defineStore('shopping', () => {
       if (item.name.toLowerCase().trim() === itemName.toLowerCase().trim()) {
         item.amount = newAmount
         item.unit = newUnit
+        if (newNote !== undefined) {
+          item.note = newNote
+        }
       }
     })
     
@@ -228,6 +254,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     clearChecked,
     selectList,
     deleteList,
+    updateListName,
     updateItemQuantity
   }
 }) 

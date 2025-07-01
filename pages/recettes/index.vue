@@ -157,7 +157,7 @@ watch(selectedCategory, (newCategory) => {
 
 // Watch for difficulty changes
 watch(selectedDifficulty, (newDifficulty) => {
-  recipesStore.selectedDifficulty = newDifficulty
+  recipesStore.setDifficulty(newDifficulty || null)
 })
 
 // Clear all filters

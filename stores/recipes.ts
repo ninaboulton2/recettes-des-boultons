@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { ref, computed, onMounted, readonly } from 'vue'
 import { sampleRecipes } from '~/data/recipes'
 
 export const useRecipesStore = defineStore('recipes', () => {
@@ -6,6 +7,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   const favorites = ref([])
   const currentCategory = ref(null)
   const searchQuery = ref('')
+  const selectedDifficulty = ref(null)
 
   // Computed properties
   const filteredRecipes = computed(() => {
@@ -22,6 +24,10 @@ export const useRecipesStore = defineStore('recipes', () => {
         recipe.description.toLowerCase().includes(query) ||
         recipe.tags.some(tag => tag.toLowerCase().includes(query))
       )
+    }
+
+    if (selectedDifficulty.value) {
+      filtered = filtered.filter(recipe => recipe.difficulty === selectedDifficulty.value)
     }
 
     return filtered
@@ -89,33 +95,46 @@ export const useRecipesStore = defineStore('recipes', () => {
     searchQuery.value = query
   }
 
+  const setDifficulty = (difficulty) => {
+    selectedDifficulty.value = difficulty
+  }
+
   const clearFilters = () => {
     currentCategory.value = null
     searchQuery.value = ''
+    selectedDifficulty.value = null
   }
 
   // Local storage
   const saveToLocalStorage = () => {
-    if (process.client) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('boultons-recipes', JSON.stringify(recipes.value))
       localStorage.setItem('boultons-favorites', JSON.stringify(favorites.value))
     }
   }
 
   const loadFromLocalStorage = () => {
-    if (process.client) {
+    if (typeof window !== 'undefined') {
       const savedRecipes = localStorage.getItem('boultons-recipes')
       const savedFavorites = localStorage.getItem('boultons-favorites')
       
       if (savedRecipes) {
-        recipes.value = JSON.parse(savedRecipes)
+        try {
+          recipes.value = JSON.parse(savedRecipes)
+        } catch (error) {
+          recipes.value = sampleRecipes
+        }
       } else {
         // Load sample data if no saved data
         recipes.value = sampleRecipes
       }
       
       if (savedFavorites) {
-        favorites.value = JSON.parse(savedFavorites)
+        try {
+          favorites.value = JSON.parse(savedFavorites)
+        } catch (error) {
+          favorites.value = sampleRecipes.filter(recipe => recipe.favorite)
+        }
       } else {
         // Load favorites from sample data
         favorites.value = sampleRecipes.filter(recipe => recipe.favorite)
@@ -134,6 +153,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     favorites: readonly(favorites),
     currentCategory: readonly(currentCategory),
     searchQuery: readonly(searchQuery),
+    selectedDifficulty: readonly(selectedDifficulty),
     
     // Computed
     filteredRecipes,
@@ -146,6 +166,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     toggleFavorite,
     setCategory,
     setSearchQuery,
+    setDifficulty,
     clearFilters
   }
 }) 
