@@ -40,35 +40,7 @@
             Découvrez nos recettes organisées par catégories pour trouver facilement ce qui vous plaît
           </p>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <NuxtLink 
-            v-for="category in categories" 
-            :key="category.id"
-            :to="`/recettes/${category.id}`"
-            class="category-card group"
-          >
-            <div class="relative mb-6">
-              <img 
-                :src="category.image" 
-                :alt="category.name"
-                class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-              >
-              <div class="absolute inset-0 bg-black bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-all duration-300"></div>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">
-              {{ category.name }}
-            </h3>
-            <p class="text-gray-600 text-sm">
-              {{ category.description }}
-            </p>
-            <div class="mt-4 flex items-center justify-center">
-              <svg class="w-5 h-5 text-primary-500 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </div>
-          </NuxtLink>
-        </div>
+        <CategoryGrid :categories="categories" />
       </div>
     </section>
 
@@ -121,6 +93,7 @@
 </template>
 
 <script setup>
+import CategoryGrid from '@/components/CategoryGrid.vue'
 // Définition des catégories
 const categories = [
   {

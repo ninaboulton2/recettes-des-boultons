@@ -1,11 +1,13 @@
 <template>
   <div class="recipe-card group">
     <div class="relative mb-4">
-      <img 
-        :src="recipe.image" 
-        :alt="recipe.title"
-        class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-      >
+      <div class="bg-white rounded-lg shadow p-2">
+        <img 
+          :src="recipe.image" 
+          :alt="recipe.title"
+          class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+        >
+      </div>
       <div class="absolute top-3 right-3">
         <button 
           @click.stop="toggleFavorite"

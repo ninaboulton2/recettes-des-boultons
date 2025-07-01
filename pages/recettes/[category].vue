@@ -3,14 +3,14 @@
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-4xl font-lobster text-gray-900 mb-4">
-        Toutes nos recettes
+        Recettes : {{ categoryName }}
       </h1>
       <p class="text-xl text-gray-600">
-        Découvrez notre collection de recettes délicieuses
+        Découvrez toutes les recettes de la catégorie « {{ categoryName }} »
       </p>
     </div>
 
-    <!-- Filters -->
+    <!-- Filters (désactivé pour la catégorie) -->
     <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Search -->
@@ -25,28 +25,17 @@
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
         </div>
-
-        <!-- Category Filter -->
+        <!-- Category Filter (readonly) -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Catégorie
           </label>
-          <select
-            v-model="selectedCategory"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          <input
+            :value="categoryName"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+            readonly
           >
-            <option value="">Toutes les catégories</option>
-            <option value="soupes">Soupes</option>
-            <option value="entrees">Entrées, Salades, Pains et accompagnements</option>
-            <option value="plats">Plats</option>
-            <option value="poissons">Poissons</option>
-            <option value="viandes">Viandes</option>
-            <option value="yaourts-fromages">Yaourts et fromages</option>
-            <option value="desserts">Desserts</option>
-            <option value="boissons">Boissons</option>
-          </select>
         </div>
-
         <!-- Difficulty Filter -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -63,7 +52,6 @@
           </select>
         </div>
       </div>
-
       <!-- Clear Filters -->
       <div class="mt-4 flex justify-between items-center">
         <button
@@ -89,7 +77,6 @@
         <RecipeCard :recipe="recipe" />
       </NuxtLink>
     </div>
-
     <!-- Empty State -->
     <div v-else class="text-center py-12">
       <div class="max-w-md mx-auto">
@@ -114,65 +101,56 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+import RecipeCard from '@/components/RecipeCard.vue'
 const recipesStore = useRecipesStore()
+const route = useRoute()
 
-// Reactive filters synchronisés avec le store
-const searchQuery = ref(recipesStore.searchQuery)
-const selectedCategory = ref(recipesStore.currentCategory || '')
-const selectedDifficulty = ref(recipesStore.selectedDifficulty || '')
-
-// Synchronisation UI <-> store
-watchEffect(() => {
-  searchQuery.value = recipesStore.searchQuery
-  selectedCategory.value = recipesStore.currentCategory || ''
-  selectedDifficulty.value = recipesStore.selectedDifficulty || ''
+const categoryParam = computed(() => route.params.category)
+const categoryName = computed(() => {
+  // Adapter si besoin pour afficher un nom plus lisible
+  const map = {
+    'soupes': 'Soupes',
+    'entrees': 'Entrées, Salades, Pains et accompagnements',
+    'plats': 'Plats',
+    'poissons': 'Poissons',
+    'viandes': 'Viandes',
+    'yaourts-fromages': 'Yaourts et fromages',
+    'desserts': 'Desserts',
+    'boissons': 'Boissons'
+  }
+  return map[categoryParam.value] || categoryParam.value
 })
 
-// Computed filtered recipes
+const searchQuery = ref('')
+const selectedDifficulty = ref('')
+
 const filteredRecipes = computed(() => {
-  let filtered = recipesStore.filteredRecipes
-
-  // Apply category filter
-  if (selectedCategory.value) {
-    filtered = filtered.filter(recipe => recipe.category === selectedCategory.value)
+  let filtered = recipesStore.filteredRecipes.filter(r => r.category === categoryParam.value)
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(recipe => 
+      recipe.title.toLowerCase().includes(query) ||
+      recipe.description.toLowerCase().includes(query) ||
+      recipe.tags.some(tag => tag.toLowerCase().includes(query))
+    )
   }
-
-  // Apply difficulty filter
   if (selectedDifficulty.value) {
     filtered = filtered.filter(recipe => recipe.difficulty === selectedDifficulty.value)
   }
-
   return filtered
 })
 
-// Watch for search query changes
-watch(searchQuery, (newQuery) => {
-  recipesStore.setSearchQuery(newQuery)
-})
-
-// Watch for category changes
-watch(selectedCategory, (newCategory) => {
-  recipesStore.setCategory(newCategory || null)
-})
-
-// Watch for difficulty changes
-watch(selectedDifficulty, (newDifficulty) => {
-  recipesStore.selectedDifficulty = newDifficulty
-})
-
-// Clear all filters
 const clearFilters = () => {
   searchQuery.value = ''
-  selectedCategory.value = ''
   selectedDifficulty.value = ''
-  recipesStore.clearFilters()
 }
 
 // SEO
 useHead({
-  title: 'Recettes - Recettes des Boultons',
+  title: () => `Recettes : ${categoryName.value} - Recettes des Boultons`,
   meta: [
-    { name: 'description', content: 'Découvrez toutes nos recettes délicieuses. Filtrez par catégorie, difficulté et trouvez votre prochain plat favori !' }
+    { name: 'description', content: () => `Découvrez toutes les recettes de la catégorie ${categoryName.value}.` }
   ]
 })
 </script> 
