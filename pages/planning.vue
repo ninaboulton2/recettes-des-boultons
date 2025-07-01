@@ -62,30 +62,6 @@
 
         <!-- Meals -->
         <div class="space-y-4">
-          <!-- Breakfast -->
-          <div class="border border-gray-200 rounded-lg p-3">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Petit-déjeuner</h4>
-            <div v-if="day.meals.breakfast" class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-900">{{ day.meals.breakfast.title }}</span>
-                <button
-                  @click="removeMeal(day.date, 'breakfast')"
-                  class="text-red-500 hover:text-red-700 text-xs"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <button
-              v-else
-              @click="openMealSelector(day.date, 'breakfast')"
-              class="w-full text-sm text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg p-2 hover:border-primary-300 transition-colors duration-200"
-            >
-              + Ajouter un repas
-            </button>
-          </div>
 
           <!-- Lunch -->
           <div class="border border-gray-200 rounded-lg p-3">
@@ -101,6 +77,48 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
                 </button>
+              </div>
+              
+              <!-- Note pour le déjeuner -->
+              <div class="mt-2">
+                <div v-if="editingNote !== `${day.dateString}-lunch`" class="flex items-center justify-between">
+                  <span v-if="day.meals.lunch.note" class="text-xs text-gray-600 italic">{{ day.meals.lunch.note }}</span>
+                  <button
+                    @click="startEditingNote(day.date, 'lunch', day.meals.lunch.note)"
+                    class="text-gray-400 hover:text-primary-600 text-xs"
+                    title="Modifier la note"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div v-else class="flex items-center gap-1">
+                  <input
+                    v-model="editingNoteValue"
+                    type="text"
+                    placeholder="Note (optionnel)"
+                    class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                    @keyup.enter="saveNote(day.date, 'lunch')"
+                    @blur="saveNote(day.date, 'lunch')"
+                  >
+                  <button
+                    @click="saveNote(day.date, 'lunch')"
+                    class="text-green-600 hover:text-green-700 text-xs"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click="cancelNoteEdit"
+                    class="text-red-500 hover:text-red-700 text-xs"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
             <button
@@ -127,6 +145,48 @@
                   </svg>
                 </button>
               </div>
+              
+              <!-- Note pour le dîner -->
+              <div class="mt-2">
+                <div v-if="editingNote !== `${day.dateString}-dinner`" class="flex items-center justify-between">
+                  <span v-if="day.meals.dinner.note" class="text-xs text-gray-600 italic">{{ day.meals.dinner.note }}</span>
+                  <button
+                    @click="startEditingNote(day.date, 'dinner', day.meals.dinner.note)"
+                    class="text-gray-400 hover:text-primary-600 text-xs"
+                    title="Modifier la note"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div v-else class="flex items-center gap-1">
+                  <input
+                    v-model="editingNoteValue"
+                    type="text"
+                    placeholder="Note (optionnel)"
+                    class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                    @keyup.enter="saveNote(day.date, 'dinner')"
+                    @blur="saveNote(day.date, 'dinner')"
+                  >
+                  <button
+                    @click="saveNote(day.date, 'dinner')"
+                    class="text-green-600 hover:text-green-700 text-xs"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click="cancelNoteEdit"
+                    class="text-red-500 hover:text-red-700 text-xs"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
             <button
               v-else
@@ -135,6 +195,49 @@
             >
               + Ajouter un repas
             </button>
+          </div>
+
+          <!-- Notes générales pour la journée -->
+          <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Notes du jour</h4>
+            <div v-if="editingDayNotes !== day.dateString" class="flex items-center justify-between">
+              <span v-if="day.meals.notes" class="text-xs text-gray-600 italic">{{ day.meals.notes }}</span>
+              <button
+                @click="startEditingDayNotes(day.date, day.meals.notes)"
+                class="text-gray-400 hover:text-primary-600 text-xs"
+                title="Modifier les notes"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+            </div>
+            <div v-else class="flex items-center gap-1">
+              <input
+                v-model="editingDayNotesValue"
+                type="text"
+                placeholder="Notes générales (optionnel)"
+                class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                @keyup.enter="saveDayNotes(day.date)"
+                @blur="saveDayNotes(day.date)"
+              >
+              <button
+                @click="saveDayNotes(day.date)"
+                class="text-green-600 hover:text-green-700 text-xs"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </button>
+              <button
+                @click="cancelDayNotesEdit"
+                class="text-red-500 hover:text-red-700 text-xs"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -184,12 +287,17 @@
 
 <script setup>
 const recipesStore = useRecipesStore()
+const planningStore = usePlanningStore()
 
 // Reactive data
 const currentWeek = ref(new Date())
 const showMealSelector = ref(false)
 const selectedDay = ref(null)
 const selectedMealType = ref(null)
+const editingNote = ref(null)
+const editingNoteValue = ref('')
+const editingDayNotes = ref(null)
+const editingDayNotesValue = ref('')
 
 // Computed properties
 const recipes = computed(() => recipesStore.recipes)
@@ -202,15 +310,13 @@ const weekDays = computed(() => {
   for (let i = 0; i < 7; i++) {
     const date = new Date(startOfWeek)
     date.setDate(startOfWeek.getDate() + i)
+    const dateString = date.toISOString().split('T')[0]
     
     days.push({
       date: date,
+      dateString: dateString,
       name: date.toLocaleDateString('fr-FR', { weekday: 'long' }),
-      meals: {
-        breakfast: null,
-        lunch: null,
-        dinner: null
-      }
+      meals: planningStore.getDayMeals(dateString)
     })
   }
   
@@ -240,26 +346,46 @@ const closeMealSelector = () => {
 
 const selectMeal = (recipe) => {
   if (selectedDay.value && selectedMealType.value) {
-    const dayIndex = weekDays.value.findIndex(day => 
-      day.date.toDateString() === selectedDay.value.toDateString()
-    )
-    
-    if (dayIndex !== -1) {
-      weekDays.value[dayIndex].meals[selectedMealType.value] = recipe
-    }
+    const dateString = selectedDay.value.toISOString().split('T')[0]
+    planningStore.addMeal(dateString, selectedMealType.value, recipe)
   }
   
   closeMealSelector()
 }
 
 const removeMeal = (date, mealType) => {
-  const dayIndex = weekDays.value.findIndex(day => 
-    day.date.toDateString() === date.toDateString()
-  )
-  
-  if (dayIndex !== -1) {
-    weekDays.value[dayIndex].meals[mealType] = null
-  }
+  const dateString = date.toISOString().split('T')[0]
+  planningStore.removeMeal(dateString, mealType)
+}
+
+const startEditingNote = (date, mealType, currentNote = '') => {
+  editingNote.value = `${date.toISOString().split('T')[0]}-${mealType}`
+  editingNoteValue.value = currentNote
+}
+
+const saveNote = (date, mealType) => {
+  const dateString = date.toISOString().split('T')[0]
+  planningStore.updateMealNote(dateString, mealType, editingNoteValue.value)
+  editingNote.value = null
+}
+
+const cancelNoteEdit = () => {
+  editingNote.value = null
+}
+
+const startEditingDayNotes = (date, currentNotes = '') => {
+  editingDayNotes.value = date.toISOString().split('T')[0]
+  editingDayNotesValue.value = currentNotes
+}
+
+const saveDayNotes = (date) => {
+  const dateString = date.toISOString().split('T')[0]
+  planningStore.updateDayNotes(dateString, editingDayNotesValue.value)
+  editingDayNotes.value = null
+}
+
+const cancelDayNotesEdit = () => {
+  editingDayNotes.value = null
 }
 
 const formatWeekStart = (date) => {
@@ -411,23 +537,41 @@ const printPlanning = () => {
             <div class="meal">
               <div class="meal-title">Petit-déjeuner</div>
               <div class="meal-content">
-                ${day.meals.breakfast ? day.meals.breakfast.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+                ${day.meals.breakfast ? `
+                  <div>${day.meals.breakfast.title}</div>
+                  ${day.meals.breakfast.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.breakfast.note}</div>` : ''}
+                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
               </div>
             </div>
             
             <div class="meal">
               <div class="meal-title">Déjeuner</div>
               <div class="meal-content">
-                ${day.meals.lunch ? day.meals.lunch.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+                ${day.meals.lunch ? `
+                  <div>${day.meals.lunch.title}</div>
+                  ${day.meals.lunch.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.lunch.note}</div>` : ''}
+                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
               </div>
             </div>
             
             <div class="meal">
               <div class="meal-title">Dîner</div>
               <div class="meal-content">
-                ${day.meals.dinner ? day.meals.dinner.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+                ${day.meals.dinner ? `
+                  <div>${day.meals.dinner.title}</div>
+                  ${day.meals.dinner.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.dinner.note}</div>` : ''}
+                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
               </div>
             </div>
+            
+            ${day.meals.notes ? `
+              <div class="meal">
+                <div class="meal-title">Notes du jour</div>
+                <div class="meal-content" style="font-style: italic; color: #6b7280;">
+                  ${day.meals.notes}
+                </div>
+              </div>
+            ` : ''}
           </div>
         `).join('')}
       </div>
