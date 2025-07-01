@@ -207,6 +207,40 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
+  const moveItemToAnotherList = (itemName: string, targetListId: string) => {
+    if (!currentList.value) return
+
+    const targetList = shoppingLists.value.find(list => list.id === targetListId)
+    if (!targetList) return
+
+    // Trouver tous les items avec le même nom dans la liste courante
+    const itemsToMove = currentList.value.items.filter(item => 
+      item.name.toLowerCase().trim() === itemName.toLowerCase().trim()
+    )
+
+    if (itemsToMove.length === 0) return
+
+    // Ajouter les items à la liste cible
+    itemsToMove.forEach(item => {
+      targetList.items.push({
+        ...item,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Nouvel ID unique
+        checked: false // Reset checked status
+      })
+    })
+
+    // Supprimer les items de la liste courante
+    currentList.value.items = currentList.value.items.filter(item => 
+      item.name.toLowerCase().trim() !== itemName.toLowerCase().trim()
+    )
+
+    // Mettre à jour les dates
+    currentList.value.updatedAt = new Date()
+    targetList.updatedAt = new Date()
+    
+    saveToLocalStorage()
+  }
+
   // Local storage
   const saveToLocalStorage = () => {
     if (typeof window !== 'undefined') {
@@ -255,6 +289,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     selectList,
     deleteList,
     updateListName,
-    updateItemQuantity
+    updateItemQuantity,
+    moveItemToAnotherList
   }
 }) 

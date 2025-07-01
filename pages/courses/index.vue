@@ -282,6 +282,39 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
             </svg>
           </button>
+          
+          <!-- Bouton de déplacement -->
+          <div class="relative move-menu-container" v-if="shoppingLists.length > 1">
+            <button
+              @click="toggleMoveMenu(item.id)"
+              class="text-blue-500 hover:text-blue-700 transition-colors duration-200"
+              title="Déplacer vers une autre liste"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+              </svg>
+            </button>
+            
+            <!-- Menu déroulant pour sélectionner la liste de destination -->
+            <div 
+              v-if="moveMenuOpen === item.id"
+              class="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48"
+            >
+              <div class="p-2">
+                <div class="text-xs font-medium text-gray-500 mb-2 px-2">Déplacer vers :</div>
+                <button
+                  v-for="list in shoppingLists"
+                  :key="list.id"
+                  @click="moveItemToList(item, list.id)"
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors duration-200"
+                  :class="list.id === currentList?.id ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'"
+                  :disabled="list.id === currentList?.id"
+                >
+                  {{ list.name }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -304,6 +337,8 @@
 </template>
 
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
+
 const shoppingStore = useShoppingStore()
 
 // Reactive data
@@ -320,6 +355,9 @@ const editingItems = ref(new Set())
 // État d'édition pour les noms de liste
 const editingListName = ref(null)
 const editingListNameValue = ref('')
+
+// État du menu de déplacement
+const moveMenuOpen = ref(null)
 
 // Computed properties
 const shoppingLists = computed(() => shoppingStore.shoppingLists)
@@ -564,6 +602,40 @@ const saveListName = (list) => {
 const cancelListNameEdit = (list) => {
   editingListName.value = null
 }
+
+const toggleMoveMenu = (itemId) => {
+  if (moveMenuOpen.value === itemId) {
+    moveMenuOpen.value = null
+  } else {
+    moveMenuOpen.value = itemId
+  }
+}
+
+const moveItemToList = (item, targetListId) => {
+  if (targetListId === currentList.value?.id) return
+  
+  shoppingStore.moveItemToAnotherList(item.name, targetListId)
+  moveMenuOpen.value = null
+}
+
+// Initialize
+onMounted(() => {
+  // Fermer le menu de déplacement quand on clique en dehors
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.move-menu-container')) {
+      moveMenuOpen.value = null
+    }
+  })
+})
+
+// Cleanup
+onUnmounted(() => {
+  document.removeEventListener('click', (event) => {
+    if (!event.target.closest('.move-menu-container')) {
+      moveMenuOpen.value = null
+    }
+  })
+})
 
 // SEO
 useHead({
