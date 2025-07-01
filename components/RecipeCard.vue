@@ -8,9 +8,11 @@
           class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
         >
       </div>
-      <div class="absolute top-3 right-3">
+      <div class="absolute top-3 right-3" @click="preventNavigation">
         <button 
-          @click.stop="toggleFavorite"
+          @click.stop.prevent="toggleFavorite"
+          @mousedown.stop.prevent
+          @mouseup.stop.prevent
           class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
         >
           <svg 
@@ -67,9 +69,11 @@
           </div>
         </div>
         
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2" @click="preventNavigation">
           <button 
-            @click.stop="addToShoppingList"
+            @click.stop.prevent="addToShoppingList"
+            @mousedown.stop.prevent
+            @mouseup.stop.prevent
             class="text-primary-600 hover:text-primary-700 transition-colors duration-200"
             title="Ajouter à la liste de courses"
           >
@@ -140,6 +144,11 @@ const addToShoppingList = () => {
       recipeId: props.recipe.id
     })
   })
+}
+
+const preventNavigation = (event) => {
+  event.stopPropagation()
+  event.preventDefault()
 }
 </script>
 
