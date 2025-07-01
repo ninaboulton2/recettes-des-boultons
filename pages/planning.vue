@@ -2,9 +2,20 @@
   <div>
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-4xl font-lobster text-gray-900 mb-4">
-        Planning hebdomadaire
-      </h1>
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-4xl font-lobster text-gray-900">
+          Planning hebdomadaire
+        </h1>
+        <button 
+          @click="printPlanning" 
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Imprimer
+        </button>
+      </div>
       <p class="text-xl text-gray-600">
         Organisez vos repas de la semaine
       </p>
@@ -264,6 +275,175 @@ const formatDate = (date) => {
     day: 'numeric',
     month: 'short'
   })
+}
+
+const printPlanning = () => {
+  const printWindow = window.open('', '_blank')
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Planning hebdomadaire - Recettes des Boultons</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 30px; 
+          line-height: 1.8; 
+          max-width: 1200px; 
+          margin-left: auto; 
+          margin-right: auto; 
+        }
+        h1 { 
+          color: #1e40af; 
+          font-size: 32px; 
+          margin-bottom: 20px; 
+          text-align: center; 
+          font-weight: bold;
+        }
+        .week-info { 
+          background: #f3f4f6; 
+          padding: 20px; 
+          border-radius: 12px; 
+          margin: 25px 0; 
+          text-align: center; 
+          font-size: 18px;
+          font-weight: 500;
+        }
+        .week-grid { 
+          display: grid; 
+          grid-template-columns: repeat(7, 1fr); 
+          gap: 20px; 
+          margin: 30px 0; 
+        }
+        .day { 
+          border: 2px solid #e5e7eb; 
+          border-radius: 12px; 
+          padding: 20px; 
+          min-height: 300px;
+        }
+        .day-header { 
+          text-align: center; 
+          margin-bottom: 20px; 
+          padding-bottom: 15px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+        .day-name { 
+          font-weight: bold; 
+          color: #374151; 
+          font-size: 18px;
+          text-transform: capitalize;
+        }
+        .day-date { 
+          font-size: 14px; 
+          color: #6b7280; 
+          margin-top: 5px;
+        }
+        .meal { 
+          margin-bottom: 20px; 
+        }
+        .meal-title { 
+          font-weight: bold; 
+          color: #374151; 
+          font-size: 16px; 
+          margin-bottom: 10px; 
+          text-align: center;
+          background: #f9fafb;
+          padding: 8px;
+          border-radius: 8px;
+        }
+        .meal-content { 
+          font-size: 14px; 
+          color: #6b7280; 
+          text-align: center;
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .empty-meal { 
+          font-style: italic; 
+          color: #9ca3af; 
+          font-size: 12px; 
+        }
+        .footer {
+          margin-top: 40px; 
+          text-align: center; 
+          font-size: 14px; 
+          color: #6b7280;
+          border-top: 2px solid #e5e7eb;
+          padding-top: 20px;
+        }
+        @media print { 
+          body { 
+            margin: 15px; 
+            font-size: 14px;
+          } 
+          h1 { font-size: 28px; }
+          .week-grid { 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 10px;
+          }
+          .day {
+            padding: 15px;
+            min-height: 250px;
+          }
+          .day-name { font-size: 16px; }
+          .meal-title { font-size: 14px; }
+          .meal-content { font-size: 12px; }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Planning hebdomadaire</h1>
+      
+      <div class="week-info">
+        <p>Semaine du ${formatWeekStart(currentWeek.value)}</p>
+      </div>
+      
+      <div class="week-grid">
+        ${weekDays.value.map(day => `
+          <div class="day">
+            <div class="day-header">
+              <div class="day-name">${day.name}</div>
+              <div class="day-date">${formatDate(day.date)}</div>
+            </div>
+            
+            <div class="meal">
+              <div class="meal-title">Petit-déjeuner</div>
+              <div class="meal-content">
+                ${day.meals.breakfast ? day.meals.breakfast.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+              </div>
+            </div>
+            
+            <div class="meal">
+              <div class="meal-title">Déjeuner</div>
+              <div class="meal-content">
+                ${day.meals.lunch ? day.meals.lunch.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+              </div>
+            </div>
+            
+            <div class="meal">
+              <div class="meal-title">Dîner</div>
+              <div class="meal-content">
+                ${day.meals.dinner ? day.meals.dinner.title : '<span class="empty-meal">Aucun repas planifié</span>'}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="footer">
+        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+      </div>
+    </body>
+    </html>
+  `
+  
+  printWindow.document.write(printContent)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+  printWindow.close()
 }
 
 // SEO

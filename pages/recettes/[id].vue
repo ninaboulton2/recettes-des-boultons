@@ -1,11 +1,23 @@
 <template>
-  <!-- Bouton retour -->
-  <button @click="$router.back()" class="mb-6 flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
-    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Retour
-  </button>
+  <!-- Boutons d'action -->
+  <div class="mb-6 flex items-center justify-between">
+    <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Retour
+    </button>
+    <button 
+      v-if="recipe"
+      @click="printRecipe" 
+      class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+    >
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+      </svg>
+      Imprimer
+    </button>
+  </div>
   <div v-if="recipe" class="max-w-3xl mx-auto">
     <!-- Header -->
     <div class="mb-8 flex flex-col md:flex-row md:items-center">
@@ -87,6 +99,145 @@ const difficultyClass = computed(() => {
       return 'text-gray-500'
   }
 })
+
+const printRecipe = () => {
+  if (!recipe.value) return
+  
+  const printWindow = window.open('', '_blank')
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${recipe.value.title} - Recettes des Boultons</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 30px; 
+          line-height: 1.8; 
+          max-width: 800px; 
+          margin-left: auto; 
+          margin-right: auto; 
+        }
+        h1 { 
+          color: #1e40af; 
+          font-size: 32px; 
+          margin-bottom: 20px; 
+          text-align: center; 
+          font-weight: bold;
+        }
+        h2 { 
+          color: #374151; 
+          font-size: 24px; 
+          margin-top: 30px; 
+          margin-bottom: 15px; 
+          text-align: center;
+          font-weight: bold;
+        }
+        .recipe-info { 
+          background: #f3f4f6; 
+          padding: 20px; 
+          border-radius: 12px; 
+          margin: 25px 0; 
+          text-align: center;
+          font-size: 16px;
+        }
+        .recipe-info span { 
+          margin-right: 25px; 
+          font-weight: 500;
+        }
+        .tags { 
+          margin: 25px 0; 
+          text-align: center;
+        }
+        .tag { 
+          background: #e5e7eb; 
+          padding: 8px 16px; 
+          border-radius: 20px; 
+          font-size: 14px; 
+          margin-right: 12px; 
+          font-weight: 500;
+        }
+        ul { 
+          margin-left: 30px; 
+          font-size: 16px;
+        }
+        ol { 
+          margin-left: 30px; 
+          font-size: 16px;
+        }
+        li { 
+          margin-bottom: 12px; 
+          line-height: 1.8;
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 40px; 
+        }
+        .header p {
+          font-size: 18px;
+          color: #6b7280;
+          margin-top: 15px;
+        }
+        .footer {
+          margin-top: 50px; 
+          text-align: center; 
+          font-size: 14px; 
+          color: #6b7280;
+          border-top: 2px solid #e5e7eb;
+          padding-top: 20px;
+        }
+        @media print { 
+          body { 
+            margin: 20px; 
+            font-size: 16px;
+          } 
+          h1 { font-size: 28px; }
+          h2 { font-size: 22px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${recipe.value.title}</h1>
+        <p>${recipe.value.description}</p>
+      </div>
+      
+      <div class="recipe-info">
+        <span><strong>Catégorie :</strong> ${categoryName.value}</span>
+        <span><strong>Difficulté :</strong> ${recipe.value.difficulty}</span>
+        <span><strong>Temps :</strong> ${recipe.value.prepTime + recipe.value.cookTime} min</span>
+        <span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>
+      </div>
+      
+      <div class="tags">
+        ${recipe.value.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+      </div>
+      
+      <h2>Ingrédients</h2>
+      <ul>
+        ${recipe.value.ingredients.map(ingredient => 
+          `<li>${ingredient.amount ? ingredient.amount + ' ' : ''}${ingredient.unit ? ingredient.unit + ' ' : ''}${ingredient.name}</li>`
+        ).join('')}
+      </ul>
+      
+      <h2>Instructions</h2>
+      <ol>
+        ${recipe.value.instructions.map(step => `<li>${step}</li>`).join('')}
+      </ol>
+      
+      <div class="footer">
+        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+      </div>
+    </body>
+    </html>
+  `
+  
+  printWindow.document.write(printContent)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+  printWindow.close()
+}
 
 // SEO
 useHead({

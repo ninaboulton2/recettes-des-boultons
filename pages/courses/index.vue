@@ -2,9 +2,21 @@
   <div>
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-4xl font-lobster text-gray-900 mb-4">
-        Listes de courses
-      </h1>
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-4xl font-lobster text-gray-900">
+          Listes de courses
+        </h1>
+        <button 
+          v-if="currentList"
+          @click="printShoppingList" 
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Imprimer
+        </button>
+      </div>
       <p class="text-xl text-gray-600">
         Gérez vos listes de courses et ne manquez plus rien !
       </p>
@@ -250,6 +262,136 @@ const formatDate = (date) => {
     month: 'long',
     year: 'numeric'
   })
+}
+
+const printShoppingList = () => {
+  if (!currentList.value) return
+  
+  const printWindow = window.open('', '_blank')
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${currentList.value.name} - Recettes des Boultons</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 30px; 
+          line-height: 1.6; 
+          max-width: 600px; 
+          margin-left: auto; 
+          margin-right: auto; 
+        }
+        h1 { 
+          color: #1e40af; 
+          font-size: 32px; 
+          margin-bottom: 20px; 
+          text-align: center; 
+          font-weight: bold;
+        }
+        .list-info { 
+          background: #f3f4f6; 
+          padding: 20px; 
+          border-radius: 12px; 
+          margin: 25px 0; 
+          text-align: center; 
+          font-size: 16px;
+        }
+        .list-info p {
+          margin: 8px 0;
+          font-weight: 500;
+        }
+        .items-list {
+          margin: 25px 0;
+        }
+        .item { 
+          padding: 8px 0; 
+          border-bottom: 1px solid #e5e7eb; 
+          font-size: 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .item:last-child { 
+          border-bottom: none; 
+        }
+        .item-name { 
+          font-weight: 500; 
+          color: #374151;
+        }
+        .item-details { 
+          color: #6b7280; 
+          font-size: 14px; 
+          font-weight: 500;
+        }
+        .checked { 
+          text-decoration: line-through; 
+          color: #9ca3af; 
+        }
+        .summary { 
+          margin-top: 25px; 
+          padding: 15px; 
+          background: #f3f4f6; 
+          border-radius: 12px; 
+          text-align: center; 
+          font-size: 16px;
+          font-weight: 500;
+        }
+        .summary p {
+          margin: 5px 0;
+        }
+        .footer {
+          margin-top: 30px; 
+          text-align: center; 
+          font-size: 14px; 
+          color: #6b7280;
+          border-top: 2px solid #e5e7eb;
+          padding-top: 20px;
+        }
+        @media print { 
+          body { 
+            margin: 20px; 
+            font-size: 16px;
+          } 
+          h1 { font-size: 28px; }
+          .item { padding: 6px 0; }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${currentList.value.name}</h1>
+      
+      <div class="list-info">
+        <p>Liste créée le ${formatDate(currentList.value.createdAt)}</p>
+        <p>${currentItems.value.length} article${currentItems.value.length > 1 ? 's' : ''} au total</p>
+      </div>
+      
+      <div class="items-list">
+        ${currentItems.value.map(item => `
+          <div class="item ${item.checked ? 'checked' : ''}">
+            <div class="item-name">${item.name}</div>
+            ${item.amount && item.unit ? `<div class="item-details">${item.amount} ${item.unit}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="summary">
+        <p><strong>${uncheckedItems.value.length}</strong> article${uncheckedItems.value.length > 1 ? 's' : ''} à acheter</p>
+        <p><strong>${checkedItems.value.length}</strong> article${checkedItems.value.length > 1 ? 's' : ''} acheté${checkedItems.value.length > 1 ? 's' : ''}</p>
+      </div>
+      
+      <div class="footer">
+        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+      </div>
+    </body>
+    </html>
+  `
+  
+  printWindow.document.write(printContent)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+  printWindow.close()
 }
 
 // SEO
