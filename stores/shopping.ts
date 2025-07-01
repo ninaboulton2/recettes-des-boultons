@@ -241,6 +241,75 @@ export const useShoppingStore = defineStore('shopping', () => {
     saveToLocalStorage()
   }
 
+  const addIngredientsToLists = (ingredients: Array<{name: string, amount: number, unit: string, recipeId?: string}>) => {
+    // Créer une liste par défaut "Ma liste de courses" si aucune n'existe
+    if (shoppingLists.value.length === 0) {
+      createList('Ma liste de courses')
+    }
+
+    ingredients.forEach(ingredient => {
+      const ingredientName = ingredient.name.toLowerCase().trim()
+      let foundInAnyList = false
+
+      // Chercher l'ingrédient dans toutes les listes
+      for (const list of shoppingLists.value) {
+        const existingItems = list.items.filter(item => 
+          item.name.toLowerCase().trim() === ingredientName
+        )
+
+        if (existingItems.length > 0) {
+          // L'ingrédient existe déjà dans cette liste, ajouter la quantité
+          const totalAmount = existingItems.reduce((sum, item) => sum + (item.amount || 0), 0) + ingredient.amount
+          
+          // Mettre à jour tous les items avec le même nom
+          list.items.forEach(item => {
+            if (item.name.toLowerCase().trim() === ingredientName) {
+              item.amount = totalAmount
+              // Garder l'unité du premier item ou combiner si différentes
+              if (item.unit !== ingredient.unit && ingredient.unit) {
+                if (!item.unit) {
+                  item.unit = ingredient.unit
+                } else if (item.unit !== ingredient.unit) {
+                  item.unit = `${item.unit} + ${ingredient.unit}`
+                }
+              }
+            }
+          })
+          
+          list.updatedAt = new Date()
+          foundInAnyList = true
+          break
+        }
+      }
+
+      // Si l'ingrédient n'a été trouvé dans aucune liste, l'ajouter à "Ma liste de courses"
+      if (!foundInAnyList) {
+        // Trouver ou créer "Ma liste de courses"
+        let defaultList = shoppingLists.value.find(list => list.name === 'Ma liste de courses')
+        
+        if (!defaultList) {
+          // Si "Ma liste de courses" n'existe pas, la créer
+          createList('Ma liste de courses')
+          defaultList = currentList.value
+        }
+
+        const newItem: ShoppingItem = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: ingredient.name,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          recipeId: ingredient.recipeId,
+          checked: false
+        }
+
+        defaultList.items.push(newItem)
+        defaultList.updatedAt = new Date()
+      }
+    })
+
+    saveToLocalStorage()
+  }
+
   // Local storage
   const saveToLocalStorage = () => {
     if (typeof window !== 'undefined') {
@@ -290,6 +359,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     deleteList,
     updateListName,
     updateItemQuantity,
-    moveItemToAnotherList
+    moveItemToAnotherList,
+    addIngredientsToLists
   }
 }) 

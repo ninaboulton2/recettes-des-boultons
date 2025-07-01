@@ -3,7 +3,7 @@
     <NuxtLink
       v-for="category in categories"
       :key="category.id"
-      :to="`/recettes/${category.id}`"
+      :to="`/recettes?category=${category.id}`"
       class="category-card group block focus:outline-none"
     >
       <div class="relative mb-4">

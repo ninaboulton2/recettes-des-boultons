@@ -114,12 +114,25 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
 const recipesStore = useRecipesStore()
+const route = useRoute()
 
 // Reactive filters synchronisés avec le store
 const searchQuery = ref(recipesStore.searchQuery)
 const selectedCategory = ref(recipesStore.currentCategory || '')
 const selectedDifficulty = ref(recipesStore.selectedDifficulty || '')
+
+// Lire le paramètre category de l'URL au chargement de la page
+onMounted(() => {
+  const categoryFromUrl = route.query.category
+  if (categoryFromUrl && typeof categoryFromUrl === 'string') {
+    selectedCategory.value = categoryFromUrl
+    recipesStore.setCategory(categoryFromUrl)
+  }
+})
 
 // Synchronisation UI <-> store
 watchEffect(() => {

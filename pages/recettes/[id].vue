@@ -7,16 +7,28 @@
       </svg>
       Retour
     </button>
-    <button 
-      v-if="recipe"
-      @click="printRecipe" 
-      class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
-    >
-      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-      </svg>
-      Imprimer
-    </button>
+    <div class="flex items-center gap-4">
+      <button 
+        v-if="recipe"
+        @click="addToShoppingList" 
+        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+        </svg>
+        Ajouter à la liste de courses
+      </button>
+      <button 
+        v-if="recipe"
+        @click="printRecipe" 
+        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+        </svg>
+        Imprimer
+      </button>
+    </div>
   </div>
   <div v-if="recipe" class="max-w-3xl mx-auto">
     <!-- Header -->
@@ -68,6 +80,7 @@
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 const recipesStore = useRecipesStore()
+const shoppingStore = useShoppingStore()
 const route = useRoute()
 
 const recipeId = computed(() => route.params.id)
@@ -99,6 +112,21 @@ const difficultyClass = computed(() => {
       return 'text-gray-500'
   }
 })
+
+const addToShoppingList = () => {
+  if (!recipe.value) return
+  
+  // Préparer les ingrédients avec les informations nécessaires
+  const ingredients = recipe.value.ingredients.map(ingredient => ({
+    name: ingredient.name,
+    amount: ingredient.amount,
+    unit: ingredient.unit,
+    recipeId: recipe.value.id
+  }))
+  
+  // Utiliser la nouvelle méthode qui vérifie toutes les listes
+  shoppingStore.addIngredientsToLists(ingredients)
+}
 
 const printRecipe = () => {
   if (!recipe.value) return

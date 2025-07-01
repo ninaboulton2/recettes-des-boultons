@@ -132,18 +132,16 @@ const toggleFavorite = () => {
 }
 
 const addToShoppingList = () => {
-  if (!shoppingStore.currentList) {
-    shoppingStore.createList('Liste de courses')
-  }
+  // Préparer les ingrédients avec les informations nécessaires
+  const ingredients = props.recipe.ingredients.map(ingredient => ({
+    name: ingredient.name,
+    amount: ingredient.amount,
+    unit: ingredient.unit,
+    recipeId: props.recipe.id
+  }))
   
-  props.recipe.ingredients.forEach(ingredient => {
-    shoppingStore.addItem({
-      name: ingredient.name,
-      amount: ingredient.amount,
-      unit: ingredient.unit,
-      recipeId: props.recipe.id
-    })
-  })
+  // Utiliser la nouvelle méthode qui vérifie toutes les listes
+  shoppingStore.addIngredientsToLists(ingredients)
 }
 
 const preventNavigation = (event) => {
