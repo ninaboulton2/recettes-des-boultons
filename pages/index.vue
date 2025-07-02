@@ -17,12 +17,12 @@
         </div>
         <!-- Illustration à droite -->
         <div class="flex-1 flex justify-center items-center w-full lg:w-auto mt-12 lg:mt-0">
-          <div class="bg-white rounded-3xl shadow-2xl p-6 md:p-10 flex items-center justify-center" style="max-width: 420px;">
+          <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 flex items-center justify-center" style="max-width: 500px;">
             <img 
               src="/images/boultons.png" 
               alt="Famille Boultons" 
               class="w-full h-auto object-contain"
-              style="max-width: 340px;"
+              style="max-width: 420px;"
             >
           </div>
         </div>

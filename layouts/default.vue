@@ -7,8 +7,8 @@
           <!-- Logo -->
           <div class="flex items-center">
             <NuxtLink to="/" class="flex items-center space-x-3">
-              <img src="/images/logo.png" alt="Logo" class="h-10 w-10">
-              <span class="text-2xl font-lobster text-primary-600">Recettes des Boultons</span>
+              <img src="/images/logo.png" alt="Logo" class="h-10">
+              <span class="text-2xl font-lobster" style="color: rgb(123, 136, 189);">Recettes des Boultons</span>
             </NuxtLink>
           </div>
 
