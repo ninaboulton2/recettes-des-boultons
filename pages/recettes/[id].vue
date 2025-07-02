@@ -40,9 +40,23 @@
         <p class="text-gray-600 mb-4">{{ recipe.description }}</p>
         <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-2">
           <span><strong>Catégorie :</strong> {{ categoryName }}</span>
-          <span><strong>Difficulté :</strong> <span :class="difficultyClass">{{ recipe.difficulty }}</span></span>
           <span><strong>Temps :</strong> {{ recipe.prepTime + recipe.cookTime }} min</span>
           <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
+        </div>
+        <!-- Dietary badges -->
+        <div class="flex flex-wrap gap-2 mb-2">
+          <span 
+            v-if="recipe.vegetarian"
+            class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full"
+          >
+            Végétarien
+          </span>
+          <span 
+            v-if="recipe.vegan"
+            class="px-2 py-1 text-xs font-semibold text-white bg-emerald-600 rounded-full"
+          >
+            Vegan
+          </span>
         </div>
         <div class="flex flex-wrap gap-2 mb-2">
           <span v-for="tag in recipe.tags" :key="tag" class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">{{ tag }}</span>
@@ -98,19 +112,6 @@ const categoryName = computed(() => {
     'boissons': 'Boissons'
   }
   return map[recipe.value?.category] || recipe.value?.category || ''
-})
-
-const difficultyClass = computed(() => {
-  switch (recipe.value?.difficulty) {
-    case 'facile':
-      return 'text-green-600'
-    case 'moyen':
-      return 'text-yellow-600'
-    case 'difficile':
-      return 'text-red-600'
-    default:
-      return 'text-gray-500'
-  }
 })
 
 const addToShoppingList = () => {
@@ -232,7 +233,6 @@ const printRecipe = () => {
       
       <div class="recipe-info">
         <span><strong>Catégorie :</strong> ${categoryName.value}</span>
-        <span><strong>Difficulté :</strong> ${recipe.value.difficulty}</span>
         <span><strong>Temps :</strong> ${recipe.value.prepTime + recipe.value.cookTime} min</span>
         <span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>
       </div>

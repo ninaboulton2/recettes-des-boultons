@@ -12,7 +12,7 @@
 
     <!-- Filters (désactivé pour la catégorie) -->
     <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Search -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -36,22 +36,31 @@
             readonly
           >
         </div>
-        <!-- Difficulty Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Difficulté
-          </label>
-          <select
-            v-model="selectedDifficulty"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      </div>
+
+      <!-- Tags Filter -->
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-3">
+          Tags
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <label 
+            v-for="tag in availableTags" 
+            :key="tag" 
+            class="flex items-center space-x-2 cursor-pointer"
           >
-            <option value="">Toutes les difficultés</option>
-            <option value="facile">Facile</option>
-            <option value="moyen">Moyen</option>
-            <option value="difficile">Difficile</option>
-          </select>
+            <input
+              type="checkbox"
+              :value="tag"
+              :checked="selectedTags.includes(tag)"
+              @change="toggleTag(tag)"
+              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            >
+            <span class="text-sm text-gray-700">{{ tag }}</span>
+          </label>
         </div>
       </div>
+
       <!-- Clear Filters -->
       <div class="mt-4 flex justify-between items-center">
         <button
@@ -123,7 +132,10 @@ const categoryName = computed(() => {
 })
 
 const searchQuery = ref('')
-const selectedDifficulty = ref('')
+const selectedTags = ref([])
+
+// Computed properties
+const availableTags = computed(() => recipesStore.categoryTags)
 
 const filteredRecipes = computed(() => {
   let filtered = recipesStore.filteredRecipes.filter(r => r.category === categoryParam.value)
@@ -135,15 +147,23 @@ const filteredRecipes = computed(() => {
       recipe.tags.some(tag => tag.toLowerCase().includes(query))
     )
   }
-  if (selectedDifficulty.value) {
-    filtered = filtered.filter(recipe => recipe.difficulty === selectedDifficulty.value)
+  if (selectedTags.value.length > 0) {
+    filtered = filtered.filter(recipe => 
+      selectedTags.value.some(selectedTag => 
+        recipe.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
+      )
+    )
   }
   return filtered
 })
 
 const clearFilters = () => {
   searchQuery.value = ''
-  selectedDifficulty.value = ''
+  selectedTags.value = []
+}
+
+const toggleTag = (tag) => {
+  recipesStore.toggleTag(tag)
 }
 
 // SEO

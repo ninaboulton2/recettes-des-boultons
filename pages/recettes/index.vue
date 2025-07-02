@@ -12,7 +12,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Search -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -46,21 +46,28 @@
             <option value="boissons">Boissons</option>
           </select>
         </div>
+      </div>
 
-        <!-- Difficulty Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Difficulté
-          </label>
-          <select
-            v-model="selectedDifficulty"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      <!-- Tags Filter -->
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-3">
+          Tags
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <label 
+            v-for="tag in availableTags" 
+            :key="tag" 
+            class="flex items-center space-x-2 cursor-pointer"
           >
-            <option value="">Toutes les difficultés</option>
-            <option value="facile">Facile</option>
-            <option value="moyen">Moyen</option>
-            <option value="difficile">Difficile</option>
-          </select>
+            <input
+              type="checkbox"
+              :value="tag"
+              :checked="selectedTags.includes(tag)"
+              @change="toggleTag(tag)"
+              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            >
+            <span class="text-sm text-gray-700">{{ tag }}</span>
+          </label>
         </div>
       </div>
 
@@ -123,7 +130,11 @@ const route = useRoute()
 // Reactive filters synchronisés avec le store
 const searchQuery = ref(recipesStore.searchQuery)
 const selectedCategory = ref(recipesStore.currentCategory || '')
-const selectedDifficulty = ref(recipesStore.selectedDifficulty || '')
+const selectedTags = ref(recipesStore.selectedTags || [])
+
+// Computed properties
+const allTags = computed(() => recipesStore.allTags)
+const availableTags = computed(() => recipesStore.categoryTags)
 
 // Lire le paramètre category de l'URL au chargement de la page
 onMounted(() => {
@@ -138,7 +149,7 @@ onMounted(() => {
 watchEffect(() => {
   searchQuery.value = recipesStore.searchQuery
   selectedCategory.value = recipesStore.currentCategory || ''
-  selectedDifficulty.value = recipesStore.selectedDifficulty || ''
+  selectedTags.value = recipesStore.selectedTags || []
 })
 
 // Computed filtered recipes
@@ -150,9 +161,13 @@ const filteredRecipes = computed(() => {
     filtered = filtered.filter(recipe => recipe.category === selectedCategory.value)
   }
 
-  // Apply difficulty filter
-  if (selectedDifficulty.value) {
-    filtered = filtered.filter(recipe => recipe.difficulty === selectedDifficulty.value)
+  // Apply tag filter
+  if (selectedTags.value.length > 0) {
+    filtered = filtered.filter(recipe => 
+      selectedTags.value.some(selectedTag => 
+        recipe.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
+      )
+    )
   }
 
   return filtered
@@ -168,16 +183,16 @@ watch(selectedCategory, (newCategory) => {
   recipesStore.setCategory(newCategory || null)
 })
 
-// Watch for difficulty changes
-watch(selectedDifficulty, (newDifficulty) => {
-  recipesStore.setDifficulty(newDifficulty || null)
-})
+// Tag functions
+const toggleTag = (tag) => {
+  recipesStore.toggleTag(tag)
+}
 
 // Clear all filters
 const clearFilters = () => {
   searchQuery.value = ''
   selectedCategory.value = ''
-  selectedDifficulty.value = ''
+  selectedTags.value = []
   recipesStore.clearFilters()
 }
 

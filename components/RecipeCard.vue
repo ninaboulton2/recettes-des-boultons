@@ -34,12 +34,19 @@
           </svg>
         </button>
       </div>
-      <div class="absolute bottom-3 left-3">
+      <!-- Dietary badges -->
+      <div class="absolute bottom-3 left-3 flex gap-2">
         <span 
-          class="px-2 py-1 text-xs font-semibold text-white rounded-full"
-          :class="difficultyClass"
+          v-if="recipe.vegetarian"
+          class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full"
         >
-          {{ recipe.difficulty }}
+          Végétarien
+        </span>
+        <span 
+          v-if="recipe.vegan"
+          class="px-2 py-1 text-xs font-semibold text-white bg-emerald-600 rounded-full"
+        >
+          Vegan
         </span>
       </div>
     </div>
@@ -84,6 +91,7 @@
         </div>
       </div>
 
+      <!-- Tags -->
       <div class="flex flex-wrap gap-1">
         <span 
           v-for="tag in recipe.tags.slice(0, 3)" 
@@ -113,19 +121,6 @@ const props = defineProps({
 
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
-
-const difficultyClass = computed(() => {
-  switch (props.recipe.difficulty) {
-    case 'facile':
-      return 'bg-green-500'
-    case 'moyen':
-      return 'bg-yellow-500'
-    case 'difficile':
-      return 'bg-red-500'
-    default:
-      return 'bg-gray-500'
-  }
-})
 
 const toggleFavorite = () => {
   recipesStore.toggleFavorite(props.recipe)
