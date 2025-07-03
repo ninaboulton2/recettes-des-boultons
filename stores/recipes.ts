@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
-import { sampleRecipes } from '~/data/recipes'
 
 export const useRecipesStore = defineStore('recipes', () => {
   const recipes = ref([])
@@ -146,15 +145,23 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const loadFromLocalStorage = () => {
+  const loadFromLocalStorage = async () => {
     if (typeof window !== 'undefined') {
       // Force reload sample data and clear localStorage
       localStorage.removeItem('boultons-recipes')
       localStorage.removeItem('boultons-favorites')
       
-      // Load sample data
-      recipes.value = sampleRecipes
-      favorites.value = sampleRecipes.filter(recipe => recipe.favorite)
+      // Load data from JSON file
+      try {
+        const response = await fetch('/data/recipes.json')
+        const data = await response.json()
+        recipes.value = data.recipes
+        favorites.value = data.recipes.filter(recipe => recipe.favorite)
+      } catch (error) {
+        console.error('Error loading recipes:', error)
+        recipes.value = []
+        favorites.value = []
+      }
     }
   }
 

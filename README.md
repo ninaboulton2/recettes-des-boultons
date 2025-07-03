@@ -1,178 +1,201 @@
-# Recettes des Boultons
+# Recettes des Boultons 🍳
 
-Une application moderne de gestion de recettes de cuisine développée avec Vue.js et Nuxt.js.
+Une application de recettes familiales construite avec Nuxt.js.
 
-## 🚀 Fonctionnalités
+## 🚀 Démarrage rapide
 
-### 📖 Gestion des recettes
-- **Affichage des recettes** par catégories (soupes, entrées, plats, poissons, viandes, yaourts & fromages, desserts, boissons)
-- **Recherche et filtres** par nom, catégorie et difficulté
-- **Recettes favorites** avec système de cœur
-- **Détails complets** : ingrédients, instructions, temps de préparation, nombre de personnes
-
-### 🛒 Listes de courses
-- **Création de listes** personnalisées
-- **Ajout automatique** des ingrédients depuis les recettes
-- **Gestion des articles** : ajout, suppression, marquage comme acheté
-- **Persistance locale** des données
-
-### 📅 Planning hebdomadaire
-- **Organisation des repas** par jour de la semaine
-- **Planification** des menus (petit-déjeuner, déjeuner, dîner)
-- **Interface intuitive** pour la gestion des plannings
-
-### 🎨 Interface moderne
-- **Design responsive** adapté à tous les écrans
-- **Thème personnalisé** avec les couleurs de la famille Boultons
-- **Animations fluides** et transitions élégantes
-- **Navigation intuitive** avec menu mobile
-
-## 🛠️ Technologies utilisées
-
-- **Vue.js 3** - Framework JavaScript progressif
-- **Nuxt.js 3** - Framework Vue.js avec SSR
-- **TypeScript** - Typage statique pour une meilleure maintenabilité
-- **Tailwind CSS** - Framework CSS utilitaire
-- **Pinia** - Gestion d'état moderne pour Vue.js
-- **Local Storage** - Persistance des données côté client
-
-## 📦 Installation
-
-### Prérequis
-- Node.js 18+ 
-- npm ou yarn
-
-### Installation des dépendances
 ```bash
+# Installer les dépendances
 npm install
-```
 
-### Développement
-```bash
+# Lancer le serveur de développement
 npm run dev
 ```
+
 L'application sera accessible sur `http://localhost:3000`
-
-### Build pour production
-```bash
-npm run build
-npm run start
-```
-
-### Génération statique
-```bash
-npm run generate
-```
 
 ## 📁 Structure du projet
 
 ```
-boultons-recipes/
-├── assets/              # Ressources statiques (CSS, images)
-├── components/          # Composants Vue réutilisables
-├── layouts/             # Layouts de l'application
-├── pages/               # Pages de l'application (routing automatique)
-├── stores/              # Stores Pinia pour la gestion d'état
-├── types/               # Définitions TypeScript
-├── public/              # Fichiers publics (images, favicon)
-├── nuxt.config.ts       # Configuration Nuxt.js
-├── tailwind.config.js   # Configuration Tailwind CSS
-└── package.json         # Dépendances et scripts
+boultons-shopping-list/
+├── public/
+│   └── data/
+│       └── recipes.json          # Fichier JSON contenant toutes les recettes
+├── stores/
+│   └── recipes.ts               # Store Pinia pour la gestion des recettes
+├── utils/
+│   └── recipeManager.js         # Utilitaire pour gérer les recettes
+├── examples/
+│   └── addRecipe.js             # Exemple d'ajout de recette
+└── pages/
+    └── recettes/                # Pages de l'application
 ```
 
-## 🎯 Fonctionnalités principales
+## 🍽️ Gestion des recettes
 
-### Page d'accueil
-- Présentation de l'application
-- Navigation vers les catégories de recettes
-- Mise en avant des fonctionnalités
+### Structure d'une recette
 
-### Gestion des recettes
-- **Page principale** : affichage de toutes les recettes avec filtres
-- **Page par catégorie** : recettes filtrées par type
-- **Page de détail** : recette complète avec ingrédients et instructions
-- **Système de favoris** : marquage et gestion des recettes préférées
-
-### Listes de courses
-- **Création de listes** multiples
-- **Ajout manuel** d'articles
-- **Ajout automatique** depuis les recettes
-- **Gestion des quantités** et unités
-- **Marquage des articles** achetés
-
-### Planning hebdomadaire
-- **Organisation des repas** par jour
-- **Sélection de recettes** pour chaque repas
-- **Vue d'ensemble** de la semaine
-
-## 🎨 Design System
-
-### Couleurs
-- **Primary** : Orange chaleureux (#ed7519)
-- **Secondary** : Bleu moderne (#0ea5e9)
-- **Neutral** : Gris élégants pour le texte et les fonds
-
-### Typographie
-- **Lobster** : Police décorative pour les titres
-- **Poppins** : Police principale pour le contenu
-
-### Composants
-- **Cards** : Affichage des recettes et catégories
-- **Buttons** : Actions principales et secondaires
-- **Forms** : Saisie des données utilisateur
-- **Navigation** : Menu principal et breadcrumbs
-
-## 🔧 Configuration
-
-### Variables d'environnement
-Créez un fichier `.env` à la racine du projet :
-```env
-API_BASE=http://localhost:3000
+```javascript
+{
+  "id": "1",
+  "title": "Nom de la recette",
+  "description": "Description courte",
+  "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts-fromages, desserts, boissons
+  "ingredients": [
+    { "name": "Ingrédient", "amount": 1, "unit": "g" }
+  ],
+  "instructions": [
+    "Étape 1",
+    "Étape 2"
+  ],
+  "prepTime": 15,        // Temps de préparation en minutes
+  "cookTime": 30,        // Temps de cuisson en minutes
+  "servings": 4,         // Nombre de portions
+  "image": "/images/plats.png",
+  "tags": ["végétarien"], // Tags disponibles: "végétarien", "vegan"
+  "vegetarian": true,    // Boolean
+  "vegan": false,        // Boolean
+  "favorite": false,     // Boolean
+  "createdAt": "2024-01-15T00:00:00.000Z",
+  "updatedAt": "2024-01-15T00:00:00.000Z",
+  "notes": "Astuce ou conseil personnel (optionnel)"
+}
 ```
 
-### Personnalisation
-- **Couleurs** : Modifiez `tailwind.config.js`
-- **Polices** : Ajoutez vos polices dans `assets/css/main.css`
-- **Images** : Placez vos images dans `public/images/`
+### Ajouter une nouvelle recette
 
-## 📱 Responsive Design
+#### Méthode 1: Utiliser l'utilitaire (recommandé)
 
-L'application est entièrement responsive et s'adapte à :
-- **Mobile** : < 768px
-- **Tablet** : 768px - 1024px
-- **Desktop** : > 1024px
+```bash
+# Voir la liste des recettes existantes
+node utils/recipeManager.js list
+
+# Voir comment ajouter une recette
+node utils/recipeManager.js add
+```
+
+#### Méthode 2: Utiliser le script d'exemple
+
+```bash
+# Exécuter l'exemple d'ajout de recette
+node examples/addRecipe.js
+```
+
+#### Méthode 3: Programmatiquement
+
+```javascript
+const { addRecipe } = require('./utils/recipeManager')
+
+const nouvelleRecette = {
+  title: "Ma nouvelle recette",
+  description: "Description de la recette",
+  category: "plats",
+  ingredients: [
+    { name: "Ingrédient 1", amount: 1, unit: "g" }
+  ],
+  instructions: [
+    "Étape 1",
+    "Étape 2"
+  ],
+  prepTime: 15,
+  cookTime: 30,
+  servings: 4,
+  image: "/images/plats.png",
+  tags: ["végétarien"],
+  vegetarian: true,
+  vegan: false
+}
+
+addRecipe(nouvelleRecette)
+```
+
+### Modifier une recette existante
+
+```javascript
+const { updateRecipe } = require('./utils/recipeManager')
+
+updateRecipe("1", {
+  title: "Nouveau titre",
+  prepTime: 20
+})
+```
+
+### Supprimer une recette
+
+```javascript
+const { deleteRecipe } = require('./utils/recipeManager')
+
+deleteRecipe("1")
+```
+
+## 🏷️ Système de tags
+
+Les recettes utilisent un système de tags simple :
+- **végétarien** : Recettes sans viande ni poisson
+- **vegan** : Recettes sans aucun produit animal
+
+Les propriétés `vegetarian` et `vegan` sont des booléens qui doivent correspondre aux tags.
+
+## 🎨 Fonctionnalités
+
+- ✅ Affichage des recettes par catégorie
+- ✅ Recherche par titre, description ou tags
+- ✅ Filtrage par tags (végétarien/vegan)
+- ✅ Système de favoris
+- ✅ Interface responsive
+- ✅ Gestion des recettes via JSON
+- ✅ Utilitaire de gestion des recettes
 
 ## 🚀 Déploiement
 
-### Vercel (recommandé)
-1. Connectez votre repository GitHub
-2. Configurez le build command : `npm run build`
-3. Déployez automatiquement
+### Option 1: Déploiement statique (recommandé)
 
-### Netlify
-1. Connectez votre repository
-2. Build command : `npm run generate`
-3. Publish directory : `.output/public`
+```bash
+# Build pour la production
+npm run build
 
-### Autres plateformes
-L'application peut être déployée sur n'importe quelle plateforme supportant Node.js ou les sites statiques.
+# Les fichiers seront dans le dossier .output/
+```
+
+### Option 2: Déploiement avec serveur
+
+```bash
+# Build et start
+npm run build
+npm run start
+```
+
+## 📝 Notes importantes
+
+1. **Fichier JSON** : Toutes les recettes sont stockées dans `public/data/recipes.json`
+2. **Accessibilité** : Le fichier JSON est public et accessible à tous les utilisateurs
+3. **Sauvegarde** : Pensez à sauvegarder régulièrement le fichier `recipes.json`
+4. **Images** : Les images doivent être placées dans `public/images/`
+5. **Tags** : Seuls "végétarien" et "vegan" sont supportés actuellement
+
+## 🔧 Développement
+
+### Ajouter une nouvelle catégorie
+
+1. Modifier le fichier `stores/recipes.ts` dans la fonction `recipesByCategory`
+2. Ajouter la nouvelle catégorie dans l'objet `grouped`
+3. Mettre à jour les recettes existantes si nécessaire
+
+### Modifier l'interface
+
+Les composants principaux se trouvent dans :
+- `components/RecipeCard.vue` - Carte d'affichage d'une recette
+- `pages/recettes/index.vue` - Page d'accueil des recettes
+- `pages/recettes/[category].vue` - Page de catégorie
 
 ## 🤝 Contribution
 
-1. Fork le projet
-2. Créez une branche pour votre fonctionnalité
-3. Committez vos changements
-4. Poussez vers la branche
-5. Ouvrez une Pull Request
-
-## 📄 Licence
-
-Ce projet est privé et destiné à l'usage de la famille Boultons.
-
-## 👨‍👩‍👧‍👦 À propos
-
-Application développée pour la famille Boultons afin de centraliser et organiser leurs recettes de cuisine préférées.
+Pour ajouter de nouvelles recettes :
+1. Utilisez l'utilitaire `recipeManager.js`
+2. Respectez la structure JSON
+3. Ajoutez des images appropriées
+4. Testez l'affichage dans l'application
 
 ---
 
-**Développé avec ❤️ pour les Boultons** 
+**Bon appétit ! 🍽️** 
