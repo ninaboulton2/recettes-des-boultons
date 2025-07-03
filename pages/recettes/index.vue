@@ -12,7 +12,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Search -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -46,28 +46,44 @@
             <option value="boissons">Boissons</option>
           </select>
         </div>
-      </div>
 
-      <!-- Tags Filter -->
-      <div class="mt-4">
-        <label class="block text-sm font-medium text-gray-700 mb-3">
-          Tags
-        </label>
-        <div class="flex flex-wrap gap-2">
-          <label 
-            v-for="tag in availableTags" 
-            :key="tag" 
-            class="flex items-center space-x-2 cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              :value="tag"
-              :checked="selectedTags.includes(tag)"
-              @change="toggleTag(tag)"
-              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            >
-            <span class="text-sm text-gray-700">{{ tag }}</span>
+        <!-- Tags Filter -->
+        <div class="relative" data-tags-dropdown>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Tags
           </label>
+          <button
+            @click="toggleTagsDropdown"
+            type="button"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left bg-white flex justify-between items-center"
+          >
+            <span class="text-gray-700">
+              {{ selectedTags.length > 0 ? `${selectedTags.length} tag(s) sélectionné(s)` : 'Tous les tags' }}
+            </span>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          
+          <!-- Dropdown -->
+          <div v-if="showTagsDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+            <div class="p-2 max-h-48 overflow-y-auto">
+              <label 
+                v-for="tag in availableTags" 
+                :key="tag" 
+                class="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  :value="tag"
+                  :checked="selectedTags.includes(tag)"
+                  @change="toggleTag(tag)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                >
+                <span class="text-sm text-gray-700">{{ tag }}</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -121,7 +137,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const recipesStore = useRecipesStore()
@@ -131,6 +147,7 @@ const route = useRoute()
 const searchQuery = ref(recipesStore.searchQuery)
 const selectedCategory = ref(recipesStore.currentCategory || '')
 const selectedTags = ref(recipesStore.selectedTags || [])
+const showTagsDropdown = ref(false)
 
 // Computed properties
 const allTags = computed(() => recipesStore.allTags)
@@ -143,6 +160,13 @@ onMounted(() => {
     selectedCategory.value = categoryFromUrl
     recipesStore.setCategory(categoryFromUrl)
   }
+  
+  // Fermer le dropdown lors d'un clic à l'extérieur
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 // Synchronisation UI <-> store
@@ -188,11 +212,24 @@ const toggleTag = (tag) => {
   recipesStore.toggleTag(tag)
 }
 
+const toggleTagsDropdown = (event) => {
+  event.stopPropagation()
+  showTagsDropdown.value = !showTagsDropdown.value
+}
+
+const handleClickOutside = (event) => {
+  const dropdown = document.querySelector('[data-tags-dropdown]')
+  if (dropdown && !dropdown.contains(event.target)) {
+    showTagsDropdown.value = false
+  }
+}
+
 // Clear all filters
 const clearFilters = () => {
   searchQuery.value = ''
   selectedCategory.value = ''
   selectedTags.value = []
+  showTagsDropdown.value = false
   recipesStore.clearFilters()
 }
 
