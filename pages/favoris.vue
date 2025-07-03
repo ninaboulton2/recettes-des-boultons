@@ -11,7 +11,7 @@
     </div>
 
     <!-- Favorites Grid -->
-    <div v-if="favorites.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+    <div v-if="favorites.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
       <NuxtLink
         v-for="recipe in favorites"
         :key="recipe.id"

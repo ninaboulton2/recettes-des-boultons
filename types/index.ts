@@ -8,9 +8,10 @@ export interface Recipe {
   prepTime: number
   cookTime: number
   servings: number
-  difficulty: 'facile' | 'moyen' | 'difficile'
   image: string
   tags: string[]
+  vegetarian: boolean
+  vegan: boolean
   favorite: boolean
   createdAt: Date
   updatedAt: Date

@@ -1,13 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
-import { sampleRecipes } from '~/data/recipes'
 
 export const useRecipesStore = defineStore('recipes', () => {
   const recipes = ref([])
   const favorites = ref([])
   const currentCategory = ref(null)
   const searchQuery = ref('')
-  const selectedDifficulty = ref(null)
+  const selectedTags = ref([])
 
   // Computed properties
   const filteredRecipes = computed(() => {
@@ -26,11 +25,37 @@ export const useRecipesStore = defineStore('recipes', () => {
       )
     }
 
-    if (selectedDifficulty.value) {
-      filtered = filtered.filter(recipe => recipe.difficulty === selectedDifficulty.value)
+    if (selectedTags.value.length > 0) {
+      filtered = filtered.filter(recipe => 
+        selectedTags.value.some(selectedTag => 
+          recipe.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
+        )
+      )
     }
 
     return filtered
+  })
+
+  // Get all unique tags from recipes
+  const allTags = computed(() => {
+    const tagsSet = new Set()
+    recipes.value.forEach(recipe => {
+      recipe.tags.forEach(tag => tagsSet.add(tag))
+    })
+    return Array.from(tagsSet).sort()
+  })
+
+  // Get tags for current category
+  const categoryTags = computed(() => {
+    if (!currentCategory.value) return allTags.value
+    
+    const tagsSet = new Set()
+    recipes.value
+      .filter(recipe => recipe.category === currentCategory.value)
+      .forEach(recipe => {
+        recipe.tags.forEach(tag => tagsSet.add(tag))
+      })
+    return Array.from(tagsSet).sort()
   })
 
   const recipesByCategory = computed(() => {
@@ -89,20 +114,27 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   const setCategory = (category) => {
     currentCategory.value = category
+    // Clear selected tags when category changes
+    selectedTags.value = []
   }
 
   const setSearchQuery = (query) => {
     searchQuery.value = query
   }
 
-  const setDifficulty = (difficulty) => {
-    selectedDifficulty.value = difficulty
+  const toggleTag = (tag) => {
+    const index = selectedTags.value.findIndex(t => t.toLowerCase() === tag.toLowerCase())
+    if (index !== -1) {
+      selectedTags.value.splice(index, 1)
+    } else {
+      selectedTags.value.push(tag)
+    }
   }
 
   const clearFilters = () => {
     currentCategory.value = null
     searchQuery.value = ''
-    selectedDifficulty.value = null
+    selectedTags.value = []
   }
 
   // Local storage
@@ -113,31 +145,22 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const loadFromLocalStorage = () => {
+  const loadFromLocalStorage = async () => {
     if (typeof window !== 'undefined') {
-      const savedRecipes = localStorage.getItem('boultons-recipes')
-      const savedFavorites = localStorage.getItem('boultons-favorites')
+      // Force reload sample data and clear localStorage
+      localStorage.removeItem('boultons-recipes')
+      localStorage.removeItem('boultons-favorites')
       
-      if (savedRecipes) {
-        try {
-          recipes.value = JSON.parse(savedRecipes)
-        } catch (error) {
-          recipes.value = sampleRecipes
-        }
-      } else {
-        // Load sample data if no saved data
-        recipes.value = sampleRecipes
-      }
-      
-      if (savedFavorites) {
-        try {
-          favorites.value = JSON.parse(savedFavorites)
-        } catch (error) {
-          favorites.value = sampleRecipes.filter(recipe => recipe.favorite)
-        }
-      } else {
-        // Load favorites from sample data
-        favorites.value = sampleRecipes.filter(recipe => recipe.favorite)
+      // Load data from JSON file
+      try {
+        const response = await fetch('/data/recipes.json')
+        const data = await response.json()
+        recipes.value = data.recipes
+        favorites.value = data.recipes.filter(recipe => recipe.favorite)
+      } catch (error) {
+        console.error('Error loading recipes:', error)
+        recipes.value = []
+        favorites.value = []
       }
     }
   }
@@ -153,10 +176,12 @@ export const useRecipesStore = defineStore('recipes', () => {
     favorites: readonly(favorites),
     currentCategory: readonly(currentCategory),
     searchQuery: readonly(searchQuery),
-    selectedDifficulty: readonly(selectedDifficulty),
+    selectedTags: readonly(selectedTags),
     
     // Computed
     filteredRecipes,
+    allTags,
+    categoryTags,
     recipesByCategory,
     
     // Actions
@@ -166,7 +191,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     toggleFavorite,
     setCategory,
     setSearchQuery,
-    setDifficulty,
+    toggleTag,
     clearFilters
   }
 }) 
