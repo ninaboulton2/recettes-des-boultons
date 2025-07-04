@@ -67,7 +67,8 @@ export const useRecipesStore = defineStore('recipes', () => {
       viandes: [],
       'yaourts et fromages': [],
       desserts: [],
-      boissons: []
+      boissons: [],
+      confitures: []
     }
 
     recipes.value.forEach(recipe => {

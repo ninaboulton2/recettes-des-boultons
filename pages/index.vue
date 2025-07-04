@@ -158,6 +158,12 @@ const categories = [
     name: 'Boissons',
     description: 'Boissons rafraîchissantes et cocktails',
     image: '/images/boissons.png'
+  },
+  {
+    id: 'confitures',
+    name: 'Confitures',
+    description: 'Confitures et conserves maison',
+    image: '/images/confitures.png'
   }
 ]
 

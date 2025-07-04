@@ -142,7 +142,8 @@ const categoryName = computed(() => {
     'viandes': 'Viandes',
     'yaourts et fromages': 'Yaourts et fromages',
     'desserts': 'Desserts',
-    'boissons': 'Boissons'
+    'boissons': 'Boissons',
+    'confitures': 'Confitures'
   }
   return map[categoryParam.value] || categoryParam.value
 })
