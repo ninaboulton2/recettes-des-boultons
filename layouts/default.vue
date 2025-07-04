@@ -131,9 +131,22 @@
         </div>
       </div>
     </footer>
+
+    <!-- Toast Container -->
+    <ToastContainer ref="toastContainer" />
   </div>
 </template>
 
 <script setup>
+import ToastContainer from '@/components/ToastContainer.vue'
+
 const mobileMenuOpen = ref(false)
+const toastContainer = ref()
+
+// Exposer le toast container globalement
+onMounted(() => {
+  if (process.client) {
+    window.$toastContainer = toastContainer.value
+  }
+})
 </script> 

@@ -132,6 +132,17 @@
 
     <!-- Current List -->
     <div v-if="currentList" class="bg-white rounded-xl shadow-sm p-6">
+
+    <!-- Confirm Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Supprimer la liste"
+      message="Êtes-vous sûr de vouloir supprimer cette liste ? Cette action est irréversible."
+      confirm-text="Supprimer"
+      cancel-text="Annuler"
+      @confirm="confirmDeleteList"
+      @close="showDeleteModal = false"
+    />
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-semibold text-gray-900">
           {{ currentList.name }}
@@ -338,6 +349,7 @@
 
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const shoppingStore = useShoppingStore()
 
@@ -359,6 +371,10 @@ const editingListNameValue = ref('')
 // État du menu de déplacement
 const moveMenuOpen = ref(null)
 
+// État de la modal de confirmation
+const showDeleteModal = ref(false)
+const listToDelete = ref(null)
+
 // Computed properties
 const shoppingLists = computed(() => shoppingStore.shoppingLists)
 const currentList = computed(() => shoppingStore.currentList)
@@ -379,8 +395,25 @@ const selectList = (listId) => {
 }
 
 const deleteList = (listId) => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer cette liste ?')) {
-    shoppingStore.deleteList(listId)
+  listToDelete.value = listId
+  showDeleteModal.value = true
+}
+
+const { $toast } = useNuxtApp()
+
+const confirmDeleteList = () => {
+  if (listToDelete.value) {
+    const listName = shoppingStore.shoppingLists.find(list => list.id === listToDelete.value)?.name || 'Liste'
+    shoppingStore.deleteList(listToDelete.value)
+    listToDelete.value = null
+    showDeleteModal.value = false
+    
+    // Afficher un toast de confirmation
+    $toast.success(
+      'Liste supprimée',
+      `La liste "${listName}" a été supprimée avec succès`,
+      3000
+    )
   }
 }
 

@@ -93,6 +93,9 @@ const error = ref('')
 const successMessage = ref('')
 const addedRecipeId = ref('')
 
+// Accéder au store des recettes
+const { forceReloadFromJSON } = useRecipesStore()
+
 const translateAndAddRecipe = async () => {
   if (!recipeText.value.trim()) return
 
@@ -127,6 +130,9 @@ const translateAndAddRecipe = async () => {
     // Succès !
     successMessage.value = addResponse.message
     addedRecipeId.value = addResponse.recipe.id
+    
+    // Forcer le rechargement du store pour inclure la nouvelle recette
+    await forceReloadFromJSON()
     
     // Vider le champ de texte
     recipeText.value = ''

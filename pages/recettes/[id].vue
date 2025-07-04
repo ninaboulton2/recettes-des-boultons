@@ -80,6 +80,19 @@
         </li>
       </ol>
     </div>
+
+    <!-- Notes -->
+    <div v-if="recipe.notes && recipe.notes.trim()" class="mb-8">
+      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Notes et conseils</h2>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="text-blue-800 whitespace-pre-wrap">{{ recipe.notes }}</p>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="text-center py-16">
     <h2 class="text-2xl font-semibold text-gray-900 mb-4">Recette introuvable</h2>
@@ -106,10 +119,13 @@ const categoryName = computed(() => {
     'viandes': 'Viandes',
     'yaourts et fromages': 'Yaourts et fromages',
     'desserts': 'Desserts',
-    'boissons': 'Boissons'
+    'boissons': 'Boissons',
+    'confitures': 'Confitures'
   }
   return map[recipe.value?.category] || recipe.value?.category || ''
 })
+
+const { $toast } = useNuxtApp()
 
 const addToShoppingList = () => {
   if (!recipe.value) return
@@ -124,6 +140,13 @@ const addToShoppingList = () => {
   
   // Utiliser la nouvelle méthode qui vérifie toutes les listes
   shoppingStore.addIngredientsToLists(ingredients)
+  
+  // Afficher un toast de confirmation
+  $toast.success(
+    'Recette ajoutée !',
+    `${recipe.value.title} a été ajoutée à votre liste de courses`,
+    3000
+  )
 }
 
 const printRecipe = () => {
@@ -250,6 +273,13 @@ const printRecipe = () => {
       <ol>
         ${recipe.value.instructions.map(step => `<li>${step}</li>`).join('')}
       </ol>
+      
+      ${recipe.value.notes && recipe.value.notes.trim() ? `
+      <h2>Notes et conseils</h2>
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <p style="color: #1e40af; margin: 0; line-height: 1.8;">${recipe.value.notes}</p>
+      </div>
+      ` : ''}
       
       <div class="footer">
         Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}

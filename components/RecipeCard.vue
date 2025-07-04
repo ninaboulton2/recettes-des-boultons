@@ -116,6 +116,8 @@ const toggleFavorite = () => {
   recipesStore.toggleFavorite(props.recipe)
 }
 
+const { $toast } = useNuxtApp()
+
 const addToShoppingList = () => {
   // Préparer les ingrédients avec les informations nécessaires
   const ingredients = props.recipe.ingredients.map(ingredient => ({
@@ -127,6 +129,13 @@ const addToShoppingList = () => {
   
   // Utiliser la nouvelle méthode qui vérifie toutes les listes
   shoppingStore.addIngredientsToLists(ingredients)
+  
+  // Afficher un toast de confirmation
+  $toast.success(
+    'Recette ajoutée !',
+    `${props.recipe.title} a été ajoutée à votre liste de courses`,
+    3000
+  )
 }
 
 const preventNavigation = (event) => {

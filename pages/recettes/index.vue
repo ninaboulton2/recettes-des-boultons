@@ -44,6 +44,7 @@
             <option value="yaourts et fromages">Yaourts et fromages</option>
             <option value="desserts">Desserts</option>
             <option value="boissons">Boissons</option>
+            <option value="confitures">Confitures</option>
           </select>
         </div>
 
