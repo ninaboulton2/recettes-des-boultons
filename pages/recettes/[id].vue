@@ -40,26 +40,23 @@
         <p class="text-gray-600 mb-4">{{ recipe.description }}</p>
         <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-2">
           <span><strong>Catégorie :</strong> {{ categoryName }}</span>
-          <span><strong>Temps :</strong> {{ recipe.prepTime + recipe.cookTime }} min</span>
-          <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
+          <span><strong>Temps :</strong> {{
+            typeof(recipe.prepTime) === 'string' ? recipe.prepTime : recipe.prepTime + recipe.cookTime + ' min'}}</span>          <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
         </div>
-        <!-- Dietary badges -->
+        <!-- Tags -->
         <div class="flex flex-wrap gap-2 mb-2">
           <span 
-            v-if="recipe.vegetarian"
-            class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full"
+            v-for="tag in recipe.tags" 
+            :key="tag" 
+            class="px-2 py-1 text-xs text-gray-600 rounded-full"
+            :class="{
+              'bg-green-500 text-white': tag === 'végétarien',
+              'bg-emerald-600 text-white': tag === 'vegan',
+              'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan'
+            }"
           >
-            Végétarien
+            {{ tag }}
           </span>
-          <span 
-            v-if="recipe.vegan"
-            class="px-2 py-1 text-xs font-semibold text-white bg-emerald-600 rounded-full"
-          >
-            Vegan
-          </span>
-        </div>
-        <div class="flex flex-wrap gap-2 mb-2">
-          <span v-for="tag in recipe.tags" :key="tag" class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">{{ tag }}</span>
         </div>
       </div>
     </div>
@@ -107,7 +104,7 @@ const categoryName = computed(() => {
     'plats': 'Plats',
     'poissons': 'Poissons',
     'viandes': 'Viandes',
-    'yaourts-fromages': 'Yaourts et fromages',
+    'yaourts et fromages': 'Yaourts et fromages',
     'desserts': 'Desserts',
     'boissons': 'Boissons'
   }
@@ -233,7 +230,8 @@ const printRecipe = () => {
       
       <div class="recipe-info">
         <span><strong>Catégorie :</strong> ${categoryName.value}</span>
-        <span><strong>Temps :</strong> ${recipe.value.prepTime + recipe.value.cookTime} min</span>
+        <span><strong>Temps :</strong> ${
+          typeof(recipe.value.prepTime) === 'string' ? recipe.value.prepTime : recipe.value.prepTime + recipe.value.cookTime} min</span>
         <span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>
       </div>
       

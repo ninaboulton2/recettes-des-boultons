@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       "id": "1",
       "title": "Nom de la recette",
       "description": "Description courte",
-      "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts-fromages, desserts, boissons
+      "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts, boissons
       "ingredients": [
         { "name": "Ingrédient", "amount": 1, "unit": "g" }
       ],
@@ -45,10 +45,8 @@ export default defineEventHandler(async (event) => {
       "prepTime": ,        // Temps de préparation en minutes
       "cookTime": ,        // Temps de cuisson en minutes
       "servings": ,         // Nombre de portions
-      "image": "/images/plats.png", // soupes, entrees, plats, poissons, viandes, yaourts&fromages, desserts, boissons
+      "image": "/images/plats.png", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts, boissons
       "tags": ["végétarien"], // Tags disponibles: "végétarien", "vegan"
-      "vegetarian": true,    // Boolean
-      "vegan": false,        // Boolean
       "favorite": false,     // Boolean
       "notes": "Astuce ou conseil personnel (optionnel)" // toute information dans la recette qui ne correspond pas aux champs ci-dessus
     }

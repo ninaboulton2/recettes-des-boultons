@@ -34,21 +34,6 @@
           </svg>
         </button>
       </div>
-      <!-- Dietary badges -->
-      <div class="absolute bottom-3 left-3 flex gap-2">
-        <span 
-          v-if="recipe.vegetarian"
-          class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full"
-        >
-          Végétarien
-        </span>
-        <span 
-          v-if="recipe.vegan"
-          class="px-2 py-1 text-xs font-semibold text-white bg-emerald-600 rounded-full"
-        >
-          Vegan
-        </span>
-      </div>
     </div>
 
     <div class="space-y-3">
@@ -94,11 +79,16 @@
       <!-- Tags -->
       <div class="flex flex-wrap gap-1">
         <span 
-          v-for="tag in recipe.tags.slice(0, 3)" 
-          :key="tag"
-          class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
-        >
-          {{ tag }}
+            v-for="tag in recipe.tags" 
+            :key="tag" 
+            class="px-2 py-1 text-xs text-gray-600 rounded-full"
+            :class="{
+              'bg-green-500 text-white': tag === 'végétarien',
+              'bg-emerald-600 text-white': tag === 'vegan',
+              'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan'
+            }"
+          >
+            {{ tag }}
         </span>
         <span 
           v-if="recipe.tags.length > 3" 

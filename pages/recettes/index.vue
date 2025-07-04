@@ -41,7 +41,7 @@
             <option value="plats">Plats</option>
             <option value="poissons">Poissons</option>
             <option value="viandes">Viandes</option>
-            <option value="yaourts-fromages">Yaourts et fromages</option>
+            <option value="yaourts et fromages">Yaourts et fromages</option>
             <option value="desserts">Desserts</option>
             <option value="boissons">Boissons</option>
           </select>
@@ -194,7 +194,8 @@ const filteredRecipes = computed(() => {
     )
   }
 
-  return filtered
+  // Sort recipes alphabetically by title
+  return filtered.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }))
 })
 
 // Watch for search query changes

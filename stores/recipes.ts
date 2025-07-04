@@ -65,7 +65,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       plats: [],
       poissons: [],
       viandes: [],
-      'yaourts-fromages': [],
+      'yaourts et fromages': [],
       desserts: [],
       boissons: []
     }
@@ -147,20 +147,47 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   const loadFromLocalStorage = async () => {
     if (typeof window !== 'undefined') {
-      // Force reload sample data and clear localStorage
-      localStorage.removeItem('boultons-recipes')
-      localStorage.removeItem('boultons-favorites')
-      
-      // Load data from JSON file
       try {
-        const response = await fetch('/data/recipes.json')
-        const data = await response.json()
-        recipes.value = data.recipes
-        favorites.value = data.recipes.filter(recipe => recipe.favorite)
+        // Try to load from localStorage first
+        const storedRecipes = localStorage.getItem('boultons-recipes')
+        const storedFavorites = localStorage.getItem('boultons-favorites')
+        
+        if (storedRecipes && storedFavorites) {
+          // Load from localStorage if available
+          recipes.value = JSON.parse(storedRecipes)
+          favorites.value = JSON.parse(storedFavorites)
+        } else {
+          // Load from JSON file if localStorage is empty
+          const response = await fetch('/data/recipes.json')
+          const data = await response.json()
+          recipes.value = data.recipes
+          favorites.value = data.recipes.filter(recipe => recipe.favorite)
+          // Save to localStorage for future use
+          saveToLocalStorage()
+        }
       } catch (error) {
         console.error('Error loading recipes:', error)
         recipes.value = []
         favorites.value = []
+      }
+    }
+  }
+
+  const forceReloadFromJSON = async () => {
+    if (typeof window !== 'undefined') {
+      try {
+        // Clear localStorage and reload from JSON file
+        localStorage.removeItem('boultons-recipes')
+        localStorage.removeItem('boultons-favorites')
+        
+        const response = await fetch('/data/recipes.json')
+        const data = await response.json()
+        recipes.value = data.recipes
+        favorites.value = data.recipes.filter(recipe => recipe.favorite)
+        // Save to localStorage for future use
+        saveToLocalStorage()
+      } catch (error) {
+        console.error('Error reloading recipes:', error)
       }
     }
   }
@@ -192,6 +219,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     setCategory,
     setSearchQuery,
     toggleTag,
-    clearFilters
+    clearFilters,
+    loadFromLocalStorage,
+    forceReloadFromJSON
   }
 }) 

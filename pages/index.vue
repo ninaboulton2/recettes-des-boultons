@@ -99,7 +99,7 @@
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">Traducteur IA</h3>
-            <p class="text-gray-600">Convertissez vos recettes depuis Google Drive en JSON structuré</p>
+            <p class="text-gray-600">Convertissez et ajoutez automatiquement vos recettes depuis Google Drive</p>
           </div>
         </div>
       </div>
@@ -142,7 +142,7 @@ const categories = [
     image: '/images/viandes.png'
   },
   {
-    id: 'yaourts-fromages',
+    id: 'yaourts et fromages',
     name: 'Yaourts et fromages',
     description: 'Produits laitiers et fromages artisanaux',
     image: '/images/yaourts&fromages.png'

@@ -46,7 +46,9 @@
 <script setup>
 const recipesStore = useRecipesStore()
 
-const favorites = computed(() => recipesStore.favorites)
+const favorites = computed(() => 
+  recipesStore.favorites.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }))
+)
 
 // SEO
 useHead({

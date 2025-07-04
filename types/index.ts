@@ -10,11 +10,10 @@ export interface Recipe {
   servings: number
   image: string
   tags: string[]
-  vegetarian: boolean
-  vegan: boolean
   favorite: boolean
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
+  notes: string
 }
 
 export interface Ingredient {
@@ -30,7 +29,7 @@ export type RecipeCategory =
   | 'plats'
   | 'poissons'
   | 'viandes'
-  | 'yaourts-fromages'
+  | 'yaourts et fromages'
   | 'desserts'
   | 'boissons'
 

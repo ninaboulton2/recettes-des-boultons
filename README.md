@@ -40,7 +40,7 @@ boultons-shopping-list/
   "id": "1",
   "title": "Nom de la recette",
   "description": "Description courte",
-  "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts-fromages, desserts, boissons
+  "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts, boissons
   "ingredients": [
     { "name": "Ingrédient", "amount": 1, "unit": "g" }
   ],
@@ -53,8 +53,6 @@ boultons-shopping-list/
   "servings": 4,         // Nombre de portions
   "image": "/images/plats.png",
   "tags": ["végétarien"], // Tags disponibles: "végétarien", "vegan"
-  "vegetarian": true,    // Boolean
-  "vegan": false,        // Boolean
   "favorite": false,     // Boolean
   "createdAt": "2024-01-15T00:00:00.000Z",
   "updatedAt": "2024-01-15T00:00:00.000Z",
@@ -102,8 +100,7 @@ const nouvelleRecette = {
   servings: 4,
   image: "/images/plats.png",
   tags: ["végétarien"],
-  vegetarian: true,
-  vegan: false
+  favorite: false
 }
 
 addRecipe(nouvelleRecette)
@@ -134,7 +131,7 @@ Les recettes utilisent un système de tags simple :
 - **végétarien** : Recettes sans viande ni poisson
 - **vegan** : Recettes sans aucun produit animal
 
-Les propriétés `vegetarian` et `vegan` sont des booléens qui doivent correspondre aux tags.
+Les badges "Végétarien" et "Vegan" sont affichés automatiquement en fonction des tags présents dans la recette.
 
 ## 🎨 Fonctionnalités
 
@@ -145,6 +142,8 @@ Les propriétés `vegetarian` et `vegan` sont des booléens qui doivent correspo
 - ✅ Interface responsive
 - ✅ Gestion des recettes via JSON
 - ✅ Utilitaire de gestion des recettes
+- ✅ Traducteur IA pour ajouter automatiquement des recettes depuis Google Drive
+- ✅ Système de tags unifié (plus de propriétés boolean)
 
 ## 🚀 Déploiement
 
@@ -195,6 +194,29 @@ Pour ajouter de nouvelles recettes :
 2. Respectez la structure JSON
 3. Ajoutez des images appropriées
 4. Testez l'affichage dans l'application
+
+## 🤖 Traducteur IA
+
+Le traducteur IA permet d'ajouter automatiquement des recettes depuis Google Drive :
+
+### Utilisation
+1. Allez sur `/traducteur` dans l'application
+2. Collez le texte de votre recette depuis Google Drive
+3. Cliquez sur "Traduire et ajouter aux recettes"
+4. L'IA convertit automatiquement le texte en JSON structuré
+5. La recette est ajoutée au fichier `recipes.json` avec un ID unique
+6. Un message de succès s'affiche avec des liens vers la recette
+
+### Fonctionnalités
+- **Traduction automatique** : L'IA analyse le texte et extrait tous les éléments (titre, ingrédients, instructions, etc.)
+- **Ajout automatique** : La recette est immédiatement ajoutée à votre collection
+- **Génération d'ID** : Un ID unique est automatiquement généré
+- **Métadonnées** : Les dates de création et modification sont ajoutées automatiquement
+- **Navigation** : Liens directs vers la recette ajoutée ou toutes les recettes
+
+### Prérequis
+- Clé API OpenAI configurée dans le fichier `.env`
+- Le fichier `recipes.json` doit être accessible en écriture
 
 ---
 

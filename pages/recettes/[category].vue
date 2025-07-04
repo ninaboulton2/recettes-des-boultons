@@ -140,7 +140,7 @@ const categoryName = computed(() => {
     'plats': 'Plats',
     'poissons': 'Poissons',
     'viandes': 'Viandes',
-    'yaourts-fromages': 'Yaourts et fromages',
+    'yaourts et fromages': 'Yaourts et fromages',
     'desserts': 'Desserts',
     'boissons': 'Boissons'
   }

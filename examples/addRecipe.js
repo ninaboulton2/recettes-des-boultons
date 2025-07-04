@@ -33,9 +33,7 @@ const nouvelleRecette = {
   cookTime: 45,
   servings: 6,
   image: "/images/plats.png",
-  tags: ["végétarien", "vegan"],
-  vegetarian: true,
-  vegan: true
+  tags: ["végétarien", "vegan"]
 }
 
 // Ajouter la recette
