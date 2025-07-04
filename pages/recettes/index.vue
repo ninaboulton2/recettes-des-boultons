@@ -237,7 +237,7 @@ const clearFilters = () => {
 useHead({
   title: 'Recettes - Recettes des Boultons',
   meta: [
-    { name: 'description', content: 'Découvrez toutes nos recettes délicieuses. Filtrez par catégorie, difficulté et trouvez votre prochain plat favori !' }
+    { name: 'description', content: 'Découvrez toutes nos recettes délicieuses. Filtrez par catégorie et tags et trouvez votre prochain plat favori !' }
   ]
 })
 </script> 

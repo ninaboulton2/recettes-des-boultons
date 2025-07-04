@@ -30,16 +30,28 @@ export default defineEventHandler(async (event) => {
     const prompt = `
     Convertis cette recette en format JSON structuré. 
     Le JSON doit contenir les champs suivants :
-    - title: le titre de la recette
-    - description: une brève description
-    - prepTime: temps de préparation en minutes
-    - cookTime: temps de cuisson en minutes
-    - servings: nombre de portions
-    - difficulty: niveau de difficulté (facile, moyen, difficile)
-    - ingredients: tableau d'objets avec {name: string, amount: string, unit: string}
-    - instructions: tableau d'étapes numérotées
-    - category: catégorie de la recette
-    - tags: tableau de tags pertinents
+    {
+      "id": "1",
+      "title": "Nom de la recette",
+      "description": "Description courte",
+      "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts-fromages, desserts, boissons
+      "ingredients": [
+        { "name": "Ingrédient", "amount": 1, "unit": "g" }
+      ],
+      "instructions": [
+        "Étape 1",
+        "Étape 2"
+      ],
+      "prepTime": ,        // Temps de préparation en minutes
+      "cookTime": ,        // Temps de cuisson en minutes
+      "servings": ,         // Nombre de portions
+      "image": "/images/plats.png", // soupes, entrees, plats, poissons, viandes, yaourts&fromages, desserts, boissons
+      "tags": ["végétarien"], // Tags disponibles: "végétarien", "vegan"
+      "vegetarian": true,    // Boolean
+      "vegan": false,        // Boolean
+      "favorite": false,     // Boolean
+      "notes": "Astuce ou conseil personnel (optionnel)" // toute information dans la recette qui ne correspond pas aux champs ci-dessus
+    }
 
     Recette à convertir :
     ${recipeText}
@@ -52,7 +64,7 @@ export default defineEventHandler(async (event) => {
       messages: [
         {
           role: "system",
-          content: "Tu es un expert en conversion de recettes en format JSON structuré. Tu retournes toujours un JSON valide et bien formaté."
+          content: "Tu es un expert en conversion de recettes en format JSON structuré. Tu retournes toujours un JSON valide et bien formaté, sans texte supplémentaire."
         },
         {
           role: "user",
@@ -60,7 +72,8 @@ export default defineEventHandler(async (event) => {
         }
       ],
       temperature: 0.3,
-      max_tokens: 2000
+      max_tokens: 2000,
+      response_format: { type: "json_object" }
     })
 
     const translatedRecipe = response.choices[0]?.message?.content

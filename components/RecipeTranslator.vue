@@ -32,16 +32,6 @@
           Traduire en JSON
         </span>
       </button>
-      
-      <!-- Bouton de test (mode développement) -->
-      <button
-        v-if="isDev"
-        @click="testTranslation"
-        :disabled="isLoading || !recipeText.trim()"
-        class="btn-secondary px-8 py-3 text-lg ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Test (sans API)
-      </button>
     </div>
 
     <!-- Résultat de la traduction -->
@@ -76,7 +66,6 @@ const recipeText = ref('')
 const translatedRecipe = ref('')
 const isLoading = ref(false)
 const error = ref('')
-const isDev = process.env.NODE_ENV === 'development'
 
 const translateRecipe = async () => {
   if (!recipeText.value.trim()) return
@@ -101,49 +90,6 @@ const translateRecipe = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-const testTranslation = async () => {
-  if (!recipeText.value.trim()) return
-
-  isLoading.value = true
-  error.value = ''
-  translatedRecipe.value = ''
-
-  // Simuler un délai de traitement
-  await new Promise(resolve => setTimeout(resolve, 2000))
-
-  // Générer un JSON de test basé sur le texte fourni
-  const testRecipe = {
-    title: "Recette de test",
-    description: "Recette générée en mode test",
-    prepTime: 15,
-    cookTime: 30,
-    servings: 4,
-    difficulty: "facile",
-    ingredients: [
-      {
-        name: "ingrédient 1",
-        amount: "100",
-        unit: "g"
-      },
-      {
-        name: "ingrédient 2",
-        amount: "2",
-        unit: "cuillères"
-      }
-    ],
-    instructions: [
-      "Étape 1: Préparer les ingrédients",
-      "Étape 2: Mélanger",
-      "Étape 3: Cuire"
-    ],
-    category: "test",
-    tags: ["test", "démonstration"]
-  }
-
-  translatedRecipe.value = JSON.stringify(testRecipe, null, 2)
-  isLoading.value = false
 }
 
 const copyToClipboard = async () => {
