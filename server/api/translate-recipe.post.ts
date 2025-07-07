@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
       "image": "/images/plats.png", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts, boissons, confitures
       "tags": ["végétarien"], // Tags disponibles: "végétarien", "vegan"
       "favorite": false,     // Boolean
-      "notes": "Astuce ou conseil personnel (optionnel)" // toute information dans la recette qui ne correspond pas aux champs ci-dessus
+      "notes": "Astuce ou conseil personnel (optionnel)" // toute information dans la recette qui ne correspond pas aux champs ci-dessus, ou des informations supplémentaires, ne rien inventer
     }
 
     Recette à convertir :
