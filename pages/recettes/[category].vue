@@ -141,7 +141,7 @@ const categoryName = computed(() => {
     'poissons': 'Poissons',
     'viandes': 'Viandes',
     'yaourts et fromages': 'Yaourts et fromages',
-    'desserts': 'Desserts',
+    'desserts et gâteaux': 'Desserts et gâteaux',
     'boissons': 'Boissons',
     'confitures': 'Confitures'
   }

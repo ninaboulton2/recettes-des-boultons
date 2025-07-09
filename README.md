@@ -40,7 +40,7 @@ boultons-shopping-list/
   "id": "1",
   "title": "Nom de la recette",
   "description": "Description courte",
-  "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts, boissons
+  "category": "plats", // soupes, entrees, plats, poissons, viandes, yaourts et fromages, desserts et gâteaux, boissons
   "ingredients": [
     { "name": "Ingrédient", "amount": 1, "unit": "g" }
   ],

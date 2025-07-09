@@ -118,4 +118,6 @@ public
 .nuxt/devtools
 
 # Local env files
-.env*.local 
+.env*.local
+
+# Credentials and sensitive files

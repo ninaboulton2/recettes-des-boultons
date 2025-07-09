@@ -42,7 +42,7 @@
             <option value="poissons">Poissons</option>
             <option value="viandes">Viandes</option>
             <option value="yaourts et fromages">Yaourts et fromages</option>
-            <option value="desserts">Desserts</option>
+            <option value="desserts et gâteaux">Desserts et gâteaux</option>
             <option value="boissons">Boissons</option>
             <option value="confitures">Confitures</option>
           </select>
@@ -195,8 +195,12 @@ const filteredRecipes = computed(() => {
     )
   }
 
-  // Sort recipes alphabetically by title
-  return filtered.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }))
+  // Sort recipes alphabetically by title with safety check
+  return filtered.sort((a, b) => {
+    const titleA = a.title || ''
+    const titleB = b.title || ''
+    return titleA.localeCompare(titleB, 'fr', { sensitivity: 'base' })
+  })
 })
 
 // Watch for search query changes

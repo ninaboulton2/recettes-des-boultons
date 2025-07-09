@@ -1,0 +1,25 @@
+{
+  "name": "batch-recipe-translator",
+  "version": "1.0.0",
+  "description": "Script de traduction par lot des recettes",
+  "main": "batch-recipe-translator.js",
+  "scripts": {
+    "start": "node batch-recipe-translator.js",
+    "test": "node create-test-files.js",
+    "translate": "./start-batch-translation.sh",
+    "translate:folder": "node batch-recipe-translator.js"
+  },
+  "keywords": [
+    "recipe",
+    "translation",
+    "batch",
+    "openai",
+    "nuxt"
+  ],
+  "author": "Boultons Shopping List",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 

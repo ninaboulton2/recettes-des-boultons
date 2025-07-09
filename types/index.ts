@@ -30,7 +30,7 @@ export type RecipeCategory =
   | 'poissons'
   | 'viandes'
   | 'yaourts et fromages'
-  | 'desserts'
+  | 'desserts et gâteaux'
   | 'boissons'
 
 export interface Category {

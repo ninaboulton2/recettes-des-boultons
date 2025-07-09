@@ -66,7 +66,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       poissons: [],
       viandes: [],
       'yaourts et fromages': [],
-      desserts: [],
+      'desserts et gâteaux': [],
       boissons: [],
       confitures: []
     }
@@ -80,8 +80,13 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   // Actions
   const addRecipe = (recipe) => {
-    recipes.value.push(recipe)
-    saveToLocalStorage()
+    // Validate recipe before adding
+    if (recipe && recipe.id && recipe.title && recipe.category) {
+      recipes.value.push(recipe)
+      saveToLocalStorage()
+    } else {
+      console.warn('Invalid recipe data:', recipe)
+    }
   }
 
   const updateRecipe = (id, updates) => {
@@ -155,14 +160,28 @@ export const useRecipesStore = defineStore('recipes', () => {
         
         if (storedRecipes && storedFavorites) {
           // Load from localStorage if available
-          recipes.value = JSON.parse(storedRecipes)
-          favorites.value = JSON.parse(storedFavorites)
+          const parsedRecipes = JSON.parse(storedRecipes)
+          const parsedFavorites = JSON.parse(storedFavorites)
+          
+          // Validate and clean recipes data
+          recipes.value = parsedRecipes.filter(recipe => 
+            recipe && recipe.id && recipe.title && recipe.category
+          )
+          favorites.value = parsedFavorites.filter(recipe => 
+            recipe && recipe.id && recipe.title && recipe.category
+          )
         } else {
           // Load from JSON file if localStorage is empty
           const response = await fetch('/data/recipes.json')
           const data = await response.json()
-          recipes.value = data.recipes
-          favorites.value = data.recipes.filter(recipe => recipe.favorite)
+          
+          // Validate and clean recipes data
+          recipes.value = data.recipes.filter(recipe => 
+            recipe && recipe.id && recipe.title && recipe.category
+          )
+          favorites.value = data.recipes.filter(recipe => 
+            recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
+          )
           // Save to localStorage for future use
           saveToLocalStorage()
         }
@@ -183,8 +202,14 @@ export const useRecipesStore = defineStore('recipes', () => {
         
         const response = await fetch('/data/recipes.json')
         const data = await response.json()
-        recipes.value = data.recipes
-        favorites.value = data.recipes.filter(recipe => recipe.favorite)
+        
+        // Validate and clean recipes data
+        recipes.value = data.recipes.filter(recipe => 
+          recipe && recipe.id && recipe.title && recipe.category
+        )
+        favorites.value = data.recipes.filter(recipe => 
+          recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
+        )
         // Save to localStorage for future use
         saveToLocalStorage()
       } catch (error) {
