@@ -42,14 +42,20 @@
             Tags
           </label>
           <button
-            @click="toggleTagsDropdown"
+            @click="availableTags.length > 0 ? toggleTagsDropdown($event) : null"
             type="button"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left bg-white flex justify-between items-center"
+            :disabled="availableTags.length === 0"
+            :class="[
+              'w-full px-4 py-2 border rounded-lg text-left flex justify-between items-center',
+              availableTags.length === 0 
+                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+            ]"
           >
-            <span class="text-gray-700">
-              {{ selectedTags.length > 0 ? `${selectedTags.length} tag(s) sélectionné(s)` : 'Tous les tags' }}
+            <span>
+              {{ availableTags.length === 0 ? 'Aucun tag disponible' : (selectedTags.length > 0 ? `${selectedTags.length} tag(s) sélectionné(s)` : 'Tous les tags') }}
             </span>
-            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" :class="availableTags.length === 0 ? 'text-gray-300' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
           </button>
