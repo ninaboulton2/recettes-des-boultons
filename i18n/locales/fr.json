@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "title": "Recettes des Boultons",
+    "description": "Retrouvez ici toutes les recettes préférées des Boultons !",
+    "home": {
+      "title": "Accueil - Recettes des Boultons",
+      "description": "Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et plus encore !"
+    }
+  },
+  "navigation": {
+    "home": "Accueil",
+    "recipes": "Recettes",
+    "favorites": "Favoris",
+    "shopping": "Courses",
+    "planning": "Planning"
+  },
+  "home": {
+    "title": "Recettes des Boultons",
+    "subtitle": "Retrouvez ici toutes les recettes préférées des Boultons !",
+    "viewRecipes": "Voir les recettes",
+    "addRecipe": "Ajouter une recette",
+    "categories": {
+      "title": "Explorez nos catégories",
+      "subtitle": "Découvrez nos recettes organisées par catégories pour trouver facilement ce qui vous plaît"
+    },
+    "features": {
+      "title": "Fonctionnalités",
+      "subtitle": "Tout ce dont vous avez besoin pour organiser vos repas",
+      "detailedRecipes": {
+        "title": "Recettes détaillées",
+        "description": "Instructions pas à pas, temps de préparation et ingrédients précis"
+      },
+      "shoppingLists": {
+        "title": "Listes de courses",
+        "description": "Générez automatiquement vos listes de courses à partir des recettes"
+      },
+      "weeklyPlanning": {
+        "title": "Planning hebdomadaire",
+        "description": "Organisez vos repas de la semaine et planifiez vos menus"
+      },
+      "aiTranslator": {
+        "title": "Traducteur IA",
+        "description": "Convertissez et ajoutez automatiquement vos recettes depuis Google Drive"
+      }
+    }
+  },
+  "categories": {
+    "soupes": {
+      "name": "Soupes",
+      "description": "Soupes chaudes et froides pour toutes les saisons"
+    },
+    "entrees": {
+      "name": "Entrées, Salades, Pains et accompagnements",
+      "description": "Entrées fraîches et accompagnements savoureux"
+    },
+    "plats": {
+      "name": "Plats",
+      "description": "Plats principaux équilibrés et délicieux"
+    },
+    "poissons": {
+      "name": "Poissons",
+      "description": "Recettes de poissons frais et savoureux"
+    },
+    "viandes": {
+      "name": "Viandes",
+      "description": "Plats de viandes traditionnels et modernes"
+    },
+    "yaourts_et_fromages": {
+      "name": "Yaourts et fromages",
+      "description": "Produits laitiers et fromages artisanaux"
+    },
+    "desserts_et_gateaux": {
+      "name": "Desserts et gâteaux",
+      "description": "Desserts sucrés et pâtisseries maison"
+    },
+    "boissons": {
+      "name": "Boissons",
+      "description": "Boissons rafraîchissantes et cocktails"
+    },
+    "confitures": {
+      "name": "Confitures",
+      "description": "Confitures et conserves maison"
+    }
+  },
+  "recipes": {
+    "title": "Toutes nos recettes",
+    "subtitle": "Découvrez notre collection de recettes délicieuses",
+    "search": {
+      "label": "Rechercher",
+      "placeholder": "Nom de la recette, ingrédient..."
+    },
+    "filters": {
+      "category": {
+        "label": "Catégorie",
+        "all": "Toutes les catégories"
+      },
+      "tags": {
+        "label": "Tags",
+        "all": "Tous les tags",
+        "none": "Aucun tag disponible",
+        "selected": "{count} tag(s) sélectionné(s)"
+      },
+      "clear": "Effacer les filtres",
+      "count": "{count} recette{plural}"
+    },
+    "empty": {
+      "title": "Aucune recette trouvée",
+      "description": "Essayez de modifier vos critères de recherche ou de supprimer les filtres.",
+      "clearFilters": "Effacer les filtres"
+    }
+  },
+  "favorites": {
+    "title": "Mes recettes favorites",
+    "subtitle": "Retrouvez ici toutes vos recettes préférées",
+    "empty": {
+      "title": "Aucune recette favorite",
+      "description": "Vous n'avez pas encore ajouté de recettes à vos favoris. Parcourez nos recettes et cliquez sur le cœur pour les ajouter !",
+      "discover": "Découvrir des recettes"
+    }
+  },
+  "planning": {
+    "title": "Planning hebdomadaire",
+    "subtitle": "Organisez vos repas de la semaine",
+    "weekOf": "Semaine du {date}",
+    "print": "Imprimer",
+    "meals": {
+      "lunch": "Déjeuner",
+      "dinner": "Dîner"
+    },
+    "addMeal": "+ Ajouter un repas",
+    "note": {
+      "placeholder": "Note (optionnel)",
+      "edit": "Modifier la note"
+    },
+    "actions": {
+      "remove": "Supprimer",
+      "save": "Sauvegarder",
+      "cancel": "Annuler"
+    },
+    "navigation": {
+      "previous": "Semaine précédente",
+      "next": "Semaine suivante"
+    },
+    "days": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "dayNotes": {
+      "title": "Notes du jour",
+      "placeholder": "Notes générales (optionnel)",
+      "edit": "Modifier les notes"
+    },
+    "mealSelector": {
+      "title": "Choisir une recette",
+      "search": "Rechercher une recette...",
+      "noRecipes": "Aucune recette trouvée",
+      "close": "Fermer"
+    }
+  },
+  "shopping": {
+    "title": "Listes de courses",
+    "subtitle": "Gérez vos listes de courses.",
+    "printButton": "Imprimer",
+    "selectList": {
+      "title": "Sélectionner une liste",
+      "items": "{count} article{plural}",
+      "createdOn": "Créée le {date}"
+    },
+    "createList": {
+      "title": "Créer une nouvelle liste",
+      "placeholder": "Nom de la liste",
+      "button": "Créer"
+    },
+    "actions": {
+      "edit": "Modifier le nom",
+      "save": "Sauvegarder",
+      "cancel": "Annuler",
+      "delete": "Supprimer la liste",
+      "clearChecked": "Effacer cochés"
+    },
+    "addItem": {
+      "title": "Ajouter un article",
+      "name": "Nom de l'article",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "button": "Ajouter"
+    },
+    "deleteModal": {
+      "title": "Supprimer la liste",
+      "message": "Êtes-vous sûr de vouloir supprimer cette liste ? Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "empty": {
+      "title": "Aucune liste de courses",
+      "description": "Créez votre première liste de courses pour commencer à organiser vos achats.",
+      "createFirst": "Créer ma première liste"
+    },
+    "itemActions": {
+      "editQuantity": "Modifier la quantité",
+      "unit": "unité",
+      "note": "note (optionnel)",
+      "save": "Sauvegarder",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "moveTo": "Déplacer vers une autre liste"
+    },
+    "moveItem": {
+      "selectList": "Déplacer vers :"
+    },
+    "emptyState": {
+      "noLists": "Aucune liste de courses",
+      "createFirstList": "Créez votre première liste de courses pour commencer à organiser vos achats."
+    },
+    "print": {
+      "title": "Recettes des Boultons",
+      "createdOn": "Liste créée le {date}",
+      "totalItems": "{count} article{plural} au total",
+      "toBuy": "{count} article{plural} à acheter",
+      "bought": "{count} article{plural} acheté{plural}",
+      "footer": "Recettes des Boultons - {date}"
+    }
+  },
+  "planningPrint": {
+    "title": "Planning hebdomadaire",
+    "weekOf": "Semaine du {date}",
+    "breakfast": "Petit-déjeuner",
+    "lunch": "Déjeuner",
+    "dinner": "Dîner",
+    "dayNotes": "Notes du jour",
+    "noMeal": "Aucun repas planifié",
+    "footer": "Recettes des Boultons - {date}"
+  },
+  "recipePrint": {
+    "title": "Recettes des Boultons",
+    "category": "Catégorie :",
+    "time": "Temps :",
+    "servings": "Portions :",
+    "ingredients": "Ingrédients",
+    "instructions": "Instructions",
+    "notes": "Notes et conseils",
+    "footer": "Recettes des Boultons - {date}"
+  },
+  "footer": {
+    "copyright": "© {year} Recettes des Boultons. Tous droits réservés."
+  }
+} 

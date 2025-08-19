@@ -7,9 +7,9 @@
 <script setup>
 // Configuration globale de l'application
 useHead({
-  title: 'Recettes des Boultons',
+  title: $t('meta.title'),
   meta: [
-    { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' }
+    { name: 'description', content: $t('meta.description') }
   ]
 })
 </script> 

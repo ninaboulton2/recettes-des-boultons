@@ -8,7 +8,7 @@
           <div class="flex items-center">
             <NuxtLink to="/" class="flex items-center space-x-3">
               <img src="/images/logo.png" alt="Logo" class="h-10">
-              <span class="text-2xl font-lobster" style="color: rgb(123, 136, 189);">Recettes des Boultons</span>
+              <span class="text-2xl font-lobster" style="color: rgb(123, 136, 189);">{{ $t('meta.title') }}</span>
             </NuxtLink>
           </div>
 
@@ -20,36 +20,41 @@
                 class="nav-link"
                 :class="{ 'nav-link-active': $route.path === '/' }"
               >
-                Accueil
+                {{ $t('navigation.home') }}
               </NuxtLink>
               <NuxtLink 
                 to="/recettes" 
                 class="nav-link"
                 :class="{ 'nav-link-active': $route.path.startsWith('/recettes') }"
               >
-                Recettes
+                {{ $t('navigation.recipes') }}
               </NuxtLink>
               <NuxtLink 
                 to="/favoris" 
                 class="nav-link"
                 :class="{ 'nav-link-active': $route.path === '/favoris' }"
               >
-                Favoris
+                {{ $t('navigation.favorites') }}
               </NuxtLink>
               <NuxtLink 
                 to="/courses" 
                 class="nav-link"
                 :class="{ 'nav-link-active': $route.path.startsWith('/courses') }"
               >
-                Courses
+                {{ $t('navigation.shopping') }}
               </NuxtLink>
               <NuxtLink 
                 to="/planning" 
                 class="nav-link"
                 :class="{ 'nav-link-active': $route.path === '/planning' }"
               >
-                Planning
+                {{ $t('navigation.planning') }}
               </NuxtLink>
+              
+              <!-- Language Switcher -->
+              <div class="ml-4">
+                <LanguageSwitcher />
+              </div>
             </div>
           </div>
 
@@ -76,7 +81,7 @@
               :class="{ 'nav-link-active': $route.path === '/' }"
               @click="mobileMenuOpen = false"
             >
-              Accueil
+              {{ $t('navigation.home') }}
             </NuxtLink>
             <NuxtLink 
               to="/recettes" 
@@ -84,7 +89,7 @@
               :class="{ 'nav-link-active': $route.path.startsWith('/recettes') }"
               @click="mobileMenuOpen = false"
             >
-              Recettes
+              {{ $t('navigation.recipes') }}
             </NuxtLink>
             <NuxtLink 
               to="/favoris" 
@@ -92,7 +97,7 @@
               :class="{ 'nav-link-active': $route.path === '/favoris' }"
               @click="mobileMenuOpen = false"
             >
-              Favoris
+              {{ $t('navigation.favorites') }}
             </NuxtLink>
             <NuxtLink 
               to="/courses" 
@@ -100,7 +105,7 @@
               :class="{ 'nav-link-active': $route.path.startsWith('/courses') }"
               @click="mobileMenuOpen = false"
             >
-              Courses
+              {{ $t('navigation.shopping') }}
             </NuxtLink>
             <NuxtLink 
               to="/planning" 
@@ -108,8 +113,13 @@
               :class="{ 'nav-link-active': $route.path === '/planning' }"
               @click="mobileMenuOpen = false"
             >
-              Planning
+              {{ $t('navigation.planning') }}
             </NuxtLink>
+            
+            <!-- Mobile Language Switcher -->
+            <div class="border-t border-gray-200 pt-2 mt-2">
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
       </nav>
@@ -127,7 +137,7 @@
     <footer class="bg-white border-t border-gray-200 mt-auto">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="text-center text-gray-600">
-          <p>&copy; {{ new Date().getFullYear() }} Recettes des Boultons. Tous droits réservés.</p>
+          <p>{{ $t('footer.copyright', { year: new Date().getFullYear() }) }}</p>
         </div>
       </div>
     </footer>
@@ -143,7 +153,7 @@ import ToastContainer from '@/components/ToastContainer.vue'
 const mobileMenuOpen = ref(false)
 const toastContainer = ref()
 
-// Exposer le toast container globalement
+// Setup global toast container
 onMounted(() => {
   if (process.client) {
     window.$toastContainer = toastContainer.value
