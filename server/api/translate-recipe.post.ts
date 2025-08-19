@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
           content: prompt
         }
       ],
-      temperature: 0.3,
+      temperature: 0.1,
       max_tokens: 2000,
       response_format: { type: "json_object" }
     })
