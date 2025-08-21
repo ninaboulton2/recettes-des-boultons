@@ -51,24 +51,58 @@
                 {{ $t('navigation.planning') }}
               </NuxtLink>
               
-              <!-- Language Switcher -->
-              <div class="ml-4">
-                <LanguageSwitcher />
-              </div>
             </div>
           </div>
 
-          <!-- Mobile menu button -->
-          <div class="md:hidden">
-            <button 
-              @click="mobileMenuOpen = !mobileMenuOpen"
-              class="text-gray-700 hover:text-primary-600 focus:outline-none focus:text-primary-600"
-            >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          <!-- Côté droit - Authentification et menu mobile -->
+          <div class="flex items-center space-x-4">
+            
+            <!-- Language Switcher -->
+            <div class="ml-4">
+              <LanguageSwitcher />
+            </div>
+
+            <!-- Bouton de connexion/déconnexion -->
+            <div v-if="!authStore.isAuthenticated">
+              <button
+                @click="showLoginModal = true"
+                class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                title="Connexion Admin"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Utilisateur connecté -->
+            <div v-else class="hidden md:flex items-center space-x-3">
+              <div class="text-sm text-gray-700">
+                <span class="font-medium">{{ authStore.currentUser?.username }}</span>
+              </div>
+              <button
+                @click="handleLogout"
+                class="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                title="Déconnexion"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+              <button 
+                @click="mobileMenuOpen = !mobileMenuOpen"
+                class="text-gray-700 hover:text-primary-600 focus:outline-none focus:text-primary-600"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -116,6 +150,40 @@
               {{ $t('navigation.planning') }}
             </NuxtLink>
             
+            <!-- Authentification mobile -->
+            <div class="border-t border-gray-200 pt-2 mt-2">
+              <div v-if="!authStore.isAuthenticated">
+                <button
+                  @click="showLoginModal = true; mobileMenuOpen = false"
+                  class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span>Connexion Admin</span>
+                  </div>
+                </button>
+              </div>
+              <div v-else class="space-y-2">
+                <div class="text-sm text-gray-700 text-center">
+                  <span class="font-medium">{{ authStore.currentUser?.username }}</span>
+
+                </div>
+                <button
+                  @click="handleLogout; mobileMenuOpen = false"
+                  class="block w-full text-center bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Déconnexion</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
             <!-- Mobile Language Switcher -->
             <div class="border-t border-gray-200 pt-2 mt-2">
               <LanguageSwitcher />
@@ -144,14 +212,26 @@
 
     <!-- Toast Container -->
     <ToastContainer ref="toastContainer" />
+
+    <!-- Modal de connexion -->
+    <LoginModal 
+      :is-open="showLoginModal" 
+      @close="showLoginModal = false"
+      @success="handleLoginSuccess"
+    />
   </div>
 </template>
 
 <script setup>
 import ToastContainer from '@/components/ToastContainer.vue'
+import { useAuthStore } from '~/stores/auth'
 
 const mobileMenuOpen = ref(false)
+const showLoginModal = ref(false)
 const toastContainer = ref()
+
+// Store d'authentification
+const authStore = useAuthStore()
 
 // Setup global toast container
 onMounted(() => {
@@ -159,4 +239,15 @@ onMounted(() => {
     window.$toastContainer = toastContainer.value
   }
 })
+
+const handleLoginSuccess = () => {
+  showLoginModal.value = false
+  // Optionnel : afficher un message de succès
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  // Rediriger vers la page d'accueil après déconnexion
+  window.location.href = '/'
+}
 </script> 

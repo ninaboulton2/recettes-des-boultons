@@ -35,8 +35,9 @@
           </svg>
         </button>
 
-        <!-- Edit button -->
+        <!-- Edit button - visible uniquement pour les admins -->
         <button 
+          v-if="showAdminActions"
           @click.stop.prevent="editRecipe"
           @mousedown.stop.prevent
           @mouseup.stop.prevent
@@ -48,8 +49,9 @@
           </svg>
         </button>
 
-        <!-- Delete button -->
+        <!-- Delete button - visible uniquement pour les admins -->
         <button 
+          v-if="showAdminActions"
           @click.stop.prevent="deleteRecipe"
           @mousedown.stop.prevent
           @mouseup.stop.prevent
@@ -135,6 +137,10 @@ const props = defineProps({
   recipe: {
     type: Object,
     required: true
+  },
+  showAdminActions: {
+    type: Boolean,
+    default: false
   }
 })
 

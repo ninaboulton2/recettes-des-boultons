@@ -7,7 +7,14 @@
     "dev": "nuxt dev --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
-    "generate": "nuxt generate"
+    "generate": "nuxt generate",
+    "security:test": "node scripts/test-security.js",
+    "security:generate": "node scripts/generate-secure-config.js",
+    "security:check": "npm run security:test && echo '✅ Vérification de sécurité terminée'",
+    "prebuild": "npm run security:check",
+    "test:auth": "echo '🧪 Tests d'authentification - à implémenter'",
+    "lint": "echo '🔍 Linting - à configurer'",
+    "lint:fix": "echo '🔧 Correction automatique du linting - à configurer'"
   },
   "dependencies": {
     "@nuxt/image": "^1.0.0",
@@ -15,6 +22,11 @@
     "@nuxtjs/i18n": "^10.0.0-rc.2",
     "@nuxtjs/tailwindcss": "^6.10.0",
     "@pinia/nuxt": "^0.5.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
     "nuxt": "^3.10.0",
     "openai": "^5.8.2",
     "pinia": "^2.1.0",
@@ -22,5 +34,19 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "latest"
-  }
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "nuxt",
+    "vue",
+    "recipes",
+    "cooking",
+    "authentication",
+    "security"
+  ],
+  "author": "Les Boultons",
+  "license": "MIT"
 }

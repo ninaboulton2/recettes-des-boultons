@@ -11,14 +11,13 @@
         </p>
       </div>
       <div class="flex gap-2 mt-4 md:mt-0">
+        <!-- Bouton Nouvelle recette - visible uniquement pour les admins -->
         <NuxtLink
-          to="/traducteur"
+          v-if="authStore.isAdmin"
+          to="/recettes/ajouter"
           class="btn-primary"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Nouvelle recette
+          + Nouvelle recette
         </NuxtLink>
         
         <!-- Indicateur de chargement -->
@@ -139,6 +138,7 @@
       >
         <RecipeCard 
           :recipe="recipe" 
+          :show-admin-actions="authStore.isAdmin"
           @edit="editRecipe"
           @delete="confirmDeleteRecipe"
         />
@@ -192,6 +192,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const recipesStore = useRecipesStore()
+const authStore = useAuthStore()
 const route = useRoute()
 
 // Reactive filters synchronisés avec le store
@@ -339,8 +340,6 @@ const closeDeleteModal = () => {
   showDeleteModal.value = false
   recipeToDelete.value = null
 }
-
-
 
 // SEO
 useHead({
