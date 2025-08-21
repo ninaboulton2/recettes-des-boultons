@@ -1,23 +1,24 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import fs from 'fs'
 import path from 'path'
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
-    const { recipe } = body
+    // Récupérer l'ID de la recette à supprimer depuis les paramètres de requête
+    const query = getQuery(event)
+    const recipeId = query.id
 
-    if (!recipe) {
+    if (!recipeId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'La recette est requise'
+        statusMessage: 'ID de recette manquant'
       })
     }
 
-    // Chemin vers le fichier JSON des recettes
+    // Chemin vers le fichier recipes.json
     const recipesFile = path.join(process.cwd(), 'public/data/recipes.json')
-
-    // Lire le fichier existant
+    
+    // Lire le fichier JSON actuel
     let recipesData
     try {
       const fileContent = fs.readFileSync(recipesFile, 'utf8')
@@ -28,25 +29,20 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Erreur lors de la lecture du fichier recipes.json'
       })
     }
-
-    // Générer un nouvel ID
-    const maxId = Math.max(...recipesData.recipes.map(r => parseInt(r.id)), 0)
-    const newId = (maxId + 1).toString()
-
-    // Préparer la recette avec les métadonnées
-    const recipeWithMetadata = {
-      ...recipe,
-      id: newId,
-      favorite: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notes: recipe.notes || ""
+    
+    // Filtrer la recette à supprimer
+    const originalLength = recipesData.recipes.length
+    recipesData.recipes = recipesData.recipes.filter(recipe => recipe.id !== recipeId)
+    
+    // Vérifier si une recette a été supprimée
+    if (recipesData.recipes.length === originalLength) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Recette non trouvée'
+      })
     }
 
-    // Ajouter la recette
-    recipesData.recipes.push(recipeWithMetadata)
-
-    // Écrire le fichier
+    // Écrire le fichier mis à jour
     try {
       fs.writeFileSync(recipesFile, JSON.stringify(recipesData, null, 2), 'utf8')
     } catch (error) {
@@ -58,17 +54,18 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      recipe: recipeWithMetadata,
-      message: `Recette "${recipe.title}" ajoutée`
+      message: 'Recette supprimée avec succès',
+      deletedRecipeId: recipeId,
+      remainingRecipes: recipesData.recipes.length
     }
 
   } catch (error: any) {
-    console.error('Erreur lors de l\'ajout de la recette:', error)
+    console.error('Erreur lors de la suppression de la recette:', error)
     
     if (error.statusCode) {
       throw error
     }
-
+    
     throw createError({
       statusCode: 500,
       statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`

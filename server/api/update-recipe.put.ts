@@ -1,16 +1,25 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, getQuery, createError } from 'h3'
 import fs from 'fs'
 import path from 'path'
 
 export default defineEventHandler(async (event) => {
   try {
+    const query = getQuery(event)
+    const recipeId = query.id
     const body = await readBody(event)
-    const { recipe } = body
+    const { updates } = body
 
-    if (!recipe) {
+    if (!recipeId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'La recette est requise'
+        statusMessage: 'ID de recette manquant'
+      })
+    }
+
+    if (!updates) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Données de mise à jour manquantes'
       })
     }
 
@@ -29,22 +38,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Générer un nouvel ID
-    const maxId = Math.max(...recipesData.recipes.map(r => parseInt(r.id)), 0)
-    const newId = (maxId + 1).toString()
-
-    // Préparer la recette avec les métadonnées
-    const recipeWithMetadata = {
-      ...recipe,
-      id: newId,
-      favorite: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notes: recipe.notes || ""
+    // Trouver la recette à mettre à jour
+    const recipeIndex = recipesData.recipes.findIndex(recipe => recipe.id === recipeId)
+    if (recipeIndex === -1) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Recette non trouvée'
+      })
     }
 
-    // Ajouter la recette
-    recipesData.recipes.push(recipeWithMetadata)
+    // Mettre à jour la recette
+    const updatedRecipe = {
+      ...recipesData.recipes[recipeIndex],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+
+    recipesData.recipes[recipeIndex] = updatedRecipe
 
     // Écrire le fichier
     try {
@@ -58,12 +68,12 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      recipe: recipeWithMetadata,
-      message: `Recette "${recipe.title}" ajoutée`
+      recipe: updatedRecipe,
+      message: `Recette "${updatedRecipe.title}" mise à jour avec succès`
     }
 
   } catch (error: any) {
-    console.error('Erreur lors de l\'ajout de la recette:', error)
+    console.error('Erreur lors de la mise à jour de la recette:', error)
     
     if (error.statusCode) {
       throw error

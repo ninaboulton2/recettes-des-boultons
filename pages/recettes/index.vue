@@ -1,13 +1,35 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-4xl font-lobster text-gray-900 mb-4">
-        Toutes nos recettes
-      </h1>
-      <p class="text-xl text-gray-600">
-        Découvrez notre collection de recettes délicieuses
-      </p>
+        <!-- Header -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between">
+      <div>
+        <h1 class="text-4xl font-lobster text-gray-900 mb-4">
+          Toutes nos recettes
+        </h1>
+        <p class="text-xl text-gray-600">
+          Découvrez notre collection de recettes délicieuses
+        </p>
+      </div>
+      <div class="flex gap-2 mt-4 md:mt-0">
+        <NuxtLink
+          to="/traducteur"
+          class="btn-primary"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Nouvelle recette
+        </NuxtLink>
+        
+        <!-- Indicateur de chargement -->
+        <div v-if="recipesStore.isLoading" class="flex items-center text-primary-600">
+          <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="text-sm">Mise à jour...</span>
+        </div>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -110,14 +132,17 @@
 
     <!-- Recipes Grid -->
     <div v-if="filteredRecipes.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      <NuxtLink
+      <div
         v-for="recipe in filteredRecipes"
         :key="recipe.id"
-        :to="`/recettes/${recipe.id}`"
         class="block"
       >
-        <RecipeCard :recipe="recipe" />
-      </NuxtLink>
+        <RecipeCard 
+          :recipe="recipe" 
+          @edit="editRecipe"
+          @delete="confirmDeleteRecipe"
+        />
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -140,6 +165,25 @@
         </button>
       </div>
     </div>
+
+    <!-- Recipe Editor Modal -->
+    <RecipeEditor
+      :show="showRecipeEditor"
+      :recipe="editingRecipe"
+      @close="closeRecipeEditor"
+      @save="onRecipeSaved"
+    />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Supprimer la recette"
+      :message="deleteConfirmMessage"
+      confirm-text="Supprimer"
+      cancel-text="Annuler"
+      @confirm="deleteRecipe"
+      @close="closeDeleteModal"
+    />
   </div>
 </template>
 
@@ -156,9 +200,21 @@ const selectedCategory = ref(recipesStore.currentCategory || '')
 const selectedTags = ref(recipesStore.selectedTags || [])
 const showTagsDropdown = ref(false)
 
+// Recipe editing and deletion
+const showRecipeEditor = ref(false)
+const editingRecipe = ref(null)
+const showDeleteModal = ref(false)
+const recipeToDelete = ref(null)
+
 // Computed properties
 const allTags = computed(() => recipesStore.allTags)
 const availableTags = computed(() => recipesStore.categoryTags)
+
+// Computed delete confirmation message
+const deleteConfirmMessage = computed(() => {
+  if (!recipeToDelete.value) return ''
+  return `Êtes-vous sûr de vouloir supprimer la recette "${recipeToDelete.value.title}" ? Cette action est irréversible.`
+})
 
 // Lire le paramètre category de l'URL au chargement de la page
 onMounted(() => {
@@ -244,6 +300,47 @@ const clearFilters = () => {
   showTagsDropdown.value = false
   recipesStore.clearFilters()
 }
+
+// Recipe editing methods
+const editRecipe = (recipe) => {
+  editingRecipe.value = recipe
+  showRecipeEditor.value = true
+}
+
+const closeRecipeEditor = () => {
+  showRecipeEditor.value = false
+  editingRecipe.value = null
+}
+
+const onRecipeSaved = (recipe) => {
+  closeRecipeEditor()
+  // The recipe is already saved in the store
+}
+
+// Recipe deletion methods
+const confirmDeleteRecipe = (recipe) => {
+  recipeToDelete.value = recipe
+  showDeleteModal.value = true
+}
+
+const deleteRecipe = async () => {
+  if (recipeToDelete.value) {
+    try {
+      await recipesStore.deleteRecipe(recipeToDelete.value.id)
+      closeDeleteModal()
+      $toast.success('Succès', 'Recette supprimée avec succès !', 3000)
+    } catch (error) {
+      $toast.error('Erreur', 'Impossible de supprimer la recette. Veuillez réessayer.', 3000)
+    }
+  }
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  recipeToDelete.value = null
+}
+
+
 
 // SEO
 useHead({

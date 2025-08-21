@@ -202,7 +202,7 @@ Le traducteur IA permet d'ajouter automatiquement des recettes depuis Google Dri
 ### Utilisation
 1. Allez sur `/traducteur` dans l'application
 2. Collez le texte de votre recette depuis Google Drive
-3. Cliquez sur "Traduire et ajouter aux recettes"
+3. Cliquez sur "Ajouter aux recettes"
 4. L'IA convertit automatiquement le texte en JSON structuré
 5. La recette est ajoutée au fichier `recipes.json` avec un ID unique
 6. Un message de succès s'affiche avec des liens vers la recette

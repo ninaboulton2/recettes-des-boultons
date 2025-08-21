@@ -15,9 +15,6 @@
             <NuxtLink to="/recettes" class="btn-primary text-lg px-8 py-3 shadow-lg">
               Voir les recettes
             </NuxtLink>
-            <NuxtLink to="/traducteur" class="btn-secondary text-lg px-8 py-3 shadow-lg">
-              Ajouter une recette
-            </NuxtLink>
           </div>
         </div>
         <!-- Illustration à droite -->

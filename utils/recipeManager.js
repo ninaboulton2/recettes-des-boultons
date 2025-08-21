@@ -45,7 +45,7 @@ function addRecipe(newRecipe) {
   recipesData.recipes.push(recipeWithMetadata)
   writeRecipes(recipesData)
   
-  console.log(`✅ Recette "${newRecipe.title}" ajoutée avec l'ID: ${newId}`)
+  console.log(`✅ Recette "${newRecipe.title}" ajoutée`)
   return newId
 }
 

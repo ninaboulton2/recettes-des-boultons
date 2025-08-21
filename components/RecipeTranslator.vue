@@ -26,10 +26,10 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Traduction et ajout en cours...
+          Ajout en cours...
         </span>
         <span v-else>
-          Traduire et ajouter aux recettes
+          Ajouter aux recettes
         </span>
       </button>
     </div>
@@ -94,7 +94,7 @@ const successMessage = ref('')
 const addedRecipeId = ref('')
 
 // Accéder au store des recettes
-const { forceReloadFromJSON } = useRecipesStore()
+const recipesStore = useRecipesStore()
 
 const translateAndAddRecipe = async () => {
   if (!recipeText.value.trim()) return
@@ -117,29 +117,22 @@ const translateAndAddRecipe = async () => {
     const recipeJson = translationResponse.translatedRecipe
     translatedRecipe.value = recipeJson
 
-    // Étape 2: Parser le JSON et ajouter la recette
+    // Étape 2: Parser le JSON et ajouter la recette via le store
     const recipe = JSON.parse(recipeJson)
     
-    const addResponse = await $fetch('/api/add-recipe', {
-      method: 'POST',
-      body: {
-        recipe: recipe
-      }
-    })
-
-    // Succès !
-    successMessage.value = addResponse.message
-    addedRecipeId.value = addResponse.recipe.id
+    // Utiliser le store pour ajouter la recette (ce qui la rendra réactive)
+    const addedRecipe = await recipesStore.addRecipe(recipe)
     
-    // Forcer le rechargement du store pour inclure la nouvelle recette
-    await forceReloadFromJSON()
+    // Succès !
+    successMessage.value = `Recette "${addedRecipe.title}" ajoutée avec succès !`
+    addedRecipeId.value = addedRecipe.id
     
     // Vider le champ de texte
     recipeText.value = ''
 
   } catch (err) {
     console.error('Erreur lors de la traduction/ajout:', err)
-    error.value = 'Erreur lors de la traduction ou de l\'ajout. Veuillez réessayer.'
+    error.value = 'Erreur lors de l\'ajout. Veuillez réessayer.'
   } finally {
     isLoading.value = false
   }

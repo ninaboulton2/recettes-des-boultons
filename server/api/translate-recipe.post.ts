@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
 
     // Prompt pour convertir la recette en JSON structuré
     const prompt = `
-    Convertis cette recette en format JSON structuré. 
+    Convertis cette recette en format JSON structuré en français. 
     Le JSON doit contenir les champs suivants :
     {
       "id": "1",
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
     Recette à convertir :
     ${recipeText}
 
-    Retourne uniquement le JSON valide, sans texte supplémentaire.
+    Retourne uniquement le JSON valide, sans texte supplémentaire. Si la recette est en anglais, retourne le JSON en français.
     `
 
     const response = await client.chat.completions.create({
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
           content: prompt
         }
       ],
-      temperature: 0.1,
+      temperature: 0.2,
       max_tokens: 2000,
       response_format: { type: "json_object" }
     })

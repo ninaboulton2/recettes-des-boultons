@@ -7,6 +7,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   const currentCategory = ref(null)
   const searchQuery = ref('')
   const selectedTags = ref([])
+  const isLoading = ref(false)
 
   // Computed properties
   const filteredRecipes = computed(() => {
@@ -79,42 +80,194 @@ export const useRecipesStore = defineStore('recipes', () => {
   })
 
   // Actions
-  const addRecipe = (recipe) => {
-    // Validate recipe before adding
-    if (recipe && recipe.id && recipe.title && recipe.category) {
-      recipes.value.push(recipe)
-      saveToLocalStorage()
-    } else {
-      console.warn('Invalid recipe data:', recipe)
-    }
-  }
-
-  const updateRecipe = (id, updates) => {
-    const index = recipes.value.findIndex(recipe => recipe.id === id)
-    if (index !== -1) {
-      recipes.value[index] = { ...recipes.value[index], ...updates, updatedAt: new Date() }
-      saveToLocalStorage()
-    }
-  }
-
-  const deleteRecipe = (id) => {
-    recipes.value = recipes.value.filter(recipe => recipe.id !== id)
-    favorites.value = favorites.value.filter(recipe => recipe.id !== id)
-    saveToLocalStorage()
-  }
-
-  const toggleFavorite = (recipe) => {
-    const index = recipes.value.findIndex(r => r.id === recipe.id)
-    if (index !== -1) {
-      recipes.value[index].favorite = !recipes.value[index].favorite
+  const addRecipe = async (recipe) => {
+    try {
+      isLoading.value = true
       
-      if (recipes.value[index].favorite) {
-        favorites.value.push(recipes.value[index])
+      // Validate recipe before adding
+      if (!recipe || !recipe.title || !recipe.category) {
+        throw new Error('Données de recette invalides')
+      }
+
+      // Appeler l'API pour ajouter la recette
+      const response = await fetch('/api/add-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ recipe })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Ajouter directement au store local
+        recipes.value.push(result.recipe)
+        
+        // Mettre à jour les favoris si nécessaire
+        if (result.recipe.favorite) {
+          favorites.value.push(result.recipe)
+        }
+        
+        // Sauvegarder dans localStorage
+        saveToLocalStorage()
+        
+        console.log('Recette ajoutée avec succès:', result.message)
+        return result.recipe
       } else {
-        favorites.value = favorites.value.filter(r => r.id !== recipe.id)
+        throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la recette:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const updateRecipe = async (id, updates) => {
+    try {
+      isLoading.value = true
+      
+      const index = recipes.value.findIndex(recipe => recipe.id === id)
+      if (index === -1) {
+        throw new Error('Recette non trouvée')
+      }
+
+      // Appeler l'API pour mettre à jour la recette
+      const response = await fetch(`/api/update-recipe?id=${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Mettre à jour localement pour la réactivité
+        recipes.value[index] = result.recipe
+
+        // Mettre à jour les favoris si nécessaire
+        const favoriteIndex = favorites.value.findIndex(r => r.id === id)
+        if (favoriteIndex !== -1) {
+          favorites.value[favoriteIndex] = result.recipe
+        }
+
+        // Sauvegarder dans localStorage
+        saveToLocalStorage()
+        
+        console.log('Recette mise à jour avec succès:', result.message)
+        return result.recipe
+      } else {
+        throw new Error(result.message || 'Erreur lors de la mise à jour')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la recette:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const deleteRecipe = async (id) => {
+    try {
+      isLoading.value = true
+      
+      console.log('Tentative de suppression de la recette avec ID:', id, 'Type:', typeof id)
+      console.log('Recettes disponibles:', recipes.value.map(r => ({ id: r.id, title: r.title, type: typeof r.id })))
+      
+      // Appeler l'API pour supprimer la recette du fichier JSON
+      const response = await fetch(`/api/delete-recipe?id=${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
       }
       
-      saveToLocalStorage()
+      const result = await response.json()
+      
+      if (result.success) {
+        // Supprimer de la mémoire locale immédiatement
+        recipes.value = recipes.value.filter(recipe => recipe.id !== id)
+        favorites.value = favorites.value.filter(recipe => recipe.id !== id)
+        saveToLocalStorage()
+        
+        console.log('Recette supprimée avec succès:', result.message)
+        return result
+      } else {
+        throw new Error(result.message || 'Erreur lors de la suppression')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la recette:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const toggleFavorite = async (recipe) => {
+    try {
+      const index = recipes.value.findIndex(r => r.id === recipe.id)
+      if (index === -1) return
+
+      const newFavoriteState = !recipes.value[index].favorite
+
+      // Appeler l'API pour synchroniser l'état du favori
+      const response = await fetch(`/api/toggle-favorite?id=${recipe.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ favorite: newFavoriteState })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Mettre à jour localement pour la réactivité
+        recipes.value[index].favorite = newFavoriteState
+        
+        if (newFavoriteState) {
+          favorites.value.push(recipes.value[index])
+        } else {
+          favorites.value = favorites.value.filter(r => r.id !== recipe.id)
+        }
+        
+        // Sauvegarder dans localStorage
+        saveToLocalStorage()
+        
+        console.log('Favori mis à jour:', result.message)
+      } else {
+        throw new Error(result.message || 'Erreur lors de la mise à jour du favori')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du favori:', error)
+      // Revenir à l'état précédent en cas d'erreur
+      const index = recipes.value.findIndex(r => r.id === recipe.id)
+      if (index !== -1) {
+        recipes.value[index].favorite = !recipes.value[index].favorite
+        if (recipes.value[index].favorite) {
+          favorites.value.push(recipes.value[index])
+        } else {
+          favorites.value = favorites.value.filter(r => r.id !== recipe.id)
+        }
+      }
+      throw error
     }
   }
 
@@ -168,22 +321,13 @@ export const useRecipesStore = defineStore('recipes', () => {
             recipe && recipe.id && recipe.title && recipe.category
           )
           favorites.value = parsedFavorites.filter(recipe => 
-            recipe && recipe.id && recipe.title && recipe.category
-          )
-        } else {
-          // Load from JSON file if localStorage is empty
-          const response = await fetch('/data/recipes.json')
-          const data = await response.json()
-          
-          // Validate and clean recipes data
-          recipes.value = data.recipes.filter(recipe => 
-            recipe && recipe.id && recipe.title && recipe.category
-          )
-          favorites.value = data.recipes.filter(recipe => 
             recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
           )
-          // Save to localStorage for future use
-          saveToLocalStorage()
+          
+          console.log('Recettes chargées depuis localStorage:', recipes.value.length)
+        } else {
+          // Load from JSON file if localStorage is empty
+          await loadFromJSON()
         }
       } catch (error) {
         console.error('Error loading recipes:', error)
@@ -193,28 +337,31 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const forceReloadFromJSON = async () => {
-    if (typeof window !== 'undefined') {
-      try {
-        // Clear localStorage and reload from JSON file
-        localStorage.removeItem('boultons-recipes')
-        localStorage.removeItem('boultons-favorites')
-        
-        const response = await fetch('/data/recipes.json')
-        const data = await response.json()
-        
-        // Validate and clean recipes data
-        recipes.value = data.recipes.filter(recipe => 
-          recipe && recipe.id && recipe.title && recipe.category
-        )
-        favorites.value = data.recipes.filter(recipe => 
-          recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
-        )
-        // Save to localStorage for future use
-        saveToLocalStorage()
-      } catch (error) {
-        console.error('Error reloading recipes:', error)
-      }
+  const loadFromJSON = async () => {
+    try {
+      isLoading.value = true
+      
+      const response = await fetch('/data/recipes.json')
+      const data = await response.json()
+      
+      // Validate and clean recipes data
+      recipes.value = data.recipes.filter(recipe => 
+        recipe && recipe.id && recipe.title && recipe.category
+      )
+      favorites.value = data.recipes.filter(recipe => 
+        recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
+      )
+      
+      console.log('Recettes chargées depuis JSON:', recipes.value.length)
+      
+      // Save to localStorage for future use
+      saveToLocalStorage()
+    } catch (error) {
+      console.error('Error loading recipes from JSON:', error)
+      recipes.value = []
+      favorites.value = []
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -230,6 +377,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     currentCategory: readonly(currentCategory),
     searchQuery: readonly(searchQuery),
     selectedTags: readonly(selectedTags),
+    isLoading: readonly(isLoading),
     
     // Computed
     filteredRecipes,
@@ -247,6 +395,6 @@ export const useRecipesStore = defineStore('recipes', () => {
     toggleTag,
     clearFilters,
     loadFromLocalStorage,
-    forceReloadFromJSON
+    loadFromJSON
   }
 }) 

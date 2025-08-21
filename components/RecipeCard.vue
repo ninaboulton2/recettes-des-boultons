@@ -8,7 +8,8 @@
           class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
         >
       </div>
-      <div class="absolute top-3 right-3" @click="preventNavigation">
+      <div class="absolute top-3 right-3 flex flex-col space-y-2" @click="preventNavigation">
+        <!-- Favorite button -->
         <button 
           @click.stop.prevent="toggleFavorite"
           @mousedown.stop.prevent
@@ -21,7 +22,7 @@
             fill="currentColor" 
             viewBox="0 0 20 20"
           >
-            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l(1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
           </svg>
           <svg 
             v-else 
@@ -33,13 +34,41 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
           </svg>
         </button>
+
+        <!-- Edit button -->
+        <button 
+          @click.stop.prevent="editRecipe"
+          @mousedown.stop.prevent
+          @mouseup.stop.prevent
+          class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
+          title="Modifier la recette"
+        >
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </button>
+
+        <!-- Delete button -->
+        <button 
+          @click.stop.prevent="deleteRecipe"
+          @mousedown.stop.prevent
+          @mouseup.stop.prevent
+          class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
+          title="Supprimer la recette"
+        >
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
       </div>
     </div>
 
     <div class="space-y-3">
-      <h3 class="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors duration-200">
-        {{ recipe.title }}
-      </h3>
+      <NuxtLink :to="`/recettes/${recipe.id}`" class="block">
+        <h3 class="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors duration-200 cursor-pointer">
+          {{ recipe.title }}
+        </h3>
+      </NuxtLink>
       
       <p class="text-gray-600 text-sm line-clamp-2">
         {{ recipe.description }}
@@ -109,6 +138,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['edit', 'delete'])
+
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
 
@@ -141,6 +172,14 @@ const addToShoppingList = () => {
 const preventNavigation = (event) => {
   event.stopPropagation()
   event.preventDefault()
+}
+
+const editRecipe = () => {
+  emit('edit', props.recipe)
+}
+
+const deleteRecipe = () => {
+  emit('delete', props.recipe)
 }
 </script>
 

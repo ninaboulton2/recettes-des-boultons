@@ -1,16 +1,25 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, getQuery, createError } from 'h3'
 import fs from 'fs'
 import path from 'path'
 
 export default defineEventHandler(async (event) => {
   try {
+    const query = getQuery(event)
+    const recipeId = query.id
     const body = await readBody(event)
-    const { recipe } = body
+    const { favorite } = body
 
-    if (!recipe) {
+    if (!recipeId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'La recette est requise'
+        statusMessage: 'ID de recette manquant'
+      })
+    }
+
+    if (typeof favorite !== 'boolean') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'État du favori manquant ou invalide'
       })
     }
 
@@ -29,22 +38,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Générer un nouvel ID
-    const maxId = Math.max(...recipesData.recipes.map(r => parseInt(r.id)), 0)
-    const newId = (maxId + 1).toString()
-
-    // Préparer la recette avec les métadonnées
-    const recipeWithMetadata = {
-      ...recipe,
-      id: newId,
-      favorite: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notes: recipe.notes || ""
+    // Trouver la recette à mettre à jour
+    const recipeIndex = recipesData.recipes.findIndex(recipe => recipe.id === recipeId)
+    if (recipeIndex === -1) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Recette non trouvée'
+      })
     }
 
-    // Ajouter la recette
-    recipesData.recipes.push(recipeWithMetadata)
+    // Mettre à jour l'état du favori
+    recipesData.recipes[recipeIndex].favorite = favorite
+    recipesData.recipes[recipeIndex].updatedAt = new Date().toISOString()
 
     // Écrire le fichier
     try {
@@ -58,12 +63,12 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      recipe: recipeWithMetadata,
-      message: `Recette "${recipe.title}" ajoutée`
+      recipe: recipesData.recipes[recipeIndex],
+      message: `Favori ${favorite ? 'ajouté' : 'retiré'} pour "${recipesData.recipes[recipeIndex].title}"`
     }
 
   } catch (error: any) {
-    console.error('Erreur lors de l\'ajout de la recette:', error)
+    console.error('Erreur lors de la mise à jour du favori:', error)
     
     if (error.statusCode) {
       throw error
