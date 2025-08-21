@@ -106,12 +106,20 @@
               @dragenter="onDragEnter($event)"
               @dragleave="onDragLeave($event)"
             >
-              <button
-                @click="openMealSelector(day.date, 'lunch')"
-                class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
-              >
-                + Ajouter une recette
-              </button>
+              <div class="flex flex-col space-y-2 w-full">
+                <button
+                  @click="openMealSelector(day.date, 'lunch')"
+                  class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+                >
+                  + Ajouter une recette
+                </button>
+                <button
+                  @click="openCustomMealInput(day.date, 'lunch')"
+                  class="w-full text-xs text-gray-400 hover:text-primary-600 border border-dashed border-gray-200 rounded-lg py-1 hover:border-primary-300 transition-colors duration-200"
+                >
+                  + Ajouter autre
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -162,12 +170,20 @@
               @dragenter="onDragEnter($event)"
               @dragleave="onDragLeave($event)"
             >
-              <button
-                @click="openMealSelector(day.date, 'dinner')"
-                class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
-              >
-                + Ajouter une recette
-              </button>
+              <div class="flex flex-col space-y-2 w-full">
+                <button
+                  @click="openMealSelector(day.date, 'dinner')"
+                  class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+                >
+                  + Ajouter une recette
+                </button>
+                <button
+                  @click="openCustomMealInput(day.date, 'dinner')"
+                  class="w-full text-xs text-gray-400 hover:text-primary-600 border border-dashed border-gray-200 rounded-lg py-1 hover:border-primary-300 transition-colors duration-200"
+                >
+                  + Ajouter autre
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -175,7 +191,7 @@
 
       <!-- Notes générales pour la semaine -->
       <div class="bg-white rounded-xl shadow-sm p-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Notes de la semaine</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Notes</h3>
         <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
           <div
             v-for="(day, index) in weekDays"
@@ -187,7 +203,7 @@
               <textarea
                 v-model="day.meals.notes"
                 placeholder="Notes du jour..."
-                class="w-full h-full min-h-[100px] p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                class="font-size-10 w-full h-full min-h-[100px] p-3 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 @input="updateDayNotes(day.date, $event.target.value)"
               ></textarea>
             </div>
@@ -276,6 +292,55 @@
         </div>
       </div>
     </div>
+
+    <!-- Custom Meal Input Modal -->
+    <div v-if="showCustomMealInput" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-semibold text-gray-900">
+            Ajouter un autre élément
+          </h3>
+          <button
+            @click="closeCustomMealInput"
+            class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form @submit.prevent="addCustomMeal" class="space-y-4">
+          <div>
+            <input
+              id="customMealTitle"
+              v-model="customMealTitle"
+              type="text"
+              placeholder="Ex: Un accompagnement, dessert..."
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg"
+              required
+              autofocus
+            >
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              @click="closeCustomMealInput"
+              class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg transition-colors"
+            >
+              Ajouter
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -315,6 +380,13 @@ const editingNoteValue = ref('')
 const editingDayNotes = ref(null)
 const editingDayNotesValue = ref('')
 const searchQuery = ref('')
+
+// Variables pour les éléments personnalisés
+const showCustomMealInput = ref(false)
+const customMealTitle = ref('')
+const customMealNote = ref('')
+const customMealDay = ref(null)
+const customMealType = ref(null)
 
 // Variables pour le drag and drop
 const draggedMeal = ref(null)
@@ -379,6 +451,45 @@ const closeMealSelector = () => {
   selectedDay.value = null
   selectedMealType.value = null
   searchQuery.value = ''
+}
+
+// Méthodes pour les éléments personnalisés
+const openCustomMealInput = (date, mealType) => {
+  customMealDay.value = date
+  customMealType.value = mealType
+  customMealTitle.value = ''
+  customMealNote.value = ''
+  showCustomMealInput.value = true
+}
+
+const closeCustomMealInput = () => {
+  showCustomMealInput.value = false
+  customMealDay.value = null
+  customMealType.value = null
+  customMealTitle.value = ''
+  customMealNote.value = ''
+}
+
+const addCustomMeal = () => {
+  if (customMealDay.value && customMealType.value && customMealTitle.value.trim()) {
+    const dateString = customMealDay.value.toISOString().split('T')[0]
+    
+    // Créer un objet "recette" personnalisé
+    const customRecipe = {
+      id: 'custom-' + Date.now(),
+      title: customMealTitle.value.trim(),
+      image: '/images/custom-meal.jpg', // Image par défaut
+      prepTime: 0,
+      cookTime: 0,
+      category: 'Personnalisé',
+      tags: ['personnalisé']
+    }
+    
+    // Ajouter au planning avec la note
+    planningStore.addMeal(dateString, customMealType.value, customRecipe, customMealNote.value.trim())
+    
+    closeCustomMealInput()
+  }
 }
 
 const selectMeal = (recipe) => {
@@ -614,30 +725,28 @@ const printPlanning = () => {
           color: #374151;
           font-size: 13px;
         }
-        .add-button {
-          margin-top: auto;
-          padding: 8px;
-          text-align: center;
-          color: #6b7280;
-          font-size: 11px;
-          font-style: italic;
-          border: 1px dashed #d1d5db;
-          border-radius: 6px;
-          background: #f9fafb;
-        }
         .notes-content {
           min-height: 80px;
           padding: 8px;
           background: #f9fafb;
-          border: 1px solid #e5e7eb;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 11px;
           color: #6b7280;
-          font-style: italic;
         }
-        .empty-notes {
-          color: #9ca3af;
-          font-style: italic;
+        .custom-meal {
+          background-color: #e0f2fe; /* Couleur légère pour les éléments personnalisés */
+          border: 1px dashed #90cdf4; /* Bordure légère pour les éléments personnalisés */
+        }
+        .custom-label {
+          font-size: 10px;
+          color: #3b82f6;
+          font-weight: 500;
+          margin-top: 2px;
+        }
+        .meal-note {
+          font-size: 10px;
+          color: #6b7280;
+          margin-top: 4px;
         }
         @media print { 
           body { 
@@ -703,7 +812,7 @@ const printPlanning = () => {
             <div class="day-content">
               ${day.meals.lunch && day.meals.lunch.length > 0 ? `
                 ${day.meals.lunch.map(meal => `
-                  <div class="recipe-item">
+                  <div class="recipe-item ${meal.recipeId && meal.recipeId.startsWith('custom-') ? 'custom-meal' : ''}">
                     <div class="recipe-title">${meal.title}</div>
                   </div>
                 `).join('')}
@@ -722,7 +831,7 @@ const printPlanning = () => {
             <div class="day-content">
               ${day.meals.dinner && day.meals.dinner.length > 0 ? `
                 ${day.meals.dinner.map(meal => `
-                  <div class="recipe-item">
+                  <div class="recipe-item ${meal.recipeId && meal.recipeId.startsWith('custom-') ? 'custom-meal' : ''}">
                     <div class="recipe-title">${meal.title}</div>
                   </div>
                 `).join('')}
@@ -735,7 +844,7 @@ const printPlanning = () => {
 
       <!-- Notes générales pour la semaine -->
       <div class="section">
-        <div class="section-title">Notes de la semaine</div>
+        <div class="section-title">Notes</div>
         <div class="week-grid">
           ${weekDays.value.map(day => `
             <div class="day-content notes">

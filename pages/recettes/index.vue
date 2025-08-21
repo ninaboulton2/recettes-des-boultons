@@ -14,7 +14,7 @@
         <!-- Bouton Nouvelle recette - visible uniquement pour les admins -->
         <NuxtLink
           v-if="authStore.isAdmin"
-          to="/recettes/ajouter"
+          to="/traducteur"
           class="btn-primary"
         >
           + Nouvelle recette

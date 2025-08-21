@@ -95,17 +95,13 @@ export const useAuthStore = defineStore('auth', {
     setSecureCookie(name: string, value: string) {
       if (typeof window === 'undefined') return
       
-      const config = getCookieConfig()
       const cookieOptions = [
-        `Max-Age=${config.maxAge / 1000}`,
+        `Max-Age=${24 * 60 * 60}`, // 24 heures
         `Path=/`,
-        config.secure ? 'Secure' : '',
-        config.httpOnly ? 'HttpOnly' : '',
-        `SameSite=${config.sameSite}`
+        process.env.NODE_ENV === 'production' ? 'Secure' : '',
+        'SameSite=Strict'
       ].filter(Boolean).join('; ')
       
-      // Note: HttpOnly ne peut être défini que côté serveur
-      // Cette méthode est pour la compatibilité, mais le serveur doit gérer HttpOnly
       document.cookie = `${name}=${value}; ${cookieOptions}`
     },
 
@@ -117,11 +113,10 @@ export const useAuthStore = defineStore('auth', {
 
     // Méthode pour vérifier la sécurité de la configuration
     checkSecurityConfig() {
-      if (!isSecureConfig()) {
-        console.warn('[SECURITY] Configuration non sécurisée détectée!')
-        if (process.env.NODE_ENV === 'production') {
-          console.error('[SECURITY] Configuration non sécurisée en production!')
-        }
+      const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
+      
+      if (jwtSecret === 'default-secret-key' && process.env.NODE_ENV === 'production') {
+        console.error('[SECURITY] Configuration non sécurisée en production!')
       }
     }
   }
