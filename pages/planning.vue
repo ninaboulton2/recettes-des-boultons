@@ -72,7 +72,14 @@
           >
             <!-- Liste des recettes du déjeuner -->
             <div v-if="day.meals.lunch && day.meals.lunch.length > 0" class="space-y-2 mb-3">
-              <div v-for="meal in day.meals.lunch" :key="meal.id" class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg">
+              <div 
+                v-for="meal in day.meals.lunch" 
+                :key="meal.id" 
+                class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
+                draggable="true"
+                @dragstart="onDragStart($event, day.dateString, 'lunch', meal)"
+                @dragend="onDragEnd"
+              >
                 <div class="flex-1 min-w-0">
                   <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
                 </div>
@@ -92,12 +99,20 @@
             </div>
 
             <!-- Bouton pour ajouter une recette -->
-            <button
-              @click="openMealSelector(day.date, 'lunch')"
-              class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+            <div
+              class="w-full min-h-[40px] flex items-center justify-center drop-zone"
+              @dragover="onDragOver($event, day.dateString, 'lunch')"
+              @drop="onDrop($event, day.dateString, 'lunch')"
+              @dragenter="onDragEnter($event)"
+              @dragleave="onDragLeave($event)"
             >
-              + Ajouter une recette
-            </button>
+              <button
+                @click="openMealSelector(day.date, 'lunch')"
+                class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+              >
+                + Ajouter une recette
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -113,7 +128,14 @@
           >
             <!-- Liste des recettes du dîner -->
             <div v-if="day.meals.dinner && day.meals.dinner.length > 0" class="space-y-2 mb-3">
-              <div v-for="meal in day.meals.dinner" :key="meal.id" class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg">
+              <div 
+                v-for="meal in day.meals.dinner" 
+                :key="meal.id" 
+                class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
+                draggable="true"
+                @dragstart="onDragStart($event, day.dateString, 'dinner', meal)"
+                @dragend="onDragEnd"
+              >
                 <div class="flex-1 min-w-0">
                   <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
                 </div>
@@ -133,12 +155,20 @@
             </div>
 
             <!-- Bouton pour ajouter une recette -->
-            <button
-              @click="openMealSelector(day.date, 'dinner')"
-              class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+            <div
+              class="w-full min-h-[40px] flex items-center justify-center drop-zone"
+              @dragover="onDragOver($event, day.dateString, 'dinner')"
+              @drop="onDrop($event, day.dateString, 'dinner')"
+              @dragenter="onDragEnter($event)"
+              @dragleave="onDragLeave($event)"
             >
-              + Ajouter une recette
-            </button>
+              <button
+                @click="openMealSelector(day.date, 'dinner')"
+                class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
+              >
+                + Ajouter une recette
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -249,6 +279,27 @@
   </div>
 </template>
 
+<style scoped>
+/* Styles pour le drag and drop */
+.drag-over {
+  background-color: rgb(239 246 255);
+  border-color: rgb(147 197 253);
+}
+
+.meal-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.drop-zone {
+  transition: all 0.2s ease-in-out;
+}
+
+.drop-zone:hover {
+  background-color: rgb(248 250 252);
+}
+</style>
+
 <script setup>
 const recipesStore = useRecipesStore()
 const planningStore = usePlanningStore()
@@ -264,6 +315,12 @@ const editingNoteValue = ref('')
 const editingDayNotes = ref(null)
 const editingDayNotesValue = ref('')
 const searchQuery = ref('')
+
+// Variables pour le drag and drop
+const draggedMeal = ref(null)
+const draggedFromDate = ref(null)
+const draggedFromMealType = ref(null)
+const dragOverTarget = ref(null)
 
 // Computed properties
 const recipes = computed(() => recipesStore.recipes)
@@ -368,6 +425,82 @@ const saveDayNotes = (date) => {
 
 const cancelDayNotesEdit = () => {
   editingDayNotes.value = null
+}
+
+// Méthodes pour le drag and drop
+const onDragStart = (event, date, mealType, meal) => {
+  draggedMeal.value = meal
+  draggedFromDate.value = date
+  draggedFromMealType.value = mealType
+  
+  // Ajouter un effet visuel au drag
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', meal.id)
+  
+  // Ajouter une classe CSS pour l'élément en cours de drag
+  event.target.classList.add('meal-dragging')
+}
+
+const onDragEnd = (event) => {
+  // Retirer la classe CSS
+  event.target.classList.remove('meal-dragging')
+  
+  // Réinitialiser les variables
+  draggedMeal.value = null
+  draggedFromDate.value = null
+  draggedFromMealType.value = null
+  dragOverTarget.value = null
+}
+
+const onDragOver = (event, date, mealType) => {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+}
+
+const onDrop = (event, toDate, toMealType) => {
+  event.preventDefault()
+  
+  // Vérifier que nous avons une recette à déplacer
+  if (!draggedMeal.value || !draggedFromDate.value || !draggedFromMealType.value) {
+    return
+  }
+  
+  // Vérifier que la destination est différente de la source
+  if (draggedFromDate.value === toDate && draggedFromMealType.value === toMealType) {
+    return
+  }
+  
+  // Déplacer la recette
+  const success = planningStore.moveMeal(
+    draggedFromDate.value,
+    draggedFromMealType.value,
+    toDate,
+    toMealType,
+    draggedMeal.value.id
+  )
+  
+  if (success) {
+    // Optionnel : afficher un message de succès
+    console.log(`Recette "${draggedMeal.value.title}" déplacée avec succès`)
+  }
+  
+  // Réinitialiser les variables
+  draggedMeal.value = null
+  draggedFromDate.value = null
+  draggedFromMealType.value = null
+  dragOverTarget.value = null
+}
+
+const onDragEnter = (event) => {
+  event.preventDefault()
+  // Ajouter un effet visuel pour indiquer que la zone accepte le drop
+  event.currentTarget.classList.add('drag-over')
+}
+
+const onDragLeave = (event) => {
+  event.preventDefault()
+  // Retirer l'effet visuel
+  event.currentTarget.classList.remove('drag-over')
 }
 
 const updateDayNotes = (date, notes) => {

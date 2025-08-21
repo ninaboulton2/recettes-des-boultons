@@ -100,6 +100,44 @@ export const usePlanningStore = defineStore('planning', () => {
     saveToLocalStorage()
   }
 
+  const moveMeal = (fromDate: string, fromMealType: 'breakfast' | 'lunch' | 'dinner', toDate: string, toMealType: 'breakfast' | 'lunch' | 'dinner', mealId: string) => {
+    // Trouver la recette à déplacer
+    if (!weekPlanning.value[fromDate] || !weekPlanning.value[fromDate][fromMealType]) {
+      return false
+    }
+
+    const mealIndex = weekPlanning.value[fromDate][fromMealType].findIndex(meal => meal.id === mealId)
+    if (mealIndex === -1) {
+      return false
+    }
+
+    // Récupérer la recette
+    const mealToMove = weekPlanning.value[fromDate][fromMealType][mealIndex]
+
+    // S'assurer que la destination existe
+    if (!weekPlanning.value[toDate]) {
+      weekPlanning.value[toDate] = {
+        breakfast: [],
+        lunch: [],
+        dinner: []
+      }
+    }
+
+    // S'assurer que le type de repas de destination est un tableau
+    if (!Array.isArray(weekPlanning.value[toDate][toMealType])) {
+      weekPlanning.value[toDate][toMealType] = []
+    }
+
+    // Supprimer de la source
+    weekPlanning.value[fromDate][fromMealType].splice(mealIndex, 1)
+
+    // Ajouter à la destination
+    weekPlanning.value[toDate][toMealType].push(mealToMove)
+
+    saveToLocalStorage()
+    return true
+  }
+
   const getDayMeals = (date: string): DayMeals => {
     if (!weekPlanning.value[date]) {
       return {
@@ -186,6 +224,7 @@ export const usePlanningStore = defineStore('planning', () => {
     updateMealNote,
     updateGroupNote,
     updateDayNotes,
-    getDayMeals
+    getDayMeals,
+    moveMeal
   }
 }) 
