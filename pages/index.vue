@@ -12,9 +12,12 @@
             Retrouvez ici toutes les recettes préférées des Boultons !
           </p>
           <div class="flex flex-col sm:flex-row gap-4">
-            <NuxtLink to="/recettes" class="btn-primary text-lg px-8 py-3 shadow-lg">
-              Voir les recettes
-            </NuxtLink>
+            <button 
+              @click="scrollToCategories" 
+              class="btn-primary text-lg px-8 py-3 shadow-lg"
+            >
+              Explorer les recettes
+            </button>
           </div>
         </div>
         <!-- Illustration à droite -->
@@ -36,11 +39,8 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
           <h2 class="text-4xl font-lobster text-gray-900 mb-4">
-            Explorez nos catégories
+            Explorer les recettes par catégories
           </h2>
-          <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-            Découvrez nos recettes organisées par catégories pour trouver facilement ce qui vous plaît
-          </p>
         </div>
         <CategoryGrid :categories="categories" />
       </div>
@@ -106,6 +106,18 @@
 
 <script setup>
 import CategoryGrid from '@/components/CategoryGrid.vue'
+
+// Fonction pour faire défiler vers la section des catégories
+const scrollToCategories = () => {
+  const categoriesSection = document.querySelector('section')
+  if (categoriesSection) {
+    categoriesSection.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    })
+  }
+}
+
 // Définition des catégories
 const categories = [
   {
