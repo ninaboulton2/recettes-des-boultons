@@ -8,30 +8,37 @@
           class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
         >
       </div>
-      <div class="absolute top-3 right-3 flex flex-col space-y-2" @click="preventNavigation">
+      <div class="absolute top-3 right-3 flex flex-col space-y-2 z-10" @click="preventNavigation">
         <!-- Favorite button -->
         <button 
           @click.stop.prevent="toggleFavorite"
           @mousedown.stop.prevent
           @mouseup.stop.prevent
-          class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
+          :class="[
+            'p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl border-2',
+            recipe.favorite 
+              ? 'bg-red-100 border-red-400' 
+              : 'bg-white border-gray-300'
+          ]"
+          :title="recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
         >
           <svg 
             v-if="recipe.favorite" 
-            class="w-5 h-5 text-red-500" 
+            class="w-5 h-5 text-red-600" 
             fill="currentColor" 
             viewBox="0 0 20 20"
           >
-            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l(1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
           </svg>
           <svg 
             v-else 
-            class="w-5 h-5 text-gray-400 hover:text-red-500" 
+            class="w-5 h-5 text-gray-600" 
             fill="none" 
             stroke="currentColor" 
+            stroke-width="2"
             viewBox="0 0 24 24"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
           </svg>
         </button>
 
@@ -41,7 +48,7 @@
           @click.stop.prevent="editRecipe"
           @mousedown.stop.prevent
           @mouseup.stop.prevent
-          class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
+          class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
           title="Modifier la recette"
         >
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +62,7 @@
           @click.stop.prevent="deleteRecipe"
           @mousedown.stop.prevent
           @mouseup.stop.prevent
-          class="bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200"
+          class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
           title="Supprimer la recette"
         >
           <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
