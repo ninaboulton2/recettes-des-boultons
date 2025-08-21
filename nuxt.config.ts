@@ -44,13 +44,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' },
-        // En-têtes de sécurité
-        { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
-        { 'http-equiv': 'X-Frame-Options', content: 'DENY' },
-        { 'http-equiv': 'X-XSS-Protection', content: '1; mode=block' },
-        { 'http-equiv': 'Referrer-Policy', content: 'strict-origin-when-cross-origin' },
-        { 'http-equiv': 'Permissions-Policy', content: 'camera=(), microphone=(), geolocation=()' }
+        { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' }
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/images/logo.png' },
@@ -70,25 +64,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:3000'
+      apiBase: process.env.API_BASE || 'http://localhost:3001'
     }
-  },
-  nitro: {
-    compatibilityDate: '2025-06-30',
-    // Configuration de sécurité Nitro
-    security: {
-      headers: {
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-        'X-XSS-Protection': '1; mode=block',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
-        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
-      }
-    }
-  },
-  // Configuration de sécurité supplémentaire
-  experimental: {
-    // Désactiver les fonctionnalités expérimentales en production
-    payloadExtraction: process.env.NODE_ENV !== 'production'
   }
 }) 

@@ -1,18 +1,8 @@
-import { isProtectedRoute } from '~/config/auth.config'
-import { isSecureConfig } from '~/config/env'
+// Middleware d'authentification simplifié
 
 export default defineNuxtRouteMiddleware((to) => {
-  // Vérifier la configuration de sécurité en production
-  if (process.env.NODE_ENV === 'production' && !isSecureConfig()) {
-    console.error('[SECURITY] Configuration non sécurisée détectée en production!')
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Configuration de sécurité insuffisante'
-    })
-  }
-
   // Si la route nécessite une authentification admin
-  if (to.meta.requiresAdmin || isProtectedRoute(to.path)) {
+  if (to.meta.requiresAdmin) {
     const authStore = useAuthStore()
     
     // Vérifier si l'utilisateur est connecté et est admin

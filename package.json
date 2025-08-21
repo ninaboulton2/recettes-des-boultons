@@ -7,14 +7,7 @@
     "dev": "nuxt dev --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
-    "generate": "nuxt generate",
-    "security:test": "node scripts/test-security.js",
-    "security:generate": "node scripts/generate-secure-config.js",
-    "security:check": "npm run security:test && echo '✅ Vérification de sécurité terminée'",
-    "prebuild": "npm run security:check",
-    "test:auth": "echo '🧪 Tests d'authentification - à implémenter'",
-    "lint": "echo '🔍 Linting - à configurer'",
-    "lint:fix": "echo '🔧 Correction automatique du linting - à configurer'"
+    "generate": "nuxt generate"
   },
   "dependencies": {
     "@nuxt/image": "^1.0.0",

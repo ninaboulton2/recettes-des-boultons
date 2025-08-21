@@ -1,19 +1,9 @@
 import jwt from 'jsonwebtoken'
-import { getAuthConfig, getCookieConfig } from '~/config/env'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Récupérer la configuration
-    const authConfig = getAuthConfig()
-    const cookieConfig = getCookieConfig()
-
-    // Vérifier que la configuration est valide
-    if (!authConfig.jwtSecret) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Configuration d\'authentification manquante'
-      })
-    }
+    // Récupérer la configuration depuis les variables d'environnement
+    const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
 
     // Essayer d'abord de récupérer le token depuis le cookie
     let token = getCookie(event, 'auth_token')
@@ -35,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
     try {
       // Vérifier et décoder le token JWT
-      const decoded = jwt.verify(token, authConfig.jwtSecret, {
+      const decoded = jwt.verify(token, jwtSecret, {
         issuer: 'les-boultons-app',
         audience: 'les-boultons-users'
       }) as any

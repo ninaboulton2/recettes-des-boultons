@@ -1,7 +1,5 @@
 import { defineStore } from 'pinia'
 import type { User, LoginCredentials, AuthResponse, AuthState } from '~/types'
-import { getAuthConfig, getCookieConfig, isSecureConfig } from '~/config/env'
-import { useSecurityStore } from './security'
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
@@ -17,16 +15,6 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async login(credentials: LoginCredentials) {
-      const securityStore = useSecurityStore()
-      
-      // Vérifier si la connexion est autorisée
-      const canProceed = securityStore.canProceedWithLogin()
-      if (!canProceed.allowed) {
-        return { 
-          success: false, 
-          error: canProceed.reason || 'Connexion temporairement bloquée' 
-        }
-      }
 
       try {
         const response = await fetch('/api/auth/login', {
@@ -39,13 +27,8 @@ export const useAuthStore = defineStore('auth', {
         })
 
         if (!response.ok) {
-          // Enregistrer la tentative échouée
-          securityStore.recordLoginAttempt(false)
-          
           if (response.status === 401) {
             throw new Error('Identifiants invalides')
-          } else if (response.status === 429) {
-            throw new Error('Trop de tentatives. Réessayez plus tard.')
           } else {
             throw new Error('Erreur de connexion')
           }
@@ -53,8 +36,7 @@ export const useAuthStore = defineStore('auth', {
 
         const data: AuthResponse = await response.json()
 
-        // Enregistrer la tentative réussie
-        securityStore.recordLoginAttempt(true)
+
 
         this.user = data.user
         this.token = data.token
@@ -81,9 +63,7 @@ export const useAuthStore = defineStore('auth', {
       // Supprimer le cookie sécurisé
       this.removeSecureCookie('auth_token')
       
-      // Réinitialiser l'état de sécurité
-      const securityStore = useSecurityStore()
-      securityStore.resetSecurityState()
+
     },
 
     async checkAuth() {

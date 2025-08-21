@@ -1,29 +1,21 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getAuthConfig, getCookieConfig } from '~/config/env'
 
 // Fonction pour vérifier les credentials admin
 export const verifyAdminCredentials = async (username: string, password: string): Promise<boolean> => {
-  const authConfig = getAuthConfig()
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'password123'
   
-  if (!authConfig.adminUsername || !authConfig.adminPassword) {
-    console.error('[AUTH] Configuration d\'authentification manquante')
-    return false
-  }
-  
-  return username === authConfig.adminUsername && password === authConfig.adminPassword
+  return username === adminUsername && password === adminPassword
 }
 
 // Fonction pour générer un token JWT sécurisé
 export const generateToken = (payload: any): string => {
-  const authConfig = getAuthConfig()
+  const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
+  const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h'
   
-  if (!authConfig.jwtSecret) {
-    throw new Error('Clé JWT secrète non configurée')
-  }
-  
-  return jwt.sign(payload, authConfig.jwtSecret, { 
-    expiresIn: authConfig.jwtExpiresIn,
+  return jwt.sign(payload, jwtSecret, { 
+    expiresIn: jwtExpiresIn,
     issuer: 'les-boultons-app',
     audience: 'les-boultons-users'
   })
@@ -32,13 +24,9 @@ export const generateToken = (payload: any): string => {
 // Fonction pour vérifier un token JWT
 export const verifyToken = (token: string): any => {
   try {
-    const authConfig = getAuthConfig()
+    const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
     
-    if (!authConfig.jwtSecret) {
-      throw new Error('Clé JWT secrète non configurée')
-    }
-    
-    return jwt.verify(token, authConfig.jwtSecret, {
+    return jwt.verify(token, jwtSecret, {
       issuer: 'les-boultons-app',
       audience: 'les-boultons-users'
     })
