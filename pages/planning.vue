@@ -1,47 +1,44 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <h1 class="text-4xl font-lobster text-gray-900">
-          Planning hebdomadaire
-        </h1>
+          <!-- Header -->
+      <div class="mb-6 relative">
+        <div class="text-center mb-3">
+          <h1 class="text-3xl font-lobster text-gray-900">
+            Planning hebdomadaire
+          </h1>
+        </div>
         <button 
           @click="printPlanning" 
-          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+          class="absolute top-0 right-0 flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
           </svg>
           Imprimer
         </button>
-      </div>
-      <p class="text-xl text-gray-600">
-        Organisez vos repas de la semaine
-      </p>
     </div>
 
     <!-- Week Navigation -->
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
       <div class="flex justify-between items-center">
         <button
           @click="previousWeek"
-          class="p-2 text-gray-600 hover:text-primary-600 transition-colors duration-200"
+          class="p-1.5 text-gray-600 hover:text-primary-600 transition-colors duration-200"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
         
-        <h2 class="text-xl font-semibold text-gray-900">
+        <h2 class="text-lg font-semibold text-gray-900">
           Semaine du {{ formatWeekStart(currentWeek) }}
         </h2>
         
         <button
           @click="nextWeek"
-          class="p-2 text-gray-600 hover:text-primary-600 transition-colors duration-200"
+          class="p-1.5 text-gray-600 hover:text-primary-600 transition-colors duration-200"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
           </svg>
         </button>
@@ -49,70 +46,42 @@
     </div>
 
     <!-- Weekly Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
-      <div
-        v-for="day in weekDays"
-        :key="day.date"
-        class="bg-white rounded-xl shadow-sm p-4"
-      >
-        <div class="text-center mb-4">
-          <h3 class="font-semibold text-gray-900">{{ day.name }}</h3>
-          <p class="text-sm text-gray-500">{{ formatDate(day.date) }}</p>
+    <div class="space-y-6">
+      <!-- En-tête des jours -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-7 gap-2">
+          <div
+            v-for="day in weekDays"
+            :key="`header-${day.date}`"
+            class="text-center"
+          >
+            <h3 class="font-semibold text-gray-900 text-sm">{{ day.name }}</h3>
+            <p class="text-xs text-gray-500">{{ formatDate(day.date) }}</p>
+          </div>
         </div>
+      </div>
 
-        <!-- Meals -->
-        <div class="space-y-4">
-
-          <!-- Lunch -->
-          <div class="border border-gray-200 rounded-lg p-3">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Déjeuner</h4>
-            <div v-if="day.meals.lunch" class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-900">{{ day.meals.lunch.title }}</span>
-                <button
-                  @click="removeMeal(day.date, 'lunch')"
-                  class="text-red-500 hover:text-red-700 text-xs"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-              
-              <!-- Note pour le déjeuner -->
-              <div class="mt-2">
-                <div v-if="editingNote !== `${day.dateString}-lunch`" class="flex items-center justify-between">
-                  <span v-if="day.meals.lunch.note" class="text-xs text-gray-600 italic">{{ day.meals.lunch.note }}</span>
-                  <button
-                    @click="startEditingNote(day.date, 'lunch', day.meals.lunch.note)"
-                    class="text-gray-400 hover:text-primary-600 text-xs"
-                    title="Modifier la note"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
+      <!-- Ligne des déjeuners -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Déjeuners</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
+          <div
+            v-for="(day, index) in weekDays"
+            :key="`lunch-${day.date}`"
+            class="min-h-[120px] px-3 first:pl-0 last:pr-0"
+          >
+            <!-- Liste des recettes du déjeuner -->
+            <div v-if="day.meals.lunch && day.meals.lunch.length > 0" class="space-y-2 mb-3">
+              <div v-for="meal in day.meals.lunch" :key="meal.id" class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg">
+                <div class="flex-1 min-w-0">
+                  <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
                 </div>
-                <div v-else class="flex items-center gap-1">
-                  <input
-                    v-model="editingNoteValue"
-                    type="text"
-                    placeholder="Note (optionnel)"
-                    class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
-                    @keyup.enter="saveNote(day.date, 'lunch')"
-                    @blur="saveNote(day.date, 'lunch')"
-                  >
+                <div class="flex items-center space-x-1 ml-2">
+                  <!-- Supprimer cette recette -->
                   <button
-                    @click="saveNote(day.date, 'lunch')"
-                    class="text-green-600 hover:text-green-700 text-xs"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="cancelNoteEdit"
-                    class="text-red-500 hover:text-red-700 text-xs"
+                    @click="removeMeal(day.date, 'lunch', meal.id)"
+                    class="text-red-500 hover:text-red-700 text-xs p-0.5"
+                    title="Supprimer cette recette"
                   >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -121,122 +90,76 @@
                 </div>
               </div>
             </div>
+
+            <!-- Bouton pour ajouter une recette -->
             <button
-              v-else
               @click="openMealSelector(day.date, 'lunch')"
-              class="w-full text-sm text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg p-2 hover:border-primary-300 transition-colors duration-200"
+              class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
             >
-              + Ajouter un repas
+              + Ajouter une recette
             </button>
           </div>
+        </div>
+      </div>
 
-          <!-- Dinner -->
-          <div class="border border-gray-200 rounded-lg p-3">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Dîner</h4>
-            <div v-if="day.meals.dinner" class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-900">{{ day.meals.dinner.title }}</span>
-                <button
-                  @click="removeMeal(day.date, 'dinner')"
-                  class="text-red-500 hover:text-red-700 text-xs"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-              
-              <!-- Note pour le dîner -->
-              <div class="mt-2">
-                <div v-if="editingNote !== `${day.dateString}-dinner`" class="flex items-center justify-between">
-                  <span v-if="day.meals.dinner.note" class="text-xs text-gray-600 italic">{{ day.meals.dinner.note }}</span>
-                  <button
-                    @click="startEditingNote(day.date, 'dinner', day.meals.dinner.note)"
-                    class="text-gray-400 hover:text-primary-600 text-xs"
-                    title="Modifier la note"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
+      <!-- Ligne des dîners -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Dîners</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
+          <div
+            v-for="(day, index) in weekDays"
+            :key="`dinner-${day.date}`"
+            class="min-h-[120px] px-3 first:pl-0 last:pr-0"
+          >
+            <!-- Liste des recettes du dîner -->
+            <div v-if="day.meals.dinner && day.meals.dinner.length > 0" class="space-y-2 mb-3">
+              <div v-for="meal in day.meals.dinner" :key="meal.id" class="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg">
+                <div class="flex-1 min-w-0">
+                  <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
                 </div>
-                <div v-else class="flex items-center gap-1">
-                  <input
-                    v-model="editingNoteValue"
-                    type="text"
-                    placeholder="Note (optionnel)"
-                    class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
-                    @keyup.enter="saveNote(day.date, 'dinner')"
-                    @blur="saveNote(day.date, 'dinner')"
-                  >
+                <div class="flex items-center space-x-1 ml-2">
+                  <!-- Supprimer cette recette -->
                   <button
-                    @click="saveNote(day.date, 'dinner')"
-                    class="text-green-600 hover:text-green-700 text-xs"
+                    @click="removeMeal(day.date, 'dinner', meal.id)"
+                    class="text-red-500 hover:text-red-700 text-xs p-0.5"
+                    title="Supprimer cette recette"
                   >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="cancelNoteEdit"
-                    class="text-red-500 hover:text-red-700 text-xs"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                   </button>
                 </div>
               </div>
             </div>
+
+            <!-- Bouton pour ajouter une recette -->
             <button
-              v-else
               @click="openMealSelector(day.date, 'dinner')"
-              class="w-full text-sm text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg p-2 hover:border-primary-300 transition-colors duration-200"
+              class="w-full text-xs text-gray-500 hover:text-primary-600 border-2 border-dashed border-gray-300 rounded-lg py-1.5 hover:border-primary-300 transition-colors duration-200"
             >
-              + Ajouter un repas
+              + Ajouter une recette
             </button>
           </div>
+        </div>
+      </div>
 
-          <!-- Notes générales pour la journée -->
-          <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Notes du jour</h4>
-            <div v-if="editingDayNotes !== day.dateString" class="flex items-center justify-between">
-              <span v-if="day.meals.notes" class="text-xs text-gray-600 italic">{{ day.meals.notes }}</span>
-              <button
-                @click="startEditingDayNotes(day.date, day.meals.notes)"
-                class="text-gray-400 hover:text-primary-600 text-xs"
-                title="Modifier les notes"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              </button>
-            </div>
-            <div v-else class="flex items-center gap-1">
-              <input
-                v-model="editingDayNotesValue"
-                type="text"
-                placeholder="Notes générales (optionnel)"
-                class="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
-                @keyup.enter="saveDayNotes(day.date)"
-                @blur="saveDayNotes(day.date)"
-              >
-              <button
-                @click="saveDayNotes(day.date)"
-                class="text-green-600 hover:text-green-700 text-xs"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </button>
-              <button
-                @click="cancelDayNotesEdit"
-                class="text-red-500 hover:text-red-700 text-xs"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
+      <!-- Notes générales pour la semaine -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Notes de la semaine</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
+          <div
+            v-for="(day, index) in weekDays"
+            :key="`notes-${day.date}`"
+            class="min-h-[120px] px-3 first:pl-0 last:pr-0"
+          >
+            <!-- Notes du jour -->
+            <div class="h-full">
+              <textarea
+                v-model="day.meals.notes"
+                placeholder="Notes du jour..."
+                class="w-full h-full min-h-[100px] p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                @input="updateDayNotes(day.date, $event.target.value)"
+              ></textarea>
             </div>
           </div>
         </div>
@@ -245,14 +168,14 @@
 
     <!-- Meal Selector Modal -->
     <div v-if="showMealSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">
+      <div class="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-semibold text-gray-900">
             Choisir une recette
           </h3>
           <button
             @click="closeMealSelector"
-            class="text-gray-500 hover:text-gray-700"
+            class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -260,25 +183,66 @@
           </button>
         </div>
 
-        <div class="space-y-2">
+        <!-- Search Bar -->
+        <div class="mb-6">
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Rechercher une recette..."
+              class="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg"
+            >
+            <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Recipe Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
-            v-for="recipe in recipes"
+            v-for="recipe in filteredRecipes"
             :key="recipe.id"
             @click="selectMeal(recipe)"
-            class="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+            class="p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-primary-300 transition-all duration-200 hover:shadow-md"
           >
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-col space-y-3">
               <img
                 :src="recipe.image"
                 :alt="recipe.title"
-                class="w-12 h-12 object-cover rounded-lg"
+                class="w-full h-32 object-cover rounded-lg"
               >
-              <div class="flex-1">
-                <h4 class="font-medium text-gray-900">{{ recipe.title }}</h4>
-                <p class="text-sm text-gray-500">{{ recipe.prepTime + recipe.cookTime }} min</p>
-              </div>
+                             <div class="flex-1">
+                 <h4 class="font-medium text-gray-900 text-lg mb-2">{{ recipe.title }}</h4>
+                 <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+                   <span>⏱️ {{ recipe.prepTime + recipe.cookTime }} min</span>
+                   <span v-if="recipe.category" class="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                     {{ recipe.category }}
+                   </span>
+                 </div>
+                 <!-- Tags -->
+                 <div v-if="recipe.tags && recipe.tags.length > 0" class="flex flex-wrap gap-1">
+                   <span
+                     v-for="tag in recipe.tags"
+                     :key="tag"
+                     class="px-2 py-1 text-xs rounded-full"
+                     :class="{
+                       'bg-green-500 text-white': tag === 'végétarien',
+                       'bg-emerald-600 text-white': tag === 'vegan',
+                       'bg-gray-100 text-gray-600': tag !== 'végétarien' && tag !== 'vegan'
+                     }"
+                   >
+                     {{ tag }}
+                   </span>
+                 </div>
+               </div>
             </div>
           </div>
+        </div>
+
+        <!-- No Results Message -->
+        <div v-if="filteredRecipes.length === 0" class="text-center py-8">
+          <p class="text-gray-500 text-lg">Aucune recette trouvée pour "{{ searchQuery }}"</p>
         </div>
       </div>
     </div>
@@ -296,11 +260,26 @@ const selectedDay = ref(null)
 const selectedMealType = ref(null)
 const editingNote = ref(null)
 const editingNoteValue = ref('')
+
 const editingDayNotes = ref(null)
 const editingDayNotesValue = ref('')
+const searchQuery = ref('')
 
 // Computed properties
 const recipes = computed(() => recipesStore.recipes)
+
+const filteredRecipes = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return recipes.value
+  }
+  
+  const query = searchQuery.value.toLowerCase().trim()
+  return recipes.value.filter(recipe => 
+    recipe.title.toLowerCase().includes(query) ||
+    (recipe.category && recipe.category.toLowerCase().includes(query)) ||
+    (recipe.tags && recipe.tags.some(tag => tag.toLowerCase().includes(query)))
+  )
+})
 
 const weekDays = computed(() => {
   const days = []
@@ -342,6 +321,7 @@ const closeMealSelector = () => {
   showMealSelector.value = false
   selectedDay.value = null
   selectedMealType.value = null
+  searchQuery.value = ''
 }
 
 const selectMeal = (recipe) => {
@@ -353,9 +333,9 @@ const selectMeal = (recipe) => {
   closeMealSelector()
 }
 
-const removeMeal = (date, mealType) => {
+const removeMeal = (date, mealType, mealId) => {
   const dateString = date.toISOString().split('T')[0]
-  planningStore.removeMeal(dateString, mealType)
+  planningStore.removeMeal(dateString, mealType, mealId)
 }
 
 const startEditingNote = (date, mealType, currentNote = '') => {
@@ -363,15 +343,17 @@ const startEditingNote = (date, mealType, currentNote = '') => {
   editingNoteValue.value = currentNote
 }
 
-const saveNote = (date, mealType) => {
+const saveNote = (date, mealType, mealId) => {
   const dateString = date.toISOString().split('T')[0]
-  planningStore.updateMealNote(dateString, mealType, editingNoteValue.value)
+  planningStore.updateMealNote(dateString, mealType, mealId, editingNoteValue.value)
   editingNote.value = null
 }
 
 const cancelNoteEdit = () => {
   editingNote.value = null
 }
+
+
 
 const startEditingDayNotes = (date, currentNotes = '') => {
   editingDayNotes.value = date.toISOString().split('T')[0]
@@ -386,6 +368,11 @@ const saveDayNotes = (date) => {
 
 const cancelDayNotesEdit = () => {
   editingDayNotes.value = null
+}
+
+const updateDayNotes = (date, notes) => {
+  const dateString = date.toISOString().split('T')[0]
+  planningStore.updateDayNotes(dateString, notes)
 }
 
 const formatWeekStart = (date) => {
@@ -414,7 +401,7 @@ const printPlanning = () => {
         body { 
           font-family: Arial, sans-serif; 
           margin: 30px; 
-          line-height: 1.8; 
+          line-height: 1.6; 
           max-width: 1200px; 
           margin-left: auto; 
           margin-right: auto; 
@@ -422,82 +409,102 @@ const printPlanning = () => {
         h1 { 
           color: #1e40af; 
           font-size: 32px; 
-          margin-bottom: 20px; 
+          margin-bottom: 30px; 
           text-align: center; 
           font-weight: bold;
         }
-        .week-info { 
-          background: #f3f4f6; 
-          padding: 20px; 
-          border-radius: 12px; 
-          margin: 25px 0; 
+        .section { 
+          margin: 10px 0; 
+          page-break-inside: avoid; 
+        }
+        .section-title { 
+          font-size: 14px; 
+          font-weight: bold; 
+          color: #374151; 
           text-align: center; 
-          font-size: 18px;
-          font-weight: 500;
+          margin-bottom: 0px; 
         }
         .week-grid { 
           display: grid; 
           grid-template-columns: repeat(7, 1fr); 
-          gap: 20px; 
-          margin: 30px 0; 
+          gap: 0; 
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
         }
-        .day { 
-          border: 2px solid #e5e7eb; 
-          border-radius: 12px; 
-          padding: 20px; 
-          min-height: 300px;
+        .day-header {
+          background: #f3f4f6;
+          border-right: 1px solid #d1d5db;
+          padding: 5px 10px;
+          text-align: center;
+          min-height: 60px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
-        .day-header { 
-          text-align: center; 
-          margin-bottom: 20px; 
-          padding-bottom: 15px;
-          border-bottom: 2px solid #e5e7eb;
+        .day-header:last-child {
+          border-right: none;
         }
         .day-name { 
           font-weight: bold; 
           color: #374151; 
-          font-size: 18px;
+          font-size: 16px;
           text-transform: capitalize;
         }
         .day-date { 
-          font-size: 14px; 
-          color: #6b7280; 
-          margin-top: 5px;
-        }
-        .meal { 
-          margin-bottom: 20px; 
-        }
-        .meal-title { 
-          font-weight: bold; 
-          color: #374151; 
-          font-size: 16px; 
-          margin-bottom: 10px; 
-          text-align: center;
-          background: #f9fafb;
-          padding: 8px;
-          border-radius: 8px;
-        }
-        .meal-content { 
-          font-size: 14px; 
-          color: #6b7280; 
-          text-align: center;
-          min-height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .empty-meal { 
-          font-style: italic; 
-          color: #9ca3af; 
           font-size: 12px; 
+          color: #6b7280; 
+          margin-top: 0px;
         }
-        .footer {
-          margin-top: 40px; 
-          text-align: center; 
-          font-size: 14px; 
+        .day-content {
+          border-right: 1px solid #d1d5db;
+          padding: 5px 10px;
+          min-height: 120px;
+          display: flex;
+          flex-direction: column;
+        }
+        .day-content:last-child {
+          border-right: none;
+        }
+        .day-content.notes {
+          min-height: 100px;
+        }
+        .recipe-item {
+          padding: 6px 8px;
+          margin-bottom: 8px;
+          background: #f9fafb;
+          border-radius: 6px;
+          border: 1px solid #e5e7eb;
+        }
+        .recipe-title {
+          font-weight: 500;
+          color: #374151;
+          font-size: 13px;
+        }
+        .add-button {
+          margin-top: auto;
+          padding: 8px;
+          text-align: center;
           color: #6b7280;
-          border-top: 2px solid #e5e7eb;
-          padding-top: 20px;
+          font-size: 11px;
+          font-style: italic;
+          border: 1px dashed #d1d5db;
+          border-radius: 6px;
+          background: #f9fafb;
+        }
+        .notes-content {
+          min-height: 80px;
+          padding: 8px;
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          font-size: 12px;
+          color: #6b7280;
+          font-style: italic;
+        }
+        .empty-notes {
+          color: #9ca3af;
+          font-style: italic;
         }
         @media print { 
           body { 
@@ -505,79 +512,107 @@ const printPlanning = () => {
             font-size: 14px;
           } 
           h1 { font-size: 28px; }
-          .week-grid { 
-            grid-template-columns: repeat(7, 1fr); 
-            gap: 10px;
+          .section { margin: 10px 0; }
+          .section-title { 
+            font-size: 14px; 
+            margin-bottom: 0px; 
           }
-          .day {
-            padding: 15px;
-            min-height: 250px;
+          .day-header {
+            padding: 12px 8px;
+            min-height: 50px;
           }
-          .day-name { font-size: 16px; }
-          .meal-title { font-size: 14px; }
-          .meal-content { font-size: 12px; }
+          .day-content {
+            padding: 12px 8px;
+            min-height: 100px;
+          }
+          .day-content.notes {
+            min-height: 80px;
+          }
+          .day-name { font-size: 14px; }
+          .day-date { font-size: 11px; }
+          .recipe-item {
+            padding: 4px 6px;
+            margin-bottom: 6px;
+          }
+          .recipe-title { font-size: 12px; }
+          .add-button {
+            padding: 6px;
+            font-size: 10px;
+          }
+          .notes-content {
+            min-height: 60px;
+            padding: 6px;
+            font-size: 11px;
+          }
         }
       </style>
     </head>
     <body>
       <h1>Planning hebdomadaire</h1>
       
-      <div class="week-info">
-        <p>Semaine du ${formatWeekStart(currentWeek.value)}</p>
-      </div>
-      
-      <div class="week-grid">
-        ${weekDays.value.map(day => `
-          <div class="day">
+      <!-- En-tête des jours -->
+      <div class="section">
+        <div class="week-grid">
+          ${weekDays.value.map(day => `
             <div class="day-header">
               <div class="day-name">${day.name}</div>
               <div class="day-date">${formatDate(day.date)}</div>
             </div>
-            
-            <div class="meal">
-              <div class="meal-title">Petit-déjeuner</div>
-              <div class="meal-content">
-                ${day.meals.breakfast ? `
-                  <div>${day.meals.breakfast.title}</div>
-                  ${day.meals.breakfast.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.breakfast.note}</div>` : ''}
-                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
-              </div>
-            </div>
-            
-            <div class="meal">
-              <div class="meal-title">Déjeuner</div>
-              <div class="meal-content">
-                ${day.meals.lunch ? `
-                  <div>${day.meals.lunch.title}</div>
-                  ${day.meals.lunch.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.lunch.note}</div>` : ''}
-                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
-              </div>
-            </div>
-            
-            <div class="meal">
-              <div class="meal-title">Dîner</div>
-              <div class="meal-content">
-                ${day.meals.dinner ? `
-                  <div>${day.meals.dinner.title}</div>
-                  ${day.meals.dinner.note ? `<div style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 4px;">${day.meals.dinner.note}</div>` : ''}
-                ` : '<span class="empty-meal">Aucun repas planifié</span>'}
-              </div>
-            </div>
-            
-            ${day.meals.notes ? `
-              <div class="meal">
-                <div class="meal-title">Notes du jour</div>
-                <div class="meal-content" style="font-style: italic; color: #6b7280;">
-                  ${day.meals.notes}
-                </div>
-              </div>
-            ` : ''}
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
       </div>
-      
-      <div class="footer">
-        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+
+      <!-- Ligne des déjeuners -->
+      <div class="section">
+        <div class="section-title">Déjeuners</div>
+        <div class="week-grid">
+          ${weekDays.value.map(day => `
+            <div class="day-content">
+              ${day.meals.lunch && day.meals.lunch.length > 0 ? `
+                ${day.meals.lunch.map(meal => `
+                  <div class="recipe-item">
+                    <div class="recipe-title">${meal.title}</div>
+                  </div>
+                `).join('')}
+              ` : `
+              `}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Ligne des dîners -->
+      <div class="section">
+        <div class="section-title">Dîners</div>
+        <div class="week-grid">
+          ${weekDays.value.map(day => `
+            <div class="day-content">
+              ${day.meals.dinner && day.meals.dinner.length > 0 ? `
+                ${day.meals.dinner.map(meal => `
+                  <div class="recipe-item">
+                    <div class="recipe-title">${meal.title}</div>
+                  </div>
+                `).join('')}
+              ` : `
+              `}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Notes générales pour la semaine -->
+      <div class="section">
+        <div class="section-title">Notes de la semaine</div>
+        <div class="week-grid">
+          ${weekDays.value.map(day => `
+            <div class="day-content notes">
+              ${day.meals.notes ? `
+                <div class="notes-content">${day.meals.notes}</div>
+              ` : `
+              `}
+            </div>
+          `).join('')}
+        </div>
       </div>
     </body>
     </html>
