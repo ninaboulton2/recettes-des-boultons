@@ -7,7 +7,7 @@
           <!-- Logo -->
           <div class="flex items-center">
             <NuxtLink to="/" class="flex items-center space-x-3">
-              <img src="/images/logo.png" alt="Logo" class="h-10">
+              <NuxtImg src="/images/logo.png" alt="Logo" class="h-10" />
               <span class="text-2xl font-lobster" style="color: rgb(123, 136, 189);">{{ $t('meta.title') }}</span>
             </NuxtLink>
           </div>

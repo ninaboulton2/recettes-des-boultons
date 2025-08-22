@@ -253,35 +253,35 @@
             class="p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-primary-300 transition-all duration-200 hover:shadow-md"
           >
             <div class="flex flex-col space-y-3">
-              <img
+              <NuxtImg
                 :src="recipe.image"
                 :alt="recipe.title"
                 class="w-full h-32 object-cover rounded-lg"
-              >
-                             <div class="flex-1">
-                 <h4 class="font-medium text-gray-900 text-lg mb-2">{{ recipe.title }}</h4>
-                 <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
-                   <span>⏱️ {{ recipe.prepTime + recipe.cookTime }} min</span>
-                   <span v-if="recipe.category" class="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                     {{ recipe.category }}
-                   </span>
-                 </div>
-                 <!-- Tags -->
-                 <div v-if="recipe.tags && recipe.tags.length > 0" class="flex flex-wrap gap-1">
-                   <span
-                     v-for="tag in recipe.tags"
-                     :key="tag"
-                     class="px-2 py-1 text-xs rounded-full"
-                     :class="{
-                       'bg-green-500 text-white': tag === 'végétarien',
-                       'bg-emerald-600 text-white': tag === 'vegan',
-                       'bg-gray-100 text-gray-600': tag !== 'végétarien' && tag !== 'vegan'
-                     }"
-                   >
-                     {{ tag }}
-                   </span>
-                 </div>
-               </div>
+              />
+              <div class="flex-1">
+                <h4 class="font-medium text-gray-900 text-lg mb-2">{{ recipe.title }}</h4>
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+                  <span>⏱️ {{ recipe.prepTime + recipe.cookTime }} min</span>
+                  <span v-if="recipe.category" class="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                    {{ recipe.category }}
+                  </span>
+                </div>
+                <!-- Tags -->
+                <div v-if="recipe.tags && recipe.tags.length > 0" class="flex flex-wrap gap-1">
+                  <span
+                    v-for="tag in recipe.tags"
+                    :key="tag"
+                    class="px-2 py-1 text-xs rounded-full"
+                    :class="{
+                      'bg-green-500 text-white': tag === 'végétarien',
+                      'bg-emerald-600 text-white': tag === 'vegan',
+                      'bg-gray-100 text-gray-600': tag !== 'végétarien' && tag !== 'vegan'
+                    }"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

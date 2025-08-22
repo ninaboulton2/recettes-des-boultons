@@ -8,11 +8,11 @@
     >
       <div class="relative mb-4">
         <div class="bg-white rounded-lg shadow p-2">
-          <img
+          <NuxtImg
             :src="category.image"
             :alt="category.name"
             class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-          >
+          />
         </div>
       </div>
       <div class="space-y-2 text-center">
