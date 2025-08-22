@@ -786,6 +786,14 @@ const printPlanning = () => {
             padding: 6px;
             font-size: 11px;
           }
+          .footer {
+            margin-top: 20px; 
+            text-align: center; 
+            font-size: 12px; 
+            color: #6b7280;
+            border-top: 2px solid #e5e7eb;
+            padding-top: 20px;
+        }
         }
       </style>
     </head>
@@ -855,6 +863,10 @@ const printPlanning = () => {
             </div>
           `).join('')}
         </div>
+      </div>
+            
+      <div class="footer">
+        Recettes des Boultons
       </div>
     </body>
     </html>

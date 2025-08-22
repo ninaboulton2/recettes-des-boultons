@@ -219,7 +219,7 @@ const printRecipe = () => {
       <style>
         body { 
           font-family: Arial, sans-serif; 
-          margin: 30px; 
+          margin: 5px; 
           line-height: 1.8; 
           max-width: 800px; 
           margin-left: auto; 
@@ -228,15 +228,12 @@ const printRecipe = () => {
         h1 { 
           color: #1e40af; 
           font-size: 32px; 
-          margin-bottom: 20px; 
           text-align: center; 
           font-weight: bold;
         }
         h2 { 
           color: #374151; 
           font-size: 24px; 
-          margin-top: 30px; 
-          margin-bottom: 15px; 
           text-align: center;
           font-weight: bold;
         }
@@ -244,9 +241,8 @@ const printRecipe = () => {
           background: #f3f4f6; 
           padding: 20px; 
           border-radius: 12px; 
-          margin: 25px 0; 
           text-align: center;
-          font-size: 16px;
+          font-size: 11px;
         }
         .recipe-info span { 
           margin-right: 25px; 
@@ -266,47 +262,42 @@ const printRecipe = () => {
         }
         ul { 
           margin-left: 30px; 
-          font-size: 16px;
+          font-size: 11px;
         }
         ol { 
           margin-left: 30px; 
-          font-size: 16px;
+          font-size: 11px;
         }
         li { 
-          margin-bottom: 12px; 
           line-height: 1.8;
         }
         .header { 
           text-align: center; 
-          margin-bottom: 40px; 
         }
         .header p {
           font-size: 18px;
           color: #6b7280;
-          margin-top: 15px;
         }
         .footer {
           margin-top: 50px; 
           text-align: center; 
-          font-size: 14px; 
+          font-size: 12px; 
           color: #6b7280;
           border-top: 2px solid #e5e7eb;
           padding-top: 20px;
         }
         @media print { 
           body { 
-            margin: 20px; 
-            font-size: 16px;
+            font-size: 11px;
           } 
           h1 { font-size: 28px; }
-          h2 { font-size: 22px; }
+          h2 { font-size: 14px; }
         }
       </style>
     </head>
     <body>
       <div class="header">
         <h1>${recipe.value.title}</h1>
-        <p>${recipe.value.description}</p>
       </div>
       
       <div class="recipe-info">
@@ -314,10 +305,6 @@ const printRecipe = () => {
         <span><strong>Temps :</strong> ${
           typeof(recipe.value.prepTime) === 'string' ? recipe.value.prepTime : recipe.value.prepTime + recipe.value.cookTime} min</span>
         <span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>
-      </div>
-      
-      <div class="tags">
-        ${recipe.value.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
       </div>
       
       <h2>Ingrédients</h2>
@@ -333,14 +320,14 @@ const printRecipe = () => {
       </ol>
       
       ${recipe.value.notes && recipe.value.notes.trim() ? `
-      <h2>Notes et conseils</h2>
+      <h2 style="margin-top: 50px;">Notes et conseils</h2>
       <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 25px 0;">
         <p style="color: #1e40af; margin: 0; line-height: 1.8;">${recipe.value.notes}</p>
       </div>
       ` : ''}
       
       <div class="footer">
-        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+        Recettes des Boultons
       </div>
     </body>
     </html>

@@ -496,14 +496,13 @@ const printShoppingList = () => {
           font-family: Arial, sans-serif; 
           margin: 30px; 
           line-height: 1.6; 
-          max-width: 600px; 
+          max-width: 700px; 
           margin-left: auto; 
           margin-right: auto; 
         }
         h1 { 
           color: #1e40af; 
           font-size: 32px; 
-          margin-bottom: 20px; 
           text-align: center; 
           font-weight: bold;
         }
@@ -520,12 +519,12 @@ const printShoppingList = () => {
           font-weight: 500;
         }
         .items-list {
-          margin: 25px 0;
+          margin: 30px 0;
         }
         .item { 
-          padding: 8px 0; 
+          padding: 10px 0; 
           border-bottom: 1px solid #e5e7eb; 
-          font-size: 16px;
+          font-size: 12px;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -539,7 +538,7 @@ const printShoppingList = () => {
         }
         .item-details { 
           color: #6b7280; 
-          font-size: 14px; 
+          font-size: 12px; 
           font-weight: 500;
         }
         .checked { 
@@ -547,7 +546,7 @@ const printShoppingList = () => {
           color: #9ca3af; 
         }
         .summary { 
-          margin-top: 25px; 
+          margin-top: 5px; 
           padding: 15px; 
           background: #f3f4f6; 
           border-radius: 12px; 
@@ -581,7 +580,6 @@ const printShoppingList = () => {
       
       <div class="list-info">
         <p>Liste créée le ${formatDate(currentList.value.createdAt)}</p>
-        <p>${currentItems.value.length} article${currentItems.value.length > 1 ? 's' : ''} au total</p>
       </div>
       
       <div class="items-list">
@@ -598,11 +596,10 @@ const printShoppingList = () => {
       
       <div class="summary">
         <p><strong>${uncheckedItems.value.length}</strong> article${uncheckedItems.value.length > 1 ? 's' : ''} à acheter</p>
-        <p><strong>${checkedItems.value.length}</strong> article${checkedItems.value.length > 1 ? 's' : ''} acheté${checkedItems.value.length > 1 ? 's' : ''}</p>
       </div>
       
       <div class="footer">
-        Recettes des Boultons - ${new Date().toLocaleDateString('fr-FR')}
+        Recettes des Boultons
       </div>
     </body>
     </html>
