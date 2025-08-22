@@ -36,7 +36,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -73,7 +72,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -123,7 +121,6 @@
       "servings": 4,
       "image": "/images/viandes.png",
       "tags": [],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -173,7 +170,6 @@
       "servings": 1,
       "image": "/images/viandes.png",
       "tags": [],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": "Utiliser une main pour les ingrédients humides et une autre pour la chapelure évite d'avoir les doigts collants."
@@ -226,7 +222,6 @@
       "servings": 2,
       "image": "/images/viandes.png",
       "tags": [],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -278,7 +273,6 @@
       "servings": 4,
       "image": "/images/viandes.png",
       "tags": [],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -334,7 +328,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -426,7 +419,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -477,7 +469,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -528,7 +519,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -578,7 +568,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -660,7 +649,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -771,7 +759,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -859,7 +846,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -936,7 +922,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -992,7 +977,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1048,7 +1032,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1115,7 +1098,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1217,7 +1199,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1273,7 +1254,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1341,7 +1321,6 @@
         "végétarien",
         "🌶️"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2025-08-21T20:38:08.285Z",
       "notes": ""
@@ -1397,7 +1376,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1457,7 +1435,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1508,7 +1485,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1564,7 +1540,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": ""
@@ -1611,7 +1586,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "createdAt": "2024-01-15T00:00:00.000Z",
       "updatedAt": "2024-01-15T00:00:00.000Z",
       "notes": "• Ne jamais mettre le scoby au réfrigérateur\n• Utiliser un tissu pour éviter les mouches\n• Goûter pour juger la fermentation\n• Retirer une partie du scoby s'il devient trop gros\n• Il est possible de créer un 'scoby hotel' pour conserver une souche de secours dans un bocal fermé sans sucre."
@@ -1660,7 +1634,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T12:48:18.522Z",
       "updatedAt": "2025-07-07T12:48:18.522Z"
@@ -1723,7 +1696,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:21:46.947Z",
       "updatedAt": "2025-07-07T13:21:46.947Z"
@@ -1773,7 +1745,6 @@
         "vegan",
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour 1kg de figues, mettre 120 g de sucre et 1 CàS d’armagnac.",
       "createdAt": "2025-07-07T13:21:58.861Z",
       "updatedAt": "2025-07-07T13:21:58.861Z"
@@ -1838,7 +1809,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:37:19.276Z",
       "updatedAt": "2025-07-07T13:37:19.276Z"
@@ -1908,7 +1878,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Ajouter du lait si nécessaire pour ajuster la texture.",
       "createdAt": "2025-07-07T13:37:29.551Z",
       "updatedAt": "2025-07-07T13:37:29.551Z"
@@ -1977,7 +1946,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:37:39.197Z",
       "updatedAt": "2025-07-07T13:37:39.197Z"
@@ -2077,7 +2045,6 @@
         "végétarien",
         "🌶️"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:37:50.403Z",
       "updatedAt": "2025-08-21T20:39:15.043Z"
@@ -2156,7 +2123,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Le cake peut se conserver 2 jours au frigidaire et peut aussi se congeler. Pour cela, le couper en tranches et le mettre dans un sachet plastique. On peut empiler les tranches si on intercale du papier sulfurisé en elles.",
       "createdAt": "2025-07-07T13:38:03.763Z",
       "updatedAt": "2025-07-07T13:38:03.763Z"
@@ -2238,7 +2204,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:38:18.387Z",
       "updatedAt": "2025-07-07T13:38:18.387Z"
@@ -2318,7 +2283,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:38:31.100Z",
       "updatedAt": "2025-07-07T13:38:31.100Z"
@@ -2363,7 +2327,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:38:39.290Z",
       "updatedAt": "2025-07-07T13:38:39.290Z"
@@ -2393,7 +2356,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:38:45.334Z",
       "updatedAt": "2025-07-07T13:38:45.334Z"
@@ -2485,7 +2447,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour James: Faire des boulettes de bœuf avec des steaks hachés. Couper 2 steaks hachés en 4. Faire des petits palets et les saupoudrer de poudre de paprika, de poudre de curry, de sel et poivre. Cuire à la poêle 2 minutes de chaque côté dans un peu d'huile.",
       "createdAt": "2025-07-07T13:39:00.612Z",
       "updatedAt": "2025-07-07T13:39:00.612Z"
@@ -2551,7 +2512,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:39:09.390Z",
       "updatedAt": "2025-07-07T13:39:09.390Z"
@@ -2649,7 +2609,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Ajuster les épices selon le goût.",
       "createdAt": "2025-07-07T13:39:23.138Z",
       "updatedAt": "2025-07-07T13:39:23.138Z"
@@ -2737,7 +2696,6 @@
           "tags": [
             "végétarien"
           ],
-          "favorite": false,
           "notes": "Toujours ajouter le sel après la cuisson des lentilles."
         },
         {
@@ -2828,12 +2786,10 @@
           "tags": [
             "végétarien"
           ],
-          "favorite": false,
           "notes": ""
         }
       ],
       "id": "46",
-      "favorite": false,
       "createdAt": "2025-07-07T13:39:44.779Z",
       "updatedAt": "2025-07-07T13:39:44.779Z",
       "notes": ""
@@ -2945,7 +2901,6 @@
       "servings": 4,
       "image": "/images/plats.png",
       "tags": [],
-      "favorite": false,
       "notes": "Vous pouvez remplacer le poulet par d'autres ingrédients selon vos préférences.",
       "createdAt": "2025-07-07T13:40:06.535Z",
       "updatedAt": "2025-07-07T13:40:06.535Z"
@@ -2997,7 +2952,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:40:15.140Z",
       "updatedAt": "2025-07-07T13:40:15.140Z"
@@ -3080,7 +3034,6 @@
       "servings": 4,
       "image": "/images/plats.png",
       "tags": [],
-      "favorite": false,
       "notes": "Préparez la salsa, le guacamole et les haricots refrits séparément.",
       "createdAt": "2025-07-07T13:40:27.528Z",
       "updatedAt": "2025-07-07T13:40:27.528Z"
@@ -3161,7 +3114,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Temps de repos de la pâte : 1h30",
       "createdAt": "2025-07-07T13:40:43.088Z",
       "updatedAt": "2025-07-07T13:40:43.088Z"
@@ -3236,7 +3188,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser de l'huile de coco pour un goût unique.",
       "createdAt": "2025-07-07T13:40:57.223Z",
       "updatedAt": "2025-07-07T13:40:57.223Z"
@@ -3313,7 +3264,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les fritters se congèlent très bien. Les réchauffer au four à 180° pour 15 minutes.",
       "createdAt": "2025-07-07T13:41:14.152Z",
       "updatedAt": "2025-07-07T13:41:14.152Z"
@@ -3400,7 +3350,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:41:34.361Z",
       "updatedAt": "2025-07-07T13:41:34.361Z"
@@ -3458,7 +3407,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "On peut les congeler pour une utilisation ultérieure.",
       "createdAt": "2025-07-07T13:41:54.471Z",
       "updatedAt": "2025-07-07T13:41:54.471Z"
@@ -3526,7 +3474,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utilisez de la crème liquide à température ambiante pour éviter qu'elle ne se sépare.",
       "createdAt": "2025-07-07T13:42:13.307Z",
       "updatedAt": "2025-07-07T13:42:13.307Z"
@@ -3579,7 +3526,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:42:26.105Z",
       "updatedAt": "2025-07-07T13:42:26.105Z"
@@ -3668,7 +3614,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T13:42:38.188Z",
       "updatedAt": "2025-07-07T13:42:38.188Z"
@@ -3740,7 +3685,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser du ghee pour un goût authentique.",
       "createdAt": "2025-07-07T13:42:56.621Z",
       "updatedAt": "2025-07-07T13:42:56.621Z"
@@ -3826,7 +3770,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:43:12.082Z",
       "updatedAt": "2025-07-07T13:43:12.082Z"
@@ -3899,7 +3842,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:43:22.730Z",
       "updatedAt": "2025-07-07T13:43:22.730Z"
@@ -3953,7 +3895,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Laissez bien refroidir au réfrigérateur pour une meilleure découpe.",
       "createdAt": "2025-07-07T13:43:35.122Z",
       "updatedAt": "2025-07-07T13:43:35.122Z"
@@ -4060,7 +4001,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les sauces peuvent être adaptées selon les goûts.",
       "createdAt": "2025-07-07T13:43:52.515Z",
       "updatedAt": "2025-07-07T13:43:52.515Z"
@@ -4107,7 +4047,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Travaillez toujours avec de la pâte froide.",
       "createdAt": "2025-07-07T13:44:00.311Z",
       "updatedAt": "2025-07-07T13:44:00.311Z"
@@ -4165,7 +4104,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les tagliatelles peuvent se congeler.",
       "createdAt": "2025-07-07T13:44:17.011Z",
       "updatedAt": "2025-07-07T13:44:17.011Z"
@@ -4222,7 +4160,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "À noter: garder le sel et la levure à part jusqu’au dernier moment, car le sel tue la levure.",
       "createdAt": "2025-07-07T13:44:28.576Z",
       "updatedAt": "2025-07-07T13:44:28.576Z"
@@ -4316,7 +4253,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce : On peut utiliser l’huile des anchois pour la cuisson des oignons.",
       "createdAt": "2025-07-07T13:44:43.325Z",
       "updatedAt": "2025-07-07T13:44:43.325Z"
@@ -4387,7 +4323,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:44:53.351Z",
       "updatedAt": "2025-07-07T13:44:53.351Z"
@@ -4476,7 +4411,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour 7 personnes : 800 g de farine",
       "createdAt": "2025-07-07T13:45:09.852Z",
       "updatedAt": "2025-07-07T13:45:09.852Z"
@@ -4557,7 +4491,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les raviolis peuvent être congelés. Les mettre sur une plaque en carton recouverte de papier sulfurisé et mettre au congélateur. Au bout d'une heure, les sortir et les mettre dans un sachet de congélation pour qu’ils prennent moins de place.",
       "createdAt": "2025-07-07T13:45:36.077Z",
       "updatedAt": "2025-07-07T13:45:36.077Z"
@@ -4662,7 +4595,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les feuilles de Wonton peuvent se congeler.",
       "createdAt": "2025-07-07T13:46:01.363Z",
       "updatedAt": "2025-07-07T13:46:01.363Z"
@@ -4764,7 +4696,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce : ajouter du parmesan râpé pour plus de saveur.",
       "createdAt": "2025-07-07T13:46:20.204Z",
       "updatedAt": "2025-07-07T13:46:20.204Z"
@@ -4875,7 +4806,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour 7 personnes : 800 g de farine",
       "createdAt": "2025-07-07T13:46:40.637Z",
       "updatedAt": "2025-07-07T13:46:40.637Z"
@@ -4946,7 +4876,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Le piment frais est optionnel.",
       "createdAt": "2025-07-07T13:46:53.085Z",
       "updatedAt": "2025-07-07T13:46:53.085Z"
@@ -4992,7 +4921,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "I always use white basmati rice, but you could also use white or semi-complet thai rice.",
       "createdAt": "2025-07-07T13:47:03.124Z",
       "updatedAt": "2025-07-07T13:47:03.124Z"
@@ -5082,7 +5010,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:47:22.060Z",
       "updatedAt": "2025-07-07T13:47:22.060Z"
@@ -5154,7 +5081,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "When making mushroom risotto, cook the mushrooms separately, then add them together with any cooking juices towards the end of the ladling phase.",
       "createdAt": "2025-07-07T13:47:36.288Z",
       "updatedAt": "2025-07-07T13:47:36.288Z"
@@ -5242,7 +5168,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les rouleaux de printemps se dégustent avec des feuilles de salade ou de la roquette et des feuilles de menthe.",
       "createdAt": "2025-07-07T13:47:52.053Z",
       "updatedAt": "2025-07-07T13:47:52.053Z"
@@ -5329,7 +5254,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser un litre d'eau par 100 g de pâtes pour éviter qu'elles ne collent.",
       "createdAt": "2025-07-07T13:48:08.334Z",
       "updatedAt": "2025-07-07T13:48:08.334Z"
@@ -5399,7 +5323,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Delicious hot or at room temperature.",
       "createdAt": "2025-07-07T13:48:20.519Z",
       "updatedAt": "2025-07-07T13:48:20.519Z"
@@ -5457,7 +5380,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser la recette de pâte brisée pour la pâte.",
       "createdAt": "2025-07-07T13:48:32.299Z",
       "updatedAt": "2025-07-07T13:48:32.299Z"
@@ -5518,7 +5440,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce : bien fariner le rouleau pour éviter que la pâte ne colle.",
       "createdAt": "2025-07-07T13:48:46.323Z",
       "updatedAt": "2025-07-07T13:48:46.323Z"
@@ -5600,7 +5521,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:48:57.525Z",
       "updatedAt": "2025-07-07T13:48:57.525Z"
@@ -5663,7 +5583,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "See shortcrust pastry recipe for the pastry.",
       "createdAt": "2025-07-07T13:49:09.024Z",
       "updatedAt": "2025-07-07T13:49:09.024Z"
@@ -5752,7 +5671,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce : Pour une meilleure texture, assurez-vous que le mélange soit bien sec avant de former les burgers.",
       "createdAt": "2025-07-07T13:49:23.393Z",
       "updatedAt": "2025-07-07T13:49:23.393Z"
@@ -5823,7 +5741,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T13:49:34.190Z",
       "updatedAt": "2025-07-07T13:49:34.190Z"
@@ -5929,7 +5846,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Servir chaud avec des nouilles chinoises ou du riz.",
       "createdAt": "2025-07-07T13:49:51.700Z",
       "updatedAt": "2025-07-07T13:49:51.700Z"
@@ -5993,7 +5909,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour des puddings encore plus légers, veillez à ne pas trop mélanger la pâte.",
       "createdAt": "2025-07-07T13:50:06.807Z",
       "updatedAt": "2025-07-07T13:50:06.807Z"
@@ -6049,7 +5964,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "La cuisson à feu vif permet d'attendrir les écorces qui sont ainsi très moelleuses.",
       "createdAt": "2025-07-07T14:03:15.898Z",
       "updatedAt": "2025-07-07T14:03:15.898Z"
@@ -6133,7 +6047,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Il est possible de congeler les accras. Ils conservent 6 mois au congélateur.",
       "createdAt": "2025-07-07T14:09:11.686Z",
       "updatedAt": "2025-08-21T12:02:29.520Z"
@@ -6235,7 +6148,6 @@
       "servings": 7,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Ajuster le temps de cuisson selon la taille des pavés de cabillaud.",
       "createdAt": "2025-07-07T14:09:30.714Z",
       "updatedAt": "2025-08-21T11:48:49.948Z"
@@ -6284,7 +6196,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T14:09:41.228Z",
       "updatedAt": "2025-07-07T14:09:41.228Z"
@@ -6327,7 +6238,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:09:51.391Z",
       "updatedAt": "2025-07-07T14:09:51.391Z"
@@ -6371,7 +6281,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:10:01.832Z",
       "updatedAt": "2025-07-07T14:10:01.832Z"
@@ -6415,7 +6324,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:10:12.908Z",
       "updatedAt": "2025-07-07T14:10:12.908Z"
@@ -6465,7 +6373,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T14:10:21.771Z",
       "updatedAt": "2025-07-07T14:10:21.771Z"
@@ -6536,7 +6443,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Les fishcakes peuvent se conserver un jour au frigidaire ou se congeler.",
       "createdAt": "2025-07-07T14:10:37.201Z",
       "updatedAt": "2025-07-07T14:10:37.202Z"
@@ -6625,7 +6531,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Le saumon doit être de la même taille et épaisseur pour une meilleure marinade.",
       "createdAt": "2025-07-07T14:11:12.111Z",
       "updatedAt": "2025-07-07T14:11:12.111Z"
@@ -6718,7 +6623,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:11:26.488Z",
       "updatedAt": "2025-07-07T14:11:26.488Z"
@@ -6813,7 +6717,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Utiliser un mélange de beurre et d'huile pour éviter que le plat soit trop riche.",
       "createdAt": "2025-07-07T14:11:43.715Z",
       "updatedAt": "2025-07-07T14:11:43.715Z"
@@ -6897,7 +6800,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Tu peux congeler les raviolis crus si tu veux les préparer à l’avance.",
       "createdAt": "2025-07-07T14:12:07.964Z",
       "updatedAt": "2025-07-07T14:12:07.964Z"
@@ -6998,7 +6900,6 @@
       "tags": [
         "🌶️"
       ],
-      "favorite": false,
       "notes": "Si vous voulez une sauce lisse, mixez-la avant d'ajouter le poisson.",
       "createdAt": "2025-07-07T14:12:22.725Z",
       "updatedAt": "2025-08-21T20:37:55.990Z"
@@ -7058,7 +6959,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:12:32.942Z",
       "updatedAt": "2025-07-07T14:12:32.942Z"
@@ -7169,7 +7069,6 @@
       "servings": 6,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Choix des poissons: Rascasse, Rouget grondin, Vive, Chapon, Saint-Pierre, Dorade grise, Merlu, Lieu, Congre, Cabillaud, Crabes, Gambas ou langoustines.",
       "createdAt": "2025-07-07T14:12:50.048Z",
       "updatedAt": "2025-07-07T14:12:50.048Z"
@@ -7270,7 +7169,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:13:06.126Z",
       "updatedAt": "2025-07-07T14:13:06.126Z"
@@ -7373,7 +7271,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "On peut congeler les tagliatelles si on veut les préparer à l’avance.",
       "createdAt": "2025-07-07T14:13:27.715Z",
       "updatedAt": "2025-07-07T14:13:27.715Z"
@@ -7432,7 +7329,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:13:36.120Z",
       "updatedAt": "2025-07-07T14:13:36.120Z"
@@ -7496,7 +7392,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:13:47.142Z",
       "updatedAt": "2025-07-07T14:13:47.142Z"
@@ -7555,7 +7450,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "Accompagnement : riz sushi, légumes marinés et grillés, pak choi sautés à l'ail, edamames, mangue.",
       "createdAt": "2025-07-07T14:13:57.864Z",
       "updatedAt": "2025-07-07T14:13:57.864Z"
@@ -7606,7 +7500,6 @@
       "servings": 4,
       "image": "/images/poissons.png",
       "tags": [],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:14:06.889Z",
       "updatedAt": "2025-07-07T14:14:06.889Z"
@@ -7695,7 +7588,6 @@
       "tags": [
         "🌶️"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:14:17.973Z",
       "updatedAt": "2025-08-21T20:41:04.876Z"
@@ -7755,7 +7647,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": true,
       "notes": "On peut faire des déclinaisons différentes en changeant les fruits: Aux abricots. Mélange pommes/rhubarbe. 1 kg de pommes et 500g de rhubarbe. Mettre la rhubarbe crue ou congelée dans le plat de cuisson avec une cuillère à café de gingembre en poudre et 40g de sucre en poudre. Mettre au four 10 min à 180 degrés. Enlever et recouvrir de pommes cuites et mettre le crumble par-dessus. Mettre au four à 180 degrés pendant 35 min.",
       "createdAt": "2025-07-07T14:25:33.818Z",
       "updatedAt": "2025-08-21T19:41:13.391Z"
@@ -7832,7 +7723,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour un goût encore meilleur, utilisez des bananes bien mûres.",
       "createdAt": "2025-07-07T14:25:47.047Z",
       "updatedAt": "2025-07-07T14:25:47.047Z"
@@ -7924,7 +7814,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Repos de 3 heures 20 minutes avant la cuisson.",
       "createdAt": "2025-07-07T14:26:06.374Z",
       "updatedAt": "2025-07-07T14:26:06.374Z"
@@ -7989,7 +7878,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Vous pouvez ajouter des raisins secs ou de la fleur d'oranger pour plus de saveur.",
       "createdAt": "2025-07-07T14:26:17.770Z",
       "updatedAt": "2025-07-07T14:26:17.770Z"
@@ -8070,7 +7958,6 @@
         "vegan",
         "sans gluten"
       ],
-      "favorite": false,
       "notes": "Utiliser du chocolat noir sans lactose pour une version entièrement vegan.",
       "createdAt": "2025-07-07T14:26:29.436Z",
       "updatedAt": "2025-08-21T18:34:03.547Z"
@@ -8128,7 +8015,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:26:38.197Z",
       "updatedAt": "2025-07-07T14:26:38.197Z"
@@ -8207,7 +8093,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Laisser reposer la pâte est essentiel pour obtenir la texture parfaite.",
       "createdAt": "2025-07-07T14:26:53.265Z",
       "updatedAt": "2025-07-07T14:26:53.265Z"
@@ -8345,7 +8230,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce: Utiliser des noix fraîches pour un meilleur goût.",
       "createdAt": "2025-07-07T14:27:16.859Z",
       "updatedAt": "2025-07-07T14:27:16.859Z"
@@ -8403,7 +8287,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:27:31.702Z",
       "updatedAt": "2025-07-07T14:27:31.702Z"
@@ -8467,7 +8350,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Bon appetit 😀",
       "createdAt": "2025-07-07T14:27:45.947Z",
       "updatedAt": "2025-07-07T14:27:45.947Z"
@@ -8556,7 +8438,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les noix hachées sont optionnelles.",
       "createdAt": "2025-07-07T14:27:57.811Z",
       "updatedAt": "2025-07-07T14:27:57.811Z"
@@ -8602,7 +8483,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Bon appetit 😀",
       "createdAt": "2025-07-07T14:28:08.567Z",
       "updatedAt": "2025-07-07T14:28:08.567Z"
@@ -8705,7 +8585,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Laisser mûrir le gâteau pour une meilleure saveur.",
       "createdAt": "2025-07-07T14:28:23.616Z",
       "updatedAt": "2025-07-07T14:28:23.616Z"
@@ -8774,7 +8653,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Si on n’a pas de robot, il faut mélanger les ingrédients avec un fouet :-)",
       "createdAt": "2025-07-07T14:28:34.230Z",
       "updatedAt": "2025-07-07T14:28:34.230Z"
@@ -8847,7 +8725,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Avec un robot il faut mixer avec le K de Kenwood 😀.",
       "createdAt": "2025-07-07T14:28:45.738Z",
       "updatedAt": "2025-07-07T14:28:45.738Z"
@@ -8910,7 +8787,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Si on n’a pas de robot, il faut mélanger les ingrédients avec un fouet :-)",
       "createdAt": "2025-07-07T14:28:54.746Z",
       "updatedAt": "2025-07-07T14:28:54.746Z"
@@ -8967,7 +8843,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:29:03.044Z",
       "updatedAt": "2025-07-07T14:29:03.044Z"
@@ -9043,7 +8918,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser des pommes acidulées pour un meilleur goût.",
       "createdAt": "2025-07-07T14:29:15.350Z",
       "updatedAt": "2025-07-07T14:29:15.350Z"
@@ -9093,7 +8967,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T14:29:23.869Z",
       "updatedAt": "2025-07-07T14:29:23.869Z"
@@ -9143,7 +9016,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Laisser reposer au congélateur pendant au moins trois heures.",
       "createdAt": "2025-07-07T14:29:32.044Z",
       "updatedAt": "2025-07-07T14:29:32.044Z"
@@ -9203,7 +9075,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce pour le kulfi à la mangue.",
       "createdAt": "2025-07-07T14:29:43.180Z",
       "updatedAt": "2025-07-07T14:29:43.180Z"
@@ -9281,7 +9152,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Chill the cheesecake overnight for the best texture.",
       "createdAt": "2025-07-07T14:29:56.185Z",
       "updatedAt": "2025-07-07T14:29:56.185Z"
@@ -9343,7 +9213,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour une conservation plus longue, vous pouvez congeler la crème au citron jusqu'à 3 à 6 mois.",
       "createdAt": "2025-07-07T14:30:05.299Z",
       "updatedAt": "2025-07-07T14:30:05.299Z"
@@ -9402,7 +9271,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:30:13.165Z",
       "updatedAt": "2025-07-07T14:30:13.165Z"
@@ -9441,7 +9309,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:30:21.378Z",
       "updatedAt": "2025-07-07T14:30:21.378Z"
@@ -9501,7 +9368,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utilisez un moule carré pour faciliter le démoulage.",
       "createdAt": "2025-07-07T14:30:30.896Z",
       "updatedAt": "2025-07-07T14:30:30.896Z"
@@ -9580,7 +9446,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Delicious with preserves if served for breakfast.",
       "createdAt": "2025-07-07T14:30:41.037Z",
       "updatedAt": "2025-07-07T14:30:41.037Z"
@@ -9633,7 +9498,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:30:52.618Z",
       "updatedAt": "2025-07-07T14:30:52.618Z"
@@ -9707,7 +9571,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Le pain d’épices peut se conserver 3 ou 4 jours en l’enveloppant dans du film alimentaire et en le conservant au réfrigérateur. Il est recommandé d’attendre 48 h avant de le déguster pour permettre aux épices et saveurs de bien se diffuser dans le gâteau. Il est possible de le congeler.",
       "createdAt": "2025-07-07T14:31:09.830Z",
       "updatedAt": "2025-07-07T14:31:09.830Z"
@@ -9772,7 +9635,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les pancakes peuvent être saupoudrés de sucre glace avant de servir.",
       "createdAt": "2025-07-07T14:31:19.623Z",
       "updatedAt": "2025-07-07T14:31:19.623Z"
@@ -9877,7 +9739,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:31:36.772Z",
       "updatedAt": "2025-07-07T14:31:36.772Z"
@@ -9951,7 +9812,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Pour un meilleur résultat, utilisez des cerises bien mûres.",
       "createdAt": "2025-07-07T14:31:48.619Z",
       "updatedAt": "2025-07-07T14:31:48.619Z"
@@ -10017,7 +9877,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser des fruits de la passion frais si disponibles.",
       "createdAt": "2025-07-07T14:32:05.209Z",
       "updatedAt": "2025-07-07T14:32:05.209Z"
@@ -10075,7 +9934,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce : ne pas enlever la peau des coings lors du mixage.",
       "createdAt": "2025-07-07T14:32:16.972Z",
       "updatedAt": "2025-07-07T14:32:16.972Z"
@@ -10133,7 +9991,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:32:27.865Z",
       "updatedAt": "2025-07-07T14:32:27.865Z"
@@ -10183,7 +10040,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "À servir avec de la glace à la vanille.",
       "createdAt": "2025-07-07T14:32:37.830Z",
       "updatedAt": "2025-07-07T14:32:37.830Z"
@@ -10233,7 +10089,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Astuce ou conseil personnel (optionnel)",
       "createdAt": "2025-07-07T14:32:46.112Z",
       "updatedAt": "2025-07-07T14:32:46.112Z"
@@ -10361,7 +10216,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Le stollen se conserve au moins un mois dans une boîte métallique.",
       "createdAt": "2025-07-07T14:33:05.023Z",
       "updatedAt": "2025-07-07T14:33:05.023Z"
@@ -10466,7 +10320,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:33:16.424Z",
       "updatedAt": "2025-07-07T14:33:16.424Z"
@@ -10532,7 +10385,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utiliser un plat IKEA blanc avec couvercle.",
       "createdAt": "2025-07-07T14:33:30.795Z",
       "updatedAt": "2025-07-07T14:33:30.795Z"
@@ -10607,7 +10459,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Préparez-le la veille pour un meilleur goût.",
       "createdAt": "2025-07-07T14:33:44.421Z",
       "updatedAt": "2025-07-07T14:33:44.421Z"
@@ -10673,7 +10524,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Laisser mariner pour un meilleur goût.",
       "createdAt": "2025-07-07T14:51:22.768Z",
       "updatedAt": "2025-08-21T18:32:51.953Z"
@@ -10756,7 +10606,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Pour une variante, ajoutez un poivron rouge rôti.",
       "createdAt": "2025-07-07T14:51:37.642Z",
       "updatedAt": "2025-07-07T14:51:37.642Z"
@@ -10810,7 +10659,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": true,
       "notes": "",
       "createdAt": "2025-07-07T14:51:47.331Z",
       "updatedAt": "2025-08-21T19:32:09.451Z"
@@ -10877,7 +10725,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Les blinis peuvent être congelés.",
       "createdAt": "2025-07-07T14:52:15.784Z",
       "updatedAt": "2025-07-07T14:52:15.784Z"
@@ -10945,7 +10792,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "The bread freezes very well. Arrange the slices flat in a freezer bag and place parchment paper between each slice layer.",
       "createdAt": "2025-07-07T14:52:28.054Z",
       "updatedAt": "2025-07-07T14:52:28.054Z"
@@ -11006,7 +10852,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Peut être servi avec des viandes grillées.",
       "createdAt": "2025-07-07T14:52:38.715Z",
       "updatedAt": "2025-07-07T14:52:38.715Z"
@@ -11067,7 +10912,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "La crème fraîche est optionnelle.",
       "createdAt": "2025-07-07T14:52:52.432Z",
       "updatedAt": "2025-07-07T14:52:52.432Z"
@@ -11142,7 +10986,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Idéalement, préparez le chutney quelques semaines à l'avance.",
       "createdAt": "2025-07-07T14:53:07.879Z",
       "updatedAt": "2025-07-07T14:53:07.879Z"
@@ -11192,7 +11035,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "If you find your guacamole oxidises anyway, then you should add more lime/lemon juice when preparing it.",
       "createdAt": "2025-07-07T14:53:17.845Z",
       "updatedAt": "2025-07-07T14:53:17.845Z"
@@ -11271,7 +11113,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Le tahini peut être amer s'il est utilisé directement du pot, mais il perd cette amertume lorsqu'il est mélangé dans le robot culinaire pendant 2 minutes. Le houmous épaissira au réfrigérateur, il doit donc avoir une consistance lisse lorsqu'il est mélangé.",
       "createdAt": "2025-07-07T14:53:29.258Z",
       "updatedAt": "2025-07-07T14:53:29.258Z"
@@ -11393,7 +11234,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Les dips peuvent être préparés à l'avance et conservés au réfrigérateur.",
       "createdAt": "2025-07-07T14:53:46.797Z",
       "updatedAt": "2025-07-07T14:53:46.797Z"
@@ -11469,7 +11309,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Le pain se congèle très bien. Répartir les tranches à plat dans un sac de congélation et mettre du papier de cuisson entre chaque couche de tranche de pain.",
       "createdAt": "2025-07-07T14:54:01.653Z",
       "updatedAt": "2025-07-07T14:54:01.653Z"
@@ -11539,7 +11378,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:54:21.819Z",
       "updatedAt": "2025-07-07T14:54:21.819Z"
@@ -11598,7 +11436,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:54:32.674Z",
       "updatedAt": "2025-07-07T14:54:32.674Z"
@@ -11668,7 +11505,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:54:44.204Z",
       "updatedAt": "2025-07-07T14:54:44.204Z"
@@ -11740,7 +11576,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Keeps in the fridge for up to 4–5 days in a sealed container.",
       "createdAt": "2025-07-07T14:55:29.080Z",
       "updatedAt": "2025-07-07T14:55:29.080Z"
@@ -11786,7 +11621,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:57:53.639Z",
       "updatedAt": "2025-07-07T14:57:53.639Z"
@@ -11841,7 +11675,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "The eggs will become harder and saltier the longer they are left in the marinade.",
       "createdAt": "2025-07-07T14:58:04.964Z",
       "updatedAt": "2025-07-07T14:58:04.964Z"
@@ -11911,7 +11744,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:58:20.544Z",
       "updatedAt": "2025-07-07T14:58:20.545Z"
@@ -11971,7 +11803,6 @@
         "vegan",
         "🌶️"
       ],
-      "favorite": false,
       "notes": "Stérilisez le pot à confiture avant utilisation avec de l'eau bouillante. Conservez au réfrigérateur une fois complètement refroidi.",
       "createdAt": "2025-07-07T14:58:31.149Z",
       "updatedAt": "2025-08-21T20:38:56.515Z"
@@ -12051,7 +11882,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "",
       "createdAt": "2025-07-07T14:58:45.050Z",
       "updatedAt": "2025-07-07T14:58:45.050Z"
@@ -12126,7 +11956,6 @@
         "végétarien",
         "vegan"
       ],
-      "favorite": false,
       "notes": "Utilisez des tomates cerises pour une préparation plus simple.",
       "createdAt": "2025-07-07T14:58:58.998Z",
       "updatedAt": "2025-07-07T14:58:58.998Z"
@@ -12201,7 +12030,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Vous pouvez ajuster la quantité de concombre et de yaourt selon vos préférences.",
       "createdAt": "2025-07-07T14:59:14.580Z",
       "updatedAt": "2025-07-07T14:59:14.580Z"
@@ -12275,7 +12103,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utilisez de l'huile de coco pour un goût authentique.",
       "createdAt": "2025-08-21T07:50:38.364Z",
       "updatedAt": "2025-08-21T07:50:38.364Z"
@@ -12349,7 +12176,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Utilisez de l'huile de coco pour un goût authentique.",
       "createdAt": "2025-08-21T08:12:23.993Z",
       "updatedAt": "2025-08-21T20:37:44.619Z"
@@ -12478,7 +12304,6 @@
       "tags": [
         "végétarien"
       ],
-      "favorite": false,
       "notes": "Retirez la citronnelle, et les morceaux de galanga/gingembre avant de servir.",
       "createdAt": "2025-08-21T19:57:34.407Z",
       "updatedAt": "2025-08-21T19:59:04.698Z"

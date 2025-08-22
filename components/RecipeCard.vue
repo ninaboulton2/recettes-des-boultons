@@ -16,14 +16,14 @@
           @mouseup.stop.prevent
           :class="[
             'p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl border-2',
-            recipe.favorite 
+            isFavorite 
               ? 'bg-red-100 border-red-400' 
               : 'bg-white border-gray-300'
           ]"
-          :title="recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+          :title="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
         >
           <svg 
-            v-if="recipe.favorite" 
+            v-if="isFavorite" 
             class="w-5 h-5 text-red-600" 
             fill="currentColor" 
             viewBox="0 0 20 20"
@@ -155,6 +155,9 @@ const emit = defineEmits(['edit', 'delete'])
 
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
+
+// Computed property to check if recipe is favorite
+const isFavorite = computed(() => recipesStore.isFavorite(props.recipe.id))
 
 const toggleFavorite = () => {
   recipesStore.toggleFavorite(props.recipe)

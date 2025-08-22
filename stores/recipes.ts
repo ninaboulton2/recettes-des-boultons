@@ -79,6 +79,11 @@ export const useRecipesStore = defineStore('recipes', () => {
     return grouped
   })
 
+  // Helper function to check if a recipe is favorite
+  const isFavorite = (recipeId) => {
+    return favorites.value.some(recipe => recipe.id === recipeId)
+  }
+
   // Actions
   const addRecipe = async (recipe) => {
     try {
@@ -107,11 +112,6 @@ export const useRecipesStore = defineStore('recipes', () => {
       if (result.success) {
         // Ajouter directement au store local
         recipes.value.push(result.recipe)
-        
-        // Mettre à jour les favoris si nécessaire
-        if (result.recipe.favorite) {
-          favorites.value.push(result.recipe)
-        }
         
         // Sauvegarder dans localStorage
         saveToLocalStorage()
@@ -216,57 +216,25 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const toggleFavorite = async (recipe) => {
+  const toggleFavorite = (recipe) => {
     try {
-      const index = recipes.value.findIndex(r => r.id === recipe.id)
-      if (index === -1) return
-
-      const newFavoriteState = !recipes.value[index].favorite
-
-      // Appeler l'API pour synchroniser l'état du favori
-      const response = await fetch(`/api/toggle-favorite?id=${recipe.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ favorite: newFavoriteState })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
-      }
-
-      const result = await response.json()
+      const favoriteIndex = favorites.value.findIndex(r => r.id === recipe.id)
       
-      if (result.success) {
-        // Mettre à jour localement pour la réactivité
-        recipes.value[index].favorite = newFavoriteState
-        
-        if (newFavoriteState) {
-          favorites.value.push(recipes.value[index])
-        } else {
-          favorites.value = favorites.value.filter(r => r.id !== recipe.id)
-        }
-        
-        // Sauvegarder dans localStorage
-        saveToLocalStorage()
-        
-        console.log('Favori mis à jour:', result.message)
+      if (favoriteIndex !== -1) {
+        // Retirer des favoris
+        favorites.value.splice(favoriteIndex, 1)
+        console.log('Recette retirée des favoris:', recipe.title)
       } else {
-        throw new Error(result.message || 'Erreur lors de la mise à jour du favori')
+        // Ajouter aux favoris
+        favorites.value.push(recipe)
+        console.log('Recette ajoutée aux favoris:', recipe.title)
       }
+      
+      // Sauvegarder dans localStorage
+      saveToLocalStorage()
+      
     } catch (error) {
       console.error('Erreur lors de la mise à jour du favori:', error)
-      // Revenir à l'état précédent en cas d'erreur
-      const index = recipes.value.findIndex(r => r.id === recipe.id)
-      if (index !== -1) {
-        recipes.value[index].favorite = !recipes.value[index].favorite
-        if (recipes.value[index].favorite) {
-          favorites.value.push(recipes.value[index])
-        } else {
-          favorites.value = favorites.value.filter(r => r.id !== recipe.id)
-        }
-      }
       throw error
     }
   }
@@ -321,7 +289,7 @@ export const useRecipesStore = defineStore('recipes', () => {
             recipe && recipe.id && recipe.title && recipe.category
           )
           favorites.value = parsedFavorites.filter(recipe => 
-            recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
+            recipe && recipe.id && recipe.title && recipe.category
           )
           
           console.log('Recettes chargées depuis localStorage:', recipes.value.length)
@@ -344,13 +312,26 @@ export const useRecipesStore = defineStore('recipes', () => {
       const response = await fetch('/data/recipes.json')
       const data = await response.json()
       
-      // Validate and clean recipes data
+      // Validate and clean recipes data - remove favorite attribute
       recipes.value = data.recipes.filter(recipe => 
         recipe && recipe.id && recipe.title && recipe.category
-      )
-      favorites.value = data.recipes.filter(recipe => 
-        recipe && recipe.favorite && recipe.id && recipe.title && recipe.category
-      )
+      ).map(recipe => {
+        // Remove favorite attribute from recipe data
+        const { favorite, ...recipeWithoutFavorite } = recipe
+        return recipeWithoutFavorite
+      })
+      
+      // Load favorites from localStorage if available, otherwise start with empty array
+      if (typeof window !== 'undefined') {
+        const storedFavorites = localStorage.getItem('boultons-favorites')
+        if (storedFavorites) {
+          favorites.value = JSON.parse(storedFavorites).filter(recipe => 
+            recipe && recipe.id && recipe.title && recipe.category
+          )
+        } else {
+          favorites.value = []
+        }
+      }
       
       console.log('Recettes chargées depuis JSON:', recipes.value.length)
       
@@ -390,6 +371,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     updateRecipe,
     deleteRecipe,
     toggleFavorite,
+    isFavorite,
     setCategory,
     setSearchQuery,
     toggleTag,
