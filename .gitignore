@@ -9,6 +9,9 @@ yarn-error.log*
 dist/
 .output/
 
+# Vercel build output
+.vercel/output/
+
 # Nuxt.js devtools
 .nuxt-devtools/
 

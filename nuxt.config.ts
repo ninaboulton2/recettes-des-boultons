@@ -68,6 +68,6 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
-    preset: 'vercel'
+    // Le preset est défini dans nitro.config.ts
   }
 }) 

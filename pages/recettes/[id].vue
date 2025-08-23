@@ -251,9 +251,9 @@
                 v-for="meal in day.meals.lunch" 
                 :key="meal.id" 
                 class="text-xs text-gray-500 px-2 py-1 truncate"
-                :title="meal.title"
+                :title="meal.recipe?.title || 'Recette sans nom'"
               >
-                {{ meal.title }}
+                {{ meal.recipe?.title || 'Recette sans nom' }}
               </div>
             </div>
           </div>
@@ -287,9 +287,9 @@
                 v-for="meal in day.meals.dinner" 
                 :key="meal.id" 
                 class="text-xs text-gray-500 px-2 py-1 truncate"
-                :title="meal.title"
+                :title="meal.recipe?.title || 'Recette sans nom'"
               >
-                {{ meal.title }}
+                {{ meal.recipe?.title || 'Recette sans nom' }}
               </div>
             </div>
           </div>

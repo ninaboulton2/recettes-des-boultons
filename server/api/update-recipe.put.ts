@@ -1,6 +1,5 @@
 import { defineEventHandler, readBody, getQuery, createError } from 'h3'
-import fs from 'fs'
-import path from 'path'
+import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -23,53 +22,83 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Chemin vers le fichier JSON des recettes
-    const recipesFile = path.join(process.cwd(), 'public/data/recipes.json')
+    // Vérifier d'abord que la recette existe
+    const { data: existingRecipe, error: checkError } = await supabase
+      .from('recipes')
+      .select('id, title')
+      .eq('id', recipeId)
+      .single()
 
-    // Lire le fichier existant
-    let recipesData
-    try {
-      const fileContent = fs.readFileSync(recipesFile, 'utf8')
-      recipesData = JSON.parse(fileContent)
-    } catch (error) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Erreur lors de la lecture du fichier recipes.json'
-      })
-    }
-
-    // Trouver la recette à mettre à jour
-    const recipeIndex = recipesData.recipes.findIndex(recipe => recipe.id === recipeId)
-    if (recipeIndex === -1) {
+    if (checkError || !existingRecipe) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Recette non trouvée'
       })
     }
 
-    // Mettre à jour la recette
-    const updatedRecipe = {
-      ...recipesData.recipes[recipeIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    }
+    // Mapper les noms de colonnes JavaScript vers Supabase
+    const supabaseUpdates: any = {}
+    
+    if (updates.title !== undefined) supabaseUpdates.title = updates.title
+    if (updates.description !== undefined) supabaseUpdates.description = updates.description
+    if (updates.category !== undefined) supabaseUpdates.category = updates.category
+    if (updates.ingredients !== undefined) supabaseUpdates.ingredients = updates.ingredients
+    if (updates.instructions !== undefined) supabaseUpdates.instructions = updates.instructions
+    if (updates.prepTime !== undefined) supabaseUpdates.prep_time = updates.prepTime
+    if (updates.cookTime !== undefined) supabaseUpdates.cook_time = updates.cookTime
+    if (updates.servings !== undefined) supabaseUpdates.servings = updates.servings
+    if (updates.image !== undefined) supabaseUpdates.image = updates.image
+    if (updates.tags !== undefined) supabaseUpdates.tags = updates.tags
+    if (updates.notes !== undefined) supabaseUpdates.notes = updates.notes
+    
+    // Toujours mettre à jour la date de modification
+    supabaseUpdates.updated_at = new Date().toISOString()
 
-    recipesData.recipes[recipeIndex] = updatedRecipe
+    // Mettre à jour la recette dans Supabase
+    const { data, error } = await supabase
+      .from('recipes')
+      .update(supabaseUpdates)
+      .eq('id', recipeId)
+      .select()
+      .single()
 
-    // Écrire le fichier
-    try {
-      fs.writeFileSync(recipesFile, JSON.stringify(recipesData, null, 2), 'utf8')
-    } catch (error) {
+    if (error) {
+      console.error('Erreur Supabase lors de la mise à jour:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Erreur lors de l\'écriture du fichier recipes.json'
+        statusMessage: `Erreur lors de la mise à jour: ${error.message}`
       })
+    }
+
+    if (!data) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Recette non trouvée après mise à jour'
+      })
+    }
+
+    // Formater la réponse pour correspondre au format JavaScript
+    const formattedRecipe = {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      ingredients: data.ingredients,
+      instructions: data.instructions,
+      prepTime: data.prep_time,
+      cookTime: data.cook_time,
+      servings: data.servings,
+      image: data.image,
+      tags: data.tags || [],
+      notes: data.notes || "",
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
     }
 
     return {
       success: true,
-      recipe: updatedRecipe,
-      message: `Recette "${updatedRecipe.title}" mise à jour avec succès`
+      recipe: formattedRecipe,
+      message: `Recette "${data.title}" mise à jour avec succès`
     }
 
   } catch (error: any) {

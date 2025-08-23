@@ -155,12 +155,18 @@ const emit = defineEmits(['edit', 'delete'])
 
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
+const favoritesStore = useFavoritesStore()
 
 // Computed property to check if recipe is favorite
-const isFavorite = computed(() => recipesStore.isFavorite(props.recipe.id))
+const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
 
-const toggleFavorite = () => {
-  recipesStore.toggleFavorite(props.recipe)
+const toggleFavorite = async () => {
+  const result = await favoritesStore.toggleFavorite(props.recipe.id)
+  if (result.success) {
+    $toast.success('Favoris mis à jour !', result.message, 3000)
+  } else {
+    $toast.error('Erreur !', result.error || 'Erreur lors de la mise à jour des favoris', 3000)
+  }
 }
 
 const { $toast } = useNuxtApp()

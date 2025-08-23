@@ -644,7 +644,8 @@ const toggleMoveMenu = (itemId) => {
 const moveItemToList = (item, targetListId) => {
   if (targetListId === currentList.value?.id) return
   
-  shoppingStore.moveItemToAnotherList(item.name, targetListId)
+  // Passer l'ID de la liste source pour un déplacement plus précis
+  shoppingStore.moveItemToAnotherList(item.name, targetListId, currentList.value?.id)
   moveMenuOpen.value = null
 }
 

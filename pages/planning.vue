@@ -89,7 +89,7 @@
                 @dragend="onDragEnd"
               >
                 <div class="flex-1 min-w-0">
-                  <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
+                  <span class="text-xs text-gray-900 truncate block" :title="meal.recipe?.title || 'Recette sans nom'">{{ meal.recipe?.title || 'Recette sans nom' }}</span>
                 </div>
                 <div class="flex items-center space-x-1 ml-2">
                   <!-- Supprimer cette recette -->
@@ -153,7 +153,7 @@
                 @dragend="onDragEnd"
               >
                 <div class="flex-1 min-w-0">
-                  <span class="text-xs text-gray-900 truncate block" :title="meal.title">{{ meal.title }}</span>
+                  <span class="text-xs text-gray-900 truncate block" :title="meal.recipe?.title || 'Recette sans nom'">{{ meal.recipe?.title || 'Recette sans nom' }}</span>
                 </div>
                 <div class="flex items-center space-x-1 ml-2">
                   <!-- Supprimer cette recette -->
@@ -489,25 +489,23 @@ const closeCustomMealInput = () => {
   customMealNote.value = ''
 }
 
-const addCustomMeal = () => {
+const addCustomMeal = async () => {
   if (customMealDay.value && customMealType.value && customMealTitle.value.trim()) {
     const dateString = customMealDay.value.toISOString().split('T')[0]
     
-    // Créer un objet "recette" personnalisé
-    const customRecipe = {
-      id: 'custom-' + Date.now(),
-      title: customMealTitle.value.trim(),
-      image: '/images/custom-meal.jpg', // Image par défaut
-      prepTime: 0,
-      cookTime: 0,
-      category: 'Personnalisé',
-      tags: ['personnalisé']
+    // Utiliser la nouvelle méthode du store pour les repas personnalisés
+    const result = await planningStore.addCustomMeal(
+      dateString, 
+      customMealType.value, 
+      customMealTitle.value.trim()
+    )
+    
+    if (result.success) {
+      closeCustomMealInput()
+    } else {
+      console.error('Erreur lors de l\'ajout du repas personnalisé:', result.error)
+      // TODO: Afficher une notification d'erreur à l'utilisateur
     }
-    
-    // Ajouter au planning avec la note
-    planningStore.addMeal(dateString, customMealType.value, customRecipe, customMealNote.value.trim())
-    
-    closeCustomMealInput()
   }
 }
 
@@ -840,7 +838,7 @@ const printPlanning = () => {
               ${day.meals.lunch && day.meals.lunch.length > 0 ? `
                 ${day.meals.lunch.map(meal => `
                   <div class="recipe-item ${meal.recipeId && meal.recipeId.startsWith('custom-') ? 'custom-meal' : ''}">
-                    <div class="recipe-title">${meal.title}</div>
+                    <div class="recipe-title">${meal.recipe?.title || 'Recette sans nom'}</div>
                   </div>
                 `).join('')}
               ` : `
@@ -859,7 +857,7 @@ const printPlanning = () => {
               ${day.meals.dinner && day.meals.dinner.length > 0 ? `
                 ${day.meals.dinner.map(meal => `
                   <div class="recipe-item ${meal.recipeId && meal.recipeId.startsWith('custom-') ? 'custom-meal' : ''}">
-                    <div class="recipe-title">${meal.title}</div>
+                    <div class="recipe-title">${meal.recipe?.title || 'Recette sans nom'}</div>
                   </div>
                 `).join('')}
               ` : `

@@ -1,6 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import fs from 'fs'
-import path from 'path'
+import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -14,51 +13,59 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Chemin vers le fichier JSON des recettes
-    const recipesFile = path.join(process.cwd(), 'public/data/recipes.json')
+    // Mapper les noms de colonnes JavaScript vers Supabase
+    const supabaseRecipe = {
+      title: recipe.title,
+      description: recipe.description,
+      category: recipe.category,
+      ingredients: recipe.ingredients,
+      instructions: recipe.instructions,
+      prep_time: recipe.prepTime,
+      cook_time: recipe.cookTime,
+      servings: recipe.servings,
+      image: recipe.image,
+      tags: recipe.tags || [],
+      notes: recipe.notes || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
 
-    // Lire le fichier existant
-    let recipesData
-    try {
-      const fileContent = fs.readFileSync(recipesFile, 'utf8')
-      recipesData = JSON.parse(fileContent)
-    } catch (error) {
+    // Insérer la recette dans Supabase
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert(supabaseRecipe)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erreur Supabase:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Erreur lors de la lecture du fichier recipes.json'
+        statusMessage: `Erreur lors de l'insertion en base de données: ${error.message}`
       })
     }
 
-    // Générer un nouvel ID
-    const maxId = Math.max(...recipesData.recipes.map(r => parseInt(r.id)), 0)
-    const newId = (maxId + 1).toString()
-
-    // Préparer la recette avec les métadonnées
-    const recipeWithMetadata = {
-      ...recipe,
-      id: newId,
-      favorite: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notes: recipe.notes || ""
-    }
-
-    // Ajouter la recette
-    recipesData.recipes.push(recipeWithMetadata)
-
-    // Écrire le fichier
-    try {
-      fs.writeFileSync(recipesFile, JSON.stringify(recipesData, null, 2), 'utf8')
-    } catch (error) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Erreur lors de l\'écriture du fichier recipes.json'
-      })
+    // Formater la réponse pour correspondre au format JavaScript
+    const formattedRecipe = {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      ingredients: data.ingredients,
+      instructions: data.instructions,
+      prepTime: data.prep_time,
+      cookTime: data.cook_time,
+      servings: data.servings,
+      image: data.image,
+      tags: data.tags || [],
+      notes: data.notes || "",
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
     }
 
     return {
       success: true,
-      recipe: recipeWithMetadata,
+      recipe: formattedRecipe,
       message: `Recette "${recipe.title}" ajoutée`
     }
 

@@ -1,19 +1,22 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
+import type { Recipe } from '~/utils/supabase'
 
 interface Meal {
   id: string
-  title: string
-  recipeId?: string
-  note?: string
+  dateString: string
+  mealType: 'lunch' | 'dinner'
+  recipeId: string
+  userId: string | null
+  createdAt: string
+  updatedAt: string
+  recipe: Recipe | null
 }
 
 interface DayMeals {
-  breakfast: Meal[]
   lunch: Meal[]
   dinner: Meal[]
   notes?: string
-  breakfastGroupNote?: string
   lunchGroupNote?: string
   dinnerGroupNote?: string
 }
@@ -24,207 +27,308 @@ interface WeekPlanning {
 
 export const usePlanningStore = defineStore('planning', () => {
   const weekPlanning = ref<WeekPlanning>({})
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
 
   // Actions
-  const addMeal = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', recipe: any, note?: string) => {
-    if (!weekPlanning.value[date]) {
-      weekPlanning.value[date] = {
-        breakfast: [],
-        lunch: [],
-        dinner: []
+  const addMeal = async (date: string, mealType: 'lunch' | 'dinner', recipe: Recipe, userId: string | null = null) => {
+    try {
+      const response = await fetch('/api/planning', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dateString: date,
+          mealType,
+          recipeId: recipe.id,
+          userId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
       }
-    }
 
-    // S'assurer que le type de repas existe et est un tableau
-    if (!Array.isArray(weekPlanning.value[date][mealType])) {
-      weekPlanning.value[date][mealType] = []
-    }
-
-    const newMeal: Meal = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      title: recipe.title,
-      recipeId: recipe.id,
-      note: note || ''
-    }
-
-    weekPlanning.value[date][mealType].push(newMeal)
-    saveToLocalStorage()
-  }
-
-  const removeMeal = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', mealId?: string) => {
-    if (weekPlanning.value[date]) {
-      if (mealId) {
-        // Supprimer une recette spécifique
-        weekPlanning.value[date][mealType] = weekPlanning.value[date][mealType].filter(meal => meal.id !== mealId)
+      const data = await response.json()
+      if (data.success) {
+        // Forcer la mise à jour du store en rechargeant depuis l'API
+        // Cela garantit que les données sont synchronisées et correctement formatées
+        await loadPlanning(userId)
+        
+        return { success: true, message: data.message }
       } else {
-        // Supprimer toutes les recettes du repas
-        weekPlanning.value[date][mealType] = []
+        throw new Error('Erreur lors de l\'ajout au planning')
       }
-      saveToLocalStorage()
+    } catch (error) {
+      console.error('Erreur ajout repas:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
     }
   }
 
-  const updateMealNote = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', mealId: string, note: string) => {
+  const addCustomMeal = async (date: string, mealType: 'lunch' | 'dinner', customTitle: string, userId: string | null = null) => {
+    try {
+      const response = await fetch('/api/planning', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dateString: date,
+          mealType,
+          customTitle,
+          userId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        // Forcer la mise à jour du store en rechargeant depuis l'API
+        // Cela garantit que les données sont synchronisées et correctement formatées
+        await loadPlanning(userId)
+        
+        return { success: true, message: data.message }
+      } else {
+        throw new Error('Erreur lors de l\'ajout du repas personnalisé')
+      }
+    } catch (error) {
+      console.error('Erreur ajout repas personnalisé:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const removeMeal = async (date: string, mealType: 'lunch' | 'dinner', mealId: string) => {
+    try {
+      const response = await fetch(`/api/planning/${mealId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      // Supprimer du planning local
+      if (weekPlanning.value[date] && weekPlanning.value[date][mealType]) {
+        weekPlanning.value[date][mealType] = weekPlanning.value[date][mealType].filter(meal => meal.id !== mealId)
+      }
+
+      return { success: true, message: 'Repas supprimé du planning' }
+    } catch (error) {
+      console.error('Erreur suppression repas:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const updateMealNote = (date: string, mealType: 'lunch' | 'dinner', mealId: string, note: string) => {
     if (weekPlanning.value[date]) {
       const meal = weekPlanning.value[date][mealType].find(m => m.id === mealId)
       if (meal) {
-        meal.note = note
-        saveToLocalStorage()
+        // Note: Pour l'instant, on garde les notes en local
+        // TODO: Ajouter une API pour mettre à jour les notes
+        // meal.note = note // Commenté car la propriété note n'existe pas dans l'interface Meal
       }
     }
   }
 
-  const updateDayNotes = (date: string, notes: string) => {
-    if (!weekPlanning.value[date]) {
-      weekPlanning.value[date] = {
-        breakfast: [],
-        lunch: [],
-        dinner: []
+  const updateDayNotes = async (date: string, notes: string, userId: string | null = null) => {
+    try {
+      const response = await fetch('/api/planning-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dateString: date,
+          noteType: 'day',
+          content: notes || null,
+          userId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
       }
+
+      const data = await response.json()
+      if (data.success) {
+        // Mettre à jour le store local
+        if (!weekPlanning.value[date]) {
+          weekPlanning.value[date] = {
+            lunch: [],
+            dinner: []
+          }
+        }
+        weekPlanning.value[date].notes = notes
+        
+        return { success: true, message: data.message }
+      } else {
+        throw new Error('Erreur lors de la mise à jour des notes')
+      }
+    } catch (error) {
+      console.error('Erreur mise à jour notes jour:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
     }
-    weekPlanning.value[date].notes = notes
-    saveToLocalStorage()
   }
 
-  const updateGroupNote = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', note: string) => {
-    if (!weekPlanning.value[date]) {
-      weekPlanning.value[date] = {
-        breakfast: [],
-        lunch: [],
-        dinner: []
+  const updateGroupNote = async (date: string, mealType: 'lunch' | 'dinner', note: string, userId: string | null = null) => {
+    try {
+      const noteType = mealType === 'lunch' ? 'lunch' : 'dinner'
+      
+      const response = await fetch('/api/planning-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dateString: date,
+          noteType,
+          content: note || null,
+          userId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
       }
+
+      const data = await response.json()
+      if (data.success) {
+        // Mettre à jour le store local
+        if (!weekPlanning.value[date]) {
+          weekPlanning.value[date] = {
+            lunch: [],
+            dinner: []
+          }
+        }
+        
+        const groupNoteKey = `${mealType}GroupNote` as keyof DayMeals
+        ;(weekPlanning.value[date] as any)[groupNoteKey] = note
+        
+        return { success: true, message: data.message }
+      } else {
+        throw new Error('Erreur lors de la mise à jour de la note de groupe')
+      }
+    } catch (error) {
+      console.error('Erreur mise à jour note groupe:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
     }
-    
-    const groupNoteKey = `${mealType}GroupNote` as keyof DayMeals
-    weekPlanning.value[date][groupNoteKey] = note
-    saveToLocalStorage()
   }
 
-  const moveMeal = (fromDate: string, fromMealType: 'breakfast' | 'lunch' | 'dinner', toDate: string, toMealType: 'breakfast' | 'lunch' | 'dinner', mealId: string) => {
-    // Trouver la recette à déplacer
-    if (!weekPlanning.value[fromDate] || !weekPlanning.value[fromDate][fromMealType]) {
-      return false
-    }
-
-    const mealIndex = weekPlanning.value[fromDate][fromMealType].findIndex(meal => meal.id === mealId)
-    if (mealIndex === -1) {
-      return false
-    }
-
-    // Récupérer la recette
-    const mealToMove = weekPlanning.value[fromDate][fromMealType][mealIndex]
-
-    // S'assurer que la destination existe
-    if (!weekPlanning.value[toDate]) {
-      weekPlanning.value[toDate] = {
-        breakfast: [],
-        lunch: [],
-        dinner: []
+  const moveMeal = async (fromDate: string, fromMealType: 'lunch' | 'dinner', toDate: string, toMealType: 'lunch' | 'dinner', mealId: string) => {
+    try {
+      // Récupérer le repas à déplacer
+      const mealToMove = weekPlanning.value[fromDate]?.[fromMealType]?.find(meal => meal.id === mealId)
+      if (!mealToMove) {
+        return { success: false, error: 'Repas non trouvé' }
       }
+
+      // Supprimer de la source
+      await removeMeal(fromDate, fromMealType, mealId)
+
+      // Ajouter à la destination selon le type de repas
+      if (mealToMove.recipe && mealToMove.recipe.id.startsWith('custom-')) {
+        // Repas personnalisé
+        const customTitle = mealToMove.recipe.title
+        const result = await addCustomMeal(toDate, toMealType, customTitle, mealToMove.userId)
+        return result
+      } else if (mealToMove.recipe) {
+        // Repas avec recette
+        const result = await addMeal(toDate, toMealType, mealToMove.recipe, mealToMove.userId)
+        return result
+      } else {
+        return { success: false, error: 'Type de repas non reconnu' }
+      }
+    } catch (error) {
+      console.error('Erreur déplacement repas:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
     }
-
-    // S'assurer que le type de repas de destination est un tableau
-    if (!Array.isArray(weekPlanning.value[toDate][toMealType])) {
-      weekPlanning.value[toDate][toMealType] = []
-    }
-
-    // Supprimer de la source
-    weekPlanning.value[fromDate][fromMealType].splice(mealIndex, 1)
-
-    // Ajouter à la destination
-    weekPlanning.value[toDate][toMealType].push(mealToMove)
-
-    saveToLocalStorage()
-    return true
   }
 
   const getDayMeals = (date: string): DayMeals => {
     if (!weekPlanning.value[date]) {
       return {
-        breakfast: [],
         lunch: [],
         dinner: []
       }
     }
 
-    // S'assurer que tous les types de repas sont des tableaux
-    const dayMeals = weekPlanning.value[date]
     return {
-      breakfast: Array.isArray(dayMeals.breakfast) ? dayMeals.breakfast : [],
-      lunch: Array.isArray(dayMeals.lunch) ? dayMeals.lunch : [],
-      dinner: Array.isArray(dayMeals.dinner) ? dayMeals.dinner : [],
-      notes: dayMeals.notes
+      lunch: weekPlanning.value[date].lunch || [],
+      dinner: weekPlanning.value[date].dinner || [],
+      notes: weekPlanning.value[date].notes,
+      lunchGroupNote: weekPlanning.value[date].lunchGroupNote,
+      dinnerGroupNote: weekPlanning.value[date].dinnerGroupNote
     }
   }
 
-  // Local storage
-  const saveToLocalStorage = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('boultons-planning', JSON.stringify(weekPlanning.value))
-    }
-  }
-
-  const loadFromLocalStorage = () => {
-    if (typeof window !== 'undefined') {
-      const savedPlanning = localStorage.getItem('boultons-planning')
-      if (savedPlanning) {
-        try {
-          const parsed = JSON.parse(savedPlanning)
-          // Migration des anciennes données (une seule recette par repas)
-          Object.keys(parsed).forEach(date => {
-            // S'assurer que la structure de base existe
-            if (!parsed[date]) {
-              parsed[date] = { breakfast: [], lunch: [], dinner: [] }
-            }
-            
-            // Migration des anciennes données (une seule recette par repas)
-            if (parsed[date].breakfast && !Array.isArray(parsed[date].breakfast)) {
-              parsed[date].breakfast = parsed[date].breakfast ? [parsed[date].breakfast] : []
-            }
-            if (parsed[date].lunch && !Array.isArray(parsed[date].lunch)) {
-              parsed[date].lunch = parsed[date].lunch ? [parsed[date].lunch] : []
-            }
-            if (parsed[date].dinner && !Array.isArray(parsed[date].dinner)) {
-              parsed[date].dinner = parsed[date].dinner ? [parsed[date].dinner] : []
-            }
-            
-            // S'assurer que tous les types de repas sont des tableaux
-            if (!Array.isArray(parsed[date].breakfast)) {
-              parsed[date].breakfast = []
-            }
-            if (!Array.isArray(parsed[date].lunch)) {
-              parsed[date].lunch = []
-            }
-            if (!Array.isArray(parsed[date].dinner)) {
-              parsed[date].dinner = []
-            }
-          })
-          weekPlanning.value = parsed
-        } catch (error) {
-          console.error('Erreur lors du chargement du planning:', error)
-          // En cas d'erreur, initialiser avec un planning vide
-          weekPlanning.value = {}
-        }
+  // Charger le planning depuis Supabase
+  const loadPlanning = async (userId: string | null = null) => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const url = userId ? `/api/planning?userId=${userId}` : '/api/planning'
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
       }
+
+      const data = await response.json()
+      if (data.success) {
+        // Convertir le format de l'API vers le format local
+        weekPlanning.value = {}
+        
+        Object.entries(data.planning).forEach(([date, meals]: [string, any]) => {
+          weekPlanning.value[date] = {
+            lunch: meals.lunch || [],
+            dinner: meals.dinner || [],
+            notes: meals.notes || null,
+            lunchGroupNote: meals.lunchGroupNote || null,
+            dinnerGroupNote: meals.dinnerGroupNote || null
+          }
+        })
+      } else {
+        throw new Error('Erreur lors du chargement du planning')
+      }
+    } catch (error) {
+      console.error('Erreur chargement planning:', error)
+      error.value = error instanceof Error ? error.message : 'Erreur inconnue'
+    } finally {
+      isLoading.value = false
     }
   }
 
   // Initialize
   onMounted(() => {
-    loadFromLocalStorage()
+    loadPlanning()
   })
 
   return {
     // State
     weekPlanning: readonly(weekPlanning),
+    isLoading: readonly(isLoading),
+    error: readonly(error),
     
     // Actions
     addMeal,
+    addCustomMeal,
     removeMeal,
     updateMealNote,
     updateGroupNote,
     updateDayNotes,
     getDayMeals,
-    moveMeal
+    moveMeal,
+    loadPlanning
   }
 }) 

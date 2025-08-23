@@ -10,15 +10,41 @@
       </p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="favoritesStore.isLoading" class="text-center py-12">
+      <div class="max-w-md mx-auto">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">Chargement de vos favoris...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="favoritesStore.error" class="text-center py-12">
+      <div class="max-w-md mx-auto">
+        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-red-900 mb-2">
+          Erreur de chargement
+        </h3>
+        <p class="text-red-600 mb-4">
+          {{ favoritesStore.error }}
+        </p>
+        <button @click="loadFavorites" class="btn-primary">
+          Réessayer
+        </button>
+      </div>
+    </div>
+
     <!-- Favorites Grid -->
-    <div v-if="favorites.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+    <div v-else-if="favoritesWithRecipes.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
       <NuxtLink
-        v-for="recipe in favorites"
-        :key="recipe.id"
-        :to="`/recettes/${recipe.id}`"
+        v-for="favorite in favoritesWithRecipes"
+        :key="favorite.id"
+        :to="`/recettes/${favorite.recipeId}`"
         class="block"
       >
-        <RecipeCard :recipe="recipe" />
+        <RecipeCard :recipe="favorite.recipe" />
       </NuxtLink>
     </div>
 
@@ -44,11 +70,24 @@
 </template>
 
 <script setup>
-const recipesStore = useRecipesStore()
+const favoritesStore = useFavoritesStore()
 
-const favorites = computed(() => 
-  recipesStore.favorites.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }))
+// Computed property pour filtrer les favoris avec des recettes valides
+const favoritesWithRecipes = computed(() => 
+  favoritesStore.favorites
+    .filter(favorite => favorite.recipe) // Filtrer les favoris avec des recettes
+    .sort((a, b) => a.recipe.title.localeCompare(b.recipe.title, 'fr', { sensitivity: 'base' }))
 )
+
+// Charger les favoris au montage de la page
+onMounted(async () => {
+  await favoritesStore.loadFavorites()
+})
+
+// Fonction pour recharger les favoris en cas d'erreur
+const loadFavorites = async () => {
+  await favoritesStore.loadFavorites()
+}
 
 // SEO
 useHead({
