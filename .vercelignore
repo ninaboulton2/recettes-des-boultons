@@ -1,0 +1,24 @@
+# Fichiers de développement
+.env
+.env.local
+.env.development
+.env.example
+
+# Dossiers de build
+.nuxt
+.output
+dist
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dépendances de développement
+node_modules
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration locale
+config.js

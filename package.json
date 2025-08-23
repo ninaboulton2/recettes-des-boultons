@@ -7,7 +7,8 @@
     "dev": "nuxt dev --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
-    "generate": "nuxt generate"
+    "generate": "nuxt generate",
+    "vercel-build": "nuxt build"
   },
   "dependencies": {
     "@nuxt/image": "^1.0.0",
