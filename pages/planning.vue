@@ -30,9 +30,17 @@
           </svg>
         </button>
         
-        <h2 class="text-lg font-semibold text-gray-900">
-          Semaine du {{ formatWeekStart(currentWeek) }}
-        </h2>
+        <div class="flex flex-col items-center">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Semaine du {{ formatWeekStart(currentWeek) }}
+          </h2>
+          <button
+            @click="goToCurrentWeek"
+            class="mt-2 px-3 py-1.5 text-sm bg-primary-100 text-primary-700 hover:bg-primary-200 rounded-lg transition-colors duration-200 font-medium"
+          >
+            Aujourd'hui
+          </button>
+        </div>
         
         <button
           @click="nextWeek"
@@ -433,16 +441,27 @@ const weekDays = computed(() => {
 
 // Methods
 const previousWeek = () => {
-  currentWeek.value.setDate(currentWeek.value.getDate() - 7)
+  const newDate = new Date(currentWeek.value)
+  newDate.setDate(newDate.getDate() - 7)
+  currentWeek.value = newDate
 }
 
 const nextWeek = () => {
-  currentWeek.value.setDate(currentWeek.value.getDate() + 7)
+  const newDate = new Date(currentWeek.value)
+  newDate.setDate(newDate.getDate() + 7)
+  currentWeek.value = newDate
 }
 
-const openMealSelector = (date, mealType) => {
+const goToCurrentWeek = () => {
+  currentWeek.value = new Date()
+}
+
+const openMealSelector = (date, mealType, prefillSearch = '') => {
   selectedDay.value = date
   selectedMealType.value = mealType
+  if (prefillSearch) {
+    searchQuery.value = prefillSearch
+  }
   showMealSelector.value = true
 }
 
@@ -878,6 +897,31 @@ const printPlanning = () => {
   printWindow.print()
   printWindow.close()
 }
+
+// Gestion des paramètres de requête pour ajouter une recette
+const route = useRoute()
+
+// Watcher pour détecter les paramètres de requête
+watch(() => route.query, (query) => {
+  if (query.addRecipe && query.recipeTitle) {
+    // Ouvrir automatiquement le sélecteur de recettes
+    // sur le jour actuel (aujourd'hui) et pré-remplir la recherche
+    const today = new Date()
+    const todayString = today.toISOString().split('T')[0]
+    
+    // Trouver le jour actuel dans weekDays
+    const todayIndex = weekDays.value.findIndex(day => day.dateString === todayString)
+    if (todayIndex !== -1) {
+      selectedDay.value = weekDays.value[todayIndex].date
+      selectedMealType.value = 'lunch' // Par défaut, on met au déjeuner
+      searchQuery.value = query.recipeTitle
+      showMealSelector.value = true
+    }
+    
+    // Nettoyer les paramètres de requête
+    navigateTo({ path: '/planning', query: {} }, { replace: true })
+  }
+}, { immediate: true })
 
 // SEO
 useHead({
