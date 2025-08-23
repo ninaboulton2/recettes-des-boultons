@@ -1,16 +1,55 @@
 <template>
   <!-- Boutons d'action -->
-  <div class="mb-6 flex items-center justify-between">
-    <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
-      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-      </svg>
-      Retour
-    </button>
-    <div class="flex items-center gap-4">
+  <div class="mb-6 flex flex-col gap-4">
+    <!-- Première ligne : bouton retour et boutons principaux -->
+    <div class="flex items-center justify-between">
+      <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Retour
+      </button>
+      <div class="flex items-center gap-4">
+        <!-- Bouton d'ajout à la liste de courses - visible pour tous -->
+        <button 
+          v-if="recipe"
+          @click="addToShoppingList" 
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+          </svg>
+          Ajouter à la liste de courses
+        </button>
+        <!-- Bouton d'ajout au planning - visible pour tous -->
+        <button 
+          v-if="recipe"
+          @click="addToPlanning" 
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          Ajouter au planning
+        </button>
+        <!-- Bouton d'impression - visible pour tous -->
+        <button 
+          v-if="recipe"
+          @click="printRecipe" 
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Imprimer
+        </button>
+      </div>
+    </div>
+    
+    <!-- Deuxième ligne : boutons d'administration -->
+    <div v-if="recipe && authStore.isAdmin" class="flex items-center justify-end gap-4">
       <!-- Bouton d'édition - visible uniquement pour les admins -->
       <button 
-        v-if="recipe && authStore.isAdmin"
         @click="editRecipe" 
         class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
         title="Modifier la recette"
@@ -22,7 +61,6 @@
       </button>
       <!-- Bouton de suppression - visible uniquement pour les admins -->
       <button 
-        v-if="recipe && authStore.isAdmin"
         @click="confirmDeleteRecipe" 
         class="flex items-center text-red-600 hover:text-red-800 font-medium transition-colors"
         title="Supprimer la recette"
@@ -31,39 +69,6 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
         </svg>
         Supprimer
-      </button>
-      <!-- Bouton d'ajout à la liste de courses - visible pour tous -->
-      <button 
-        v-if="recipe"
-        @click="addToShoppingList" 
-        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-        </svg>
-        Ajouter à la liste de courses
-      </button>
-      <!-- Bouton d'ajout au planning - visible pour tous -->
-      <button 
-        v-if="recipe"
-        @click="addToPlanning" 
-        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-        Ajouter au planning
-      </button>
-      <!-- Bouton d'impression - visible pour tous -->
-      <button 
-        v-if="recipe"
-        @click="printRecipe" 
-        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-        </svg>
-        Imprimer
       </button>
     </div>
   </div>
