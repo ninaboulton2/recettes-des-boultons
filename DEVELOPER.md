@@ -1,6 +1,6 @@
 # Guide Technique - Recettes des Boultons
 
-## 🏗️ Architecture
+## Architecture
 
 ### **Stack Technique**
 - **Frontend** : Nuxt.js 3 + Vue 3 + Tailwind CSS
@@ -48,7 +48,7 @@ interface PlanningMeal {
 }
 ```
 
-## 🔐 Authentification
+## Authentification
 
 ### **Système JWT**
 ```typescript
@@ -89,7 +89,7 @@ export default defineNuxtRouteMiddleware((to) => {
 })
 ```
 
-## 🗄️ Base de Données Supabase
+## Base de Données Supabase
 
 ### **Tables Principales**
 ```sql
@@ -177,8 +177,6 @@ CREATE POLICY "Allow public delete" ON recipes FOR DELETE USING (true);
 // DELETE /api/shopping-lists/:id - Supprimer une liste
 ```
 
-## 🎨 Composants Vue
-
 ### **RecipeCard.vue**
 ```vue
 <template>
@@ -204,23 +202,9 @@ defineProps<Props>()
 </script>
 ```
 
-### **RecipeEditor.vue**
-```vue
-<template>
-  <form @submit.prevent="saveRecipe">
-    <input v-model="recipe.title" placeholder="Titre de la recette" required>
-    <textarea v-model="recipe.description" placeholder="Description"></textarea>
-    <select v-model="recipe.category" required>
-      <option v-for="cat in categories" :key="cat" :value="cat">
-        {{ $t(`categories.${cat}`) }}
-      </option>
-    </select>
-    <!-- Autres champs... -->
-  </form>
-</template>
-```
 
-## 🌍 Internationalisation
+
+## Internationalisation
 
 ### **Configuration i18n**
 ```typescript
@@ -238,25 +222,7 @@ export default defineNuxtConfig({
 })
 ```
 
-### **Fichiers de Traduction**
-```json
-// i18n/locales/fr.json
-{
-  "categories": {
-    "soupes": "Soupes",
-    "entrees": "Entrées",
-    "plats": "Plats",
-    "desserts": "Desserts"
-  },
-  "common": {
-    "save": "Sauvegarder",
-    "cancel": "Annuler",
-    "delete": "Supprimer"
-  }
-}
-```
-
-## 🧪 Tests
+## Tests
 
 ### **Scripts de Test Disponibles**
 ```bash
@@ -273,41 +239,21 @@ node scripts/test-apis.js
 node scripts/test-shopping-integration.js
 ```
 
-### **Tests d'API**
-```typescript
-// Test d'ajout de recette
-const response = await fetch('/api/add-recipe', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    title: 'Test Recipe',
-    category: 'desserts',
-    ingredients: [{ name: 'Farine', amount: 200, unit: 'g' }],
-    instructions: ['Étape 1', 'Étape 2'],
-    prepTime: 15,
-    servings: 4
-  })
-})
-
-const data = await response.json()
-console.log('Recipe added:', data.success)
-```
-
-## 🚀 Déploiement
+## Déploiement
 
 ### **Variables d'Environnement**
 ```bash
 # Supabase (obligatoire)
-SUPABASE_URL=https://votre-projet.supabase.co
-SUPABASE_API_KEY=votre_cle_anonyme_supabase
+SUPABASE_URL=
+SUPABASE_API_KEY=
 
 # OpenAI (pour le traducteur IA)
-OPENAI_API_KEY=sk-your_production_key
+OPENAI_API_KEY=
 
 # Authentification
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=secure_password
-JWT_SECRET=your_64_char_secret
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
+JWT_SECRET=
 
 # Production
 NODE_ENV=production
@@ -323,93 +269,4 @@ npm run start
 
 # Déploiement Vercel (automatique)
 git push origin main
-```
-
-## 🔧 Configuration
-
-### **Nuxt Config**
-```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  modules: [
-    '@nuxtjs/tailwindcss',
-    '@nuxtjs/i18n',
-    '@pinia/nuxt'
-  ],
-  runtimeConfig: {
-    jwtSecret: process.env.JWT_SECRET,
-    openaiApiKey: process.env.OPENAI_API_KEY
-  },
-  nitro: {
-    preset: 'vercel'
-  }
-})
-```
-
-### **Tailwind CSS**
-```javascript
-// tailwind.config.js
-module.exports = {
-  content: [
-    './components/**/*.{js,vue,ts}',
-    './layouts/**/*.vue',
-    './pages/**/*.vue',
-    './plugins/**/*.{js,ts}',
-    './nuxt.config.{js,ts}'
-  ],
-  theme: {
-    extend: {
-      fontFamily: {
-        'lobster': ['Lobster', 'cursive'],
-        'poppins': ['Poppins', 'sans-serif']
-      }
-    }
-  }
-}
-```
-
-## 🌍 Internationalisation
-
-### **Breakpoints Tailwind**
-```vue
-<template>
-  <!-- Mobile first approach -->
-  <div class="w-full md:w-1/2 lg:w-1/3">
-    <h1 class="text-lg md:text-xl lg:text-2xl">Titre</h1>
-    <p class="text-sm md:text-base">Contenu</p>
-  </div>
-</template>
-```
-
-### **Classes Responsives Utiles**
-- `hidden md:block` : Cacher sur mobile, afficher sur desktop
-- `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` : Grille responsive
-- `p-4 md:p-6 lg:p-8` : Padding responsive
-- `text-center md:text-left` : Alignement responsive
-
-## 🔍 Debug et Performance
-
-### **Vue DevTools**
-- Inspection des composants et de l'état
-- Debug des stores Pinia
-- Timeline des événements
-
-### **Nuxt DevTools**
-- Accessibles sur `/__nuxt_devtools__`
-- Inspection des modules
-- Analyse des performances
-- Debug de la configuration
-
-### **Console et Logs**
-```typescript
-// Logs de développement
-console.log('Recipe loaded:', recipe)
-
-// Logs d'erreur
-console.error('API error:', error)
-
-// Logs de performance
-console.time('recipe-loading')
-// ... code ...
-console.timeEnd('recipe-loading')
 ```
