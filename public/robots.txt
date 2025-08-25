@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://votre-domaine.com/sitemap.xml
+
+# Favoriser l'indexation des pages importantes
+Allow: /recettes
+Allow: /favoris
+Allow: /courses
+Allow: /planning

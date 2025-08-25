@@ -47,7 +47,10 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' }
       ],
       link: [
-        { rel: 'icon', type: 'image/png', href: '/images/logo.png' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/logo.png' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/logo.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { href: 'https://fonts.googleapis.com/css2?family=Lobster&family=Poppins:wght@400;600;700&display=swap', rel: 'stylesheet' }
