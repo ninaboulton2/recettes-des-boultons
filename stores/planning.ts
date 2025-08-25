@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
 import type { Recipe } from '~/utils/supabase'
+import { useAuthStore } from './auth'
 
 interface Meal {
   id: string
@@ -31,8 +32,15 @@ export const usePlanningStore = defineStore('planning', () => {
   const error = ref<string | null>(null)
 
   // Actions
-  const addMeal = async (date: string, mealType: 'lunch' | 'dinner', recipe: Recipe, userId: string | null = null) => {
+  const addMeal = async (date: string, mealType: 'lunch' | 'dinner', recipe: Recipe) => {
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
       const response = await fetch('/api/planning', {
         method: 'POST',
         headers: {
@@ -54,7 +62,7 @@ export const usePlanningStore = defineStore('planning', () => {
       if (data.success) {
         // Forcer la mise à jour du store en rechargeant depuis l'API
         // Cela garantit que les données sont synchronisées et correctement formatées
-        await loadPlanning(userId)
+        await loadPlanning()
         
         return { success: true, message: data.message }
       } else {
@@ -67,8 +75,15 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  const addCustomMeal = async (date: string, mealType: 'lunch' | 'dinner', customTitle: string, userId: string | null = null) => {
+  const addCustomMeal = async (date: string, mealType: 'lunch' | 'dinner', customTitle: string) => {
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
       const response = await fetch('/api/planning', {
         method: 'POST',
         headers: {
@@ -90,7 +105,7 @@ export const usePlanningStore = defineStore('planning', () => {
       if (data.success) {
         // Forcer la mise à jour du store en rechargeant depuis l'API
         // Cela garantit que les données sont synchronisées et correctement formatées
-        await loadPlanning(userId)
+        await loadPlanning()
         
         return { success: true, message: data.message }
       } else {
@@ -105,12 +120,20 @@ export const usePlanningStore = defineStore('planning', () => {
 
   const removeMeal = async (date: string, mealType: 'lunch' | 'dinner', mealId: string) => {
     try {
-      const response = await fetch(`/api/planning/${mealId}`, {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
+      const response = await fetch(`/api/planning/${mealId}?userId=${userId}`, {
         method: 'DELETE'
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
       }
 
       // Supprimer du planning local
@@ -137,8 +160,15 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  const updateDayNotes = async (date: string, notes: string, userId: string | null = null) => {
+  const updateDayNotes = async (date: string, notes: string) => {
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
       const response = await fetch('/api/planning-notes', {
         method: 'POST',
         headers: {
@@ -148,7 +178,7 @@ export const usePlanningStore = defineStore('planning', () => {
           dateString: date,
           noteType: 'day',
           content: notes || null,
-          userId
+          userId: userId
         })
       })
 
@@ -178,8 +208,50 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  const updateGroupNote = async (date: string, mealType: 'lunch' | 'dinner', note: string, userId: string | null = null) => {
+  const deleteDayNotes = async (date: string) => {
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
+      const response = await fetch(`/api/planning-notes?dateString=${date}&noteType=day&userId=${userId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        // Mettre à jour le store local
+        if (weekPlanning.value[date]) {
+          weekPlanning.value[date].notes = null
+        }
+        
+        return { success: true, message: data.message }
+      } else {
+        throw new Error('Erreur lors de la suppression des notes')
+      }
+    } catch (error) {
+      console.error('Erreur suppression notes jour:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const updateGroupNote = async (date: string, mealType: 'lunch' | 'dinner', note: string) => {
+    try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer votre planning')
+      }
+      
       const noteType = mealType === 'lunch' ? 'lunch' : 'dinner'
       
       const response = await fetch('/api/planning-notes', {
@@ -238,11 +310,11 @@ export const usePlanningStore = defineStore('planning', () => {
       if (mealToMove.recipe && mealToMove.recipe.id.startsWith('custom-')) {
         // Repas personnalisé
         const customTitle = mealToMove.recipe.title
-        const result = await addCustomMeal(toDate, toMealType, customTitle, mealToMove.userId)
+        const result = await addCustomMeal(toDate, toMealType, customTitle)
         return result
       } else if (mealToMove.recipe) {
         // Repas avec recette
-        const result = await addMeal(toDate, toMealType, mealToMove.recipe, mealToMove.userId)
+        const result = await addMeal(toDate, toMealType, mealToMove.recipe)
         return result
       } else {
         return { success: false, error: 'Type de repas non reconnu' }
@@ -272,13 +344,21 @@ export const usePlanningStore = defineStore('planning', () => {
   }
 
   // Charger le planning depuis Supabase
-  const loadPlanning = async (userId: string | null = null) => {
+  const loadPlanning = async () => {
     isLoading.value = true
     error.value = null
     
     try {
-      const url = userId ? `/api/planning?userId=${userId}` : '/api/planning'
-      const response = await fetch(url)
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      // Si pas d'utilisateur connecté, vider le planning
+      if (!userId) {
+        weekPlanning.value = {}
+        return
+      }
+      
+      const response = await fetch(`/api/planning?userId=${userId}`)
       
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`)
@@ -309,6 +389,11 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
+  // Méthode pour recharger le planning quand l'utilisateur change
+  const refreshPlanning = async () => {
+    await loadPlanning()
+  }
+
   // Initialize
   onMounted(() => {
     loadPlanning()
@@ -327,8 +412,10 @@ export const usePlanningStore = defineStore('planning', () => {
     updateMealNote,
     updateGroupNote,
     updateDayNotes,
+    deleteDayNotes,
     getDayMeals,
     moveMeal,
-    loadPlanning
+    loadPlanning,
+    refreshPlanning
   }
 }) 

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
+import { useAuthStore } from './auth'
 
 interface ShoppingItem {
   id: string
@@ -93,8 +94,15 @@ export const useShoppingStore = defineStore('shopping', () => {
   })
 
   // Actions
-  const createList = async (name: string, userId: string | null = null) => {
+  const createList = async (name: string) => {
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour créer des listes de courses')
+      }
+      
       const response = await fetch('/api/shopping-lists', {
         method: 'POST',
         headers: {
@@ -104,7 +112,8 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
       }
 
       const data = await response.json()
@@ -122,7 +131,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         currentList.value = newList
         return { success: true, list: newList }
       } else {
-        throw new Error('Erreur lors de la création de la liste')
+        throw new Error(data.message || 'Erreur lors de la création de la liste')
       }
     } catch (error) {
       console.error('Erreur création liste:', error)
@@ -131,10 +140,17 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  const addItem = async (item: Omit<ShoppingItem, 'id' | 'checked' | 'createdAt' | 'updatedAt'>, userId: string | null = null) => {
+  const addItem = async (item: Omit<ShoppingItem, 'id' | 'checked' | 'createdAt' | 'updatedAt'>) => {
     if (!currentList.value) return { success: false, error: 'Aucune liste sélectionnée' }
 
     try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour gérer vos listes de courses')
+      }
+      
       const response = await fetch('/api/shopping-items', {
         method: 'POST',
         headers: {
@@ -151,7 +167,8 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
       }
 
       const data = await response.json()
@@ -165,7 +182,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         currentList.value.updatedAt = newItem.updatedAt
         return { success: true, item: newItem }
       } else {
-        throw new Error('Erreur lors de l\'ajout de l\'article')
+        throw new Error(data.message || 'Erreur lors de l\'ajout de l\'article')
       }
     } catch (error) {
       console.error('Erreur ajout article:', error)
@@ -310,7 +327,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  const updateItemQuantity = async (itemId: string, newAmount: number, newUnit: string, newNote?: string) => {
+  const updateItemQuantity = async (itemId: string, newAmount: number, newUnit: string) => {
     if (!currentList.value) return
 
     try {
@@ -322,13 +339,13 @@ export const useShoppingStore = defineStore('shopping', () => {
         },
         body: JSON.stringify({
           amount: newAmount,
-          unit: newUnit,
-          note: newNote
+          unit: newUnit
         })
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
       }
 
       const data = await response.json()
@@ -338,9 +355,6 @@ export const useShoppingStore = defineStore('shopping', () => {
         if (item) {
           item.amount = newAmount
           item.unit = newUnit
-          if (newNote !== undefined) {
-            item.note = newNote
-          }
           item.updatedAt = data.item.updatedAt
           currentList.value.updatedAt = new Date().toISOString()
         }
@@ -352,6 +366,13 @@ export const useShoppingStore = defineStore('shopping', () => {
 
   const moveItemToAnotherList = async (itemName: string, targetListId: string, sourceListId?: string) => {
     if (!currentList.value) return
+
+    const authStore = useAuthStore()
+    const userId = authStore.currentUser?.id || null
+    
+    if (!userId) {
+      throw new Error('Vous devez être connecté pour déplacer des articles')
+    }
 
     const targetList = shoppingLists.value.find(list => list.id === targetListId)
     if (!targetList) return
@@ -383,12 +404,14 @@ export const useShoppingStore = defineStore('shopping', () => {
             name: item.name,
             amount: item.amount,
             unit: item.unit,
-            recipeId: item.recipeId || null // Gérer les items sans recipeId
+            recipeId: item.recipeId || null, // Gérer les items sans recipeId
+            userId: userId
           })
         })
 
         if (!response.ok) {
-          throw new Error(`Erreur lors de l'ajout à la liste cible: ${response.status}`)
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.message || `Erreur lors de l'ajout à la liste cible: ${response.status}`)
         }
       }
 
@@ -399,7 +422,8 @@ export const useShoppingStore = defineStore('shopping', () => {
         })
 
         if (!response.ok) {
-          throw new Error(`Erreur lors de la suppression de la liste source: ${response.status}`)
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.message || `Erreur lors de la suppression de la liste source: ${response.status}`)
         }
       }
 
@@ -422,10 +446,17 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  const addIngredientsToLists = async (ingredients: Array<{name: string, amount: number, unit: string, recipeId?: string}>, userId: string | null = null) => {
+  const addIngredientsToLists = async (ingredients: Array<{name: string, amount: number, unit: string, recipeId?: string}>) => {
+    const authStore = useAuthStore()
+    const userId = authStore.currentUser?.id || null
+    
+    if (!userId) {
+      throw new Error('Vous devez être connecté pour gérer vos listes de courses')
+    }
+    
     // Créer une liste par défaut "Ma liste de courses" si aucune n'existe
     if (shoppingLists.value.length === 0) {
-      const result = await createList('Ma liste de courses', userId)
+      const result = await createList('Ma liste de courses')
       if (!result.success) {
         return result
       }
@@ -448,9 +479,7 @@ export const useShoppingStore = defineStore('shopping', () => {
             const itemAmount = parseFloat(item.amount as string) || 0
             return sum + itemAmount
           }, 0) + ingredient.amount
-          
-          console.log(`🔢 Mise à jour quantité: ${ingredientName} - ${totalAmount} ${ingredient.unit} (existant: ${totalAmount - ingredient.amount} + nouveau: ${ingredient.amount})`)
-          
+                    
           // Mettre à jour le premier item existant avec la nouvelle quantité totale
           const firstExistingItem = existingItems[0]
           
@@ -505,7 +534,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         
         if (!defaultList) {
           // Si "Ma liste de courses" n'existe pas, la créer
-          const result = await createList('Ma liste de courses', userId)
+          const result = await createList('Ma liste de courses')
           if (result.success) {
             defaultList = result.list
           } else {
@@ -519,7 +548,7 @@ export const useShoppingStore = defineStore('shopping', () => {
           unit: ingredient.unit,
           recipeId: ingredient.recipeId,
           listId: defaultList.id
-        }, userId)
+        })
       }
     }
 
@@ -530,13 +559,22 @@ export const useShoppingStore = defineStore('shopping', () => {
   }
 
   // Charger les listes depuis Supabase
-  const loadShoppingLists = async (userId: string | null = null) => {
+  const loadShoppingLists = async () => {
     isLoading.value = true
     error.value = null
     
     try {
-      const url = userId ? `/api/shopping-lists?userId=${userId}` : '/api/shopping-lists'
-      const response = await fetch(url)
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      // Si pas d'utilisateur connecté, vider les listes
+      if (!userId) {
+        shoppingLists.value = []
+        currentList.value = null
+        return
+      }
+      
+      const response = await fetch(`/api/shopping-lists?userId=${userId}`)
       
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`)
@@ -558,6 +596,11 @@ export const useShoppingStore = defineStore('shopping', () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  // Méthode pour recharger les listes quand l'utilisateur change
+  const refreshShoppingLists = async () => {
+    await loadShoppingLists()
   }
 
   // Initialize
@@ -590,6 +633,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     updateItemQuantity,
     moveItemToAnotherList,
     addIngredientsToLists,
-    loadShoppingLists
+    loadShoppingLists,
+    refreshShoppingLists
   }
 }) 

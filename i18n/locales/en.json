@@ -1,5 +1,158 @@
 {
-  "coming_soon": "Coming soon...",
+  "meta": {
+    "title": "Recettes des Boultons",
+    "description": "Find here all the favorite recipes of the Boultons!",
+    "home": {
+      "title": "Home - Recettes des Boultons",
+      "description": "Discover the favorite recipes of the Boulton family. Soups, dishes, desserts and more!"
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "recipes": "Recipes",
+    "favorites": "Favorites",
+    "shopping": "Shopping",
+    "planning": "Planning"
+  },
+  "home": {
+    "title": "Recettes des Boultons",
+    "subtitle": "Find here all the favorite recipes of the Boultons!",
+    "viewRecipes": "View recipes",
+    "addRecipe": "Add a recipe",
+    "categories": {
+      "title": "Explore our categories",
+      "subtitle": "Discover our recipes organized by categories to easily find what you like"
+    },
+    "features": {
+      "title": "Features",
+      "subtitle": "Everything you need to organize your meals",
+      "detailedRecipes": {
+        "title": "Detailed recipes",
+        "description": "Step-by-step instructions, preparation time and precise ingredients"
+      },
+      "shoppingLists": {
+        "title": "Shopping lists",
+        "description": "Automatically generate your shopping lists from recipes"
+      },
+      "weeklyPlanning": {
+        "title": "Weekly planning",
+        "description": "Organize your weekly meals and plan your menus"
+      },
+      "aiTranslator": {
+        "title": "AI Translator",
+        "description": "Convert and automatically add your recipes from Google Drive"
+      }
+    }
+  },
+  "categories": {
+    "soupes": {
+      "name": "Soups",
+      "description": "Hot and cold soups for all seasons"
+    },
+    "entrees": {
+      "name": "Starters, Salads, Breads and sides",
+      "description": "Fresh starters and savory sides"
+    },
+    "plats": {
+      "name": "Main dishes",
+      "description": "Balanced and delicious main dishes"
+    },
+    "poissons": {
+      "name": "Fish",
+      "description": "Fresh and savory fish recipes"
+    },
+    "viandes": {
+      "name": "Meat",
+      "description": "Traditional and modern meat dishes"
+    },
+    "yaourts_et_fromages": {
+      "name": "Yogurts and cheeses",
+      "description": "Dairy products and artisanal cheeses"
+    },
+    "desserts_et_gateaux": {
+      "name": "Desserts and cakes",
+      "description": "Sweet desserts and homemade pastries"
+    },
+    "boissons": {
+      "name": "Beverages",
+      "description": "Refreshing drinks and cocktails"
+    },
+    "confitures": {
+      "name": "Jams",
+      "description": "Homemade jams and preserves"
+    }
+  },
+  "recipes": {
+    "title": "All our recipes",
+    "subtitle": "Discover our collection of delicious recipes",
+    "search": {
+      "label": "Search",
+      "placeholder": "Recipe name, ingredient..."
+    },
+    "filters": {
+      "category": {
+        "label": "Category",
+        "all": "All categories"
+      },
+      "tags": {
+        "label": "Tags",
+        "all": "All tags",
+        "none": "No tags available"
+      }
+    }
+  },
+  "favorites": {
+    "title": "Mes favoris",
+    "subtitle": "Retrouvez ici toutes vos recettes préférées",
+    "empty": "Vous n'avez pas encore de favoris",
+    "addFirst": "Ajoutez votre première recette favorite !"
+  },
+  "shopping": {
+    "title": "Listes de courses",
+    "subtitle": "Gérez vos listes de courses et vos ingrédients",
+    "createList": "Créer une liste",
+    "addItem": "Ajouter un article",
+    "clearChecked": "Vider les cochés",
+    "empty": "Aucune liste de courses",
+    "createFirst": "Créez votre première liste !"
+  },
+  "planning": {
+    "title": "Planning hebdomadaire",
+    "subtitle": "Organisez vos repas de la semaine",
+    "addMeal": "Ajouter un repas",
+    "addCustom": "Repas personnalisé",
+    "notes": "Notes du jour",
+    "empty": "Aucun repas planifié",
+    "planFirst": "Planifiez votre premier repas !"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "error": "Login error",
+      "success": "Login successful"
+    },
+    "signup": {
+      "title": "Sign up",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "error": "Sign up error",
+      "success": "Sign up successful"
+    },
+    "required": {
+      "title": "Login required",
+      "description": "You must be logged in to access this feature. Log in to manage your favorites, planning and shopping lists.",
+      "loginButton": "Login",
+      "backToHome": "Back to home"
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Recettes des Boultons. All rights reserved."
+  },
   "language_switcher": {
     "french": "French",
     "english": "English"

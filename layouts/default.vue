@@ -67,7 +67,6 @@
               <button
                 @click="showLoginModal = true"
                 class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                title="Connexion Admin"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -77,9 +76,12 @@
             
             <!-- Utilisateur connecté -->
             <div v-else class="hidden md:flex items-center space-x-3">
+              <!-- Nom de l'utilisateur -->
               <div class="text-sm text-gray-700">
-                <span class="font-medium">{{ authStore.currentUser?.username }}</span>
+                <span class="font-medium">{{ authStore.currentUser?.name || authStore.currentUser?.email }}</span>
               </div>
+              
+              <!-- Bouton de déconnexion -->
               <button
                 @click="handleLogout"
                 class="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
@@ -161,14 +163,12 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                     </svg>
-                    <span>Connexion Admin</span>
                   </div>
                 </button>
               </div>
               <div v-else class="space-y-2">
                 <div class="text-sm text-gray-700 text-center">
-                  <span class="font-medium">{{ authStore.currentUser?.username }}</span>
-
+                  <span class="font-medium">{{ authStore.currentUser?.name || authStore.currentUser?.email }}</span>
                 </div>
                 <button
                   @click="handleLogout; mobileMenuOpen = false"
@@ -213,8 +213,8 @@
     <!-- Toast Container -->
     <ToastContainer ref="toastContainer" />
 
-    <!-- Modal de connexion -->
-    <LoginModal 
+    <!-- Modal d'authentification -->
+    <AuthModal 
       :is-open="showLoginModal" 
       @close="showLoginModal = false"
       @success="handleLoginSuccess"
@@ -224,14 +224,21 @@
 
 <script setup>
 import ToastContainer from '@/components/ToastContainer.vue'
+import AuthModal from '@/components/AuthModal.vue'
 import { useAuthStore } from '~/stores/auth'
+import { useFavoritesStore } from '~/stores/favorites'
+import { usePlanningStore } from '~/stores/planning'
+import { useShoppingStore } from '~/stores/shopping'
 
 const mobileMenuOpen = ref(false)
 const showLoginModal = ref(false)
 const toastContainer = ref()
 
-// Store d'authentification
+// Stores
 const authStore = useAuthStore()
+const favoritesStore = useFavoritesStore()
+const planningStore = usePlanningStore()
+const shoppingStore = useShoppingStore()
 
 // Setup global toast container
 onMounted(() => {
@@ -240,14 +247,64 @@ onMounted(() => {
   }
 })
 
-const handleLoginSuccess = () => {
+const handleLoginSuccess = async () => {
   showLoginModal.value = false
-  // Optionnel : afficher un message de succès
+  
+  // Recharger les données des stores après connexion
+  try {
+    await Promise.all([
+      favoritesStore.refreshFavorites(),
+      planningStore.refreshPlanning(),
+      shoppingStore.refreshShoppingLists()
+    ])
+  } catch (error) {
+    console.error('Erreur lors du rechargement des données:', error)
+  }
 }
 
 const handleLogout = async () => {
   await authStore.logout()
+  
+  // Vider les stores après déconnexion
+  try {
+    await Promise.all([
+      favoritesStore.refreshFavorites(),
+      planningStore.refreshPlanning(),
+      shoppingStore.refreshShoppingLists()
+    ])
+  } catch (error) {
+    console.error('Erreur lors du vidage des stores:', error)
+  }
+  
   // Rediriger vers la page d'accueil après déconnexion
   window.location.href = '/'
 }
+
+// Surveiller les changements d'authentification
+watch(() => authStore.isAuthenticated, async (isAuthenticated) => {
+  if (isAuthenticated) {
+    // Utilisateur connecté, recharger les données
+    try {
+      await Promise.all([
+        favoritesStore.refreshFavorites(),
+        planningStore.refreshPlanning(),
+        shoppingStore.refreshShoppingLists()
+      ])
+
+    } catch (error) {
+      console.error('Erreur lors du rechargement des données:', error)
+    }
+  } else {
+    // Utilisateur déconnecté, vider les données
+    try {
+      await Promise.all([
+        favoritesStore.refreshFavorites(),
+        planningStore.refreshPlanning(),
+        shoppingStore.refreshShoppingLists()
+      ])
+    } catch (error) {
+      console.error('Erreur lors du vidage des stores:', error)
+    }
+  }
+})
 </script> 

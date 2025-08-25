@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import { config, validateConfig } from './config'
 
-// Valider la configuration au démarrage
-validateConfig()
-
-export const supabase = createClient(config.supabase.url, config.supabase.anonKey)
+// Configuration Supabase directe depuis les variables d'environnement
+// Note: Ces variables doivent être accessibles côté client
+export const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
+)
 
 // Types pour les recettes
 export interface Recipe {

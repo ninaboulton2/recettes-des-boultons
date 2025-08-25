@@ -1,10 +1,10 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, createError, getQuery } from 'h3'
 import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
-    const { id, recipeId, userId = null } = query
+    const { id, recipeId, userId } = query
 
     if (!id && !recipeId) {
       throw createError({
@@ -13,39 +13,81 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    let error
-
-    if (id) {
-      // Supprimer par ID de favori
-      const { error: deleteError } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('id', id)
-      
-      error = deleteError
-    } else if (recipeId) {
-      // Supprimer par ID de recette et utilisateur
-      let deleteQuery = supabase
-        .from('favorites')
-        .delete()
-        .eq('recipe_id', recipeId)
-      
-      if (userId) {
-        deleteQuery = deleteQuery.eq('user_id', userId)
-      } else {
-        // Si pas d'utilisateur, supprimer tous les favoris de cette recette sans utilisateur
-        deleteQuery = deleteQuery.is('user_id', null)
-      }
-      
-      const { error: deleteError } = await deleteQuery
-      error = deleteError
+    if (!userId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'userId est requis pour supprimer un favori'
+      })
     }
 
-    if (error) {
-      console.error('Erreur Supabase lors de la suppression du favori:', error)
+    let deleteResult
+
+    if (id) {
+      // Supprimer par ID de favori en utilisant la fonction SQL simplifiée
+      const { data: success, error } = await supabase
+        .rpc('delete_user_favorite_by_id', { 
+          favorite_id_param: id, 
+          user_id_param: userId 
+        })
+
+      if (error) {
+        // Fallback : suppression directe si la fonction n'existe pas
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId)
+          .select('id')
+          .single()
+
+        if (fallbackError) {
+          console.error('Erreur Supabase lors de la suppression du favori:', fallbackError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: `Erreur lors de la suppression: ${fallbackError.message}`
+          })
+        }
+
+        deleteResult = fallbackData
+      } else {
+        deleteResult = success ? { id } : null
+      }
+    } else if (recipeId) {
+      // Supprimer par ID de recette et utilisateur en utilisant la fonction SQL simplifiée
+      const { data: success, error } = await supabase
+        .rpc('delete_user_favorite_by_recipe', { 
+          recipe_id_param: recipeId, 
+          user_id_param: userId 
+        })
+
+      if (error) {
+        // Fallback : suppression directe si la fonction n'existe pas
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('recipe_id', recipeId)
+          .eq('user_id', userId)
+          .select('id')
+          .single()
+
+        if (fallbackError) {
+          console.error('Erreur Supabase lors de la suppression du favori:', fallbackError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: `Erreur lors de la suppression: ${fallbackError.message}`
+          })
+        }
+
+        deleteResult = fallbackData
+      } else {
+        deleteResult = success ? { id: recipeId } : null
+      }
+    }
+
+    if (!deleteResult) {
       throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la suppression: ${error.message}`
+        statusCode: 404,
+        statusMessage: 'Favori non trouvé ou vous n\'êtes pas autorisé à le supprimer'
       })
     }
 

@@ -113,7 +113,6 @@ export const useRecipesStore = defineStore('recipes', () => {
         // Ajouter directement au store local
         recipes.value.push(result.recipe)
         
-        console.log('Recette ajoutée avec succès:', result.message)
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
@@ -154,7 +153,6 @@ export const useRecipesStore = defineStore('recipes', () => {
         // Mettre à jour localement pour la réactivité
         recipes.value[index] = result.recipe
         
-        console.log('Recette mise à jour avec succès:', result.message)
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de la mise à jour')
@@ -170,9 +168,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   const deleteRecipe = async (id) => {
     try {
       isLoading.value = true
-      
-      console.log('Tentative de suppression de la recette avec ID:', id)
-      
+            
       // Appeler l'API pour supprimer la recette
       const response = await fetch(`/api/delete-recipe?id=${id}`, {
         method: 'DELETE'
@@ -187,8 +183,6 @@ export const useRecipesStore = defineStore('recipes', () => {
       if (result.success) {
         // Supprimer de la mémoire locale immédiatement
         recipes.value = recipes.value.filter(recipe => recipe.id !== id)
-        
-        console.log('Recette supprimée avec succès:', result.message)
         return result
       } else {
         throw new Error(result.message || 'Erreur lors de la suppression')

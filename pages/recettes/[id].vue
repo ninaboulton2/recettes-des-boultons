@@ -197,7 +197,7 @@
               @click="goToCurrentWeek"
               class="mt-2 px-3 py-1.5 text-sm bg-primary-100 text-primary-700 hover:bg-primary-200 rounded-lg transition-colors duration-200 font-medium"
             >
-              Aujourd'hui
+              Revenir à la semaine actuelle
             </button>
           </div>
           
@@ -220,7 +220,14 @@
           class="text-center min-w-[120px]"
         >
           <div class="text-base font-medium text-gray-900 mb-2">{{ day.name }}</div>
-          <div class="text-sm text-gray-500">{{ formatDate(day.date) }}</div>
+          <div 
+            class="text-sm px-3 py-1.5 rounded-lg transition-colors duration-200 font-medium"
+            :class="isToday(day.date) 
+              ? 'bg-primary-100 text-primary-700' 
+              : 'text-gray-500'"
+          >
+            {{ formatDate(day.date) }}
+          </div>
         </div>
       </div>
 
@@ -420,10 +427,8 @@ const closePlanningModal = () => {
 }
 
 const selectDayAndMeal = (dateString, mealType) => {
-  console.log('selectDayAndMeal appelé avec:', dateString, mealType)
   selectedDay.value = dateString
   selectedMealType.value = mealType
-  console.log('Valeurs mises à jour:', selectedDay.value, selectedMealType.value)
 }
 
 const confirmAddToPlanning = () => {
@@ -487,6 +492,11 @@ const formatDate = (date) => {
     day: 'numeric',
     month: 'short'
   })
+}
+
+const isToday = (date) => {
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
 }
 
 const printRecipe = () => {

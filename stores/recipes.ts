@@ -115,8 +115,6 @@ export const useRecipesStore = defineStore('recipes', () => {
         
         // Sauvegarder dans localStorage
         saveToLocalStorage()
-        
-        console.log('Recette ajoutée avec succès:', result.message)
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
@@ -165,8 +163,6 @@ export const useRecipesStore = defineStore('recipes', () => {
 
         // Sauvegarder dans localStorage
         saveToLocalStorage()
-        
-        console.log('Recette mise à jour avec succès:', result.message)
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de la mise à jour')
@@ -182,10 +178,6 @@ export const useRecipesStore = defineStore('recipes', () => {
   const deleteRecipe = async (id) => {
     try {
       isLoading.value = true
-      
-      console.log('Tentative de suppression de la recette avec ID:', id, 'Type:', typeof id)
-      console.log('Recettes disponibles:', recipes.value.map(r => ({ id: r.id, title: r.title, type: typeof r.id })))
-      
       // Appeler l'API pour supprimer la recette du fichier JSON
       const response = await fetch(`/api/delete-recipe?id=${id}`, {
         method: 'DELETE'
@@ -202,8 +194,6 @@ export const useRecipesStore = defineStore('recipes', () => {
         recipes.value = recipes.value.filter(recipe => recipe.id !== id)
         favorites.value = favorites.value.filter(recipe => recipe.id !== id)
         saveToLocalStorage()
-        
-        console.log('Recette supprimée avec succès:', result.message)
         return result
       } else {
         throw new Error(result.message || 'Erreur lors de la suppression')
@@ -223,11 +213,9 @@ export const useRecipesStore = defineStore('recipes', () => {
       if (favoriteIndex !== -1) {
         // Retirer des favoris
         favorites.value.splice(favoriteIndex, 1)
-        console.log('Recette retirée des favoris:', recipe.title)
       } else {
         // Ajouter aux favoris
         favorites.value.push(recipe)
-        console.log('Recette ajoutée aux favoris:', recipe.title)
       }
       
       // Sauvegarder dans localStorage
@@ -291,9 +279,7 @@ export const useRecipesStore = defineStore('recipes', () => {
           favorites.value = parsedFavorites.filter(recipe => 
             recipe && recipe.id && recipe.title && recipe.category
           )
-          
-          console.log('Recettes chargées depuis localStorage:', recipes.value.length)
-        } else {
+          } else {
           // Load from JSON file if localStorage is empty
           loadFromSupabase()
         }

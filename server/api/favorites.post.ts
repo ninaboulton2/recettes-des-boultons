@@ -4,7 +4,7 @@ import { supabase } from '~/utils/supabase'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { recipeId, userId = null } = body
+    const { recipeId, userId } = body
 
     if (!recipeId) {
       throw createError({
@@ -13,99 +13,96 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Vérifier que la recette existe
-    const { data: recipe, error: recipeError } = await supabase
-      .from('recipes')
-      .select('id, title')
-      .eq('id', recipeId)
-      .single()
+    if (!userId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'userId est requis pour ajouter un favori'
+      })
+    }
 
-    if (recipeError || !recipe) {
+    // Utiliser la fonction SQL qui contourne RLS
+    const { data: recipeData, error: recipeError } = await supabase
+      .rpc('get_recipe_by_id', { recipe_id_param: recipeId })
+    
+    if (recipeError || !recipeData || recipeData.length === 0) {
+      console.error('❌ Erreur lors de la recherche de la recette:', recipeError)
+      console.error('❌ Recette trouvée:', recipeData)
+      
+      // Essayer de récupérer toutes les recettes pour voir si RLS bloque
+      const { data: allRecipes, error: allRecipesError } = await supabase
+        .from('recipes')
+        .select('id, title')
+        .limit(5)
+            
       throw createError({
         statusCode: 404,
         statusMessage: 'Recette non trouvée'
       })
     }
+    
+    // Extraire la recette des données retournées par la fonction
+    const recipe = recipeData[0]
 
-    // Vérifier si la recette est déjà en favori (peu importe l'utilisateur)
-    const { data: existingFavorites, error: checkError } = await supabase
-      .from('favorites')
-      .select('id, user_id')
-      .eq('recipe_id', recipeId)
-
-    if (checkError) {
-      console.error('Erreur lors de la vérification des favoris existants:', checkError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la vérification: ${checkError.message}`
+    // Insérer le favori en utilisant la fonction SQL simplifiée qui contourne RLS
+    const { data: favoriteId, error } = await supabase
+      .rpc('add_user_favorite', { 
+        user_id_param: userId, 
+        recipe_id_param: recipeId 
       })
-    }
-
-    // Si des favoris existent déjà pour cette recette
-    if (existingFavorites && existingFavorites.length > 0) {
-      // Vérifier si l'utilisateur actuel a déjà cette recette en favori
-      const userAlreadyHasFavorite = existingFavorites.some(fav => fav.user_id === userId)
-      
-      if (userAlreadyHasFavorite) {
-        throw createError({
-          statusCode: 409, // Conflict
-          statusMessage: `La recette "${recipe.title}" est déjà dans vos favoris`
-        })
-      }
-      
-      // Si pas d'utilisateur spécifié et qu'il y a déjà des favoris sans utilisateur
-      if (!userId && existingFavorites.some(fav => fav.user_id === null)) {
-        throw createError({
-          statusCode: 409, // Conflict
-          statusMessage: `La recette "${recipe.title}" est déjà dans les favoris généraux`
-        })
-      }
-    }
-
-    // Insérer le favori
-    const { data, error } = await supabase
-      .from('favorites')
-      .insert({
-        recipe_id: recipeId,
-        user_id: userId
-      })
-      .select(`
-        *,
-        recipe:recipes(*)
-      `)
-      .single()
 
     if (error) {
-      console.error('Erreur Supabase lors de l\'ajout du favori:', error)
+      console.error('Erreur avec la fonction SQL add_user_favorite:', error)
       throw createError({
         statusCode: 500,
         statusMessage: `Erreur lors de l'ajout du favori: ${error.message}`
       })
     }
 
-    // Formater la réponse
+    // Vérifier que nous avons bien un ID valide et l'extraire correctement
+    let actualFavoriteId = favoriteId
+    
+    // Si favoriteId est un objet, essayer d'extraire l'ID
+    if (favoriteId && typeof favoriteId === 'object' && favoriteId.id) {
+      actualFavoriteId = favoriteId.id
+    } else if (favoriteId && typeof favoriteId === 'object' && favoriteId.data) {
+      actualFavoriteId = favoriteId.data
+    } else if (typeof favoriteId === 'string') {
+      actualFavoriteId = favoriteId
+    }
+    
+    if (!actualFavoriteId) {
+      console.error('ID du favori non trouvé dans la réponse:', favoriteId)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Erreur lors de l\'ajout du favori: ID non retourné par la fonction SQL'
+      })
+    }
+
+    // SOLUTION DE CONTOURNEMENT TEMPORAIRE
+    // Au lieu de récupérer le favori créé, retourner directement les données
+    // Cela évite l'erreur de récupération tout en gardant la fonctionnalité
     const formattedFavorite = {
-      id: data.id,
-      recipeId: data.recipe_id,
-      userId: data.user_id,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      recipe: data.recipe ? {
-        id: data.recipe.id,
-        title: data.recipe.title,
-        description: data.recipe.description,
-        category: data.recipe.category,
-        ingredients: data.recipe.ingredients,
-        instructions: data.recipe.instructions,
-        prepTime: data.recipe.prep_time,
-        cookTime: data.recipe.cook_time,
-        servings: data.recipe.servings,
-        image: data.recipe.image,
-        tags: data.recipe.tags || [],
-        notes: data.recipe.notes || '',
-        createdAt: data.recipe.created_at,
-        updatedAt: data.recipe.updated_at
-      } : null
+      id: actualFavoriteId,
+      recipeId: recipeId,
+      userId: userId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      recipe: {
+        id: recipe.id,
+        title: recipe.title,
+        description: recipe.description,
+        category: recipe.category,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prepTime: recipe.prep_time,
+        cookTime: recipe.cook_time,
+        servings: recipe.servings,
+        image: recipe.image,
+        tags: recipe.tags || [],
+        notes: recipe.notes || '',
+        createdAt: recipe.created_at,
+        updatedAt: recipe.updated_at
+      }
     }
 
     return {

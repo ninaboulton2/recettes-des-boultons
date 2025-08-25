@@ -41,7 +41,7 @@ Une application web de gestion de recettes familiales, construite avec **Nuxt.js
 
 - **API Nuxt** : Endpoints REST intégrés
 - **JWT** : Authentification sécurisée
-- **bcrypt** : Hashage des mots de passe
+- **Supabase Auth** : Authentification et gestion des utilisateurs
 - **Middleware** : Sécurité et validation
 
 **Base de Données**
@@ -202,15 +202,15 @@ Fonctionnalités Techniques :
 ```bash
 # Configuration Supabase (obligatoire)
 SUPABASE_URL=
-SUPABASE_API_KEY=
+SUPABASE_ANON_KEY=
 
 # Configuration OpenAI (pour le traducteur IA)
 OPENAI_API_KEY=
 
-# Configuration d'authentification (optionnel en développement)
-ADMIN_USERNAME=
-ADMIN_PASSWORD=
-JWT_SECRET=
+# Configuration Supabase (obligatoire)
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 
@@ -247,7 +247,7 @@ node scripts/test-apis.js # Test des APIs
 **Variables de Production**
 ```bash
 SUPABASE_URL=
-SUPABASE_API_KEY=
+SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 NODE_ENV=production
 ```

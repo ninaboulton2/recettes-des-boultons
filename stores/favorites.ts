@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import type { Recipe } from '~/utils/supabase'
+import type { Recipe } from '~/types'
+import { useAuthStore } from './auth'
 
 interface Favorite {
   id: string
@@ -31,11 +32,21 @@ export const useFavoritesStore = defineStore('favorites', {
 
   actions: {
     async loadFavorites() {
-      this.isLoading = true
-      this.error = null
-      
       try {
-        const response = await fetch('/api/favorites')
+        this.isLoading = true
+        this.error = null
+        
+        const authStore = useAuthStore()
+        const userId = authStore.currentUser?.id || null
+        
+        // Si pas d'utilisateur connecté, vider les favoris
+        if (!userId) {
+          this.favorites = []
+          return
+        }
+        
+        const response = await fetch(`/api/favorites?userId=${userId}`)
+        
         if (!response.ok) {
           throw new Error(`Erreur HTTP: ${response.status}`)
         }
@@ -54,8 +65,15 @@ export const useFavoritesStore = defineStore('favorites', {
       }
     },
 
-    async addFavorite(recipeId: string, userId: string | null = null) {
+    async addFavorite(recipeId: string) {
       try {
+        const authStore = useAuthStore()
+        const userId = authStore.currentUser?.id || null
+        
+        if (!userId) {
+          throw new Error('Vous devez être connecté pour ajouter des favoris')
+        }
+        
         const response = await fetch('/api/favorites', {
           method: 'POST',
           headers: {
@@ -82,9 +100,16 @@ export const useFavoritesStore = defineStore('favorites', {
       }
     },
 
-    async removeFavorite(recipeId: string, userId: string | null = null) {
+    async removeFavorite(recipeId: string) {
       try {
-        const response = await fetch(`/api/favorites?recipeId=${recipeId}${userId ? `&userId=${userId}` : ''}`, {
+        const authStore = useAuthStore()
+        const userId = authStore.currentUser?.id || null
+        
+        if (!userId) {
+          throw new Error('Vous devez être connecté pour gérer vos favoris')
+        }
+        
+        const response = await fetch(`/api/favorites?recipeId=${recipeId}&userId=${userId}`, {
           method: 'DELETE'
         })
 
@@ -106,16 +131,21 @@ export const useFavoritesStore = defineStore('favorites', {
       }
     },
 
-    async toggleFavorite(recipeId: string, userId: string | null = null) {
+    async toggleFavorite(recipeId: string) {
       if (this.isFavorite(recipeId)) {
-        return await this.removeFavorite(recipeId, userId)
+        return await this.removeFavorite(recipeId)
       } else {
-        return await this.addFavorite(recipeId, userId)
+        return await this.addFavorite(recipeId)
       }
     },
 
     // Initialisation au démarrage de l'app
     async init() {
+      await this.loadFavorites()
+    },
+
+    // Méthode pour recharger les favoris quand l'utilisateur change
+    async refreshFavorites() {
       await this.loadFavorites()
     }
   }

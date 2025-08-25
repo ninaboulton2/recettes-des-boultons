@@ -19,11 +19,20 @@ export default defineEventHandler(async (event) => {
       .select('id, content')
       .eq('date_string', dateString)
       .eq('note_type', noteType)
-      .is('user_id', userId)
+      .eq('user_id', userId)
       .single()
+
+    console.log('🔍 Debug API - Recherche de note existante:', {
+      dateString,
+      noteType,
+      userId,
+      existingNote,
+      checkError
+    })
 
     let result
     if (existingNote) {
+      console.log('✅ Note existante trouvée, mise à jour...')
       // Mettre à jour la note existante
       const { data, error } = await supabase
         .from('planning_notes')
@@ -36,7 +45,7 @@ export default defineEventHandler(async (event) => {
         .single()
 
       if (error) {
-        console.error('Erreur Supabase lors de la mise à jour de la note:', error)
+        console.error('❌ Erreur Supabase lors de la mise à jour de la note:', error)
         throw createError({
           statusCode: 500,
           statusMessage: `Erreur lors de la mise à jour de la note: ${error.message}`
@@ -44,7 +53,9 @@ export default defineEventHandler(async (event) => {
       }
 
       result = data
+      console.log('✅ Note mise à jour avec succès:', result)
     } else {
+      console.log('🆕 Aucune note existante, création...')
       // Créer une nouvelle note
       const { data, error } = await supabase
         .from('planning_notes')
@@ -58,7 +69,7 @@ export default defineEventHandler(async (event) => {
         .single()
 
       if (error) {
-        console.error('Erreur Supabase lors de la création de la note:', error)
+        console.error('❌ Erreur Supabase lors de la création de la note:', error)
         throw createError({
           statusCode: 500,
           statusMessage: `Erreur lors de la création de la note: ${error.message}`
@@ -66,6 +77,7 @@ export default defineEventHandler(async (event) => {
       }
 
       result = data
+      console.log('✅ Note créée avec succès:', result)
     }
 
     // Formater la réponse

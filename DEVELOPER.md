@@ -4,7 +4,7 @@
 
 ### **Stack Technique**
 - **Frontend** : Nuxt.js 3 + Vue 3 + Tailwind CSS
-- **Backend** : API Nuxt + JWT + bcrypt
+- **Backend** : API Nuxt + Supabase Auth
 - **Base de données** : Supabase (PostgreSQL)
 - **État** : Pinia stores
 - **Authentification** : JWT avec cookies sécurisés
@@ -24,7 +24,6 @@ interface Recipe {
   servings: number
   image?: string
   tags: string[]
-  notes?: string
   createdAt: string
   updatedAt: string
 }
@@ -50,31 +49,27 @@ interface PlanningMeal {
 
 ## Authentification
 
-### **Système JWT**
+### **Système Supabase Auth**
 ```typescript
-// utils/auth.ts
-export const generateToken = (payload: any): string => {
-  const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
-  const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h'
-  
-  return jwt.sign(payload, jwtSecret, { 
-    expiresIn: jwtExpiresIn,
-    issuer: 'les-boultons-app',
-    audience: 'les-boultons-users'
-  })
-}
+// stores/auth.ts
+export const useAuthStore = defineStore('auth', {
+  state: (): AuthState => ({
+    user: null,
+    token: null,
+    isAuthenticated: false
+  }),
 
-export const verifyToken = (token: string): any => {
-  try {
-    const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
-    return jwt.verify(token, jwtSecret, {
-      issuer: 'les-boultons-app',
-      audience: 'les-boultons-users'
-    })
-  } catch (error) {
-    return null
+  actions: {
+    async login(credentials: LoginCredentials) {
+      const { supabase } = useSupabase()
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password
+      })
+      // ... gestion de la connexion
+    }
   }
-}
+})
 ```
 
 ### **Middleware d'Authentification**
@@ -245,15 +240,15 @@ node scripts/test-shopping-integration.js
 ```bash
 # Supabase (obligatoire)
 SUPABASE_URL=
-SUPABASE_API_KEY=
+SUPABASE_ANON_KEY=
 
 # OpenAI (pour le traducteur IA)
 OPENAI_API_KEY=
 
-# Authentification
-ADMIN_USERNAME=
-ADMIN_PASSWORD=
-JWT_SECRET=
+# Supabase (obligatoire)
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # Production
 NODE_ENV=production

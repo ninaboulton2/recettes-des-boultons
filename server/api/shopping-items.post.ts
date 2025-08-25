@@ -13,10 +13,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Vérifier que la liste existe
+    if (!userId) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Vous devez être connecté pour ajouter des articles'
+      })
+    }
+
+    // Vérifier que la liste existe et appartient à l'utilisateur connecté
     const { data: list, error: listError } = await supabase
       .from('shopping_lists')
-      .select('id, name')
+      .select('id, name, user_id')
       .eq('id', listId)
       .single()
 
@@ -24,6 +31,14 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         statusMessage: 'Liste de courses non trouvée'
+      })
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la liste
+    if (list.user_id !== userId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Vous n\'êtes pas autorisé à ajouter des articles à cette liste'
       })
     }
 
@@ -43,17 +58,13 @@ export default defineEventHandler(async (event) => {
     }
 
     if (existingItems && existingItems.length > 0) {
-      // Consolidation des quantités
-      console.log(`🔢 Consolidation automatique: ${name} - ${existingItems.length} item(s) existant(s)`)
-      
+
       // Calculer la quantité totale
       const totalAmount = existingItems.reduce((sum, item) => {
         const itemAmount = parseFloat(item.amount) || 0
         return sum + itemAmount
       }, 0) + amount
-      
-      console.log(`   📊 Quantité totale: ${totalAmount} ${unit} (existant: ${totalAmount - amount} + nouveau: ${amount})`)
-      
+            
       // Mettre à jour le premier item existant avec la nouvelle quantité totale
       const firstExistingItem = existingItems[0]
       

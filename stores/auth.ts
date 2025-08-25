@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { User, LoginCredentials, AuthResponse, AuthState } from '~/types'
+import { useSupabase } from '~/composables/useSupabase'
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
@@ -15,68 +16,118 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async login(credentials: LoginCredentials) {
-
       try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(credentials),
-          credentials: 'include' // Important pour les cookies
+        // Connexion via Supabase avec email
+        const { supabase } = useSupabase()
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: credentials.email,
+          password: credentials.password
         })
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Identifiants invalides')
-          } else {
-            throw new Error('Erreur de connexion')
+        if (error) {
+          console.error('Erreur de connexion Supabase:', error)
+          return { 
+            success: false, 
+            error: error.message || 'Identifiants invalides' 
           }
         }
 
-        const data: AuthResponse = await response.json()
+        if (data.user) {
+          // Récupérer le profil utilisateur
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single()
 
+          if (profileError) {
+            console.error('Erreur lors de la récupération du profil:', profileError)
+          }
 
+          // Créer l'objet utilisateur simplifié
+          this.user = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: profile?.name,
+            role: profile?.role || 'user',
+            language: profile?.language || 'fr',
+            theme: profile?.theme || 'light',
+            notifications: profile?.notifications || true,
+            createdAt: data.user.created_at,
+            updatedAt: profile?.updated_at
+          }
 
-        this.user = data.user
-        this.token = data.token
-        this.isAuthenticated = true
+          this.token = data.session?.access_token || null
+          this.isAuthenticated = true
 
-        // Stocker le token dans un cookie sécurisé (géré côté serveur)
-        this.setSecureCookie('auth_token', data.token)
-
-        return { success: true }
+          return { success: true }
+        } else {
+          return { 
+            success: false, 
+            error: 'Aucun utilisateur retourné' 
+          }
+        }
       } catch (error) {
         console.error('Erreur de connexion:', error)
         return { 
           success: false, 
-          error: error instanceof Error ? error.message : 'Identifiants invalides' 
+          error: error instanceof Error ? error.message : 'Erreur de connexion' 
         }
       }
     },
 
     async logout() {
-      this.user = null
-      this.token = null
-      this.isAuthenticated = false
-
-      // Supprimer le cookie sécurisé
-      this.removeSecureCookie('auth_token')
-      
-
+      try {
+        // Déconnexion via Supabase
+        const { supabase } = useSupabase()
+        await supabase.auth.signOut()
+      } catch (error) {
+        console.error('Erreur lors de la déconnexion:', error)
+      } finally {
+        this.user = null
+        this.token = null
+        this.isAuthenticated = false
+      }
     },
 
     async checkAuth() {
       try {
-        // Vérifier l'authentification via l'API
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include' // Important pour les cookies
-        })
+        // Vérifier l'authentification via Supabase
+        const { supabase } = useSupabase()
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (response.ok) {
-          const data = await response.json()
-          this.user = data.user
-          this.token = data.token
+        if (error) {
+          console.error('Erreur lors de la vérification de la session:', error)
+          this.logout()
+          return
+        }
+
+        if (session?.user) {
+          // Récupérer le profil utilisateur
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+
+          if (profileError) {
+            console.error('Erreur lors de la récupération du profil:', profileError)
+          }
+
+          // Créer l'objet utilisateur simplifié
+          this.user = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: profile?.name,
+            role: profile?.role || 'user',
+            language: profile?.language || 'fr',
+            theme: profile?.theme || 'light',
+            notifications: profile?.notifications || true,
+            createdAt: session.user.created_at,
+            updatedAt: profile?.updated_at
+          }
+
+          this.token = session.access_token
           this.isAuthenticated = true
         } else {
           this.logout()
@@ -89,34 +140,50 @@ export const useAuthStore = defineStore('auth', {
 
     async init() {
       await this.checkAuth()
-    },
+      
+      // Écouter les changements d'authentification Supabase
+      const { supabase } = useSupabase()
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Changement d\'état d\'authentification:', event)
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Récupérer le profil utilisateur
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
 
-    // Méthodes pour gérer les cookies sécurisés
-    setSecureCookie(name: string, value: string) {
-      if (typeof window === 'undefined') return
-      
-      const cookieOptions = [
-        `Max-Age=${24 * 60 * 60}`, // 24 heures
-        `Path=/`,
-        process.env.NODE_ENV === 'production' ? 'Secure' : '',
-        'SameSite=Strict'
-      ].filter(Boolean).join('; ')
-      
-      document.cookie = `${name}=${value}; ${cookieOptions}`
-    },
+          if (profileError) {
+            console.error('Erreur lors de la récupération du profil:', profileError)
+          }
 
-    removeSecureCookie(name: string) {
-      if (typeof window === 'undefined') return
-      
-      document.cookie = `${name}=; Max-Age=0; Path=/`
+          // Créer l'objet utilisateur simplifié
+          this.user = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: profile?.name,
+            role: profile?.role || 'user',
+            language: profile?.language || 'fr',
+            theme: profile?.theme || 'light',
+            notifications: profile?.notifications || true,
+            createdAt: session.user.created_at,
+            updatedAt: profile?.updated_at
+          }
+
+          this.token = session.access_token
+          this.isAuthenticated = true
+        } else if (event === 'SIGNED_OUT') {
+          this.logout()
+        }
+      })
     },
 
     // Méthode pour vérifier la sécurité de la configuration
     checkSecurityConfig() {
-      const jwtSecret = process.env.JWT_SECRET || 'default-secret-key'
-      
-      if (jwtSecret === 'default-secret-key' && process.env.NODE_ENV === 'production') {
-        console.error('[SECURITY] Configuration non sécurisée en production!')
+      // Vérifier que Supabase est configuré
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+        console.error('[SECURITY] Configuration Supabase manquante!')
       }
     }
   }

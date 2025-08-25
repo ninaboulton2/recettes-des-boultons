@@ -51,6 +51,13 @@ export default defineEventHandler(async (event) => {
 
     const { data: notesData, error: notesError } = await notesQuery
 
+    console.log('🔍 Debug API - Notes récupérées:', {
+      notesData,
+      notesError,
+      userId,
+      dateString
+    })
+
     if (notesError) {
       console.error('Erreur Supabase lors de la récupération des notes:', notesError)
       // On continue sans les notes en cas d'erreur
@@ -118,18 +125,43 @@ export default defineEventHandler(async (event) => {
 
     // Ajouter les notes au planning groupé
     if (notesData && !notesError) {
+      console.log('🔍 Debug API - Ajout des notes au planning groupé...')
+      
+      // D'abord, créer des entrées vides pour toutes les dates qui ont des notes
       notesData.forEach(note => {
+        if (!groupedPlanning[note.date_string]) {
+          groupedPlanning[note.date_string] = { lunch: [], dinner: [] }
+          console.log('🆕 Entrée vide créée pour la date:', note.date_string)
+        }
+      })
+      
+      // Ensuite, traiter chaque note
+      notesData.forEach(note => {
+        console.log('🔍 Debug API - Traitement note:', {
+          date: note.date_string,
+          type: note.note_type,
+          content: note.content,
+          noteId: note.id
+        })
+        
         if (groupedPlanning[note.date_string]) {
           if (note.note_type === 'day') {
             groupedPlanning[note.date_string].notes = note.content
+            console.log('✅ Note du jour ajoutée pour', note.date_string)
           } else if (note.note_type === 'lunch') {
             groupedPlanning[note.date_string].lunchGroupNote = note.content
+            console.log('✅ Note déjeuner ajoutée pour', note.date_string)
           } else if (note.note_type === 'dinner') {
             groupedPlanning[note.date_string].dinnerGroupNote = note.content
+            console.log('✅ Note dîner ajoutée pour', note.date_string)
           }
+        } else {
+          console.log('⚠️ Date non trouvée dans le planning pour la note:', note.date_string)
         }
       })
     }
+
+    console.log('🔍 Debug API - Planning final groupé:', groupedPlanning)
 
     return {
       success: true,

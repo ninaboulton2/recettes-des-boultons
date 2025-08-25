@@ -64,7 +64,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:3001'
+      apiBase: process.env.API_BASE || 'http://localhost:3001',
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
     }
   },
   nitro: {

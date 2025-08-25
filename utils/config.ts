@@ -2,7 +2,7 @@
 export const config = {
   supabase: {
     url: process.env.SUPABASE_URL || '',
-    anonKey: process.env.SUPABASE_API_KEY || ''
+    anonKey: process.env.SUPABASE_ANON_KEY || ''
   }
 }
 
@@ -10,6 +10,6 @@ export const config = {
 export function validateConfig() {
   if (!config.supabase.url || !config.supabase.anonKey) {
     console.warn('⚠️  Variables Supabase manquantes. Vérifiez votre fichier .env')
-    console.warn('   SUPABASE_URL et SUPABASE_API_KEY sont requis')
+    console.warn('   SUPABASE_URL et SUPABASE_ANON_KEY sont requis')
   }
 }

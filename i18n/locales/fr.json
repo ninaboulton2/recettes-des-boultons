@@ -248,5 +248,30 @@
   },
   "footer": {
     "copyright": "© {year} Recettes des Boultons. Tous droits réservés."
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "email": "Email",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "error": "Erreur de connexion",
+      "success": "Connexion réussie"
+    },
+    "signup": {
+      "title": "Inscription",
+      "name": "Nom",
+      "email": "Email",
+      "password": "Mot de passe",
+      "submit": "S'inscrire",
+      "error": "Erreur d'inscription",
+      "success": "Inscription réussie"
+    },
+    "required": {
+      "title": "Connexion requise",
+      "description": "Vous devez être connecté pour accéder à cette fonctionnalité. Connectez-vous pour gérer vos favoris, votre planning et vos listes de courses.",
+      "loginButton": "Se connecter",
+      "backToHome": "Retour à l'accueil"
+    }
   }
 } 

@@ -43,6 +43,7 @@ export interface Category {
 
 export interface ShoppingList {
   id: string
+  user_id: string
   name: string
   items: ShoppingItem[]
   createdAt: Date
@@ -51,11 +52,33 @@ export interface ShoppingList {
 
 export interface ShoppingItem {
   id: string
+  list_id: string
   name: string
   amount: number
   unit: string
   checked: boolean
-  recipeId?: string
+  recipe_id?: string
+}
+
+export interface Favorite {
+  id: string
+  user_id: string
+  recipe_id: string
+  recipe?: Recipe
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanningItem {
+  id: string
+  user_id: string
+  date_string: string
+  meal_type: 'lunch' | 'dinner'
+  recipe_id?: string
+  recipe?: Recipe
+  custom_title?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface WeeklyPlan {
@@ -74,15 +97,38 @@ export interface WeeklyDay {
   }
 } 
 
+export interface Profile {
+  id: string
+  email: string
+  name?: string
+  role: 'admin' | 'user'
+  language?: 'fr' | 'en'
+  theme?: 'light' | 'dark'
+  notifications?: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: string
-  username: string
+  email: string
+  name?: string
   role: 'admin' | 'user'
+  language?: 'fr' | 'en'
+  theme?: 'light' | 'dark'
+  notifications?: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 export interface LoginCredentials {
-  username: string
+  email: string
+  password: string
+}
+
+export interface SignUpCredentials {
+  email: string
+  name: string
   password: string
 }
 
