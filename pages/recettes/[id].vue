@@ -1,60 +1,67 @@
 <template>
   <!-- Boutons d'action -->
-  <div class="mb-6 flex flex-col gap-4">
-    <!-- Première ligne : bouton retour et boutons principaux -->
-    <div class="flex items-center justify-between">
-      <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div class="mb-4 sm:mb-6 flex flex-col gap-3 sm:gap-4">
+          <!-- Première ligne : bouton retour et boutons principaux -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+      <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors w-fit text-sm sm:text-base">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
-        Retour
+        <span class="hidden sm:inline">Retour</span>
       </button>
-      <div class="flex items-center gap-4">
-        <!-- Bouton d'ajout à la liste de courses - visible pour tous -->
+      
+      <!-- Boutons d'action - disposition mobile optimisée -->
+      <div class="flex flex-wrap gap-1.5 sm:gap-4 justify-end sm:justify-start">
+        <!-- Bouton d'ajout à la liste de courses -->
         <button 
           v-if="recipe"
           @click="addToShoppingList" 
-          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
           </svg>
-          Ajouter à la liste de courses
+          <span class="hidden sm:inline">Ajouter à la liste de courses</span>
+          <span class="sm:hidden">Courses</span>
         </button>
-        <!-- Bouton d'ajout au planning - visible pour tous -->
+        
+        <!-- Bouton d'ajout au planning -->
         <button 
           v-if="recipe"
           @click="addToPlanning" 
-          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 12a2 2 0 002 2z"></path>
           </svg>
-          Ajouter au planning
+          <span class="hidden sm:inline">Ajouter au planning</span>
+          <span class="sm:hidden">Planning</span>
         </button>
-        <!-- Bouton d'impression - visible pour tous -->
+        
+        <!-- Bouton d'impression -->
         <button 
           v-if="recipe"
           @click="printRecipe" 
-          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+          class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
           </svg>
-          Imprimer
+          <span class="hidden sm:inline">Imprimer</span>
+          <span class="sm:hidden">Imprimer</span>
         </button>
       </div>
     </div>
     
     <!-- Deuxième ligne : boutons d'administration -->
-    <div v-if="recipe && authStore.isAdmin" class="flex items-center justify-end gap-4">
+    <div v-if="recipe && authStore.isAdmin" class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-4">
       <!-- Bouton d'édition - visible uniquement pour les admins -->
       <button 
         @click="editRecipe" 
-        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         title="Modifier la recette"
       >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
         </svg>
         Modifier
@@ -62,10 +69,10 @@
       <!-- Bouton de suppression - visible uniquement pour les admins -->
       <button 
         @click="confirmDeleteRecipe" 
-        class="flex items-center text-red-600 hover:text-red-800 font-medium transition-colors"
+        class="flex items-center text-red-600 hover:text-red-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-red-50 text-sm sm:text-base"
         title="Supprimer la recette"
       >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
         </svg>
         Supprimer
@@ -74,19 +81,20 @@
   </div>
   <div v-if="recipe" class="max-w-3xl mx-auto">
     <!-- Header -->
-    <div class="mb-8 flex flex-col md:flex-row md:items-center">
-      <div class="flex-shrink-0 mb-6 md:mb-0">
+    <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center">
+      <div class="flex-shrink-0 mb-4 sm:mb-6 md:mb-0">
       </div>
       <div class="flex-1">
-        <h1 class="text-4xl font-lobster text-gray-900 mb-2">{{ recipe.title }}</h1>
-        <p class="text-gray-600 mb-4">{{ recipe.description }}</p>
-        <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-2">
+        <h1 class="text-2xl sm:text-4xl font-lobster text-gray-900 mb-2">{{ recipe.title }}</h1>
+        <p class="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">{{ recipe.description }}</p>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 mb-2">
           <span><strong>Catégorie :</strong> {{ categoryName }}</span>
           <span><strong>Temps :</strong> {{
-            typeof(recipe.prepTime) === 'string' ? recipe.prepTime : recipe.prepTime + recipe.cookTime + ' min'}}</span>          <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
+            typeof(recipe.prepTime) === 'string' ? recipe.prepTime : recipe.prepTime + recipe.cookTime + ' min'}}</span>
+          <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
         </div>
         <!-- Tags -->
-        <div class="flex flex-wrap gap-2 mb-2">
+        <div class="flex flex-wrap gap-1 sm:gap-2 mb-2">
           <span 
             v-for="tag in recipe.tags" 
             :key="tag" 
@@ -104,9 +112,9 @@
     </div>
 
     <!-- Ingrédients -->
-    <div class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Ingrédients</h2>
-      <ul class="list-disc list-inside space-y-1 text-gray-800">
+    <div class="mb-6 sm:mb-8">
+      <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">Ingrédients</h2>
+      <ul class="list-disc list-inside space-y-1 text-sm sm:text-base text-gray-800">
         <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
           {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
         </li>
@@ -114,9 +122,9 @@
     </div>
 
     <!-- Instructions -->
-    <div class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Instructions</h2>
-      <ol class="list-decimal list-inside space-y-2 text-gray-800">
+    <div class="mb-6 sm:mb-8">
+      <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">Instructions</h2>
+      <ol class="list-decimal list-inside space-y-2 text-sm sm:text-base text-gray-800">
         <li v-for="(step, i) in recipe.instructions" :key="i">
           {{ step }}
         </li>
@@ -124,20 +132,20 @@
     </div>
 
     <!-- Notes -->
-    <div v-if="recipe.notes && recipe.notes.trim()" class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Notes et conseils</h2>
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div v-if="recipe.notes && recipe.notes.trim()" class="mb-6 sm:mb-8">
+      <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">Notes et conseils</h2>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
-          <p class="text-blue-800 whitespace-pre-wrap">{{ recipe.notes }}</p>
+          <p class="text-sm sm:text-base text-blue-800 whitespace-pre-wrap">{{ recipe.notes }}</p>
         </div>
       </div>
     </div>
   </div>
-  <div v-else class="text-center py-16">
-    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Recette introuvable</h2>
+  <div v-else class="text-center py-12 sm:py-16">
+    <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">Recette introuvable</h2>
     <NuxtLink to="/recettes" class="btn-primary">Retour aux recettes</NuxtLink>
   </div>
 
@@ -161,15 +169,15 @@
   />
 
   <!-- Planning Modal -->
-  <div v-if="showPlanningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl p-8 max-w-6xl w-full mx-8 max-h-[90vh] overflow-y-auto">
+  <div v-if="showPlanningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl p-4 sm:p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-semibold text-gray-900">
+        <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
           Ajouter "{{ recipe?.title }}" au planning
         </h3>
         <button
           @click="closePlanningModal"
-          class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -213,15 +221,15 @@
       </div>
 
       <!-- En-tête des jours -->
-      <div class="grid grid-cols-7 gap-6 mb-6">
+      <div class="grid grid-cols-7 gap-2 sm:gap-6 mb-6 overflow-x-auto">
         <div
           v-for="day in planningWeekDays"
           :key="`header-${day.dateString}`"
-          class="text-center min-w-[120px]"
+          class="text-center min-w-[80px] sm:min-w-[120px]"
         >
-          <div class="text-base font-medium text-gray-900 mb-2">{{ day.name }}</div>
+          <div class="text-sm sm:text-base font-medium text-gray-900 mb-2">{{ day.name }}</div>
           <div 
-            class="text-sm px-3 py-1.5 rounded-lg transition-colors duration-200 font-medium"
+            class="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-colors duration-200 font-medium"
             :class="isToday(day.date) 
               ? 'bg-primary-100 text-primary-700' 
               : 'text-gray-500'"
@@ -233,21 +241,22 @@
 
       <!-- Ligne des déjeuners -->
       <div class="mb-8">
-        <div class="grid grid-cols-7 gap-6">
+        <div class="grid grid-cols-7 gap-2 sm:gap-6 overflow-x-auto">
           <div
             v-for="day in planningWeekDays"
             :key="`lunch-${day.dateString}`"
-            class="text-center min-w-[120px]"
+            class="text-center min-w-[80px] sm:min-w-[120px]"
           >
             <button
               @click="selectDayAndMeal(day.dateString, 'lunch')"
-              class="w-full p-3 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors duration-200 font-medium relative"
+              class="w-full p-2 sm:p-3 text-xs sm:text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors duration-200 font-medium relative"
               :class="{ 'bg-green-200 border-2 border-green-400': selectedDay === day.dateString && selectedMealType === 'lunch' }"
             >
-              Déjeuner
+              <span class="hidden sm:inline">Déjeuner</span>
+              <span class="sm:hidden">Déj</span>
               <span 
                 v-if="day.meals.lunch && day.meals.lunch.length > 0" 
-                class="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center"
+                class="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
               >
                 {{ day.meals.lunch.length }}
               </span>
@@ -257,7 +266,7 @@
               <div 
                 v-for="meal in day.meals.lunch" 
                 :key="meal.id" 
-                class="text-xs text-gray-500 px-2 py-1 truncate"
+                class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
                 :title="meal.recipe?.title || 'Recette sans nom'"
               >
                 {{ meal.recipe?.title || 'Recette sans nom' }}
@@ -269,21 +278,22 @@
 
       <!-- Ligne des dîners -->
       <div class="mb-8">
-        <div class="grid grid-cols-7 gap-6">
+        <div class="grid grid-cols-7 gap-2 sm:gap-6 overflow-x-auto">
           <div
             v-for="day in planningWeekDays"
             :key="`dinner-${day.dateString}`"
-            class="text-center min-w-[120px]"
+            class="text-center min-w-[80px] sm:min-w-[120px]"
           >
             <button
               @click="selectDayAndMeal(day.dateString, 'dinner')"
-              class="w-full p-3 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors duration-200 font-medium relative"
+              class="w-full p-2 sm:p-3 text-xs sm:text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors duration-200 font-medium relative"
               :class="{ 'bg-blue-200 border-2 border-blue-400': selectedDay === day.dateString && selectedMealType === 'dinner' }"
             >
-              Dîner
+              <span class="hidden sm:inline">Dîner</span>
+              <span class="sm:hidden">Dîner</span>
               <span 
                 v-if="day.meals.dinner && day.meals.dinner.length > 0" 
-                class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center"
+                class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
               >
                 {{ day.meals.dinner.length }}
               </span>
@@ -293,7 +303,7 @@
               <div 
                 v-for="meal in day.meals.dinner" 
                 :key="meal.id" 
-                class="text-xs text-gray-500 px-2 py-1 truncate"
+                class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
                 :title="meal.recipe?.title || 'Recette sans nom'"
               >
                 {{ meal.recipe?.title || 'Recette sans nom' }}

@@ -157,9 +157,9 @@ const categories = [
     image: '/images/yaourts&fromages.png'
   },
   {
-    id: 'desserts et gâteaux et gâteaux',
-    name: 'desserts et gâteaux et gâteaux',
-    description: 'desserts et gâteaux et gâteaux sucrés et pâtisseries maison',
+    id: 'desserts et gâteaux',
+    name: 'Desserts et gâteaux',
+    description: 'Desserts et gâteaux sucrés et pâtisseries maison',
     image: '/images/desserts.png'
   },
   {
@@ -180,7 +180,7 @@ const categories = [
 useHead({
   title: 'Accueil - Recettes des Boultons',
   meta: [
-    { name: 'description', content: 'Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et gâteaux et gâteaux et plus encore !' }
+    { name: 'description', content: 'Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et gâteaux et plus encore !' }
   ]
 })
 </script> 

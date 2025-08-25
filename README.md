@@ -40,7 +40,6 @@ Une application web de gestion de recettes familiales, construite avec **Nuxt.js
 **Backend**
 
 - **API Nuxt** : Endpoints REST intégrés
-- **JWT** : Authentification sécurisée
 - **Supabase Auth** : Authentification et gestion des utilisateurs
 - **Middleware** : Sécurité et validation
 
@@ -66,7 +65,7 @@ recettes-des-boultons/
 │ └── ...
 ├── pages/ # Pages de l'application
 │ └── ...
-├── stores/ # Gestion d'état Pinia
+├── stores/ # Gestion d'état Pinia (Supabase uniquement)
 │ └── ...
 ├── server/api/ # API backend
 │ └── ...
@@ -83,19 +82,23 @@ recettes-des-boultons/
 Tables Supabase :
 
 - **recipes** : Recettes avec ingrédients et instructions
+	- Structure JSONB pour ingredients et instructions
+	- Support des tags et notes
 
 - **favorites** : Recettes favorites des utilisateurs
 	- Relation many-to-many entre utilisateurs et recettes
 	- Contrainte unique sur (user_id, recipe_id)
 
 - **planning** : Planning hebdomadaire des repas (recettes ET repas personnalisés)
-	  - Contrainte unique sur (user_id, date_string, meal_type)
+	- Support des repas avec recettes ou titres personnalisés
+	- Contrainte unique sur (user_id, date_string, meal_type)
 
-- **planning_notes** : Notes générales dans le planning
-  
 - **shopping_lists** : Listes de courses
+	- Gestion multi-listes par utilisateur
 
 - **shopping_items** : Articles des listes de courses
+	- Support des quantités flexibles (string/number)
+	- Liaison avec les recettes pour traçabilité
 
 
 
@@ -107,8 +110,8 @@ erDiagram
         TEXT title "Titre de la recette"
         TEXT description "Description de la recette"
         TEXT category "Catégorie (soupes, plats, desserts...)"
-        JSONB ingredients "Liste des ingrédients en JSON"
-        JSONB instructions "Étapes de préparation en JSON"
+        JSONB ingredients "Array d'objets {name, amount, unit, optional}"
+        JSONB instructions "Array de strings (étapes)"
         INTEGER prep_time "Temps de préparation (minutes)"
         INTEGER cook_time "Temps de cuisson (minutes)"
         INTEGER servings "Nombre de portions"
@@ -122,16 +125,15 @@ erDiagram
     %% Table des favoris
     favorites {
         UUID id PK "Généré automatiquement"
-        UUID user_id "Référence future vers auth.users"
+        UUID user_id "Référence vers auth.users (nullable)"
         UUID recipe_id FK "Référence vers recipes.id"
         TIMESTAMP created_at "Date de création"
-        TIMESTAMP updated_at "Date de mise à jour"
     }
 
     %% Table du planning hebdomadaire
     planning {
         UUID id PK "Généré automatiquement"
-        UUID user_id "Référence future vers auth.users"
+        UUID user_id "Référence vers auth.users (nullable)"
         TEXT date_string "Format: '2024-01-15'"
         TEXT meal_type "lunch ou dinner"
         UUID recipe_id FK "Référence vers recipes.id (nullable)"
@@ -154,7 +156,7 @@ erDiagram
     %% Table des listes de courses
     shopping_lists {
         UUID id PK "Généré automatiquement"
-        UUID user_id "Référence future vers auth.users"
+        UUID user_id "Référence vers auth.users (nullable)"
         TEXT name "Nom de la liste (défaut: 'Liste principale')"
         TIMESTAMP created_at "Date de création"
         TIMESTAMP updated_at "Date de mise à jour"
@@ -165,7 +167,7 @@ erDiagram
         UUID id PK "Généré automatiquement"
         UUID list_id FK "Référence vers shopping_lists.id"
         TEXT name "Nom de l'article"
-        TEXT amount "Quantité"
+        TEXT amount "Quantité (string ou number)"
         TEXT unit "Unité de mesure"
         UUID recipe_id FK "Référence vers recipes.id (nullable)"
         BOOLEAN is_checked "Article coché ou non"
@@ -183,6 +185,7 @@ erDiagram
     %% - RLS activé sur toutes les tables
     %% - Triggers automatiques pour updated_at
     %% - Index sur les colonnes fréquemment utilisées
+    %% - Contraintes de clés étrangères avec suppression en cascade
 ```
 
   
@@ -197,22 +200,17 @@ Fonctionnalités Techniques :
 
 ## Développement 
 
-**Variables d'Environnement Requises :
+**Variables d'Environnement Requises :**
 
 ```bash
 # Configuration Supabase (obligatoire)
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # Configuration OpenAI (pour le traducteur IA)
 OPENAI_API_KEY=
-
-# Configuration Supabase (obligatoire)
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 ```
-
 
 **Démarrage :**
 ```bash

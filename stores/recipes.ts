@@ -3,7 +3,6 @@ import { ref, computed, onMounted, readonly } from 'vue'
 
 export const useRecipesStore = defineStore('recipes', () => {
   const recipes = ref([])
-  const favorites = ref([])
   const currentCategory = ref(null)
   const searchQuery = ref('')
   const selectedTags = ref([])
@@ -41,7 +40,9 @@ export const useRecipesStore = defineStore('recipes', () => {
   const allTags = computed(() => {
     const tagsSet = new Set()
     recipes.value.forEach(recipe => {
-      recipe.tags.forEach(tag => tagsSet.add(tag))
+      if (recipe.tags && Array.isArray(recipe.tags)) {
+        recipe.tags.forEach(tag => tagsSet.add(tag))
+      }
     })
     return Array.from(tagsSet).sort()
   })
@@ -54,7 +55,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     recipes.value
       .filter(recipe => recipe.category === currentCategory.value)
       .forEach(recipe => {
-        recipe.tags.forEach(tag => tagsSet.add(tag))
+        if (recipe.tags && Array.isArray(recipe.tags)) {
+          recipe.tags.forEach(tag => tagsSet.add(tag))
+        }
       })
     return Array.from(tagsSet).sort()
   })
@@ -73,16 +76,13 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
 
     recipes.value.forEach(recipe => {
-      grouped[recipe.category].push(recipe)
+      if (grouped[recipe.category]) {
+        grouped[recipe.category].push(recipe)
+      }
     })
 
     return grouped
   })
-
-  // Helper function to check if a recipe is favorite
-  const isFavorite = (recipeId) => {
-    return favorites.value.some(recipe => recipe.id === recipeId)
-  }
 
   // Actions
   const addRecipe = async (recipe) => {
@@ -113,8 +113,6 @@ export const useRecipesStore = defineStore('recipes', () => {
         // Ajouter directement au store local
         recipes.value.push(result.recipe)
         
-        // Sauvegarder dans localStorage
-        saveToLocalStorage()
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
@@ -154,15 +152,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       if (result.success) {
         // Mettre à jour localement pour la réactivité
         recipes.value[index] = result.recipe
-
-        // Mettre à jour les favoris si nécessaire
-        const favoriteIndex = favorites.value.findIndex(r => r.id === id)
-        if (favoriteIndex !== -1) {
-          favorites.value[favoriteIndex] = result.recipe
-        }
-
-        // Sauvegarder dans localStorage
-        saveToLocalStorage()
+        
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de la mise à jour')
@@ -178,7 +168,8 @@ export const useRecipesStore = defineStore('recipes', () => {
   const deleteRecipe = async (id) => {
     try {
       isLoading.value = true
-      // Appeler l'API pour supprimer la recette du fichier JSON
+            
+      // Appeler l'API pour supprimer la recette
       const response = await fetch(`/api/delete-recipe?id=${id}`, {
         method: 'DELETE'
       })
@@ -192,8 +183,6 @@ export const useRecipesStore = defineStore('recipes', () => {
       if (result.success) {
         // Supprimer de la mémoire locale immédiatement
         recipes.value = recipes.value.filter(recipe => recipe.id !== id)
-        favorites.value = favorites.value.filter(recipe => recipe.id !== id)
-        saveToLocalStorage()
         return result
       } else {
         throw new Error(result.message || 'Erreur lors de la suppression')
@@ -203,27 +192,6 @@ export const useRecipesStore = defineStore('recipes', () => {
       throw error
     } finally {
       isLoading.value = false
-    }
-  }
-
-  const toggleFavorite = (recipe) => {
-    try {
-      const favoriteIndex = favorites.value.findIndex(r => r.id === recipe.id)
-      
-      if (favoriteIndex !== -1) {
-        // Retirer des favoris
-        favorites.value.splice(favoriteIndex, 1)
-      } else {
-        // Ajouter aux favoris
-        favorites.value.push(recipe)
-      }
-      
-      // Sauvegarder dans localStorage
-      saveToLocalStorage()
-      
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du favori:', error)
-      throw error
     }
   }
 
@@ -252,62 +220,20 @@ export const useRecipesStore = defineStore('recipes', () => {
     selectedTags.value = []
   }
 
-  // Local storage
-  const saveToLocalStorage = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('boultons-recipes', JSON.stringify(recipes.value))
-      localStorage.setItem('boultons-favorites', JSON.stringify(favorites.value))
-    }
-  }
-
-  const loadFromLocalStorage = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        // Try to load from localStorage first
-        const storedRecipes = localStorage.getItem('boultons-recipes')
-        const storedFavorites = localStorage.getItem('boultons-favorites')
-        
-        if (storedRecipes && storedFavorites) {
-          // Load from localStorage if available
-          const parsedRecipes = JSON.parse(storedRecipes)
-          const parsedFavorites = JSON.parse(storedFavorites)
-          
-          // Validate and clean recipes data
-          recipes.value = parsedRecipes.filter(recipe => 
-            recipe && recipe.id && recipe.title && recipe.category
-          )
-          favorites.value = parsedFavorites.filter(recipe => 
-            recipe && recipe.id && recipe.title && recipe.category
-          )
-          } else {
-          // Load from JSON file if localStorage is empty
-          loadFromSupabase()
-        }
-      } catch (error) {
-        console.error('Error loading recipes:', error)
-        recipes.value = []
-        favorites.value = []
-      }
-    }
-  }
-
+  // Charger les recettes depuis Supabase
   const loadFromSupabase = async () => {
     try {
       isLoading.value = true
       
-      // Utiliser l'API Supabase
+      // Utiliser la nouvelle API Supabase
       const response = await fetch('/api/recipes')
       const data = await response.json()
       
       if (data.success) {
-        // Validate and clean recipes data - remove favorite attribute
+        // Validate and clean recipes data
         recipes.value = data.recipes.filter(recipe => 
           recipe && recipe.id && recipe.title && recipe.category
-        ).map(recipe => {
-          // Remove favorite attribute from recipe data
-          const { favorite, ...recipeWithoutFavorite } = recipe
-          return recipeWithoutFavorite
-        })
+        )
         
         console.log('Recettes chargées depuis Supabase:', recipes.value.length)
       } else {
@@ -315,24 +241,9 @@ export const useRecipesStore = defineStore('recipes', () => {
         recipes.value = []
       }
       
-      // Load favorites from localStorage if available, otherwise start with empty array
-      if (typeof window !== 'undefined') {
-        const storedFavorites = localStorage.getItem('boultons-favorites')
-        if (storedFavorites) {
-          favorites.value = JSON.parse(storedFavorites).filter(recipe => 
-            recipe && recipe.id && recipe.title && recipe.category
-          )
-        } else {
-          favorites.value = []
-        }
-      }
-      
-      // Save to localStorage for future use
-      saveToLocalStorage()
     } catch (error) {
       console.error('Error loading recipes:', error)
       recipes.value = []
-      favorites.value = []
     } finally {
       isLoading.value = false
     }
@@ -340,13 +251,12 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   // Initialize
   onMounted(() => {
-    loadFromLocalStorage()
+    loadFromSupabase()
   })
 
   return {
     // State
     recipes: readonly(recipes),
-    favorites: readonly(favorites),
     currentCategory: readonly(currentCategory),
     searchQuery: readonly(searchQuery),
     selectedTags: readonly(selectedTags),
@@ -362,13 +272,10 @@ export const useRecipesStore = defineStore('recipes', () => {
     addRecipe,
     updateRecipe,
     deleteRecipe,
-    toggleFavorite,
-    isFavorite,
     setCategory,
     setSearchQuery,
     toggleTag,
     clearFilters,
-    loadFromLocalStorage,
     loadFromSupabase
   }
-}) 
+})

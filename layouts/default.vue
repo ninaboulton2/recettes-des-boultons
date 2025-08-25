@@ -56,14 +56,9 @@
 
           <!-- Côté droit - Authentification et menu mobile -->
           <div class="flex items-center space-x-4">
-            
-            <!-- Language Switcher -->
-            <div class="ml-4">
-              <LanguageSwitcher />
-            </div>
 
-            <!-- Bouton de connexion/déconnexion -->
-            <div v-if="!authStore.isAuthenticated">
+            <!-- Bouton de connexion/déconnexion - visible uniquement sur desktop -->
+            <div v-if="!authStore.isAuthenticated" class="hidden md:block">
               <button
                 @click="showLoginModal = true"
                 class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -163,6 +158,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                     </svg>
+                    <span>Connexion</span>
                   </div>
                 </button>
               </div>
@@ -171,7 +167,7 @@
                   <span class="font-medium">{{ authStore.currentUser?.name || authStore.currentUser?.email }}</span>
                 </div>
                 <button
-                  @click="handleLogout; mobileMenuOpen = false"
+                  @click="handleLogoutMobile"
                   class="block w-full text-center bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
                 >
                   <div class="flex items-center justify-center space-x-2">
@@ -182,11 +178,6 @@
                   </div>
                 </button>
               </div>
-            </div>
-            
-            <!-- Mobile Language Switcher -->
-            <div class="border-t border-gray-200 pt-2 mt-2">
-              <LanguageSwitcher />
             </div>
           </div>
         </div>
@@ -278,6 +269,14 @@ const handleLogout = async () => {
   
   // Rediriger vers la page d'accueil après déconnexion
   window.location.href = '/'
+}
+
+const handleLogoutMobile = async () => {
+  // Fermer le menu mobile
+  mobileMenuOpen.value = false
+  
+  // Appeler la fonction de déconnexion normale
+  await handleLogout()
 }
 
 // Surveiller les changements d'authentification

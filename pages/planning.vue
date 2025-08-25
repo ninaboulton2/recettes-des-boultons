@@ -15,21 +15,26 @@
     <!-- Contenu pour utilisateurs connectés -->
     <div v-else>
       <!-- Header -->
-      <div class="mb-6 relative">
-        <div class="text-center mb-3">
-          <h1 class="text-3xl font-lobster text-gray-900">
+      <div class="mb-6">
+        <!-- Bouton imprimer - au-dessus sur mobile, à droite sur desktop -->
+        <div class="flex justify-end mb-3 sm:mb-0">
+          <button 
+            @click="printPlanning" 
+            class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-primary-50"
+          >
+            <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            <span class="text-sm sm:text-base">Imprimer</span>
+          </button>
+        </div>
+        
+        <!-- Titre centré -->
+        <div class="text-center">
+          <h1 class="text-2xl sm:text-3xl font-lobster text-gray-900">
             Planning hebdomadaire
           </h1>
         </div>
-        <button 
-          @click="printPlanning" 
-          class="absolute top-0 right-0 flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors"
-        >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-        </svg>
-          Imprimer
-        </button>
       </div>
 
       <!-- Week Navigation -->
