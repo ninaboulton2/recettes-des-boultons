@@ -314,7 +314,7 @@ const handleSignUp = async () => {
     }
 
     if (data.user) {
-      successMessage.value = 'Inscription réussie ! Connexion en cours...'
+      successMessage.value = 'Inscription réussie ! Vous pouvez vous connecter'
       
       // Vérifier que l'utilisateur est bien créé dans la base
       setTimeout(async () => {
@@ -327,7 +327,7 @@ const handleSignUp = async () => {
                     
           if (profileError) {
             console.error('⚠️ Erreur lors de la récupération du profil:', profileError)
-            error.value = 'Inscription réussie mais profil non trouvé. Veuillez vous reconnecter.'
+            error.value = 'Inscription réussie. Veuillez vous connecter.'
             return
           }
           
@@ -335,7 +335,7 @@ const handleSignUp = async () => {
             emit('success')
             closeModal()
           } else {
-            error.value = 'Inscription réussie mais profil non créé. Veuillez patienter...'
+            error.value = 'Inscription réussie. Veuillez patienter...'
           }
         } catch (profileErr) {
           error.value = 'Erreur lors de la vérification du profil.'
