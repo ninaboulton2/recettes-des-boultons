@@ -22,14 +22,6 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', userId)
       .single()
 
-    console.log('🔍 Debug API - Recherche de note existante:', {
-      dateString,
-      noteType,
-      userId,
-      existingNote,
-      checkError
-    })
-
     let result
     if (existingNote) {
       console.log('✅ Note existante trouvée, mise à jour...')

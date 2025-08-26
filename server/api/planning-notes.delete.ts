@@ -22,12 +22,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🗑️ Debug API - Suppression note:', {
-      dateString,
-      noteType,
-      userId
-    })
-
     // Vérifier que la note existe et appartient à l'utilisateur
     const { data: existingNote, error: checkError } = await supabase
       .from('planning_notes')

@@ -12,9 +12,9 @@
       
       <!-- Boutons d'action - disposition mobile optimisée -->
       <div class="flex flex-wrap gap-1.5 sm:gap-4 justify-end sm:justify-start">
-        <!-- Bouton d'ajout à la liste de courses -->
+        <!-- Bouton d'ajout à la liste de courses - visible uniquement pour les utilisateurs connectés -->
         <button 
-          v-if="recipe"
+          v-if="recipe && authStore.isAuthenticated"
           @click="addToShoppingList" 
           class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
@@ -25,14 +25,14 @@
           <span class="sm:hidden">Courses</span>
         </button>
         
-        <!-- Bouton d'ajout au planning -->
+        <!-- Bouton d'ajout au planning - visible uniquement pour les utilisateurs connectés -->
         <button 
-          v-if="recipe"
+          v-if="recipe && authStore.isAuthenticated"
           @click="addToPlanning" 
           class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
           <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 12a2 2 0 002 2z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
           </svg>
           <span class="hidden sm:inline">Ajouter au planning</span>
           <span class="sm:hidden">Planning</span>
@@ -44,9 +44,9 @@
           @click="printRecipe" 
           class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
-          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-          </svg>
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
           <span class="hidden sm:inline">Imprimer</span>
           <span class="sm:hidden">Imprimer</span>
         </button>

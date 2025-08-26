@@ -603,6 +603,161 @@ export const useShoppingStore = defineStore('shopping', () => {
     await loadShoppingLists()
   }
 
+  // Réinitialiser les quantités et unités de tous les articles de la liste actuelle
+  const resetQuantities = async () => {
+    if (!currentList.value) return
+    
+    try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour réinitialiser les quantités')
+      }
+      
+      // Mettre à jour tous les articles de la liste actuelle
+      const updatePromises = currentList.value.items.map(async (item) => {
+        try {
+          const response = await fetch(`/api/shopping-items/${item.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              amount: null,
+              unit: null,
+              userId
+            })
+          })
+
+          if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`)
+          }
+
+          const data = await response.json()
+          if (!data.success) {
+            throw new Error(data.error || 'Erreur lors de la mise à jour')
+          }
+
+          // Mettre à jour l'état local immédiatement
+          if (currentList.value) {
+            const itemToUpdate = currentList.value.items.find(i => i.id === item.id)
+            if (itemToUpdate) {
+              itemToUpdate.amount = null
+              itemToUpdate.unit = null
+            }
+          }
+
+          return data.success
+        } catch (error) {
+          console.error(`Erreur mise à jour article ${item.id}:`, error)
+          return false
+        }
+      })
+
+      // Attendre que toutes les mises à jour soient terminées
+      const results = await Promise.all(updatePromises)
+      const successCount = results.filter(Boolean).length
+      const totalCount = currentList.value.items.length
+
+      if (successCount > 0) {
+        // Mettre à jour aussi l'état local des autres listes si nécessaire
+        shoppingLists.value.forEach(list => {
+          if (list.id !== currentList.value?.id) {
+            list.items.forEach(item => {
+              if (item.amount !== null || item.unit !== null) {
+                item.amount = null
+                item.unit = null
+              }
+            })
+          }
+        })
+        
+        return { 
+          success: true, 
+          message: `${successCount} article${successCount > 1 ? 's' : ''} mis à jour sur ${totalCount}`,
+          updatedCount: successCount,
+          totalCount
+        }
+      } else {
+        throw new Error('Aucun article n\'a pu être mis à jour')
+      }
+    } catch (error) {
+      console.error('Erreur réinitialisation quantités:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  // Vider une liste en supprimant tous ses articles
+  const clearList = async (listId: string) => {
+    try {
+      const authStore = useAuthStore()
+      const userId = authStore.currentUser?.id || null
+      
+      if (!userId) {
+        throw new Error('Vous devez être connecté pour vider une liste')
+      }
+      
+      const list = shoppingLists.value.find(l => l.id === listId)
+      if (!list) {
+        throw new Error('Liste non trouvée')
+      }
+      
+      if (list.items.length === 0) {
+        return { success: true, message: 'La liste est déjà vide' }
+      }
+      
+      // Supprimer tous les articles de la liste
+      const deletePromises = list.items.map(async (item) => {
+        try {
+          const response = await fetch(`/api/shopping-items/${item.id}?userId=${userId}`, {
+            method: 'DELETE'
+          })
+
+          if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`)
+          }
+
+          return true
+        } catch (error) {
+          console.error(`Erreur suppression article ${item.id}:`, error)
+          return false
+        }
+      })
+
+      // Attendre que toutes les suppressions soient terminées
+      const results = await Promise.all(deletePromises)
+      const successCount = results.filter(Boolean).length
+      const totalCount = list.items.length
+
+      if (successCount > 0) {
+        // Mettre à jour l'état local immédiatement
+        if (list) {
+          list.items = []
+        }
+        
+        // Si c'est la liste actuelle, la vider aussi
+        if (currentList.value?.id === listId) {
+          currentList.value.items = []
+        }
+        
+        return { 
+          success: true, 
+          message: `${successCount} article${successCount > 1 ? 's' : ''} supprimé${successCount > 1 ? 's' : ''} sur ${totalCount}`,
+          deletedCount: successCount,
+          totalCount
+        }
+      } else {
+        throw new Error('Aucun article n\'a pu être supprimé')
+      }
+    } catch (error) {
+      console.error('Erreur vidage liste:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      return { success: false, error: errorMessage }
+    }
+  }
+
   // Initialize
   onMounted(() => {
     loadShoppingLists()
@@ -634,6 +789,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     moveItemToAnotherList,
     addIngredientsToLists,
     loadShoppingLists,
-    refreshShoppingLists
+    refreshShoppingLists,
+    resetQuantities,
+    clearList
   }
 }) 

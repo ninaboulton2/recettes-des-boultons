@@ -106,15 +106,26 @@
                     Créée le {{ formatDate(list.createdAt) }}
                   </p>
                 </div>
-                <button
-                  @click.stop="deleteList(list.id)"
-                  class="text-red-500 hover:text-red-700 transition-colors duration-200"
-                  title="Supprimer la liste"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click.stop="clearList(list.id)"
+                    class="text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                    title="Vider la liste"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click.stop="deleteList(list.id)"
+                    class="text-red-500 hover:text-red-700 transition-colors duration-200"
+                    title="Supprimer la liste"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </button>
           </div>
@@ -153,10 +164,17 @@
           <div class="flex gap-2">
             <button
               @click="clearChecked"
-              class="text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="checkedItems.length === 0"
             >
               Effacer cochés
+            </button>
+            <button
+              @click="resetQuantities"
+              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!currentItems.length"
+            >
+              Réinitialiser quantités
             </button>
           </div>
         </div>
@@ -416,6 +434,36 @@ const deleteList = (listId) => {
   showDeleteModal.value = true
 }
 
+const clearList = async (listId) => {
+  try {
+    const list = shoppingLists.value.find(l => l.id === listId)
+    if (!list) return
+    
+    const result = await shoppingStore.clearList(listId)
+    
+    if (result.success) {
+      $toast.success(
+        'Liste vidée !',
+        `La liste "${list.name}" a été vidée avec succès`,
+        3000
+      )
+    } else {
+      $toast.error(
+        'Erreur !',
+        result.error || 'Erreur lors du vidage de la liste',
+        3000
+      )
+    }
+  } catch (error) {
+    console.error('Erreur vidage liste:', error)
+    $toast.error(
+      'Erreur !',
+      'Erreur lors du vidage de la liste',
+      3000
+    )
+  }
+}
+
 const { $toast } = useNuxtApp()
 
 const confirmDeleteList = () => {
@@ -483,6 +531,35 @@ const cancelEditing = (item) => {
 
 const clearChecked = () => {
   shoppingStore.clearChecked()
+}
+
+const resetQuantities = async () => {
+  if (!currentList.value) return
+  
+  try {
+    const result = await shoppingStore.resetQuantities()
+    
+    if (result.success) {
+      $toast.success(
+        'Quantités réinitialisées !',
+        result.message,
+        3000
+      )
+    } else {
+      $toast.error(
+        'Erreur !',
+        result.error || 'Erreur lors de la réinitialisation des quantités',
+        3000
+      )
+    }
+  } catch (error) {
+    console.error('Erreur réinitialisation quantités:', error)
+    $toast.error(
+      'Erreur !',
+      'Erreur lors de la réinitialisation des quantités',
+      3000
+    )
+  }
 }
 
 const formatDate = (date) => {

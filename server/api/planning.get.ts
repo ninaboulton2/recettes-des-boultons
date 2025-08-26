@@ -51,13 +51,6 @@ export default defineEventHandler(async (event) => {
 
     const { data: notesData, error: notesError } = await notesQuery
 
-    console.log('🔍 Debug API - Notes récupérées:', {
-      notesData,
-      notesError,
-      userId,
-      dateString
-    })
-
     if (notesError) {
       console.error('Erreur Supabase lors de la récupération des notes:', notesError)
       // On continue sans les notes en cas d'erreur
@@ -125,7 +118,6 @@ export default defineEventHandler(async (event) => {
 
     // Ajouter les notes au planning groupé
     if (notesData && !notesError) {
-      console.log('🔍 Debug API - Ajout des notes au planning groupé...')
       
       // D'abord, créer des entrées vides pour toutes les dates qui ont des notes
       notesData.forEach(note => {
@@ -137,12 +129,6 @@ export default defineEventHandler(async (event) => {
       
       // Ensuite, traiter chaque note
       notesData.forEach(note => {
-        console.log('🔍 Debug API - Traitement note:', {
-          date: note.date_string,
-          type: note.note_type,
-          content: note.content,
-          noteId: note.id
-        })
         
         if (groupedPlanning[note.date_string]) {
           if (note.note_type === 'day') {
@@ -160,8 +146,6 @@ export default defineEventHandler(async (event) => {
         }
       })
     }
-
-    console.log('🔍 Debug API - Planning final groupé:', groupedPlanning)
 
     return {
       success: true,

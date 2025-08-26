@@ -32,13 +32,9 @@ export default defineEventHandler(async (event) => {
     let finalRecipeId = null
 
     if (recipeId) {
-      // Vérifier que la recette existe en utilisant la fonction SQL qui contourne RLS
-      console.log('🔍 Debug API Planning - Recherche de la recette avec ID:', recipeId)
-      
+
       const { data: recipeData, error: recipeError } = await supabase
         .rpc('get_recipe_by_id', { recipe_id_param: recipeId })
-
-      console.log('🔍 Debug API Planning - Résultat de la recherche via fonction SQL:', { recipeData, recipeError })
       
       if (recipeError || !recipeData || recipeData.length === 0) {
         console.error('❌ Erreur lors de la recherche de la recette:', recipeError)
