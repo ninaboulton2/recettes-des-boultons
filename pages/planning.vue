@@ -358,7 +358,13 @@
 
           <!-- No Results Message -->
           <div v-if="filteredRecipes.length === 0" class="text-center py-8">
-            <p class="text-gray-500 text-lg">Aucune recette trouvée pour "{{ searchQuery }}"</p>
+            <p class="text-gray-500 text-lg mb-4">Aucune recette trouvée pour "{{ searchQuery }}"</p>
+            <button
+              @click="addCustomMealFromSearch"
+              class="px-6 py-3 bg-primary-600 text-white hover:bg-primary-700 rounded-lg transition-colors font-medium text-lg"
+            >
+              Ajouter "{{ searchQuery }}" au planning
+            </button>
           </div>
         </div>
       </div>
@@ -627,6 +633,26 @@ const addCustomMeal = async () => {
     
     if (result.success) {
       closeCustomMealInput()
+    } else {
+      console.error('Erreur lors de l\'ajout du repas personnalisé:', result.error)
+      // TODO: Afficher une notification d'erreur à l'utilisateur
+    }
+  }
+}
+
+const addCustomMealFromSearch = async () => {
+  if (selectedDay.value && selectedMealType.value && searchQuery.value.trim()) {
+    const dateString = selectedDay.value.toISOString().split('T')[0]
+    
+    // Utiliser la méthode du store pour les repas personnalisés
+    const result = await planningStore.addCustomMeal(
+      dateString, 
+      selectedMealType.value, 
+      searchQuery.value.trim()
+    )
+    
+    if (result.success) {
+      closeMealSelector()
     } else {
       console.error('Erreur lors de l\'ajout du repas personnalisé:', result.error)
       // TODO: Afficher une notification d'erreur à l'utilisateur
