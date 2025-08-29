@@ -25,30 +25,15 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="favoritesStore.isLoading" class="text-center py-12">
-        <div class="max-w-md mx-auto">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p class="text-gray-600">Chargement de vos favoris...</p>
-        </div>
-      </div>
+      <LoadingState v-if="favoritesStore.isLoading" message="Chargement de vos favoris..." />
 
       <!-- Error State -->
-      <div v-else-if="favoritesStore.error" class="text-center py-12">
-        <div class="max-w-md mx-auto">
-          <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-          </svg>
-          <h3 class="text-lg font-semibold text-red-900 mb-2">
-            Erreur de chargement
-          </h3>
-          <p class="text-red-600 mb-4">
-            {{ favoritesStore.error }}
-          </p>
-          <button @click="loadFavorites" class="btn-primary">
-            Réessayer
-          </button>
-        </div>
-      </div>
+      <ErrorState 
+        v-else-if="favoritesStore.error" 
+        :message="favoritesStore.error"
+        :retry-action="loadFavorites"
+        title="Erreur de chargement"
+      />
 
       <!-- Favorites Grid -->
       <div v-else-if="favoritesWithRecipes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -92,6 +77,8 @@ import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
 import PlanningModal from '@/components/PlanningModal.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()

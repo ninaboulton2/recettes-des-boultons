@@ -96,8 +96,19 @@
       </div>
     </div>
 
+    <!-- Loading State -->
+    <LoadingState v-if="recipesStore.isLoading" message="Chargement des recettes..." />
+
+    <!-- Error State -->
+    <ErrorState 
+      v-else-if="recipesStore.error" 
+      :message="recipesStore.error"
+      :retry-action="loadRecipes"
+      title="Erreur de chargement des recettes"
+    />
+
     <!-- Recipes Grid -->
-    <div v-if="filteredRecipes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+    <div v-else-if="filteredRecipes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
       <NuxtLink
         v-for="recipe in filteredRecipes"
         :key="recipe.id"
@@ -107,6 +118,7 @@
         <RecipeCard :recipe="recipe" />
       </NuxtLink>
     </div>
+
     <!-- Empty State -->
     <div v-else class="text-center py-12">
       <div class="max-w-md mx-auto">
@@ -134,6 +146,8 @@
 import { useRoute } from 'vue-router'
 import { onMounted, onUnmounted } from 'vue'
 import RecipeCard from '@/components/RecipeCard.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 const recipesStore = useRecipesStore()
 const route = useRoute()
 
@@ -194,6 +208,11 @@ const clearFilters = () => {
   searchQuery.value = ''
   selectedTags.value = []
   showTagsDropdown.value = false
+}
+
+// Fonction pour recharger les recettes en cas d'erreur
+const loadRecipes = async () => {
+  await recipesStore.loadFromSupabase()
 }
 
 const toggleTag = (tag) => {

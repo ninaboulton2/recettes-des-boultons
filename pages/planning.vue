@@ -37,8 +37,19 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <LoadingState v-if="planningStore.isLoading" message="Chargement de votre planning..." />
+
+      <!-- Error State -->
+      <ErrorState 
+        v-else-if="planningStore.error" 
+        :message="planningStore.error"
+        :retry-action="loadPlanning"
+        title="Erreur de chargement du planning"
+      />
+
       <!-- Week Navigation -->
-      <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <div v-else class="bg-white rounded-xl shadow-sm p-4 mb-6">
         <div class="flex justify-between items-center">
           <button
             @click="previousWeek"
@@ -447,6 +458,8 @@ import AuthRequired from '@/components/AuthRequired.vue'
 import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const recipesStore = useRecipesStore()
 const planningStore = usePlanningStore()
@@ -534,6 +547,11 @@ const goToCurrentWeek = () => {
   currentWeek.value = new Date()
 }
 
+// Fonction pour recharger le planning en cas d'erreur
+const loadPlanning = async () => {
+  await planningStore.loadPlanning()
+}
+
 const openMealSelector = (date, mealType, prefillSearch = '') => {
   selectedDay.value = date
   selectedMealType.value = mealType
@@ -565,7 +583,6 @@ const saveDayNotes = async (date) => {
       const result = await planningStore.deleteDayNotes(dateString)
       
       if (result.success) {
-        console.log('✅ Note du jour supprimée:', result.message)
         // Recharger le planning pour voir les changements
         await planningStore.loadPlanning()
       } else {
@@ -576,7 +593,6 @@ const saveDayNotes = async (date) => {
       const result = await planningStore.updateDayNotes(dateString, editingDayNotesValue.value.trim())
       
       if (result.success) {
-        console.log('✅ Note du jour sauvegardée:', result.message)
         // Recharger le planning pour voir les changements
         await planningStore.loadPlanning()
       } else {

@@ -36,8 +36,19 @@
         </p>
       </div>
 
+      <!-- Loading State -->
+      <LoadingState v-if="shoppingStore.isLoading" message="Chargement de vos listes de courses..." />
+
+      <!-- Error State -->
+      <ErrorState 
+        v-else-if="shoppingStore.error" 
+        :message="shoppingStore.error"
+        :retry-action="loadShoppingLists"
+        title="Erreur de chargement des listes"
+      />
+
       <!-- Lists Selection -->
-      <div v-if="shoppingLists.length > 0" class="mb-8">
+      <div v-else-if="shoppingLists.length > 0" class="mb-8">
         <div class="bg-white rounded-xl shadow-sm p-6">
           <h2 class="text-xl font-semibold text-gray-900 mb-4">
             Sélectionner une liste
@@ -155,6 +166,14 @@
         </div>
       </div>
 
+      <!-- Empty State -->
+      <EmptyState
+        v-if="shoppingLists.length === 0"
+        title="Aucune liste de courses"
+        message="Créez votre première liste de courses pour commencer à organiser vos achats."
+        icon-path="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+      />
+
       <!-- Current List -->
       <div v-if="currentList" class="bg-white rounded-xl shadow-sm p-6">
         <div class="flex justify-between items-center mb-6">
@@ -201,13 +220,14 @@
               placeholder="Unité"
               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
-            <button
+            <LoadingButton
               @click="addItem"
-              class="btn-primary"
+              :loading="isAddingItem"
               :disabled="!newItem.name.trim()"
+              variant="primary"
             >
               Ajouter
-            </button>
+            </LoadingButton>
           </div>
         </div>
 
@@ -393,6 +413,11 @@ import AuthRequired from '@/components/AuthRequired.vue'
 import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import ActionLoading from '@/components/ActionLoading.vue'
+import LoadingButton from '@/components/LoadingButton.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const authStore = useAuthStore()
 const shoppingStore = useShoppingStore()
@@ -422,6 +447,9 @@ const moveMenuOpen = ref(null)
 const showDeleteModal = ref(false)
 const listToDelete = ref(null)
 
+// État de chargement pour les actions
+const isAddingItem = ref(false)
+
 // Computed properties
 const shoppingLists = computed(() => shoppingStore.shoppingLists)
 const currentList = computed(() => shoppingStore.currentList)
@@ -444,6 +472,11 @@ const areSomeItemsChecked = computed(() => {
 const handleLoginSuccess = async () => {
   showLoginModal.value = false
   // Les favoris seront automatiquement rechargés par le layout
+}
+
+// Fonction pour recharger les listes de courses en cas d'erreur
+const loadShoppingLists = async () => {
+  await shoppingStore.loadShoppingLists()
 }
 
 const createNewList = () => {
@@ -510,14 +543,21 @@ const confirmDeleteList = () => {
   }
 }
 
-const addItem = () => {
+const addItem = async () => {
   if (newItem.value.name.trim()) {
-    shoppingStore.addItem({
-      name: newItem.value.name.trim(),
-      amount: newItem.value.amount || 1,
-      unit: newItem.value.unit.trim()
-    })
-    newItem.value = { name: '', amount: 1, unit: '' }
+    isAddingItem.value = true
+    try {
+      await shoppingStore.addItem({
+        name: newItem.value.name.trim(),
+        amount: newItem.value.amount || 1,
+        unit: newItem.value.unit.trim()
+      })
+      newItem.value = { name: '', amount: 1, unit: '' }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'article:', error)
+    } finally {
+      isAddingItem.value = false
+    }
   }
 }
 
