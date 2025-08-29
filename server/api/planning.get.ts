@@ -133,13 +133,10 @@ export default defineEventHandler(async (event) => {
         if (groupedPlanning[note.date_string]) {
           if (note.note_type === 'day') {
             groupedPlanning[note.date_string].notes = note.content
-            console.log('✅ Note du jour ajoutée pour', note.date_string)
           } else if (note.note_type === 'lunch') {
             groupedPlanning[note.date_string].lunchGroupNote = note.content
-            console.log('✅ Note déjeuner ajoutée pour', note.date_string)
           } else if (note.note_type === 'dinner') {
             groupedPlanning[note.date_string].dinnerGroupNote = note.content
-            console.log('✅ Note dîner ajoutée pour', note.date_string)
           }
         } else {
           console.log('⚠️ Date non trouvée dans le planning pour la note:', note.date_string)

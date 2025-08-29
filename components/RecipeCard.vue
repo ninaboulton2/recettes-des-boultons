@@ -200,24 +200,33 @@ const toggleFavorite = async () => {
 
 const { $toast } = useNuxtApp()
 
-const addToShoppingList = () => {
-  // Préparer les ingrédients avec les informations nécessaires
-  const ingredients = props.recipe.ingredients.map(ingredient => ({
-    name: ingredient.name,
-    amount: ingredient.amount,
-    unit: ingredient.unit,
-    recipeId: props.recipe.id
-  }))
-  
-  // Utiliser la nouvelle méthode qui vérifie toutes les listes
-  shoppingStore.addIngredientsToLists(ingredients)
-  
-  // Afficher un toast de confirmation
-  $toast.success(
-    'Recette ajoutée !',
-    `${props.recipe.title} a été ajoutée à votre liste de courses`,
-    3000
-  )
+const addToShoppingList = async () => {
+  try {
+    // Préparer les ingrédients avec les informations nécessaires
+    const ingredients = props.recipe.ingredients.map(ingredient => ({
+      name: ingredient.name,
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      recipeId: props.recipe.id
+    }))
+    
+    // Utiliser la nouvelle méthode qui vérifie toutes les listes
+    const result = await shoppingStore.addIngredientsToLists(ingredients)
+    
+    // Afficher un toast de confirmation
+    $toast.success(
+      'Recette ajoutée !',
+      `${props.recipe.title} a été ajoutée à votre liste de courses`,
+      3000
+    )
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'ajout à la liste de courses:', error)
+    $toast.error(
+      'Erreur !',
+      'Impossible d\'ajouter la recette à la liste de courses. Veuillez réessayer.',
+      3000
+    )
+  }
 }
 
 const addToPlanning = () => {

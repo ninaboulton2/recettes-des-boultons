@@ -52,14 +52,16 @@
 
       <!-- Favorites Grid -->
       <div v-else-if="favoritesWithRecipes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        <NuxtLink
+        <div
           v-for="favorite in favoritesWithRecipes"
           :key="favorite.id"
-          :to="`/recettes/${favorite.recipeId}`"
           class="block"
         >
-          <RecipeCard :recipe="favorite.recipe" />
-        </NuxtLink>
+          <RecipeCard 
+            :recipe="favorite.recipe" 
+            :show-admin-actions="authStore.isAdmin"
+          />
+        </div>
       </div>
 
       <!-- Empty State -->
@@ -89,6 +91,7 @@ import AuthRequired from '@/components/AuthRequired.vue'
 import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
+import PlanningModal from '@/components/PlanningModal.vue'
 
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
