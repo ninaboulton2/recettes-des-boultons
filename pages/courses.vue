@@ -213,6 +213,23 @@
 
         <!-- Items List -->
         <div class="space-y-2">
+          <!-- Checkbox globale pour tous les articles -->
+          <div v-if="currentItems.length > 0" class="flex items-center gap-3 p-3">
+            <input
+              type="checkbox"
+              :checked="areAllItemsChecked"
+              :indeterminate="areSomeItemsChecked"
+              @change="toggleAllItems"
+              class="w-5 h-5 text-primary-600"
+            >
+            <label class="flex-1 cursor-pointer font-medium text-gray-700">
+              {{ areAllItemsChecked ? 'Décocher tous les articles' : 'Cocher tous les articles' }}
+            </label>
+            <span class="text-sm text-gray-500">
+              {{ checkedItems.length }}/{{ currentItems.length }} article{{ currentItems.length > 1 ? 's' : '' }}
+            </span>
+          </div>
+          
           <div
             v-for="item in currentItems"
             :key="item.id"
@@ -412,6 +429,17 @@ const currentItems = computed(() => shoppingStore.currentItemsGrouped)
 const checkedItems = computed(() => shoppingStore.checkedItems)
 const uncheckedItems = computed(() => shoppingStore.uncheckedItems)
 
+// Computed properties pour la checkbox globale
+const areAllItemsChecked = computed(() => {
+  return currentItems.value.length > 0 && currentItems.value.every(item => item.checked)
+})
+
+const areSomeItemsChecked = computed(() => {
+  return currentItems.value.length > 0 && 
+         currentItems.value.some(item => item.checked) && 
+         !currentItems.value.every(item => item.checked)
+})
+
 // Methods
 const handleLoginSuccess = async () => {
   showLoginModal.value = false
@@ -495,6 +523,38 @@ const addItem = () => {
 
 const toggleItem = (itemId) => {
   shoppingStore.toggleItem(itemId)
+}
+
+const toggleAllItems = async () => {
+  if (!currentItems.value.length) return
+  
+  try {
+    const newState = !areAllItemsChecked.value
+    const result = await shoppingStore.toggleAllItems(newState)
+    
+    if (result.success) {
+      $toast.success(
+        newState ? 'Tous les articles cochés !' : 'Tous les articles décochés !',
+        newState 
+          ? `${currentItems.value.length} article${currentItems.value.length > 1 ? 's' : ''} coché${currentItems.value.length > 1 ? 's' : ''}`
+          : `${currentItems.value.length} article${currentItems.value.length > 1 ? 's' : ''} décoché${currentItems.value.length > 1 ? 's' : ''}`,
+        3000
+      )
+    } else {
+      $toast.error(
+        'Erreur !',
+        result.error || 'Erreur lors de la mise à jour des articles',
+        3000
+      )
+    }
+  } catch (error) {
+    console.error('Erreur toggle tous les articles:', error)
+    $toast.error(
+      'Erreur !',
+      'Erreur lors de la mise à jour des articles',
+      3000
+    )
+  }
 }
 
 const removeItem = (itemId) => {

@@ -758,6 +758,65 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
+  // Méthodes pour la checkbox globale
+  const toggleAllItems = async (checked: boolean) => {
+    if (!currentList.value) return
+
+    try {
+      // Mettre à jour tous les items de la liste actuelle
+      const updatePromises = currentList.value.items.map(async (item) => {
+        if (item.checked !== checked) {
+          try {
+            const response = await fetch(`/api/shopping-items/${item.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                isChecked: checked
+              })
+            })
+
+            if (!response.ok) {
+              throw new Error(`Erreur HTTP: ${response.status}`)
+            }
+
+            const data = await response.json()
+            if (data.success) {
+              // Mettre à jour l'item localement
+              item.checked = checked
+              item.updatedAt = data.item.updatedAt
+            }
+            return true
+          } catch (error) {
+            console.error(`Erreur mise à jour article ${item.id}:`, error)
+            return false
+          }
+        }
+        return true
+      })
+
+      // Attendre que toutes les mises à jour soient terminées
+      await Promise.all(updatePromises)
+      
+      // Mettre à jour la date de modification de la liste
+      currentList.value.updatedAt = new Date().toISOString()
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Erreur toggle tous les articles:', error)
+      return { success: false, error: 'Erreur lors de la mise à jour des articles' }
+    }
+  }
+
+  const checkAllItems = async () => {
+    return await toggleAllItems(true)
+  }
+
+  const uncheckAllItems = async () => {
+    return await toggleAllItems(false)
+  }
+
   // Initialize
   onMounted(() => {
     loadShoppingLists()
@@ -791,6 +850,9 @@ export const useShoppingStore = defineStore('shopping', () => {
     loadShoppingLists,
     refreshShoppingLists,
     resetQuantities,
-    clearList
+    clearList,
+    toggleAllItems,
+    checkAllItems,
+    uncheckAllItems
   }
 }) 
