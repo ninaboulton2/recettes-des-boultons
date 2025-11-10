@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <div class="recipe-card group">
+  <div class="h-full">
+    <div class="recipe-card group h-full flex flex-col">
       <div class="relative mb-4">
         <div class="bg-white rounded-lg shadow p-2">
           <NuxtImg 
@@ -73,18 +73,18 @@
         </div>
       </div>
 
-      <div class="space-y-3">
+      <div class="space-y-3 flex-1 flex flex-col">
         <NuxtLink :to="`/recettes/${recipe.id}`" class="block">
           <h3 class="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors duration-200 cursor-pointer">
             {{ recipe.title }}
           </h3>
         </NuxtLink>
         
-        <p class="text-gray-600 text-sm line-clamp-2">
+        <p class="text-gray-600 text-sm line-clamp-2 flex-1 overflow-hidden text-ellipsis">
           {{ recipe.description }}
         </p>
 
-        <div class="flex items-center justify-between text-sm text-gray-500">
+        <div class="flex items-center justify-between text-sm text-gray-500 mt-auto">
           <div class="flex items-center space-x-4">
             <div v-if="getTotalTime() > 0" class="flex items-center space-x-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -455,5 +455,6 @@ const deleteRecipe = () => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style> 

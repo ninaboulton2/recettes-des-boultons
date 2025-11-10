@@ -145,7 +145,7 @@
       <div
         v-for="recipe in filteredRecipes"
         :key="recipe.id"
-        class="block"
+        class="block h-full"
       >
         <RecipeCard 
           :recipe="recipe" 

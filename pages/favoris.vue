@@ -40,7 +40,7 @@
         <div
           v-for="favorite in favoritesWithRecipes"
           :key="favorite.id"
-          class="block"
+          class="block h-full"
         >
           <RecipeCard 
             :recipe="favorite.recipe" 

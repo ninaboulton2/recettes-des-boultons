@@ -113,7 +113,7 @@
         v-for="recipe in filteredRecipes"
         :key="recipe.id"
         :to="`/recettes/${recipe.id}`"
-        class="block"
+        class="block h-full"
       >
         <RecipeCard :recipe="recipe" />
       </NuxtLink>
