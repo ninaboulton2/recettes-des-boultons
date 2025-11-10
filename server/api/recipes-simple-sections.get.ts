@@ -3,7 +3,7 @@ import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Récupérer toutes les recettes
+    // Récupérer toutes les recettes de manière simple
     const { data: recipes, error: recipesError } = await supabase
       .from('recipes')
       .select('*')
@@ -72,19 +72,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Formater les données pour correspondre à la nouvelle structure
+    // Formater les données
     const formattedRecipes = recipes.map(recipe => {
       // Trouver les sections pour cette recette
       const recipeSections = sections?.filter(section => section.recipe_id === recipe.id) || []
       
-      // Organiser les sections par type et ordre
+      // Organiser les sections
       const formattedSections = recipeSections.map(section => ({
         id: section.id,
         recipeId: recipe.id,
         name: section.name,
         type: section.type,
         orderIndex: section.order_index,
-        ingredients: ingredientsBySection[section.id]?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map(ing => ({
+        ingredients: ingredientsBySection[section.id]?.map(ing => ({
           id: ing.id,
           name: ing.name,
           amount: ing.amount,
@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
           optional: ing.optional,
           sectionId: section.id
         })) || [],
-        instructions: instructionsBySection[section.id]?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map(inst => ({
+        instructions: instructionsBySection[section.id]?.map(inst => ({
           id: inst.id,
           content: inst.content,
           orderIndex: inst.order_index,

@@ -1,21 +1,22 @@
 <template>
   <div class="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
     <!-- Zone de saisie du texte de la recette -->
-    <div class="mb-6">
+    <div v-if="!successMessage" class="mb-6">
       <label for="recipe-text" class="block text-sm font-medium text-gray-700 mb-2">
         Texte de la recette à traduire
       </label>
       <textarea
         id="recipe-text"
         v-model="recipeText"
-        rows="8"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        placeholder="Collez ici le texte de votre recette depuis Google Drive..."
+        rows="15"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm leading-relaxed"
+        style="white-space: pre-wrap; word-wrap: break-word;"
+        placeholder="Collez ici le texte de votre recette depuis Google Drive...&#10;&#10;"
       ></textarea>
     </div>
 
     <!-- Bouton de traduction -->
-    <div class="text-center mb-6">
+    <div v-if="!successMessage" class="text-center mb-6">
       <button
         @click="translateAndAddRecipe"
         :disabled="isLoading || !recipeText.trim()"
@@ -55,26 +56,15 @@
         >
           Voir toutes les recettes →
         </button>
-      </div>
-    </div>
-
-    <!-- Résultat de la traduction (optionnel) -->
-    <div v-if="translatedRecipe && !successMessage" class="mb-6">
-      <h4 class="text-lg font-semibold text-gray-900 mb-3">Recette traduite :</h4>
-      <div class="bg-gray-50 rounded-lg p-4">
-        <pre class="text-sm text-gray-800 whitespace-pre-wrap">{{ translatedRecipe }}</pre>
-      </div>
-      
-      <!-- Bouton pour copier le JSON -->
-      <div class="mt-4 text-center">
         <button
-          @click="copyToClipboard"
-          class="btn-secondary px-6 py-2"
+          @click="resetForm"
+          class="text-green-600 hover:text-green-800 text-sm font-medium"
         >
-          Copier le JSON
+          Ajouter une autre recette →
         </button>
       </div>
     </div>
+
 
     <!-- Message d'erreur -->
     <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -149,5 +139,13 @@ const copyToClipboard = async () => {
 
 const viewAllRecipes = () => {
   navigateTo('/recettes')
+}
+
+const resetForm = () => {
+  recipeText.value = ''
+  translatedRecipe.value = ''
+  successMessage.value = ''
+  addedRecipeId.value = ''
+  error.value = ''
 }
 </script> 

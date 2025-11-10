@@ -86,13 +86,13 @@
 
         <div class="flex items-center justify-between text-sm text-gray-500">
           <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-1">
+            <div v-if="getTotalTime() > 0" class="flex items-center space-x-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span>{{ recipe.prepTime + recipe.cookTime }} min</span>
+              <span>{{ getTotalTime() }} min</span>
             </div>
-            <div class="flex items-center space-x-1">
+            <div v-if="recipe.servings && recipe.servings > 0" class="flex items-center space-x-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
               </svg>
@@ -104,7 +104,7 @@
             <!-- Bouton Ajouter à la liste de courses - visible uniquement pour les utilisateurs connectés -->
             <button 
               v-if="authStore.isAuthenticated"
-              @click.stop.prevent="addToShoppingList"
+              @click.stop.prevent="showShoppingModal = true"
               @mousedown.stop.prevent
               @mouseup.stop.prevent
               class="text-primary-600 hover:text-primary-700 transition-colors duration-200"
@@ -140,7 +140,8 @@
               :class="{
                 'bg-green-500 text-white': tag === 'végétarien',
                 'bg-green-600 text-white': tag === 'vegan',
-                'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan'
+                'bg-sky-400 text-white': tag === 'pescétarien' || tag === 'pescetarien',
+                'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan' && tag !== 'pescétarien' && tag !== 'pescetarien'
               }"
             >
               {{ tag }}
@@ -151,6 +152,103 @@
           >
             +{{ recipe.tags.length - 3 }}
           </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shopping List Modal -->
+    <div v-if="showShoppingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
+            Ajouter "{{ recipe?.title }}" à la liste de courses
+          </h3>
+          <button
+            @click="closeShoppingModal"
+            class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Si des sections existent -->
+        <template v-if="recipe && recipe.sections && sectionsWithIngredients.length > 0">
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-sm text-gray-600">Sélectionnez les sections d'ingrédients à ajouter :</p>
+              <div class="flex gap-2">
+                <button
+                  @click="selectAllSections"
+                  class="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium px-2 py-1 rounded hover:bg-primary-50"
+                >
+                  Tout sélectionner
+                </button>
+                <button
+                  @click="deselectAllSections"
+                  class="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-50"
+                >
+                  Tout désélectionner
+                </button>
+              </div>
+            </div>
+            
+            <div class="space-y-3">
+              <div
+                v-for="(section, index) in sectionsWithIngredients"
+                :key="section.id || index"
+                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+              >
+                <label class="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="selectedSections"
+                    :value="section.id || index"
+                    class="mt-1 mr-3 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  >
+                  <div class="flex-1">
+                    <h4 class="font-medium text-gray-900 mb-2">
+                      {{ section.name || 'Sans nom' }}
+                    </h4>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 ml-2">
+                      <li v-for="ingredient in section.ingredients" :key="ingredient.id">
+                        {{ formatIngredient(ingredient) }}
+                      </li>
+                    </ul>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Si pas de sections (ancien format) -->
+        <template v-else-if="recipe && recipe.ingredients && recipe.ingredients.length > 0">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-4">Tous les ingrédients seront ajoutés :</p>
+            <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
+              <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
+                {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
+              </li>
+            </ul>
+          </div>
+        </template>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <button
+            @click="closeShoppingModal"
+            class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+          >
+            Annuler
+          </button>
+          <button
+            @click="confirmAddToShoppingList"
+            :disabled="recipe && recipe.sections && sectionsWithIngredients.length > 0 && selectedSections.length === 0"
+            class="px-4 py-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Ajouter
+          </button>
         </div>
       </div>
     </div>
@@ -189,6 +287,10 @@ const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
 // État du modal de planning
 const showPlanningModal = ref(false)
 
+// État du modal de shopping
+const showShoppingModal = ref(false)
+const selectedSections = ref([])
+
 const toggleFavorite = async () => {
   const result = await favoritesStore.toggleFavorite(props.recipe.id)
   if (result.success) {
@@ -200,27 +302,105 @@ const toggleFavorite = async () => {
 
 const { $toast } = useNuxtApp()
 
-const addToShoppingList = async () => {
-  try {
-    // Préparer les ingrédients avec les informations nécessaires
-    const ingredients = props.recipe.ingredients.map(ingredient => ({
+// Computed properties pour les sections d'ingrédients
+const sectionsWithIngredients = computed(() => {
+  if (!props.recipe.sections || props.recipe.sections.length === 0) {
+    return []
+  }
+  
+  return props.recipe.sections
+    .filter(section => 
+      (section.type === 'ingredients' || section.type === 'mixed') &&
+      section.ingredients &&
+      section.ingredients.length > 0
+    )
+    .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+})
+
+// Fonction pour formater un ingrédient
+const formatIngredient = (ingredient) => {
+  const parts = []
+  if (ingredient.amount) parts.push(ingredient.amount)
+  if (ingredient.unit) parts.push(ingredient.unit)
+  parts.push(ingredient.name)
+  return parts.join(' ')
+}
+
+const closeShoppingModal = () => {
+  showShoppingModal.value = false
+  selectedSections.value = []
+}
+
+// Sélectionner toutes les sections par défaut quand le modal s'ouvre
+watch(showShoppingModal, (isOpen) => {
+  if (isOpen && props.recipe && props.recipe.sections && sectionsWithIngredients.value.length > 0) {
+    selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+  }
+})
+
+const selectAllSections = () => {
+  if (!props.recipe || !props.recipe.sections) return
+  selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+}
+
+const deselectAllSections = () => {
+  selectedSections.value = []
+}
+
+const confirmAddToShoppingList = async () => {
+  if (!props.recipe) return
+  
+  let ingredients = []
+  
+  // Si des sections existent et sont sélectionnées
+  if (props.recipe.sections && props.recipe.sections.length > 0 && selectedSections.value.length > 0) {
+    // Récupérer les ingrédients des sections sélectionnées
+    sectionsWithIngredients.value.forEach((section, index) => {
+      const sectionKey = section.id || index.toString()
+      if (selectedSections.value.includes(sectionKey)) {
+        section.ingredients.forEach(ingredient => {
+          ingredients.push({
+            name: ingredient.name,
+            amount: ingredient.amount || null,
+            unit: ingredient.unit || null,
+            recipeId: props.recipe.id
+          })
+        })
+      }
+    })
+  } else if (props.recipe.ingredients && props.recipe.ingredients.length > 0) {
+    // Ancien format : utiliser tous les ingrédients
+    ingredients = props.recipe.ingredients.map(ingredient => ({
       name: ingredient.name,
-      amount: ingredient.amount,
-      unit: ingredient.unit,
+      amount: ingredient.amount || null,
+      unit: ingredient.unit || null,
       recipeId: props.recipe.id
     }))
-    
+  }
+  
+  if (ingredients.length === 0) {
+    $toast.error(
+      'Erreur !',
+      'Aucun ingrédient sélectionné',
+      3000
+    )
+    return
+  }
+  
+  try {
     // Utiliser la nouvelle méthode qui vérifie toutes les listes
-    const result = await shoppingStore.addIngredientsToLists(ingredients)
+    await shoppingStore.addIngredientsToLists(ingredients)
     
     // Afficher un toast de confirmation
     $toast.success(
       'Recette ajoutée !',
-      `${props.recipe.title} a été ajoutée à votre liste de courses`,
+      `${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} ajouté${ingredients.length > 1 ? 's' : ''} à votre liste de courses`,
       3000
     )
+    
+    closeShoppingModal()
   } catch (error) {
-    console.error('❌ Erreur lors de l\'ajout à la liste de courses:', error)
+    console.error('Erreur lors de l\'ajout à la liste de courses:', error)
     $toast.error(
       'Erreur !',
       'Impossible d\'ajouter la recette à la liste de courses. Veuillez réessayer.',
@@ -232,6 +412,23 @@ const addToShoppingList = async () => {
 const addToPlanning = () => {
   // Ouvrir le modal de planning
   showPlanningModal.value = true
+}
+
+// Fonction pour calculer le temps total
+const getTotalTime = () => {
+  if (!props.recipe) return 0
+  
+  const prepTime = props.recipe.prepTime
+  const cookTime = props.recipe.cookTime
+  
+  // Si prepTime est une string, retourner 0 (format non supporté)
+  if (typeof prepTime === 'string') return 0
+  
+  const prep = prepTime || 0
+  const cook = cookTime || 0
+  const total = prep + cook
+  
+  return total
 }
 
 const closePlanningModal = () => {

@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
 
+// Fonction pour normaliser les accents (insensible aux accents)
+const normalizeAccents = (str) => {
+  if (!str) return ''
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+    .toLowerCase()
+}
+
 export const useRecipesStore = defineStore('recipes', () => {
   const recipes = ref([])
   const currentCategory = ref(null)
@@ -17,11 +26,11 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
 
     if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase()
+      const normalizedQuery = normalizeAccents(searchQuery.value)
       filtered = filtered.filter(recipe => 
-        recipe.title.toLowerCase().includes(query) ||
-        recipe.description.toLowerCase().includes(query) ||
-        recipe.tags.some(tag => tag.toLowerCase().includes(query))
+        normalizeAccents(recipe.title).includes(normalizedQuery) ||
+        normalizeAccents(recipe.description).includes(normalizedQuery) ||
+        recipe.tags.some(tag => normalizeAccents(tag).includes(normalizedQuery))
       )
     }
 

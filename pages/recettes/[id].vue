@@ -15,7 +15,7 @@
         <!-- Bouton d'ajout à la liste de courses - visible uniquement pour les utilisateurs connectés -->
         <button 
           v-if="recipe && authStore.isAuthenticated"
-          @click="addToShoppingList" 
+          @click="showShoppingModal = true" 
           class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-primary-50 text-sm sm:text-base"
         >
           <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,9 +89,8 @@
         <p class="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">{{ recipe.description }}</p>
         <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 mb-2">
           <span><strong>Catégorie :</strong> {{ categoryName }}</span>
-          <span><strong>Temps :</strong> {{
-            typeof(recipe.prepTime) === 'string' ? recipe.prepTime : recipe.prepTime + recipe.cookTime + ' min'}}</span>
-          <span><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
+          <span v-if="totalTime !== null"><strong>Temps :</strong> {{ totalTime }} min</span>
+          <span v-if="recipe.servings !== null && recipe.servings !== undefined"><strong>Portions :</strong> {{ recipe.servings }} pers.</span>
         </div>
         <!-- Tags -->
         <div class="flex flex-wrap gap-1 sm:gap-2 mb-2">
@@ -102,7 +101,8 @@
             :class="{
               'bg-green-500 text-white': tag === 'végétarien',
               'bg-emerald-600 text-white': tag === 'vegan',
-              'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan'
+              'bg-sky-400 text-white': tag === 'pescétarien' || tag === 'pescetarien',
+              'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan' && tag !== 'pescétarien' && tag !== 'pescetarien'
             }"
           >
             {{ tag }}
@@ -114,21 +114,57 @@
     <!-- Ingrédients -->
     <div class="mb-6 sm:mb-8">
       <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">Ingrédients</h2>
-      <ul class="list-disc list-inside space-y-1 text-sm sm:text-base text-gray-800">
-        <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
-          {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
-        </li>
-      </ul>
+      
+      <!-- Si des sections existent, les organiser par section -->
+      <template v-if="recipe.sections && recipe.sections.length > 0">
+        <div class="space-y-4">
+          <div v-for="section in sectionsWithIngredients" :key="section.id" class="mb-4">
+            <h3 class="text-lg font-medium text-gray-700 mb-2">{{ section.name }}</h3>
+            <ul class="list-disc list-inside space-y-1 text-sm sm:text-base text-gray-800 ml-4">
+              <li v-for="ingredient in section.ingredients" :key="ingredient.id">
+                {{ formatIngredient(ingredient) }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+      
+      <!-- Fallback : affichage simple si pas de sections -->
+      <template v-else>
+        <ul class="list-disc list-inside space-y-1 text-sm sm:text-base text-gray-800">
+          <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
+            {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
+          </li>
+        </ul>
+      </template>
     </div>
 
     <!-- Instructions -->
     <div class="mb-6 sm:mb-8">
       <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">Instructions</h2>
-      <ol class="list-decimal list-inside space-y-2 text-sm sm:text-base text-gray-800">
-        <li v-for="(step, i) in recipe.instructions" :key="i">
-          {{ step }}
-        </li>
-      </ol>
+      
+      <!-- Si des sections existent, les organiser par section -->
+      <template v-if="recipe.sections && recipe.sections.length > 0">
+        <div class="space-y-4">
+          <div v-for="section in sectionsWithInstructions" :key="section.id" class="mb-4">
+            <h3 class="text-lg font-medium text-gray-700 mb-2">{{ section.name }}</h3>
+            <ol class="list-decimal list-inside space-y-2 text-sm sm:text-base text-gray-800 ml-4">
+              <li v-for="instruction in section.instructions" :key="instruction.id">
+                {{ instruction.content }}
+              </li>
+            </ol>
+          </div>
+        </div>
+      </template>
+      
+      <!-- Fallback : affichage simple si pas de sections -->
+      <template v-else>
+        <ol class="list-decimal list-inside space-y-2 text-sm sm:text-base text-gray-800">
+          <li v-for="(step, i) in recipe.instructions" :key="i">
+            {{ step }}
+          </li>
+        </ol>
+      </template>
     </div>
 
     <!-- Notes -->
@@ -167,6 +203,103 @@
     @confirm="deleteRecipe"
     @close="closeDeleteModal"
   />
+
+  <!-- Shopping List Modal -->
+  <div v-if="showShoppingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
+          Ajouter "{{ recipe?.title }}" à la liste de courses
+        </h3>
+        <button
+          @click="closeShoppingModal"
+          class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Si des sections existent -->
+      <template v-if="recipe && recipe.sections && sectionsWithIngredients.length > 0">
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-sm text-gray-600">Sélectionnez les sections d'ingrédients à ajouter :</p>
+            <div class="flex gap-2">
+              <button
+                @click="selectAllSections"
+                class="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium px-2 py-1 rounded hover:bg-primary-50"
+              >
+                Tout sélectionner
+              </button>
+              <button
+                @click="deselectAllSections"
+                class="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-50"
+              >
+                Tout désélectionner
+              </button>
+            </div>
+          </div>
+          
+          <div class="space-y-3">
+            <div
+              v-for="(section, index) in sectionsWithIngredients"
+              :key="section.id || index"
+              class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+            >
+              <label class="flex items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  v-model="selectedSections"
+                  :value="section.id || index"
+                  class="mt-1 mr-3 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                >
+                <div class="flex-1">
+                  <h4 class="font-medium text-gray-900 mb-2">
+                    {{ section.name || 'Sans nom' }}
+                  </h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 ml-2">
+                    <li v-for="ingredient in section.ingredients" :key="ingredient.id">
+                      {{ formatIngredient(ingredient) }}
+                    </li>
+                  </ul>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Si pas de sections (ancien format) -->
+      <template v-else-if="recipe && recipe.ingredients && recipe.ingredients.length > 0">
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-4">Tous les ingrédients seront ajoutés :</p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
+            <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
+              {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
+            </li>
+          </ul>
+        </div>
+      </template>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button
+          @click="closeShoppingModal"
+          class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+        >
+          Annuler
+        </button>
+        <button
+          @click="confirmAddToShoppingList"
+          :disabled="recipe && recipe.sections && sectionsWithIngredients.length > 0 && selectedSections.length === 0"
+          class="px-4 py-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Planning Modal -->
   <div v-if="showPlanningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -328,7 +461,7 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, watch, ref } from 'vue'
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
 const authStore = useAuthStore()
@@ -337,6 +470,76 @@ const route = useRoute()
 
 const recipeId = computed(() => route.params.id)
 const recipe = computed(() => recipesStore.recipes.find(r => r.id === recipeId.value))
+
+// Console log de la recette pour debug
+watch(recipe, (newRecipe) => {
+  if (newRecipe) {
+    console.log('Recette chargée:', newRecipe)
+  }
+}, { immediate: true })
+
+// Sections avec ingrédients (pour l'affichage organisé)
+const sectionsWithIngredients = computed(() => {
+  if (!recipe.value?.sections || recipe.value.sections.length === 0) return []
+  
+  return recipe.value.sections
+    .filter(section => 
+      section.ingredients && 
+      Array.isArray(section.ingredients) && 
+      section.ingredients.length > 0
+    )
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+})
+
+// Sections avec instructions (pour l'affichage organisé)
+const sectionsWithInstructions = computed(() => {
+  if (!recipe.value?.sections || recipe.value.sections.length === 0) return []
+  
+  return recipe.value.sections
+    .filter(section => 
+      section.instructions && 
+      Array.isArray(section.instructions) && 
+      section.instructions.length > 0
+    )
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+})
+
+// Fonction pour formater un ingrédient
+const formatIngredient = (ingredient) => {
+  let formatted = ''
+  if (ingredient.amount) {
+    formatted += ingredient.amount + ' '
+  }
+  if (ingredient.unit) {
+    formatted += ingredient.unit + ' '
+  }
+  formatted += ingredient.name
+  return formatted
+}
+
+// Calculer le temps total (prepTime + cookTime) seulement si les deux sont non-nuls
+const totalTime = computed(() => {
+  if (!recipe.value) return null
+  
+  const prepTime = recipe.value.prepTime
+  const cookTime = recipe.value.cookTime
+  
+  // Si prepTime est une string, retourner null (format non supporté)
+  if (typeof prepTime === 'string') return null
+  
+  // Si les deux temps sont null ou undefined, retourner null
+  if ((prepTime === null || prepTime === undefined) && (cookTime === null || cookTime === undefined)) {
+    return null
+  }
+  
+  // Calculer le total en utilisant 0 pour les valeurs null/undefined
+  const prep = prepTime || 0
+  const cook = cookTime || 0
+  const total = prep + cook
+  
+  // Retourner null si le total est 0 (aucun temps renseigné)
+  return total > 0 ? total : null
+})
 
 // Recipe editing and deletion
 const showRecipeEditor = ref(false)
@@ -349,6 +552,10 @@ const showPlanningModal = ref(false)
 const planningCurrentWeek = ref(new Date())
 const selectedDay = ref(null)
 const selectedMealType = ref(null)
+
+// Shopping modal
+const showShoppingModal = ref(false)
+const selectedSections = ref([])
 
 const categoryName = computed(() => {
   const map = {
@@ -398,26 +605,87 @@ const deleteConfirmMessage = computed(() => {
   return `Êtes-vous sûr de vouloir supprimer la recette "${recipeToDelete.value.title}" ? Cette action est irréversible.`
 })
 
-const addToShoppingList = () => {
+const closeShoppingModal = () => {
+  showShoppingModal.value = false
+  selectedSections.value = []
+}
+
+// Sélectionner toutes les sections par défaut quand le modal s'ouvre
+watch(showShoppingModal, (isOpen) => {
+  if (isOpen && recipe.value && recipe.value.sections && sectionsWithIngredients.value.length > 0) {
+    selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+  }
+})
+
+const selectAllSections = () => {
+  if (!recipe.value || !recipe.value.sections) return
+  selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+}
+
+const deselectAllSections = () => {
+  selectedSections.value = []
+}
+
+const confirmAddToShoppingList = async () => {
   if (!recipe.value) return
   
-  // Préparer les ingrédients avec les informations nécessaires
-  const ingredients = recipe.value.ingredients.map(ingredient => ({
-    name: ingredient.name,
-    amount: ingredient.amount,
-    unit: ingredient.unit,
-    recipeId: recipe.value.id
-  }))
+  let ingredients = []
   
-  // Utiliser la nouvelle méthode qui vérifie toutes les listes
-  shoppingStore.addIngredientsToLists(ingredients)
+  // Si des sections existent et sont sélectionnées
+  if (recipe.value.sections && recipe.value.sections.length > 0 && selectedSections.value.length > 0) {
+    // Récupérer les ingrédients des sections sélectionnées
+    sectionsWithIngredients.value.forEach((section, index) => {
+      const sectionKey = section.id || index.toString()
+      if (selectedSections.value.includes(sectionKey)) {
+        section.ingredients.forEach(ingredient => {
+          ingredients.push({
+            name: ingredient.name,
+            amount: ingredient.amount || null,
+            unit: ingredient.unit || null,
+            recipeId: recipe.value.id
+          })
+        })
+      }
+    })
+  } else if (recipe.value.ingredients && recipe.value.ingredients.length > 0) {
+    // Ancien format : utiliser tous les ingrédients
+    ingredients = recipe.value.ingredients.map(ingredient => ({
+      name: ingredient.name,
+      amount: ingredient.amount || null,
+      unit: ingredient.unit || null,
+      recipeId: recipe.value.id
+    }))
+  }
   
-  // Afficher un toast de confirmation
-  $toast.success(
-    'Recette ajoutée !',
-    `${recipe.value.title} a été ajoutée à votre liste de courses`,
-    3000
-  )
+  if (ingredients.length === 0) {
+    $toast.error(
+      'Erreur !',
+      'Aucun ingrédient sélectionné',
+      3000
+    )
+    return
+  }
+  
+  try {
+    // Utiliser la nouvelle méthode qui vérifie toutes les listes
+    await shoppingStore.addIngredientsToLists(ingredients)
+    
+    // Afficher un toast de confirmation
+    $toast.success(
+      'Recette ajoutée !',
+      `${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} ajouté${ingredients.length > 1 ? 's' : ''} à votre liste de courses`,
+      3000
+    )
+    
+    closeShoppingModal()
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout à la liste de courses:', error)
+    $toast.error(
+      'Erreur !',
+      'Impossible d\'ajouter la recette à la liste de courses. Veuillez réessayer.',
+      3000
+    )
+  }
 }
 
 const addToPlanning = () => {
@@ -524,7 +792,7 @@ const printRecipe = () => {
           margin: 5px; 
           line-height: 1.8; 
           max-width: 800px; 
-          margin-left: auto; 
+          margin-left: 50px; 
           margin-right: auto; 
         }
         h1 { 
@@ -538,6 +806,14 @@ const printRecipe = () => {
           font-size: 24px; 
           text-align: center;
           font-weight: bold;
+        }
+        h3 { 
+          color: #4b5563; 
+          font-size: 18px; 
+          font-weight: bold;
+          margin-top: 20px;
+          margin-bottom: 10px;
+          margin-left: 50px;
         }
         .recipe-info { 
           background: #f3f4f6; 
@@ -563,11 +839,11 @@ const printRecipe = () => {
           font-weight: 500;
         }
         ul { 
-          margin-left: 30px; 
+          margin-left: 50px; 
           font-size: 11px;
         }
         ol { 
-          margin-left: 30px; 
+          margin-left: 50px; 
           font-size: 11px;
         }
         li { 
@@ -594,6 +870,7 @@ const printRecipe = () => {
           } 
           h1 { font-size: 28px; }
           h2 { font-size: 14px; }
+          h3 { font-size: 12px; }
         }
       </style>
     </head>
@@ -604,22 +881,41 @@ const printRecipe = () => {
       
       <div class="recipe-info">
         <span><strong>Catégorie :</strong> ${categoryName.value}</span>
-        <span><strong>Temps :</strong> ${
-          typeof(recipe.value.prepTime) === 'string' ? recipe.value.prepTime : recipe.value.prepTime + recipe.value.cookTime} min</span>
-        <span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>
+        ${totalTime.value !== null ? `<span><strong>Temps :</strong> ${totalTime.value} min</span>` : ''}
+        ${recipe.value.servings !== null && recipe.value.servings !== undefined ? `<span><strong>Portions :</strong> ${recipe.value.servings} pers.</span>` : ''}
       </div>
       
       <h2>Ingrédients</h2>
-      <ul>
-        ${recipe.value.ingredients.map(ingredient => 
-          `<li>${ingredient.amount ? ingredient.amount + ' ' : ''}${ingredient.unit ? ingredient.unit + ' ' : ''}${ingredient.name}</li>`
-        ).join('')}
-      </ul>
+      ${recipe.value.sections && sectionsWithIngredients.value.length > 0 ? 
+        sectionsWithIngredients.value.map(section => `
+          ${section.name && section.name.trim() ? `<h3>${section.name}</h3>` : ''}
+          <ul>
+            ${section.ingredients.map(ingredient => 
+              `<li>${formatIngredient(ingredient)}</li>`
+            ).join('')}
+          </ul>
+        `).join('') :
+        `<ul>
+          ${recipe.value.ingredients ? recipe.value.ingredients.map(ingredient => 
+            `<li>${ingredient.amount ? ingredient.amount + ' ' : ''}${ingredient.unit ? ingredient.unit + ' ' : ''}${ingredient.name}</li>`
+          ).join('') : ''}
+        </ul>`
+      }
       
       <h2>Instructions</h2>
-      <ol>
-        ${recipe.value.instructions.map(step => `<li>${step}</li>`).join('')}
-      </ol>
+      ${recipe.value.sections && sectionsWithInstructions.value.length > 0 ? 
+        sectionsWithInstructions.value.map(section => `
+          ${section.name && section.name.trim() ? `<h3>${section.name}</h3>` : ''}
+          <ol>
+            ${section.instructions.map(instruction => 
+              `<li>${typeof instruction === 'string' ? instruction : instruction.content || ''}</li>`
+            ).join('')}
+          </ol>
+        `).join('') :
+        `<ol>
+          ${recipe.value.instructions ? recipe.value.instructions.map(step => `<li>${typeof step === 'string' ? step : step.content || ''}</li>`).join('') : ''}
+        </ol>`
+      }
       
       ${recipe.value.notes && recipe.value.notes.trim() ? `
       <h2 style="margin-top: 50px;">Notes et conseils</h2>

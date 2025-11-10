@@ -184,14 +184,23 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+// Fonction pour normaliser les accents (insensible aux accents)
+const normalizeAccents = (str) => {
+  if (!str) return ''
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+    .toLowerCase()
+}
+
 const filteredRecipes = computed(() => {
   let filtered = recipesStore.filteredRecipes.filter(r => r.category === categoryParam.value)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const normalizedQuery = normalizeAccents(searchQuery.value)
     filtered = filtered.filter(recipe => 
-      recipe.title.toLowerCase().includes(query) ||
-      recipe.description.toLowerCase().includes(query) ||
-      recipe.tags.some(tag => tag.toLowerCase().includes(query))
+      normalizeAccents(recipe.title).includes(normalizedQuery) ||
+      normalizeAccents(recipe.description).includes(normalizedQuery) ||
+      recipe.tags.some(tag => normalizeAccents(tag).includes(normalizedQuery))
     )
   }
   if (selectedTags.value.length > 0) {

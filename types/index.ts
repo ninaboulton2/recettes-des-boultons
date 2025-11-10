@@ -5,6 +5,7 @@ export interface Recipe {
   category: RecipeCategory
   ingredients: Ingredient[]
   instructions: string[]
+  sections?: RecipeSection[]
   prepTime: number
   cookTime: number
   servings: number
@@ -21,6 +22,25 @@ export interface Ingredient {
   amount: number
   unit: string
   optional?: boolean
+  sectionId?: string
+}
+
+export interface Instruction {
+  content: string
+  orderIndex: number
+  sectionId?: string
+}
+
+export interface RecipeSection {
+  id: string
+  recipeId: string
+  name: string
+  type: 'ingredients' | 'instructions' | 'mixed'
+  orderIndex: number
+  ingredients?: Ingredient[]
+  instructions?: Instruction[]
+  createdAt: string
+  updatedAt: string
 }
 
 export type RecipeCategory = 
