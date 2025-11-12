@@ -1,10 +1,41 @@
 <template>
-  <div class="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
-    <!-- Zone de saisie du texte de la recette -->
-    <div v-if="!successMessage" class="mb-6">
-      <label for="recipe-text" class="block text-sm font-medium text-gray-700 mb-2">
-        Texte de la recette à traduire
-      </label>
+      <div class="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
+        <!-- Choix de la langue -->
+        <div v-if="!successMessage" class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Langue de la recette
+          </label>
+          <div class="flex gap-3">
+            <button
+              @click="translationMode = 'keep'"
+              :class="[
+                'flex-1 px-4 py-2 rounded-lg border-2 transition-colors font-medium',
+                translationMode === 'keep'
+                  ? 'bg-primary-100 border-primary-500 text-primary-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              Garder la langue d'origine
+            </button>
+            <button
+              @click="translationMode = 'translate'"
+              :class="[
+                'flex-1 px-4 py-2 rounded-lg border-2 transition-colors font-medium',
+                translationMode === 'translate'
+                  ? 'bg-primary-100 border-primary-500 text-primary-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              Traduire en français
+            </button>
+          </div>
+        </div>
+
+        <!-- Zone de saisie du texte de la recette -->
+        <div v-if="!successMessage" class="mb-6">
+          <label for="recipe-text" class="block text-sm font-medium text-gray-700 mb-2">
+            Texte de la recette {{ translationMode === 'translate' ? 'à traduire' : '' }}
+          </label>
       <textarea
         id="recipe-text"
         v-model="recipeText"
@@ -82,6 +113,7 @@ const isLoading = ref(false)
 const error = ref('')
 const successMessage = ref('')
 const addedRecipeId = ref('')
+const translationMode = ref('translate') // 'translate' ou 'keep'
 
 // Accéder au store des recettes
 const recipesStore = useRecipesStore()
@@ -100,7 +132,8 @@ const translateAndAddRecipe = async () => {
     const translationResponse = await $fetch('/api/translate-recipe', {
       method: 'POST',
       body: {
-        recipeText: recipeText.value
+        recipeText: recipeText.value,
+        translateToFrench: translationMode.value === 'translate'
       }
     })
 
@@ -147,5 +180,6 @@ const resetForm = () => {
   successMessage.value = ''
   addedRecipeId.value = ''
   error.value = ''
+  translationMode.value = 'translate' // Réinitialiser à la traduction par défaut
 }
 </script> 

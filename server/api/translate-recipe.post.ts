@@ -4,7 +4,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { recipeText } = body
+    const { recipeText, translateToFrench = true } = body
 
     if (!recipeText) {
       throw createError({
@@ -27,8 +27,12 @@ export default defineEventHandler(async (event) => {
     })
 
     // Prompt pour convertir la recette en JSON structuré
+    const languageInstruction = translateToFrench 
+      ? 'en français' 
+      : 'dans la langue d\'origine de la recette'
+    
     const prompt = `
-    Convertis cette recette en format JSON structuré en français avec un système de sections.
+    Convertis cette recette en format JSON structuré ${languageInstruction} avec un système de sections.
     Le JSON doit contenir les champs suivants :
     {
       "id": "1",
@@ -100,7 +104,7 @@ export default defineEventHandler(async (event) => {
     Recette à convertir :
     ${recipeText}
 
-    Retourne uniquement le JSON valide, sans texte supplémentaire. Si la recette est en anglais, retourne le JSON en français.
+    Retourne uniquement le JSON valide, sans texte supplémentaire. ${translateToFrench ? 'Si la recette est en anglais ou dans une autre langue, retourne le JSON en français.' : 'Retourne le JSON dans la langue d\'origine de la recette, sans traduire.'}
     `
 
     const response = await client.chat.completions.create({
@@ -108,7 +112,7 @@ export default defineEventHandler(async (event) => {
       messages: [
         {
           role: "system",
-          content: "Tu es un expert en conversion de recettes en format JSON structuré avec sections. Tu détectes TOUJOURS les sous-sections dans les instructions et ingrédients en cherchant : 1) des sous-titres suivis de ':', 2) des sauts de ligne (lignes vides) suivis d'une ligne qui ressemble à un titre puis plusieurs lignes de contenu. Tu crées une section séparée pour chaque sous-section détectée. Tu retournes toujours un JSON valide et bien formaté, sans texte supplémentaire."
+          content: `Tu es un expert en conversion de recettes en format JSON structuré avec sections. Tu détectes TOUJOURS les sous-sections dans les instructions et ingrédients en cherchant : 1) des sous-titres suivis de ':', 2) des sauts de ligne (lignes vides) suivis d'une ligne qui ressemble à un titre puis plusieurs lignes de contenu. Tu crées une section séparée pour chaque sous-section détectée. ${translateToFrench ? 'Tu traduis toujours le contenu en français.' : 'Tu conserves la langue d\'origine de la recette, sans traduire.'} Tu retournes toujours un JSON valide et bien formaté, sans texte supplémentaire.`
         },
         {
           role: "user",
