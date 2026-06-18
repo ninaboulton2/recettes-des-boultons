@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { apiFetch } from '~/composables/useApi'
 import type { Recipe } from '~/types'
 import { useAuthStore } from './auth'
 
@@ -45,7 +46,7 @@ export const useFavoritesStore = defineStore('favorites', {
           return
         }
         
-        const response = await fetch(`/api/favorites?userId=${userId}`)
+        const response = await apiFetch(`/api/favorites?userId=${userId}`)
         
         if (!response.ok) {
           throw new Error(`Erreur HTTP: ${response.status}`)
@@ -74,7 +75,7 @@ export const useFavoritesStore = defineStore('favorites', {
           throw new Error('Vous devez être connecté pour ajouter des favoris')
         }
         
-        const response = await fetch('/api/favorites', {
+        const response = await apiFetch('/api/favorites', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -109,7 +110,7 @@ export const useFavoritesStore = defineStore('favorites', {
           throw new Error('Vous devez être connecté pour gérer vos favoris')
         }
         
-        const response = await fetch(`/api/favorites?recipeId=${recipeId}&userId=${userId}`, {
+        const response = await apiFetch(`/api/favorites?recipeId=${recipeId}&userId=${userId}`, {
           method: 'DELETE'
         })
 

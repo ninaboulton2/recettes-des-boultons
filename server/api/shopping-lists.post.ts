@@ -1,10 +1,12 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+
     const body = await readBody(event)
-    const { name, userId = null } = body
+    const { name } = body
+    const userId = user.id
 
     if (!name) {
       throw createError({

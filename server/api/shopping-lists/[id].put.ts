@@ -1,8 +1,9 @@
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase } = await requireUser(event)
+
     const listId = getRouterParam(event, 'id')
     const body = await readBody(event)
     const { name } = body

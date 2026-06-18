@@ -1,8 +1,9 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase } = await requireAdmin(event)
+
     // Récupérer l'ID de la recette à supprimer depuis les paramètres de requête
     const query = getQuery(event)
     const recipeId = query.id

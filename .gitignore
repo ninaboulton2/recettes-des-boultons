@@ -27,6 +27,7 @@ config/production.env
 config/local.env
 
 # Credentials et secrets
+credentials.json
 credentials-temp.json
 *.key
 *.pem

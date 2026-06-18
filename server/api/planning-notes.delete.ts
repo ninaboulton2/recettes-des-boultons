@@ -1,17 +1,18 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+
     const query = getQuery(event)
     const dateString = String(query.dateString || '')
     const noteType = String(query.noteType || '')
-    const userId = String(query.userId || '')
+    const userId = user.id
 
-    if (!dateString || !noteType || !userId) {
+    if (!dateString || !noteType) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Date, type de note et userId requis'
+        statusMessage: 'Date et type de note requis'
       })
     }
 

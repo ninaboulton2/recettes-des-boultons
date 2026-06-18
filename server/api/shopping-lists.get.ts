@@ -1,10 +1,9 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    const query = getQuery(event)
-    const { userId = null } = query
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
 
     let listsQuery = supabase
       .from('shopping_lists')

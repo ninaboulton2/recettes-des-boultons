@@ -1,22 +1,17 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
+
     const body = await readBody(event)
-    const { listId, name, amount, unit, recipeId = null, userId = null } = body
+    const { listId, name, amount, unit, recipeId = null } = body
 
     if (!listId || !name) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID de liste et nom de l\'article requis'
-      })
-    }
-
-    if (!userId) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Vous devez être connecté pour ajouter des articles'
       })
     }
 

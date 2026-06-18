@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { apiFetch } from '~/composables/useApi'
 import { ref, computed, onMounted, readonly } from 'vue'
 import type { Recipe } from '~/utils/supabase'
 import { useAuthStore } from './auth'
@@ -41,7 +42,7 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error('Vous devez être connecté pour gérer votre planning')
       }
       
-      const response = await fetch('/api/planning', {
+      const response = await apiFetch('/api/planning', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -84,7 +85,7 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error('Vous devez être connecté pour gérer votre planning')
       }
       
-      const response = await fetch('/api/planning', {
+      const response = await apiFetch('/api/planning', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -127,7 +128,7 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error('Vous devez être connecté pour gérer votre planning')
       }
       
-      const response = await fetch(`/api/planning/${mealId}?userId=${userId}`, {
+      const response = await apiFetch(`/api/planning/${mealId}?userId=${userId}`, {
         method: 'DELETE'
       })
 
@@ -169,7 +170,7 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error('Vous devez être connecté pour gérer votre planning')
       }
       
-      const response = await fetch('/api/planning-notes', {
+      const response = await apiFetch('/api/planning-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -217,7 +218,7 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error('Vous devez être connecté pour gérer votre planning')
       }
       
-      const response = await fetch(`/api/planning-notes?dateString=${date}&noteType=day&userId=${userId}`, {
+      const response = await apiFetch(`/api/planning-notes?dateString=${date}&noteType=day&userId=${userId}`, {
         method: 'DELETE'
       })
 
@@ -254,7 +255,7 @@ export const usePlanningStore = defineStore('planning', () => {
       
       const noteType = mealType === 'lunch' ? 'lunch' : 'dinner'
       
-      const response = await fetch('/api/planning-notes', {
+      const response = await apiFetch('/api/planning-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -358,7 +359,7 @@ export const usePlanningStore = defineStore('planning', () => {
         return
       }
       
-      const response = await fetch(`/api/planning?userId=${userId}`)
+      const response = await apiFetch(`/api/planning?userId=${userId}`)
       
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`)

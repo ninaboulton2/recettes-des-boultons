@@ -1,22 +1,17 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
+
     const body = await readBody(event)
-    const { recipeId, userId } = body
+    const { recipeId } = body
 
     if (!recipeId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID de recette manquant'
-      })
-    }
-
-    if (!userId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'userId est requis pour ajouter un favori'
       })
     }
 

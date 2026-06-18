@@ -1,10 +1,12 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+
     const query = getQuery(event)
-    const { dateString, userId = null } = query
+    const { dateString } = query
+    const userId = user.id
 
     let planningQuery = supabase
       .from('planning')

@@ -3,6 +3,9 @@ import { defineEventHandler, readBody, createError } from 'h3'
 
 export default defineEventHandler(async (event) => {
   try {
+    // Réservé aux administrateurs (évite l'abus de la facturation OpenAI)
+    await requireAdmin(event)
+
     const body = await readBody(event)
     const { recipeText, translateToFrench = true } = body
 

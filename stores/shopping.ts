@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { apiFetch } from '~/composables/useApi'
 import { ref, computed, onMounted, readonly } from 'vue'
 import { useAuthStore } from './auth'
 
@@ -103,7 +104,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         throw new Error('Vous devez être connecté pour créer des listes de courses')
       }
       
-      const response = await fetch('/api/shopping-lists', {
+      const response = await apiFetch('/api/shopping-lists', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -151,7 +152,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         throw new Error('Vous devez être connecté pour gérer vos listes de courses')
       }
       
-      const response = await fetch('/api/shopping-items', {
+      const response = await apiFetch('/api/shopping-items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -200,7 +201,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       if (!item) return
 
       // Appeler l'API pour mettre à jour l'état checked
-      const response = await fetch(`/api/shopping-items/${itemId}`, {
+      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -231,7 +232,7 @@ export const useShoppingStore = defineStore('shopping', () => {
 
     try {
       // Appeler l'API pour supprimer l'item
-      const response = await fetch(`/api/shopping-items/${itemId}`, {
+      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
         method: 'DELETE'
       })
 
@@ -272,7 +273,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   const deleteList = async (listId: string) => {
     try {
       // Appeler l'API pour supprimer la liste
-      const response = await fetch(`/api/shopping-lists/${listId}`, {
+      const response = await apiFetch(`/api/shopping-lists/${listId}`, {
         method: 'DELETE'
       })
 
@@ -296,7 +297,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   const updateListName = async (listId: string, newName: string) => {
     try {
       // Appeler l'API pour mettre à jour le nom de la liste
-      const response = await fetch(`/api/shopping-lists/${listId}`, {
+      const response = await apiFetch(`/api/shopping-lists/${listId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -332,7 +333,7 @@ export const useShoppingStore = defineStore('shopping', () => {
 
     try {
       // Appeler l'API pour mettre à jour l'item
-      const response = await fetch(`/api/shopping-items/${itemId}`, {
+      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -394,7 +395,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     try {
       // Ajouter les items à la liste cible via l'API
       for (const item of itemsToMove) {
-        const response = await fetch('/api/shopping-items', {
+        const response = await apiFetch('/api/shopping-items', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -417,7 +418,7 @@ export const useShoppingStore = defineStore('shopping', () => {
 
       // Supprimer les items de la liste source via l'API
       for (const item of itemsToMove) {
-        const response = await fetch(`/api/shopping-items/${item.id}`, {
+        const response = await apiFetch(`/api/shopping-items/${item.id}`, {
           method: 'DELETE'
         })
 
@@ -484,7 +485,7 @@ export const useShoppingStore = defineStore('shopping', () => {
           const firstExistingItem = existingItems[0]
           
           try {
-            const response = await fetch(`/api/shopping-items/${firstExistingItem.id}`, {
+            const response = await apiFetch(`/api/shopping-items/${firstExistingItem.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -506,7 +507,7 @@ export const useShoppingStore = defineStore('shopping', () => {
             // Supprimer les autres items avec le même nom (ils sont maintenant consolidés)
             for (let i = 1; i < existingItems.length; i++) {
               const itemToDelete = existingItems[i]
-              const deleteResponse = await fetch(`/api/shopping-items/${itemToDelete.id}`, {
+              const deleteResponse = await apiFetch(`/api/shopping-items/${itemToDelete.id}`, {
                 method: 'DELETE'
               })
               
@@ -574,7 +575,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         return
       }
       
-      const response = await fetch(`/api/shopping-lists?userId=${userId}`)
+      const response = await apiFetch(`/api/shopping-lists?userId=${userId}`)
       
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`)
@@ -618,7 +619,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       // Mettre à jour tous les articles de la liste actuelle
       const updatePromises = currentList.value.items.map(async (item) => {
         try {
-          const response = await fetch(`/api/shopping-items/${item.id}`, {
+          const response = await apiFetch(`/api/shopping-items/${item.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json'
@@ -711,7 +712,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       // Supprimer tous les articles de la liste
       const deletePromises = list.items.map(async (item) => {
         try {
-          const response = await fetch(`/api/shopping-items/${item.id}?userId=${userId}`, {
+          const response = await apiFetch(`/api/shopping-items/${item.id}?userId=${userId}`, {
             method: 'DELETE'
           })
 
@@ -767,7 +768,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       const updatePromises = currentList.value.items.map(async (item) => {
         if (item.checked !== checked) {
           try {
-            const response = await fetch(`/api/shopping-items/${item.id}`, {
+            const response = await apiFetch(`/api/shopping-items/${item.id}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json'

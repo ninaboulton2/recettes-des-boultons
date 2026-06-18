@@ -1,22 +1,17 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
+
     const query = getQuery(event)
-    const { id, recipeId, userId } = query
+    const { id, recipeId } = query
 
     if (!id && !recipeId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID de favori ou ID de recette manquant'
-      })
-    }
-
-    if (!userId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'userId est requis pour supprimer un favori'
       })
     }
 

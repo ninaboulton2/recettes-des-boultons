@@ -1,8 +1,9 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase } = await requireAdmin(event)
+
     const body = await readBody(event)
     const { sectionId, ingredient } = body
 

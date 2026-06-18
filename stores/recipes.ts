@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
+import { apiFetch } from '~/composables/useApi'
 
 // Fonction pour normaliser les accents (insensible aux accents)
 const normalizeAccents = (str) => {
@@ -104,7 +105,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       }
 
       // Appeler l'API pour ajouter la recette
-      const response = await fetch('/api/add-recipe', {
+      const response = await apiFetch('/api/add-recipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +145,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       }
 
       // Appeler l'API pour mettre à jour la recette
-      const response = await fetch(`/api/update-recipe?id=${id}`, {
+      const response = await apiFetch(`/api/update-recipe?id=${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +180,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       isLoading.value = true
             
       // Appeler l'API pour supprimer la recette
-      const response = await fetch(`/api/delete-recipe?id=${id}`, {
+      const response = await apiFetch(`/api/delete-recipe?id=${id}`, {
         method: 'DELETE'
       })
       
@@ -235,7 +236,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       isLoading.value = true
       
       // Utiliser la nouvelle API Supabase
-      const response = await fetch('/api/recipes')
+      const response = await apiFetch('/api/recipes')
       const data = await response.json()
       
       if (data.success) {

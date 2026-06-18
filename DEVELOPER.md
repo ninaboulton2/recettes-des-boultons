@@ -1,267 +1,154 @@
-# Guide Technique - Recettes des Boultons
+# Guide technique — Recettes des Boultons
 
-## Architecture
+Application de gestion de recettes familiales : recettes, planning des repas, listes de courses, favoris, et traducteur de recettes par IA.
 
-### **Stack Technique**
-- **Frontend** : Nuxt.js 3 + Vue 3 + Tailwind CSS
-- **Backend** : API Nuxt + Supabase Auth
-- **Base de données** : Supabase (PostgreSQL)
-- **État** : Pinia stores
-- **Authentification** : JWT avec cookies sécurisés
+## Stack technique
 
-### **Structure des Stores**
-```typescript
-// stores/recipes.ts - Gestion des recettes
-interface Recipe {
-  id: string
-  title: string
-  description: string
-  category: string
-  ingredients: Ingredient[]
-  instructions: string[]
-  prepTime: number
-  cookTime?: number
-  servings: number
-  image?: string
-  tags: string[]
-  createdAt: string
-  updatedAt: string
-}
+| Couche | Technologie |
+|---|---|
+| Framework | Nuxt 3 (SSR) + Vue 3 (Composition API) |
+| UI | Tailwind CSS, `@nuxt/image`, `@nuxtjs/color-mode` |
+| État | Pinia (`stores/`) |
+| i18n | `@nuxtjs/i18n` (FR par défaut, EN) |
+| Backend | API Nitro intégrée (`server/api/`) |
+| Base de données / Auth | Supabase (PostgreSQL + Supabase Auth) |
+| IA | OpenAI (`gpt-4o-mini`) pour le traducteur de recettes |
+| Hébergement | Vercel |
 
-// stores/shopping.ts - Gestion des courses
-interface ShoppingList {
-  id: string
-  name: string
-  items: ShoppingItem[]
-  createdAt: string
-  updatedAt: string
-}
+## Structure du projet
 
-// stores/planning.ts - Gestion du planning
-interface PlanningMeal {
-  id: string
-  dateString: string
-  mealType: 'lunch' | 'dinner'
-  recipeId?: string
-  customTitle?: string
-}
+```
+recettes-des-boultons/
+├── components/          # Composants Vue réutilisables
+├── pages/               # Routes (recettes, planning, courses, favoris, traducteur)
+├── layouts/             # Layout par défaut
+├── stores/              # Pinia : recipes, planning, favorites, shopping, auth
+├── composables/         # useSupabase (client), useApi (apiFetch)
+├── server/
+│   ├── api/             # Endpoints REST (Nitro)
+│   └── utils/auth.ts    # requireUser / requireAdmin (auth serveur)
+├── middleware/auth.ts   # Garde de route côté client (admin)
+├── utils/supabase.ts    # Client Supabase anon partagé (lecture publique)
+├── i18n/locales/        # fr.json, en.json
+├── supabase/migrations/ # Migrations SQL (RLS, etc.)
+└── public/images/       # Images des recettes par catégorie
 ```
 
-## Authentification
+## Authentification & sécurité
 
-### **Système Supabase Auth**
-```typescript
-// stores/auth.ts
-export const useAuthStore = defineStore('auth', {
-  state: (): AuthState => ({
-    user: null,
-    token: null,
-    isAuthenticated: false
-  }),
+> ⚠️ L'authentification repose sur **Supabase Auth**, pas sur un système JWT/bcrypt maison.
+> Le rôle d'administrateur est porté par la colonne `role` de la table `profiles`.
 
-  actions: {
-    async login(credentials: LoginCredentials) {
-      const { supabase } = useSupabase()
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password
-      })
-      // ... gestion de la connexion
-    }
-  }
-})
-```
+### Côté client
 
-### **Middleware d'Authentification**
-```typescript
-// middleware/auth.ts
-export default defineNuxtRouteMiddleware((to) => {
-  const { $auth } = useNuxtApp()
-  
-  if (!$auth.isAuthenticated) {
-    return navigateTo('/login')
-  }
-})
-```
+- **Connexion** : `stores/auth.ts` → `supabase.auth.signInWithPassword({ email, password })`. Le profil (dont `role`) est lu dans `profiles`. Le token de session est conservé dans le store et rafraîchi via `onAuthStateChange`.
+- **Garde de route** : `middleware/auth.ts` protège les pages marquées `meta.requiresAdmin` (redirige vers `/` si non-admin). ⚠️ C'est une garde **d'affichage uniquement** — la vraie sécurité est côté serveur.
+- **Appels API** : tous les stores passent par `apiFetch` (`composables/useApi.ts`), qui injecte automatiquement `Authorization: Bearer <token Supabase>` dans chaque requête vers `/api/*`.
 
-## Base de Données Supabase
+### Côté serveur (la barrière qui fait foi)
 
-### **Tables Principales**
+`server/utils/auth.ts` expose deux gardes, utilisées par tous les endpoints d'écriture :
+
+- **`requireUser(event)`** — valide le token Bearer, crée un client Supabase *scopé sur ce token* (le RLS s'applique avec `auth.uid()`), et renvoie `{ supabase, user }`. L'identité (`user.id`) est **toujours dérivée du token**, jamais d'un `userId` envoyé par le client (évite l'usurpation / IDOR).
+- **`requireAdmin(event)`** — `requireUser` + vérification que `profiles.role = 'admin'`. Renvoie 401 si non connecté, 403 si non-admin.
+
+Défense en profondeur : vérification explicite côté serveur **+** RLS en base.
+
+### Modèle RLS (Row Level Security)
+
+Défini dans `supabase/migrations/0001_harden_rls.sql` :
+
+| Tables | Lecture | Écriture |
+|---|---|---|
+| `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions` | publique | admin uniquement (`is_admin()`) |
+| `favorites`, `planning`, `planning_notes`, `shopping_lists` | propriétaire (`auth.uid() = user_id`) | propriétaire |
+| `shopping_items` | propriétaire (via la liste parente) | propriétaire (via la liste parente) |
+| `profiles` | sa ligne (ou admin) | sa ligne ; un trigger empêche un non-admin de changer son `role` |
+
+Fonctions `SECURITY DEFINER` : seules 4 RPC favoris sont utilisées (`get_recipe_by_id`, `add_user_favorite`, `delete_user_favorite_by_id`, `delete_user_favorite_by_recipe`), exécutables par les utilisateurs authentifiés. L'exécution par `anon` est révoquée. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
+
+## Base de données (schéma réel)
+
 ```sql
--- Table des recettes
-CREATE TABLE recipes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  category TEXT NOT NULL,
-  ingredients JSONB NOT NULL,
-  instructions JSONB NOT NULL,
-  prep_time INTEGER,
-  cook_time INTEGER,
-  servings INTEGER,
-  image TEXT,
-  tags TEXT[] DEFAULT '{}',
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+profiles            (id uuid PK = auth.users.id, email, name, role 'user'|'admin',
+                     language, theme, notifications, created_at, updated_at)
 
--- Table des favoris
-CREATE TABLE favorites (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID,
-  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+recipes             (id uuid PK, title, description, category, ingredients jsonb,
+                     instructions jsonb, prep_time, cook_time, servings, image,
+                     tags text[], notes, created_at, updated_at)
 
--- Table du planning
-CREATE TABLE planning (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID,
-  date_string TEXT NOT NULL,
-  meal_type TEXT NOT NULL CHECK (meal_type IN ('lunch', 'dinner')),
-  recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
-  custom_title TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+recipe_sections     (id uuid PK, recipe_id FK, name, type, order_index,
+                     created_at, updated_at)
+recipe_ingredients  (id uuid PK, recipe_id FK, section_id FK, name, amount, unit,
+                     optional, order_index, created_at, updated_at)
+instructions        (id uuid PK, recipe_id FK, section_id FK, content, order_index,
+                     created_at, updated_at)
+
+favorites           (id uuid PK, user_id, recipe_id FK, created_at, updated_at)
+planning            (id uuid PK, user_id, date_string, meal_type 'lunch'|'dinner',
+                     recipe_id FK?, custom_title, created_at, updated_at)
+planning_notes      (id uuid PK, user_id, date_string, note_type 'day'|'lunch'|'dinner',
+                     content, created_at, updated_at)
+shopping_lists      (id uuid PK, user_id, name, created_at, updated_at)
+shopping_items      (id uuid PK, list_id FK, name, amount, unit, recipe_id FK?,
+                     is_checked, created_at, updated_at)
 ```
 
-### **Politiques de Sécurité (RLS)**
-```sql
--- Activer RLS sur toutes les tables
-ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
-ALTER TABLE planning ENABLE ROW LEVEL SECURITY;
+Notes :
+- Une recette stocke ses ingrédients/instructions à la fois en JSONB (champs `ingredients`/`instructions`, compatibilité) **et** de façon structurée via `recipe_sections` → `recipe_ingredients` / `instructions` (modèle à sections).
+- `profiles.id` référence `auth.users.id` ; un trigger `handle_new_user` crée le profil à l'inscription.
 
--- Politiques publiques (à ajuster selon vos besoins)
-CREATE POLICY "Allow public read access" ON recipes FOR SELECT USING (true);
-CREATE POLICY "Allow public insert" ON recipes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update" ON recipes FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete" ON recipes FOR DELETE USING (true);
-```
+## Endpoints API (`server/api/`)
 
-## 🌐 API Endpoints
+Légende auth : 🟢 public · 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
 
-### **Recettes**
-```typescript
-// GET /api/recipes - Récupérer toutes les recettes
-// POST /api/add-recipe - Ajouter une recette
-// PUT /api/update-recipe - Modifier une recette
-// DELETE /api/delete-recipe - Supprimer une recette
-```
+**Recettes**
+- 🟢 `GET /api/recipes`, `/api/recipes-simple`, `/api/recipes-simple-sections`
+- 🔑 `POST /api/add-recipe` · `PUT /api/update-recipe?id=` · `DELETE /api/delete-recipe?id=`
+- 🔑 `POST|PUT|DELETE /api/recipe-sections` · `POST /api/section-ingredients` · `POST /api/section-instructions`
+- 🔑 `POST /api/translate-recipe` (OpenAI)
 
-### **Favoris**
-```typescript
-// GET /api/favorites - Récupérer les favoris
-// POST /api/favorites - Ajouter un favori
-// DELETE /api/favorites - Supprimer un favori
-```
+**Favoris** (👤)
+- `GET|POST /api/favorites` · `DELETE /api/favorites?recipeId=`
 
-### **Planning**
-```typescript
-// GET /api/planning - Récupérer le planning
-// POST /api/planning - Ajouter un repas
-// DELETE /api/planning/:id - Supprimer un repas
-```
+**Planning** (👤)
+- `GET|POST /api/planning` · `DELETE /api/planning/:id`
+- `POST /api/planning-notes` · `DELETE /api/planning-notes?dateString=&noteType=`
 
-### **Listes de Courses**
-```typescript
-// GET /api/shopping-lists - Récupérer les listes
-// POST /api/shopping-lists - Créer une liste
-// PUT /api/shopping-lists/:id - Modifier une liste
-// DELETE /api/shopping-lists/:id - Supprimer une liste
-```
+**Courses** (👤)
+- `GET|POST /api/shopping-lists` · `PUT|DELETE /api/shopping-lists/:id`
+- `POST /api/shopping-items` · `PUT|DELETE /api/shopping-items/:id`
 
-### **RecipeCard.vue**
-```vue
-<template>
-  <div class="recipe-card">
-    <img :src="recipe.image || '/images/default-recipe.png'" :alt="recipe.title">
-    <div class="recipe-info">
-      <h3>{{ recipe.title }}</h3>
-      <p>{{ recipe.description }}</p>
-      <div class="recipe-meta">
-        <span>{{ recipe.prepTime }} min</span>
-        <span>{{ recipe.servings }} portions</span>
-      </div>
-    </div>
-  </div>
-</template>
+> Les endpoints 👤/🔑 ne reçoivent plus de `userId` du client : il est dérivé du token. Le client doit donc envoyer son token (géré automatiquement par `apiFetch`).
 
-<script setup>
-interface Props {
-  recipe: Recipe
-}
+## Variables d'environnement
 
-defineProps<Props>()
-</script>
-```
+Seules ces variables sont lues par le code :
 
-
-
-## Internationalisation
-
-### **Configuration i18n**
-```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  modules: ['@nuxtjs/i18n'],
-  i18n: {
-    locales: [
-      { code: 'fr', iso: 'fr-FR', name: 'Français' },
-      { code: 'en', iso: 'en-US', name: 'English' }
-    ],
-    defaultLocale: 'fr',
-    strategy: 'prefix_except_default'
-  }
-})
-```
-
-## Tests
-
-### **Scripts de Test Disponibles**
 ```bash
-# Test de connexion Supabase
-node scripts/test-supabase.js
-
-# Test de structure des tables
-node scripts/test-tables-structure.js
-
-# Test des APIs
-node scripts/test-apis.js
-
-# Test d'intégration shopping
-node scripts/test-shopping-integration.js
+SUPABASE_URL=            # URL du projet Supabase
+SUPABASE_ANON_KEY=       # clé publique anon
+OPENAI_API_KEY=          # traducteur IA
+# API_BASE=http://localhost:3001   # optionnel
 ```
 
-## Déploiement
+- **Développement** : dans `.env` (gitignoré). Modèle : `env.example`.
+- **Production** : dans le dashboard **Vercel** (Settings → Environment Variables) — aucun fichier `.env` n'est déployé.
+- ❌ La clé `service_role` n'est **pas** utilisée par l'application et ne doit jamais être exposée côté client.
 
-### **Variables d'Environnement**
+## Commandes
+
 ```bash
-# Supabase (obligatoire)
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-
-# OpenAI (pour le traducteur IA)
-OPENAI_API_KEY=
-
-# Supabase (obligatoire)
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Production
-NODE_ENV=production
+npm install
+npm run dev        # http://localhost:3001
+npm run build      # build de production
+npm run start      # serveur de production
+npm run generate   # génération statique
 ```
 
-### **Build et Déploiement**
-```bash
-# Build de production
-npm run build
+Déploiement : push sur `main` → build automatique Vercel.
 
-# Démarrage en production
-npm run start
+## À savoir
 
-# Déploiement Vercel (automatique)
-git push origin main
-```
+- **Aucun test automatisé** n'est présent dans le projet pour l'instant (les anciens scripts `scripts/test-*.js` référencés dans la doc précédente n'existent pas).
+- Migrations base de données : `supabase/migrations/`. Appliquer via le SQL Editor du dashboard Supabase ou la CLI Supabase. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md) pour l'ordre de déploiement du durcissement RLS.

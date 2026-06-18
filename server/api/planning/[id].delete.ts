@@ -1,23 +1,16 @@
 import { defineEventHandler, getRouterParam, createError, getQuery } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
+
     const id = getRouterParam(event, 'id')
-    const query = getQuery(event)
-    const { userId } = query
 
     if (!id) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID du repas manquant'
-      })
-    }
-
-    if (!userId) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'userId est requis pour supprimer un repas'
       })
     }
 

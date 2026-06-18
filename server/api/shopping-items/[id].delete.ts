@@ -1,8 +1,9 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase } = await requireUser(event)
+
     const itemId = getRouterParam(event, 'id')
 
     if (!itemId) {

@@ -1,10 +1,12 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { supabase, user } = await requireUser(event)
+
     const body = await readBody(event)
-    const { dateString, noteType, content, userId = null } = body
+    const { dateString, noteType, content } = body
+    const userId = user.id
 
     if (!dateString || !noteType || !['day', 'lunch', 'dinner'].includes(noteType)) {
       throw createError({

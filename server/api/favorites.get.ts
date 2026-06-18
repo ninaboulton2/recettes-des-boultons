@@ -1,18 +1,9 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { supabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    const query = getQuery(event)
-    const { userId } = query
-
-    // Vérifier que userId est fourni
-    if (!userId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'userId est requis pour récupérer les favoris'
-      })
-    }
+    const { supabase, user } = await requireUser(event)
+    const userId = user.id
 
     // Récupérer les favoris de l'utilisateur
     const { data: favoritesData, error: favoritesError } = await supabase
