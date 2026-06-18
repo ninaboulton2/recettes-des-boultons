@@ -236,6 +236,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { supabase } = useSupabase()
+const authStore = useAuthStore()
 
 const credentials = ref<SignUpCredentials>({
   email: '',
@@ -313,34 +314,14 @@ const handleSignUp = async () => {
       return
     }
 
-    if (data.user) {
-      successMessage.value = 'Inscription réussie ! Vous pouvez vous connecter'
-      
-      // Vérifier que l'utilisateur est bien créé dans la base
-      setTimeout(async () => {
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single()
-                    
-          if (profileError) {
-            console.error('⚠️ Erreur lors de la récupération du profil:', profileError)
-            error.value = 'Inscription réussie. Veuillez vous connecter.'
-            return
-          }
-          
-          if (profileData) {
-            emit('success')
-            closeModal()
-          } else {
-            error.value = 'Inscription réussie. Veuillez patienter...'
-          }
-        } catch (profileErr) {
-          error.value = 'Erreur lors de la vérification du profil.'
-        }
-      }, 2000)
+    if (data.session) {
+      // Confirmation d'email désactivée → connexion automatique
+      await authStore.checkAuth()
+      emit('success')
+      closeModal()
+    } else if (data.user) {
+      // Confirmation d'email activée → l'utilisateur doit valider son email avant de se connecter
+      successMessage.value = 'Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre compte.'
     } else {
       error.value = 'Inscription échouée: aucun utilisateur créé'
     }

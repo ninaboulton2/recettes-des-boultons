@@ -117,6 +117,7 @@ const translationMode = ref('translate') // 'translate' ou 'keep'
 
 // Accéder au store des recettes
 const recipesStore = useRecipesStore()
+const { supabase } = useSupabase()
 
 const translateAndAddRecipe = async () => {
   if (!recipeText.value.trim()) return
@@ -128,9 +129,14 @@ const translateAndAddRecipe = async () => {
   addedRecipeId.value = ''
 
   try {
+    // Le traducteur est réservé aux admins (requireAdmin côté serveur) :
+    // on transmet le token de session Supabase.
+    const { data: { session } } = await supabase.auth.getSession()
+
     // Étape 1: Traduire la recette
     const translationResponse = await $fetch('/api/translate-recipe', {
       method: 'POST',
+      headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
       body: {
         recipeText: recipeText.value,
         translateToFrench: translationMode.value === 'translate'
