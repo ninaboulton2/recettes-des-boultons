@@ -26,11 +26,11 @@
   }
   
   .recipe-card {
-    @apply card p-6 cursor-pointer transform hover:scale-105 transition-transform duration-200;
+    @apply card p-6 cursor-pointer transition-transform duration-200 hover:-translate-y-1;
   }
-  
+
   .category-card {
-    @apply card p-8 text-center cursor-pointer transform hover:scale-105 transition-all duration-300;
+    @apply card p-8 text-center cursor-pointer transition-transform duration-200 hover:-translate-y-1;
   }
   
   .nav-link {

@@ -1,8 +1,8 @@
 <template>
   <div class="w-full min-h-screen">
     <!-- Hero Section - Diagonal Blue/White FULL WIDTH -->
-    <div class="relative min-h-screen w-full diagonal-bg overflow-hidden flex items-center justify-center">
-      <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between min-h-screen">
+    <div class="relative min-h-[72vh] w-full diagonal-bg overflow-hidden flex items-center justify-center">
+      <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between min-h-[72vh] py-16">
         <!-- Texte à gauche -->
         <div class="flex-1 flex flex-col justify-center items-start lg:items-start py-16 lg:py-0">
           <h1 class="text-5xl md:text-6xl font-lobster text-white mb-6 drop-shadow-lg">
@@ -38,7 +38,7 @@
     <section class="py-16 w-full">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
-          <h2 class="text-4xl font-lobster text-gray-900 mb-4">
+          <h2 class="text-4xl font-semibold text-gray-900 mb-4">
             Explorer les recettes par catégories
           </h2>
         </div>
@@ -50,7 +50,7 @@
     <section class="py-16 bg-white w-full">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
-          <h2 class="text-4xl font-lobster text-gray-900 mb-4">
+          <h2 class="text-4xl font-semibold text-gray-900 mb-4">
             Fonctionnalités
           </h2>
           <p class="text-xl text-gray-600">

@@ -7,7 +7,7 @@
       class="category-card group block focus:outline-none"
     >
       <div class="relative mb-4">
-        <div class="bg-white rounded-lg shadow p-2">
+        <div class="bg-white rounded-lg shadow p-2 overflow-hidden">
           <NuxtImg
             :src="category.image"
             :alt="category.name"

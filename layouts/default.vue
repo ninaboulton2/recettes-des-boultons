@@ -61,7 +61,8 @@
             <div v-if="!authStore.isAuthenticated" class="hidden md:block">
               <button
                 @click="showLoginModal = true"
-                class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                aria-label="Connexion"
+                class="bg-primary-600 text-white p-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -79,6 +80,7 @@
               <!-- Bouton de déconnexion -->
               <button
                 @click="handleLogout"
+                aria-label="Déconnexion"
                 class="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                 title="Déconnexion"
               >
@@ -90,8 +92,10 @@
 
             <!-- Mobile menu button -->
             <div class="md:hidden">
-              <button 
+              <button
                 @click="mobileMenuOpen = !mobileMenuOpen"
+                :aria-label="mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'"
+                :aria-expanded="mobileMenuOpen"
                 class="text-gray-700 hover:text-primary-600 focus:outline-none focus:text-primary-600"
               >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -152,7 +156,7 @@
               <div v-if="!authStore.isAuthenticated">
                 <button
                   @click="showLoginModal = true; mobileMenuOpen = false"
-                  class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                  class="block w-full text-center bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700 transition-colors"
                 >
                   <div class="flex items-center justify-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

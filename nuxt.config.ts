@@ -7,7 +7,6 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
-    '@nuxtjs/color-mode',
     '@nuxt/image',
     '@nuxtjs/i18n'
   ],
@@ -56,10 +55,6 @@ export default defineNuxtConfig({
         { href: 'https://fonts.googleapis.com/css2?family=Lobster&family=Poppins:wght@400;600;700&display=swap', rel: 'stylesheet' }
       ]
     }
-  },
-  colorMode: {
-    preference: 'light',
-    fallback: 'light'
   },
   image: {
     quality: 80,

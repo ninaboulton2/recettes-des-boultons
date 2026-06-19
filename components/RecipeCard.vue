@@ -2,9 +2,9 @@
   <div class="h-full">
     <div class="recipe-card group h-full flex flex-col">
       <div class="relative mb-4">
-        <div class="bg-white rounded-lg shadow p-2">
-          <NuxtImg 
-            :src="recipe.image" 
+        <div class="bg-white rounded-lg shadow p-2 overflow-hidden">
+          <NuxtImg
+            :src="recipe.image"
             :alt="recipe.title"
             class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
           />
@@ -22,6 +22,8 @@
                 : 'bg-white border-gray-300'
             ]"
             :title="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+            :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+            :aria-pressed="isFavorite"
           >
             <svg 
               v-if="isFavorite" 
@@ -51,8 +53,9 @@
             @mouseup.stop.prevent
             class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
             title="Modifier la recette"
+            aria-label="Modifier la recette"
           >
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
             </svg>
           </button>
@@ -65,6 +68,7 @@
             @mouseup.stop.prevent
             class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
             title="Supprimer la recette"
+            aria-label="Supprimer la recette"
           >
             <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -109,6 +113,7 @@
               @mouseup.stop.prevent
               class="text-primary-600 hover:text-primary-700 transition-colors duration-200"
               title="Ajouter à la liste de courses"
+              aria-label="Ajouter à la liste de courses"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
@@ -121,8 +126,9 @@
               @click.stop.prevent="addToPlanning"
               @mousedown.stop.prevent
               @mouseup.stop.prevent
-              class="text-green-600 hover:text-green-700 transition-colors duration-200"
+              class="text-primary-600 hover:text-primary-700 transition-colors duration-200"
               title="Ajouter au planning"
+              aria-label="Ajouter au planning"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
