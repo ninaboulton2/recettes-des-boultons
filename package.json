@@ -8,7 +8,8 @@
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
-    "vercel-build": "nuxt build"
+    "vercel-build": "nuxt build",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@nuxt/image": "^1.0.0",

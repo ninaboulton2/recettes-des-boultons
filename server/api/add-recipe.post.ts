@@ -14,6 +14,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Validation des champs texte
+    recipe.title = requireString(recipe.title, 'titre', { max: 200 })
+    recipe.category = requireString(recipe.category, 'catégorie', { max: 100 })
+    recipe.description = requireString(recipe.description, 'description', { required: false, max: 2000 })
+    recipe.notes = requireString(recipe.notes, 'notes', { required: false, max: 5000 })
+
     // Mapper les noms de colonnes JavaScript vers Supabase
     const supabaseRecipe = {
       title: recipe.title,

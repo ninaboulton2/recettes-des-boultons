@@ -492,6 +492,7 @@ const dragOverTarget = ref(null)
 // Variables pour l'authentification
 const showLoginModal = ref(false)
 const toastContainer = ref()
+const { $toast } = useNuxtApp()
 
 // Computed properties
 const recipes = computed(() => recipesStore.recipes)
@@ -586,7 +587,8 @@ const saveDayNotes = async (date) => {
         // Recharger le planning pour voir les changements
         await planningStore.loadPlanning()
       } else {
-        console.error('❌ Erreur lors de la suppression:', result.error)
+        console.error('Erreur lors de la suppression:', result.error)
+        $toast.error('Échec de la suppression de la note', result.error || '')
       }
     } else {
       // Appeler l'API pour créer ou modifier la note
@@ -596,11 +598,13 @@ const saveDayNotes = async (date) => {
         // Recharger le planning pour voir les changements
         await planningStore.loadPlanning()
       } else {
-        console.error('❌ Erreur lors de la sauvegarde:', result.error)
+        console.error('Erreur lors de la sauvegarde:', result.error)
+        $toast.error('Échec de la sauvegarde de la note', result.error || '')
       }
     }
   } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde de la note:', error)
+    console.error('Erreur lors de la sauvegarde de la note:', error)
+    $toast.error('Échec de la sauvegarde de la note')
   } finally {
     // Toujours fermer le mode édition
     editingDayNotes.value = null
@@ -651,7 +655,7 @@ const addCustomMeal = async () => {
       closeCustomMealInput()
     } else {
       console.error('Erreur lors de l\'ajout du repas personnalisé:', result.error)
-      // TODO: Afficher une notification d'erreur à l'utilisateur
+      $toast.error('Échec de l\'ajout du repas', result.error || '')
     }
   }
 }
@@ -671,7 +675,7 @@ const addCustomMealFromSearch = async () => {
       closeMealSelector()
     } else {
       console.error('Erreur lors de l\'ajout du repas personnalisé:', result.error)
-      // TODO: Afficher une notification d'erreur à l'utilisateur
+      $toast.error('Échec de l\'ajout du repas', result.error || '')
     }
   }
 }

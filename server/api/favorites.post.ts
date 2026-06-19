@@ -15,73 +15,47 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Utiliser la fonction SQL qui contourne RLS
-    const { data: recipeData, error: recipeError } = await supabase
-      .rpc('get_recipe_by_id', { recipe_id_param: recipeId })
-    
-    if (recipeError || !recipeData || recipeData.length === 0) {
-      console.error('❌ Erreur lors de la recherche de la recette:', recipeError)
-      console.error('❌ Recette trouvée:', recipeData)
-      
-      // Essayer de récupérer toutes les recettes pour voir si RLS bloque
-      const { data: allRecipes, error: allRecipesError } = await supabase
-        .from('recipes')
-        .select('id, title')
-        .limit(5)
-            
+    // Récupérer la recette (lecture publique sous RLS)
+    const { data: recipe, error: recipeError } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('id', recipeId)
+      .single()
+
+    if (recipeError || !recipe) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Recette non trouvée'
       })
     }
-    
-    // Extraire la recette des données retournées par la fonction
-    const recipe = recipeData[0]
 
-    // Insérer le favori en utilisant la fonction SQL simplifiée qui contourne RLS
-    const { data: favoriteId, error } = await supabase
-      .rpc('add_user_favorite', { 
-        user_id_param: userId, 
-        recipe_id_param: recipeId 
-      })
+    // Insérer le favori (RLS : auth.uid() = user_id). L'identité vient du token.
+    const { data: favorite, error } = await supabase
+      .from('favorites')
+      .insert({ user_id: userId, recipe_id: recipeId })
+      .select('id, created_at, updated_at')
+      .single()
 
     if (error) {
-      console.error('Erreur avec la fonction SQL add_user_favorite:', error)
+      // 23505 = violation de contrainte unique → déjà en favori
+      if (error.code === '23505') {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Cette recette est déjà dans vos favoris'
+        })
+      }
       throw createError({
         statusCode: 500,
         statusMessage: `Erreur lors de l'ajout du favori: ${error.message}`
       })
     }
 
-    // Vérifier que nous avons bien un ID valide et l'extraire correctement
-    let actualFavoriteId = favoriteId
-    
-    // Si favoriteId est un objet, essayer d'extraire l'ID
-    if (favoriteId && typeof favoriteId === 'object' && favoriteId.id) {
-      actualFavoriteId = favoriteId.id
-    } else if (favoriteId && typeof favoriteId === 'object' && favoriteId.data) {
-      actualFavoriteId = favoriteId.data
-    } else if (typeof favoriteId === 'string') {
-      actualFavoriteId = favoriteId
-    }
-    
-    if (!actualFavoriteId) {
-      console.error('ID du favori non trouvé dans la réponse:', favoriteId)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Erreur lors de l\'ajout du favori: ID non retourné par la fonction SQL'
-      })
-    }
-
-    // SOLUTION DE CONTOURNEMENT TEMPORAIRE
-    // Au lieu de récupérer le favori créé, retourner directement les données
-    // Cela évite l'erreur de récupération tout en gardant la fonctionnalité
     const formattedFavorite = {
-      id: actualFavoriteId,
-      recipeId: recipeId,
-      userId: userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      id: favorite.id,
+      recipeId,
+      userId,
+      createdAt: favorite.created_at,
+      updatedAt: favorite.updated_at,
       recipe: {
         id: recipe.id,
         title: recipe.title,
@@ -107,12 +81,10 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error: any) {
-    console.error('Erreur lors de l\'ajout du favori:', error)
-    
     if (error.statusCode) {
       throw error
     }
-
+    console.error('Erreur lors de l\'ajout du favori:', error)
     throw createError({
       statusCode: 500,
       statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`

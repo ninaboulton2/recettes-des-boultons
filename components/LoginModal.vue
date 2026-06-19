@@ -99,9 +99,25 @@
           </div>
         </div>
 
+        <!-- Mot de passe oublié -->
+        <div class="text-right -mt-3">
+          <button
+            type="button"
+            @click="handleForgotPassword"
+            class="text-sm text-blue-600 hover:text-blue-800"
+          >
+            Mot de passe oublié ?
+          </button>
+        </div>
+
         <!-- Error Message -->
         <div v-if="error" class="text-red-600 text-sm text-center">
           {{ error }}
+        </div>
+
+        <!-- Success Message -->
+        <div v-if="successMessage" class="text-green-600 text-sm text-center">
+          {{ successMessage }}
         </div>
 
         <!-- Submit Button -->
@@ -165,6 +181,7 @@ const credentials = ref<LoginCredentials>({
 
 const isLoading = ref(false)
 const error = ref('')
+const successMessage = ref('')
 const showPassword = ref(false)
 
 const togglePassword = () => {
@@ -183,6 +200,35 @@ const switchToSignUp = () => {
 const resetForm = () => {
   credentials.value = { email: '', password: '' }
   error.value = ''
+  successMessage.value = ''
+}
+
+const handleForgotPassword = async () => {
+  if (!credentials.value.email) {
+    error.value = 'Entrez d\'abord votre email, puis cliquez sur « Mot de passe oublié »'
+    return
+  }
+
+  isLoading.value = true
+  error.value = ''
+  successMessage.value = ''
+
+  try {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      credentials.value.email,
+      { redirectTo: `${window.location.origin}/reset-password` }
+    )
+
+    if (resetError) {
+      error.value = resetError.message || 'Erreur lors de l\'envoi de l\'email'
+    } else {
+      successMessage.value = 'Email de réinitialisation envoyé ! Vérifiez votre boîte mail.'
+    }
+  } catch (err) {
+    error.value = 'Erreur lors de l\'envoi de l\'email'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleLogin = async () => {

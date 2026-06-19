@@ -6,14 +6,9 @@ export default defineEventHandler(async (event) => {
     const userId = user.id
 
     const body = await readBody(event)
-    const { listId, name, amount, unit, recipeId = null } = body
-
-    if (!listId || !name) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de liste et nom de l\'article requis'
-      })
-    }
+    const { listId, amount, unit, recipeId = null } = body
+    requireUuid(listId, 'listId')
+    const name = requireString(body.name, 'nom de l\'article', { max: 200 })
 
     // Vérifier que la liste existe et appartient à l'utilisateur connecté
     const { data: list, error: listError } = await supabase

@@ -6,14 +6,7 @@ export default defineEventHandler(async (event) => {
 
     // Récupérer l'ID de la recette à supprimer depuis les paramètres de requête
     const query = getQuery(event)
-    const recipeId = query.id
-
-    if (!recipeId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de recette manquant'
-      })
-    }
+    const recipeId = requireUuid(query.id, 'id')
 
     // Supprimer la recette de Supabase
     const { error } = await supabase

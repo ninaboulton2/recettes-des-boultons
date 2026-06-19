@@ -5,16 +5,9 @@ export default defineEventHandler(async (event) => {
     const { supabase } = await requireAdmin(event)
 
     const query = getQuery(event)
-    const recipeId = query.id
+    const recipeId = requireUuid(query.id, 'id')
     const body = await readBody(event)
     const { updates } = body
-
-    if (!recipeId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de recette manquant'
-      })
-    }
 
     if (!updates) {
       throw createError({

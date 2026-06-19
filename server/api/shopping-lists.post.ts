@@ -5,15 +5,8 @@ export default defineEventHandler(async (event) => {
     const { supabase, user } = await requireUser(event)
 
     const body = await readBody(event)
-    const { name } = body
+    const name = requireString(body.name, 'nom de la liste', { max: 200 })
     const userId = user.id
-
-    if (!name) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Nom de la liste requis'
-      })
-    }
 
     // Insérer la nouvelle liste
     const { data, error } = await supabase

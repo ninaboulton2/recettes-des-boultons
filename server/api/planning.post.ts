@@ -35,21 +35,19 @@ export default defineEventHandler(async (event) => {
 
     if (recipeId) {
 
-      const { data: recipeData, error: recipeError } = await supabase
-        .rpc('get_recipe_by_id', { recipe_id_param: recipeId })
-      
-      if (recipeError || !recipeData || recipeData.length === 0) {
-        console.error('❌ Erreur lors de la recherche de la recette:', recipeError)
-        console.error('❌ Recette trouvée:', recipeData)
+      const { data: recipe, error: recipeError } = await supabase
+        .from('recipes')
+        .select('title')
+        .eq('id', recipeId)
+        .single()
+
+      if (recipeError || !recipe) {
         throw createError({
           statusCode: 404,
           statusMessage: 'Recette non trouvée'
         })
       }
-      
-      // Extraire la recette des données retournées par la fonction
-      const recipe = recipeData[0]
-      console.log('✅ Recette trouvée via fonction SQL:', recipe)
+
       recipeTitle = recipe.title
       finalRecipeId = recipeId
     } else {
