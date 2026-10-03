@@ -421,3 +421,36 @@ et `*_orphans_20261003` y apparaîtront (RLS sans politique : inaccessibles) ; i
    front passé aux clés publishable/secret (les variables Vercel doivent être à jour avant).
 6. **Storage** : vérifier que le bucket `recipe-photos` apparaît (Storage) ; adapter la taille max
    si besoin (5 Mo).
+
+---
+
+## 0012 — `ai_usage`, `check_ai_quota` (traducteur IA)
+
+Fichier : `migrations/0012_ai_usage.sql`. Prérequis : 0009 (`private.is_admin()`). **Appliquée à la
+base LOCALE uniquement** (`psql … -f`, rejouée une seconde fois pour vérifier l'idempotence) ;
+rien en production.
+
+**Quoi**
+
+| Objet | Rôle |
+|---|---|
+| `public.ai_usage` | Journal append-only : un enregistrement par appel au fournisseur IA — `user_id` (FK `auth.users`, cascade), `created_at`, `provider`, `model`, `feature` (`translate` par défaut ; `transcribe`, `image` plus tard), `input_tokens`, `output_tokens`, `estimated_cost_usd numeric(12,6)` (grille `server/utils/ai/pricing.ts`, NULL si modèle inconnu), `status` ok\|error, `duration_ms`. Index `(user_id, created_at desc)`. |
+| RLS | `ai_usage_select_own_or_admin` (select : `auth.uid() = user_id or private.is_admin()`), `ai_usage_insert_own` (insert : `auth.uid() = user_id`). Pas d'update/delete. Grants : `authenticated` select/insert ; rien pour `anon`. |
+| `public.check_ai_quota(p_max_per_day int) → boolean` | **SECURITY INVOKER**, stable, `search_path = ''`. Vrai si l'appelant a strictement moins de `p_max_per_day` lignes depuis minuit **Europe/Paris** (compte sous RLS → ses propres lignes, admin compris). Exécution : `authenticated`, `service_role`. |
+
+**Pourquoi** : mesurer le coût réel du traducteur par personne et plafonner (`AI_DAILY_QUOTA`,
+50/jour par défaut, → 429) avant d'ouvrir la fonctionnalité au-delà des admins (phase 4).
+
+**Réversibilité** : `drop function public.check_ai_quota(integer); drop table public.ai_usage;`
+(aucune autre table ne la référence).
+
+**Vérifications locales** (2026-10-03) : assertions du fichier passées (2 politiques, RLS active,
+fonction présente) ; `check_ai_quota(1)` → `false` après un appel, `true` pour un autre
+utilisateur ; un utilisateur simple ne voit pas les lignes de l'admin
+(`test/integration/translate-recipe.local.test.ts`).
+
+**À faire en prod (procédure § 4)** : appliquer 0012 après 0009 ; puis **régénérer
+`shared/types/database.ts`** (la table `ai_usage` et la fonction `check_ai_quota` y
+apparaîtront ; `server/utils/ai/usage.ts` pourra alors utiliser le client typé). Ajouter 0012 à
+la liste de `supabase/local/setup.sh` (fichier non modifié ici) pour les prochaines
+réinitialisations locales.
