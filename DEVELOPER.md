@@ -38,7 +38,7 @@ recettes-des-boultons/
 │   ├── middleware/auth.ts   # Garde de route côté client (admin)
 │   └── plugins/             # toast.client.ts ($toast → useToast() de Nuxt UI)
 ├── shared/                  # Code partagé client/serveur (alias #shared)
-│   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...)
+│   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...) + ré-export de RecipeInput (schéma Zod)
 │   ├── types/database.ts    # Types Supabase GÉNÉRÉS (ne pas éditer)
 │   ├── utils/recipes.ts     # Mapping snake_case → camelCase, formatAmount, formatIngredient
 │   ├── utils/shopping.ts    # formatQuantity, splitChecked, aisleOf / groupByAisle (rayons)
@@ -49,7 +49,7 @@ recettes-des-boultons/
 ├── i18n/locales/            # fr.json, en.json
 ├── supabase/migrations/     # Migrations SQL (RLS, etc.)
 ├── test/                    # Tests Vitest (test/unit/...)
-├── public/images/           # Images des recettes par catégorie
+├── public/images/           # logo.png (header, NuxtImg), google.svg (bouton OAuth)
 ├── nuxt.config.ts, eslint.config.mjs, vitest.config.ts, tsconfig.json
 └── .github/workflows/ci.yml # Lint + typecheck + test + build
 ```
@@ -89,32 +89,40 @@ Système commun à toutes les pages ; les tokens vivent dans `app/assets/css/mai
 - **Toasts** : `useToast().add({ title, description, color, icon })` (Nuxt UI). La façade
   `$toast` (`useNuxtApp().$toast`, plugin `toast.client.ts`) conserve l'API historique
   `$toast.success(title, message?, duration?)` / `error` / `info` / `warning` / `show`.
-- **Composants partagés** (API inchangée, rendu Nuxt UI) : `ConfirmModal` (`show`, `title`,
-  `message`, `confirmText`, `cancelText`, `loading` ; émet `confirm`, `cancel`, `close`),
-  `LoadingButton` (`loading`, `variant`, `size`, `disabled`), `LoadingState` / `ActionLoading`
-  (`message`), `EmptyState` (`title`, `message`, `icon` Lucide, `actionText`, `actionHandler`,
+- **Composants partagés** (rendu Nuxt UI) : `LoadingState` / `ActionLoading` (`message`), `EmptyState` (`title`, `message`, `icon` Lucide, `actionText`, `actionHandler`,
   slot `action`), `ErrorState` (`title`, `message`, `retryAction`, `retryText`),
   `AuthRequired` (émet `login`), `AuthModal` (`isOpen` ; émet `close`, `success` — connexion,
   inscription et OAuth réunis), `RecipeCard`, `RecipeAddToListModal`, `RecipeFilters`,
-  `RecipeGridSkeleton`, `CategoryGrid`, `LanguageSwitcher`, `AppUserMenu`, `AppMobileNav`.
+  `RecipeGridSkeleton`, `RecipePagination` (`v-model:page`, `total`, `itemsPerPage` ; sans pages
+  voisines sous `sm`), `CategoryGrid`, `LanguageSwitcher`, `AppUserMenu`, `AppMobileNav`.
+  Les confirmations sont des `UModal` dans la page (plus de `ConfirmModal` ni de `LoadingButton`).
 - **Layout** : header compact (logo, navigation desktop, `UColorModeButton`, langue, menu
   utilisateur) ; sur mobile, barre d'onglets en bas (Recettes / Planning / Courses / Favoris /
   Moi) — le layout réserve le padding bas (`pb-20 md:pb-0`), les pages n'ont rien à prévoir ;
-  conteneur unique `UContainer` pour toutes les pages ; footer desktop ; `app/error.vue`.
+  conteneur unique `UContainer` pour toutes les pages ; `<main class="w-full min-w-0">` (un contenu
+  `nowrap` ne peut plus élargir la page : aucune page ne défile horizontalement à 375 px) ;
+  footer desktop ; `app/error.vue`.
 - **Accessibilité** : focus visible (`outline-primary`) sur les éléments natifs, composants
   Nuxt UI focusables au clavier, `aria-current="page"` sur la navigation, `prefers-reduced-motion`
   respecté (animations/transitions neutralisées dans `main.css`).
 - **Catégories** : `useCategories()` (`app/composables/useCategories.ts`) fournit libellés
   i18n (`categories.<clé>.name`) et icônes Lucide ; `categoryIcon(category)` sert de repli
   visuel quand une recette n'a pas de `photoPath` (plus d'illustrations par catégorie).
-- **Photos** : `RecipeCard` affiche `photoPath` depuis l'URL publique du bucket Storage
-  `recipe-photos` (`<supabase.url>/storage/v1/object/public/recipe-photos/<path>`) via un
-  `<img loading="lazy">` (le provider ipx de `@nuxt/image` n'optimise pas les domaines externes).
+- **Photos** : `NuxtImg` sur l'URL publique du bucket `recipe-photos` (`useRecipePhoto().publicUrl`),
+  voir « Photos » plus bas. Aucune illustration par catégorie : `recipes.image` n'est plus lu ni
+  écrit par l'application (`RecipeSummary` n'a plus de champ `image`).
 - **i18n** : bloc `ui` (textes communs : `ui.common.*`, `ui.nav.*`, `ui.card.*`, `ui.error.*`…)
-  et blocs `auth`, `home`, `recipes`, `favorites`, `categories`, `footer`, `navigation`.
-- **Dette** : la classe `.btn-primary` (`main.css`) est conservée en version minimale tant que
-  `pages/recettes/[id].vue`, `components/RecipeTranslator.vue` et `pages/courses.vue`
-  l'utilisent (`TODO(phase 4)`).
+  et blocs `auth`, `home`, `recipes`, `favorites`, `categories`, `footer`, `navigation`, `errors`
+  (erreurs levées côté client : `translateKey(clé, repliFrançais)` de `useApiError.ts`, utilisable
+  dans les stores). Aucun texte visible en dur ; liens et redirections via `localePath()`.
+  `test/unit/i18n.test.ts` vérifie que `fr.json` et `en.json` ont les mêmes clés, aucune valeur
+  vide, les mêmes paramètres `{…}`, et que toute clé littérale utilisée dans `app/` existe.
+  Les messages d'erreur 4xx renvoyés par `server/api` restent en français.
+- **Couleurs codées en dur** : aucune dans `app/` hors `main.css` (logo Google dans
+  `public/images/google.svg`, feuille d'impression de la fiche dans `main.css`).
+- **Création d'une recette** (admin, `pages/recettes/index.vue`) : `UDropdownMenu` « Nouvelle
+  recette » → « Saisir une recette » (`RecipeEditor` en création, puis ouverture de la fiche) ou
+  « Importer avec l'IA » (`/traducteur`).
 
 ### OAuth (Google, Apple)
 
@@ -285,7 +293,7 @@ que lire/écrire :
 
 | Couche | Planning | Courses |
 |---|---|---|
-| Store (données) | `usePlanningStore` : `loadWeek`, `refresh`, `ensureWeekLoaded`, `addMeal`, `addCustomMeal`, `removeMeal`, `moveMeal` (`PUT /api/planning/:id`), `saveNote` (vide → `DELETE`) | `useShoppingStore` : `refresh`, `ensureLoaded`, `createList`/`updateListName`/`deleteList`/`clearList`, `addItem` (fusion en base), `updateItem`, `toggleItem` (optimiste), `toggleAllItems`, `clearChecked`, `resetQuantities`, `moveItem`, `addRecipeToList`, `addIngredientsToLists` (façade) |
+| Store (données) | `usePlanningStore` : `loadWeek`, `refresh`, `ensureWeekLoaded`, `addMeal`, `addCustomMeal`, `removeMeal`, `moveMeal` (`PUT /api/planning/:id`), `saveNote` (vide → `DELETE`) | `useShoppingStore` : `refresh`, `ensureLoaded`, `createList`/`updateListName`/`deleteList`/`clearList`, `addItem` (fusion en base), `updateItem`, `toggleItem` (optimiste), `toggleAllItems`, `clearChecked`, `resetQuantities`, `moveItem`, `addRecipeToList` |
 | Composable (UI) | `usePlanningWeek(date)` : semaine courante, jours (`PlanningDay[]`), formats de date localisés, actions → toasts | `useShoppingLists()` : liste courante, groupes cochés / à acheter, rayons, préférences `storeMode` / `byAisle` (localStorage), actions → toasts |
 | Utilitaires | `app/utils/week.ts` (lundi → dimanche, clés `YYYY-MM-DD` en heure locale, `shiftWeeks`, `fromDateString`) | `shared/utils/shopping.ts` (`formatQuantity`, `splitChecked`, `aisleOf`, `groupByAisle`) |
 
@@ -293,10 +301,8 @@ que lire/écrire :
   consolidation côté client : `merge_shopping_item` / `add_recipe_to_list` fusionnent en base
   (même nom replié + même `unit_code`). La quantité affichée vient de `amountNum` + libellé
   `useUnits().unitLabel(unitCode, unit)`.
-- `addIngredientsToLists(ingredients)` reste une façade pour la carte et la fiche recette
-  (`RecipeCard.vue`, `pages/recettes/[id].vue`) : un `POST /api/shopping-items` par ingrédient dans la
-  liste courante (créée sous « Ma liste de courses » si aucune). À remplacer par `addRecipeToList`
-  (un seul appel, sections et facteur de portions) quand ces écrans passeront par la RPC.
+- La carte (`RecipeAddToListModal`) et la fiche (`RecipeAddToShoppingModal`) passent toutes deux
+  par `addRecipeToList` (un seul appel, sections et facteur de portions).
 - `PlanningModal.vue` (ajout d'une recette depuis sa carte/fiche) garde son API : props `show`,
   `recipe: RecipeSummary`, événement `close`.
 - Planning : vue en liste par jour sur mobile, grille 7 colonnes sur `lg`, glisser-déposer natif
@@ -438,7 +444,7 @@ Composables :
 - `useServingsScaler(recipe)` — `servings` cible, `factor` (= cible / portions de la recette, `1` si inconnues), `scaledAmount(ingredient)`. La mise à l'échelle vit dans `shared/utils/recipes.ts` : `servingsFactor`, `roundReadable` (< 10 : au quart ou au tiers → ½ ¼ ¾ ⅓ ⅔ ; 10–100 : une décimale ; ≥ 100 : entier), `scaleAmount`, `formatScaledAmount` (texte libre non numérique rendu tel quel). Le facteur est passé à `add_recipe_to_list`.
 - `useIngredientLabel()` (`useRecipe.ts`) — « quantité + unité » / « quantité + unité + nom » partagé par la fiche, le mode cuisine et la modale courses.
 - `useCookingMode(recipe)` — `flattenSteps` des sections, navigation, `currentIngredientSection` (section de l'étape, sinon section d'ingrédients de même nom, sinon l'unique section d'ingrédients), `navigator.wakeLock.request('screen')` à l'ouverture (redemandé au retour de l'onglet, relâché à la fermeture, **silencieux** si non supporté ou refusé), écouteurs clavier posés/retirés avec `isOpen`.
-- Impression : utilitaires `print:` sur les actions/navigation de la page + feuille `@media print` injectée par `useHead` (en-tête/pied du layout masqués, `@page { margin: 1.5cm }`, sauts de page évités dans les listes).
+- Impression : utilitaires `print:` sur les actions/navigation de la page + feuille `@media print` de `main.css` limitée à `body:has(#recipe-sheet)` (en-tête/pied du layout masqués, page nommée `recipe-sheet` à marges 1,5 cm pour ne pas écraser le `@page` paysage du planning, sauts de page évités dans les listes).
 
 ### Éditeur (`app/components/RecipeEditor.vue` → `app/components/editor/`)
 
@@ -452,10 +458,14 @@ Composables :
 ### Photos (`useRecipePhoto`, bucket `recipe-photos`, migrations 0010 + 0011)
 
 - Pas de transformation d'images sur le plan Supabase gratuit : **redimensionnement client** (`resizeRecipeImage` : canvas, `createImageBitmap` avec orientation EXIF, plus grand côté 1600 px, WebP qualité 0,82, repli JPEG).
-- `uploadPhoto(recipeId, file)` → `recipe-photos/<recipeId>/<timestamp>.webp` (client Supabase de l'admin, politiques de 0010), `removePhoto(path)`, `removeRecipePhotos(recipeId)` (vide le dossier avant `delete_recipe`), `publicUrl(path)`.
+- `uploadPhoto(recipeId, file)` → `recipe-photos/<recipeId>/<timestamp>.webp` (client Supabase de l'admin, politiques de 0010), `removePhoto(path)`, `removeRecipePhotos(recipeId)` (appelé par `useRecipesStore().deleteRecipe` avant `delete_recipe`, depuis la liste comme depuis la fiche), `publicUrl(path)`.
 - Flux : modification → la photo est téléversée d'abord (id connu), `photoPath` part dans `RecipeInput`, l'ancien objet est supprimé après l'enregistrement ; création → recette d'abord, puis photo, puis `updateRecipe` avec `photoPath`. `photoPath` absent/vide → `save_recipe` (0011) remet `photo_path` à `NULL`.
-- Affichage : `<img>` sur l'URL publique (pas `NuxtImg` : il faudrait `image.domains` ou le provider `supabase` dans `nuxt.config.ts`).
-- `RecipeInput` de `shared/types/index.ts` n'a pas encore `photoPath` (clé acceptée par le schéma Zod) : l'éditeur passe par `RecipeInput & { photoPath?: string | null }` ; à ajouter au type en phase 4.
+- Affichage : `NuxtImg` (`format="webp"`, qualité 80). `nuxt.config.ts` → `image.domains` = hôte de `SUPABASE_URL` (lu au build) + `127.0.0.1:54321` hors Vercel ; ipx en dev, optimisation Vercel en prod (un domaine non listé est servi tel quel). Le provider `supabase` de `@nuxt/image` n'est pas utilisé : il passe par la transformation d'images Supabase, absente du plan gratuit. Écrans : Tailwind + `xs: 320` pour des `sizes` mobile-first (`xs:100vw sm:50vw …`).
+  - `RecipeCard` : `sizes="xs:100vw sm:50vw lg:33vw xl:25vw"`, 4:3, `loading="lazy"` ;
+  - `RecipeHero` (image principale, LCP) : `sizes="xs:100vw md:768px lg:896px"`, `loading="eager"`, `fetchpriority="high"`, `preload` ;
+  - `planning/MealCard` (32 px) et `planning/AddMealModal` (40 px) : `densities="x1 x2"`, lazy ; repli icône de catégorie inchangé ;
+  - `editor/PhotoField` garde un `<img>` natif (l'aperçu peut être une object URL `blob:`).
+- Type d'écriture unique : `RecipeInput` = `z.infer<typeof recipeInputSchema>` (`photoPath` compris), ré-exporté par `#shared/types` ; l'éditeur, le traducteur (plus de pont `toStoreRecipeInput`) et le store l'emploient tel quel.
 
 ## À savoir
 
