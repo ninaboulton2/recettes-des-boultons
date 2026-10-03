@@ -137,3 +137,9 @@ Thumbs.db
 # Test files
 test-results/
 coverage/
+
+# Supabase local (CLI) : état temporaire et snapshot des données prod (familiales)
+supabase/.temp/
+supabase/.branches/
+supabase/local/snapshot/*
+!supabase/local/snapshot/.gitkeep
