@@ -12,7 +12,7 @@
     "start": "nuxt start",
     "generate": "nuxt generate",
     "vercel-build": "nuxt build",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt typecheck && tsc -p e2e/tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
