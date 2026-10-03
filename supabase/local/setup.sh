@@ -7,7 +7,10 @@
 #       migrations/0001, 0002           (déjà appliquées en prod)      ┘ fois
 #    2. local/snapshot/*.sql  (données prod anonymisées, gitignorées)
 #       ou seed_test.sql avec --seed-test (données jetables des tests)
-#    3. migrations/0003 → 0010 (idempotentes, rejouées à chaque appel)
+#    3. migrations/0003 → dernière (0015) — idempotentes, rejouées à chaque
+#       appel ; une fois 0013 (« contract » : colonnes JSONB supprimées)
+#       appliquée, 0003 → 0012 ne sont plus rejouées (0005 lit le JSONB) :
+#       seules 0013 et suivantes le sont
 #    4. local/test_accounts.sql (admin@local.test / user@local.test)
 #       local/tests_shim.sql    (tests.login / tests.logout)
 #    5. local/verify.sql (comptes attendus de MIGRATION_NOTES.md § 4)
@@ -16,7 +19,9 @@
 #  sautées si le schéma / les migrations sont déjà là). Pour repartir de zéro :
 #  `npx supabase db reset` puis ce script (= npm run db:local:reset).
 #
-#  Usage : supabase/local/setup.sh [--seed-test] [--no-verify]
+#  Usage : supabase/local/setup.sh [--seed-test] [--no-verify] [--until NNNN]
+#    --until NNNN     s'arrête après la migration NNNN (ex. 0012 : état
+#                     « expand » utilisé par test.sh pour les tests 0003-0012)
 #    SUPABASE_DB_URL  URL de la base (défaut : celle de `supabase start`).
 #                     Refusée si l'hôte n'est pas local.
 # ============================================================================
@@ -27,14 +32,17 @@ SUPA="$(dirname "$HERE")"
 DB_URL="${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 MODE=snapshot
 VERIFY=1
+UNTIL=9999
 
-for arg in "$@"; do
-  case "$arg" in
+while (( $# > 0 )); do
+  case "$1" in
     --seed-test) MODE=seed-test ;;
     --no-verify) VERIFY=0 ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
-    *) echo "Option inconnue : $arg" >&2; exit 2 ;;
+    --until) shift; UNTIL=$((10#${1:?--until NNNN}));;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
+    *) echo "Option inconnue : $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
 # Garde-fou : ce script ne doit JAMAIS viser la prod.
@@ -93,8 +101,23 @@ else
   fi
 fi
 
-# 3. Migrations 0003 → 0010 ------------------------------------------------------
-for f in "$SUPA"/migrations/00{03,04,05,06,07,08,09,10,11,12}_*.sql; do run "$f"; done
+# 3. Migrations 0003 → … ---------------------------------------------------------
+# 0013 supprime recipes.ingredients / instructions : si elle est déjà passée,
+# 0003 → 0012 ne sont pas rejouées (0005 lit ces colonnes, 0006/0010/0011
+# recréeraient des fonctions qui les écrivent).
+CONTRACTED=0
+if has_table public.recipes && [[ "$(sql "select count(*) from information_schema.columns
+     where table_schema = 'public' and table_name = 'recipes' and column_name = 'ingredients'")" == "0" ]]; then
+  CONTRACTED=1
+  echo "• 0013 déjà appliquée : 0003 → 0012 ne sont pas rejouées"
+fi
+for f in "$SUPA"/migrations/0*_*.sql; do
+  b="$(basename "$f")"; n=$((10#${b:0:4}))
+  (( n < 3 )) && continue
+  (( n > UNTIL )) && break
+  (( CONTRACTED == 1 && n <= 12 )) && continue
+  run "$f"
+done
 
 # 4. Comptes de test + aide aux tests ----------------------------------------
 # En mode seed-test, les tests SQL comptent exactement les utilisateurs de
@@ -105,7 +128,7 @@ fi
 run "$HERE/tests_shim.sql"
 
 # 5. Vérifications ------------------------------------------------------------
-if [[ $MODE == snapshot && $HAS_DATA -eq 1 && $VERIFY -eq 1 ]]; then
+if [[ $MODE == snapshot && $HAS_DATA -eq 1 && $VERIFY -eq 1 && $UNTIL -ge 9999 ]]; then
   run "$HERE/verify.sql"
 fi
 

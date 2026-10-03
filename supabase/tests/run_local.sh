@@ -16,8 +16,11 @@
 #    3. tests/01_baseline_schema.sql   (schéma prod avant 0001)
 #    4. migrations/0001, 0002          (déjà appliquées en prod)
 #    5. seed_test.sql                  (données jetables façon prod)
-#    6. migrations/0003 → 0010
-#    7. tests/test_00xx.sql            (assertions ; échec = exit 1)
+#    6. migrations/0003 → 0012 (« expand ») + rejeu, tests test_0003 → test_0012
+#    7. migrations/0013 → …   (« contract » : 0013, 0014, 0015) + rejeu,
+#       tests test_0013 → …   (assertions ; échec = exit 1)
+#  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
+#  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
 set -euo pipefail
 export LC_ALL=C LANG=C   # évite « postmaster became multithreaded » sur macOS
@@ -58,11 +61,22 @@ run "$HERE/01_baseline_schema.sql"
 run "$SUPA/migrations/0001_harden_rls.sql"
 run "$SUPA/migrations/0002_drop_unused_secdef_functions.sql"
 run "$SUPA/seed_test.sql"
-for f in "$SUPA"/migrations/00{03,04,05,06,07,08,09,10}_*.sql; do run "$f"; done
+# Migrations numérotées ≥ 0003, en deux phases (voir en-tête).
+num() { local b; b="$(basename "$1")"; echo $((10#${b:0:4})); }
+EXPAND=(); CONTRACT=()
+for f in "$SUPA"/migrations/0*_*.sql; do
+  n=$(num "$f")
+  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 )); then CONTRACT+=("$f"); fi
+done
 
-# Idempotence : rejouer 0003 → 0010 une seconde fois ne doit rien casser.
-echo "▶ Rejeu idempotence 0003 → 0010"
-for f in "$SUPA"/migrations/00{03,04,05,06,07,08,09,10}_*.sql; do "${PSQL[@]}" -f "$f"; done
+for f in "${EXPAND[@]}"; do run "$f"; done
+# Idempotence : rejouer 0003 → 0012 une seconde fois ne doit rien casser.
+echo "▶ Rejeu idempotence 0003 → 0012"
+for f in "${EXPAND[@]}"; do "${PSQL[@]}" -f "$f"; done
+for f in "$HERE"/test_*.sql; do if (( $(num "${f#*test_}") <= 12 )); then run "$f"; fi; done
 
-for f in "$HERE"/test_*.sql; do run "$f"; done
+for f in "${CONTRACT[@]}"; do run "$f"; done
+echo "▶ Rejeu idempotence 0013 → …"
+for f in "${CONTRACT[@]}"; do "${PSQL[@]}" -f "$f"; done
+for f in "$HERE"/test_*.sql; do if (( $(num "${f#*test_}") >= 13 )); then run "$f"; fi; done
 echo "✅ Toutes les migrations et tous les tests sont passés."
