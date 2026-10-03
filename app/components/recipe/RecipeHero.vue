@@ -1,7 +1,10 @@
 <template>
   <header class="space-y-5">
     <!-- Photo (ou icône de repli) -->
-    <div class="relative aspect-video overflow-hidden rounded-xl border border-default bg-muted print:aspect-auto print:max-h-64">
+    <div
+      class="relative overflow-hidden rounded-xl border border-default bg-muted print:max-h-64"
+      :class="photoUrl ? 'aspect-video print:aspect-auto' : 'h-36 sm:h-44 print:hidden'"
+    >
       <!-- URL publique du bucket, déjà redimensionnée côté client (pas d'optimisation ipx :
            `NuxtImg` exigerait `image.domains`/provider dans nuxt.config, hors périmètre 3B). -->
       <img
@@ -54,7 +57,7 @@
         <dt>{{ $t('recipeDetail.totalTime') }}</dt>
         <dd class="font-medium text-default">{{ $t('recipeDetail.minutes', { n: total }) }}</dd>
       </div>
-      <div class="flex items-center gap-2 sm:ml-auto">
+      <div v-if="canScale || recipe.servings" class="flex items-center gap-2 sm:ml-auto">
         <UIcon name="i-lucide-users" class="size-4" aria-hidden="true" />
         <dt class="sr-only">{{ $t('recipeDetail.servings') }}</dt>
         <dd>
@@ -65,7 +68,7 @@
             @update:model-value="emit('update:servings', $event)"
           />
           <span v-else class="font-medium text-default">
-            {{ recipe.servings ? $t('recipeDetail.servingsCount', { count: recipe.servings }, recipe.servings) : '—' }}
+            {{ $t('recipeDetail.servingsCount', { count: recipe.servings ?? 0 }, recipe.servings ?? 0) }}
           </span>
         </dd>
       </div>

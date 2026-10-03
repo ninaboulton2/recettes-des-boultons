@@ -38,8 +38,7 @@
           >
             <template #label>
               <span :class="checked[ingredient.id] ? 'text-dimmed line-through' : 'text-default'">
-                <span v-if="amountLabel(ingredient)" class="font-medium tabular-nums">{{ amountLabel(ingredient) }} </span>
-                <span>{{ ingredient.name }}</span>
+                <span v-if="amountLabel(ingredient)" class="font-medium tabular-nums">{{ amountLabel(ingredient) }}</span>{{ amountLabel(ingredient) ? ' ' : '' }}<span>{{ ingredient.name }}</span>
                 <span v-if="ingredient.optional" class="ml-1 text-xs text-muted">
                   ({{ $t('recipeDetail.ingredients.optional') }})
                 </span>

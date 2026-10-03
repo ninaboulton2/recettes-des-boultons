@@ -248,6 +248,45 @@ npm run db:local:down      # arrêter les conteneurs
   passage par `save_recipe` (0006), une recette modifiée garde un JSONB périmé (sans effet
   d'affichage : le front ne lit plus le JSONB).
 
+## Fiche recette, éditeur et photos (phase 3B)
+
+### Fiche (`app/pages/recettes/[id].vue`, ≈ 190 lignes)
+
+La page assemble des composants Nuxt UI sous `app/components/recipe/` :
+
+| Composant | Rôle |
+|---|---|
+| `RecipeHero` | photo du bucket (ou icône de repli sur `bg-muted`), catégorie en `UBadge`, tags, titre `font-serif`, temps, compteur de portions (`RecipeServingsControl`) |
+| `RecipeIngredients` | ingrédients par section avec **cases à cocher** (suivi en cuisinant, état local), quantités mises à l'échelle, unité canonique via `useUnits().unitLabel(unitCode, unit)` |
+| `RecipeSteps` | étapes numérotées par section |
+| `RecipeActions` | favori, courses, planning (`PlanningModal` de 3C, API `show`/`recipe`/`close`), mode cuisine, impression (`window.print()`), modifier/supprimer (admin). La confirmation de suppression est une `UModal` dans la page |
+| `RecipeAddToShoppingModal` | choix de la liste (création inline si aucune) et des **sections** à ajouter → `useShoppingStore().addRecipeToList(listId, recipeId, sectionIds, servingsFactor)` |
+| `RecipeCookingMode` | `UModal fullscreen` : une étape à la fois, ingrédients de la section, `UProgress`, ←/→/Échap, Wake Lock |
+
+Composables :
+
+- `useServingsScaler(recipe)` — `servings` cible, `factor` (= cible / portions de la recette, `1` si inconnues), `scaledAmount(ingredient)`. La mise à l'échelle vit dans `shared/utils/recipes.ts` : `servingsFactor`, `roundReadable` (< 10 : au quart ou au tiers → ½ ¼ ¾ ⅓ ⅔ ; 10–100 : une décimale ; ≥ 100 : entier), `scaleAmount`, `formatScaledAmount` (texte libre non numérique rendu tel quel). Le facteur est passé à `add_recipe_to_list`.
+- `useIngredientLabel()` (`useRecipe.ts`) — « quantité + unité » / « quantité + unité + nom » partagé par la fiche, le mode cuisine et la modale courses.
+- `useCookingMode(recipe)` — `flattenSteps` des sections, navigation, `currentIngredientSection` (section de l'étape, sinon section d'ingrédients de même nom, sinon l'unique section d'ingrédients), `navigator.wakeLock.request('screen')` à l'ouverture (redemandé au retour de l'onglet, relâché à la fermeture, **silencieux** si non supporté ou refusé), écouteurs clavier posés/retirés avec `isOpen`.
+- Impression : utilitaires `print:` sur les actions/navigation de la page + feuille `@media print` injectée par `useHead` (en-tête/pied du layout masqués, `@page { margin: 1.5cm }`, sauts de page évités dans les listes).
+
+### Éditeur (`app/components/RecipeEditor.vue` → `app/components/editor/`)
+
+`RecipeEditor.vue` est une **façade** qui garde l'API historique utilisée par `pages/recettes/index.vue` et `[id].vue` : props `show` / `recipe: Recipe | null`, émissions `close` / `save(recipe)`. Elle rend une `UModal` contenant `editor/RecipeEditorForm.vue` (recréé à chaque ouverture : `v-if="show"`).
+
+- `RecipeEditorForm` — `UForm` + `recipeInputSchema` (Zod, erreurs sous chaque champ par chemin `sections.0.ingredients.1.name`) + validation custom « au moins un ingrédient et une étape ». L'état du formulaire a la forme du schéma (+ `key` stables). Les sections `mixed` (0005) sont chargées comme une section d'ingrédients **et** une section d'étapes du même nom ; à l'enregistrement les sections d'ingrédients précèdent celles d'étapes (`orderIndex` recalculé). Soumission via `useRecipesStore().addRecipe / updateRecipe`.
+- `SectionEditor` — nom, lignes, monter/descendre (sections, ingrédients, étapes), glisser-déposer des étapes par la poignée (dans la section). Les modifications remontent en **updater** `(section) => section'` appliqué sur l'état courant du formulaire (robuste à deux changements dans le même tick).
+- `IngredientRow` — quantité (texte libre, `parse_amount` côté base), **unité en `USelectMenu`** alimenté par `useUnits()` (libellé `abbr — label`, valeur = `abbr`, qui se normalise en `unit_code` par `normalize_unit`) avec `create-item` pour une saisie libre ; « sans unité » passe par une sentinelle (`''` est interdit par Reka). `unitCode` n'est pas envoyé : la base le dérive.
+- `StepRow`, `PhotoField` (aperçu bucket ou object URL du fichier choisi, remplacer/retirer).
+
+### Photos (`useRecipePhoto`, bucket `recipe-photos`, migrations 0010 + 0011)
+
+- Pas de transformation d'images sur le plan Supabase gratuit : **redimensionnement client** (`resizeRecipeImage` : canvas, `createImageBitmap` avec orientation EXIF, plus grand côté 1600 px, WebP qualité 0,82, repli JPEG).
+- `uploadPhoto(recipeId, file)` → `recipe-photos/<recipeId>/<timestamp>.webp` (client Supabase de l'admin, politiques de 0010), `removePhoto(path)`, `removeRecipePhotos(recipeId)` (vide le dossier avant `delete_recipe`), `publicUrl(path)`.
+- Flux : modification → la photo est téléversée d'abord (id connu), `photoPath` part dans `RecipeInput`, l'ancien objet est supprimé après l'enregistrement ; création → recette d'abord, puis photo, puis `updateRecipe` avec `photoPath`. `photoPath` absent/vide → `save_recipe` (0011) remet `photo_path` à `NULL`.
+- Affichage : `<img>` sur l'URL publique (pas `NuxtImg` : il faudrait `image.domains` ou le provider `supabase` dans `nuxt.config.ts`).
+- `RecipeInput` de `shared/types/index.ts` n'a pas encore `photoPath` (clé acceptée par le schéma Zod) : l'éditeur passe par `RecipeInput & { photoPath?: string | null }` ; à ajouter au type en phase 4.
+
 ## À savoir
 
 - **Tests** : Vitest via `@nuxt/test-utils` (environnement `happy-dom` par défaut ; `// @vitest-environment nuxt` pour un test nécessitant l'app). Premier test : `test/unit/text.test.ts`.

@@ -59,7 +59,7 @@
             :index="entry.index"
             :position="position"
             :count="sectionsOf(kind).length"
-            @update:section="replaceSection(entry.index, $event)"
+            @update="updateSection(entry.index, $event)"
             @move="moveSection(entry.index, $event)"
             @remove="removeSection(entry.index)"
           />
@@ -108,6 +108,8 @@ export interface FormSection {
   ingredients: FormIngredient[]
   instructions: FormStep[]
 }
+/** Transformation d'une section appliquée sur l'état courant du formulaire. */
+export type SectionUpdater = (section: FormSection) => FormSection
 export interface RecipeFormState {
   title: string
   category: string
@@ -137,7 +139,6 @@ const props = defineProps<{ recipe: Recipe | null }>()
 const emit = defineEmits<{ saved: [recipe: Recipe], cancel: [] }>()
 
 const SECTION_KINDS: readonly FormSectionType[] = ['ingredients', 'instructions']
-
 const recipesStore = useRecipesStore()
 const toast = useToast()
 const { t } = useI18n()
@@ -184,12 +185,11 @@ const categoryItems = computed<Array<{ label: string, value: string }>>(() =>
   RECIPE_CATEGORIES.map(category => ({ label: t(categoryI18nKey(category)), value: category }))
 )
 
-// --- Sections -----------------------------------------------------------------
 const sectionsOf = (type: FormSectionType) =>
   state.sections.map((section, index) => ({ section, index })).filter(entry => entry.section.type === type)
 
-const replaceSection = (index: number, value: FormSection) => {
-  state.sections = state.sections.map((section, i) => (i === index ? value : section))
+const updateSection = (index: number, updater: SectionUpdater) => {
+  state.sections = state.sections.map((section, i) => (i === index ? updater(section) : section))
 }
 const removeSection = (index: number) => {
   state.sections = state.sections.filter((_, i) => i !== index)
@@ -225,7 +225,6 @@ const validateSections = (current: Partial<z.input<typeof recipeInputSchema>>): 
   return errors
 }
 
-// --- Soumission -----------------------------------------------------------------
 type EditorRecipeInput = RecipeInput & { photoPath?: string | null }
 
 function toRecipeInput(photoPath: string | null): EditorRecipeInput {
@@ -261,9 +260,8 @@ function toRecipeInput(photoPath: string | null): EditorRecipeInput {
   }
 }
 
-const onError = (event: FormErrorEvent) => {
+const onError = (event: FormErrorEvent) =>
   toast.add({ title: t('editor.validation.fixErrors'), description: event.errors[0]?.message, color: 'warning', icon: 'i-lucide-circle-alert' })
-}
 
 const onSubmit = async () => {
   if (saving.value) return

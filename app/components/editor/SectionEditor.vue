@@ -13,7 +13,7 @@
           variant="ghost"
           size="lg"
           class="w-full font-serif font-medium"
-          @update:model-value="patch({ name: String($event ?? '') })"
+          @update:model-value="update(s => ({ ...s, name: String($event ?? '') }))"
         />
       </UFormField>
       <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm" :aria-label="$t('editor.sections.remove')" @click="emit('remove')" />
@@ -30,12 +30,12 @@
           :field-prefix="`${prefix}.ingredients.${i}`"
           :can-move-up="i > 0"
           :can-move-down="i < section.ingredients.length - 1"
-          @update:ingredient="patch({ ingredients: replaceAt(section.ingredients, i, $event) })"
-          @move="patch({ ingredients: moveItem(section.ingredients, i, $event) })"
-          @remove="patch({ ingredients: section.ingredients.filter((_, j) => j !== i) })"
+          @patch="update(s => ({ ...s, ingredients: patchAt(s.ingredients, i, $event) }))"
+          @move="update(s => ({ ...s, ingredients: moveItem(s.ingredients, i, $event) }))"
+          @remove="update(s => ({ ...s, ingredients: s.ingredients.filter((_, j) => j !== i) }))"
         />
       </div>
-      <UButton icon="i-lucide-plus" :label="$t('editor.sections.addIngredient')" color="neutral" variant="soft" size="sm" @click="addIngredient" />
+      <UButton icon="i-lucide-plus" :label="$t('editor.sections.addIngredient')" color="neutral" variant="soft" size="sm" @click="update(s => ({ ...s, ingredients: [...s.ingredients, newIngredient()] }))" />
     </template>
 
     <!-- Étapes (glisser-déposer par la poignée + boutons) -->
@@ -60,14 +60,14 @@
             :field-prefix="`${prefix}.instructions.${i}`"
             :can-move-up="i > 0"
             :can-move-down="i < section.instructions.length - 1"
-            @update:step="patch({ instructions: replaceAt(section.instructions, i, $event) })"
-            @move="patch({ instructions: moveItem(section.instructions, i, $event) })"
-            @remove="patch({ instructions: section.instructions.filter((_, j) => j !== i) })"
+            @patch="update(s => ({ ...s, instructions: patchAt(s.instructions, i, $event) }))"
+            @move="update(s => ({ ...s, instructions: moveItem(s.instructions, i, $event) }))"
+            @remove="update(s => ({ ...s, instructions: s.instructions.filter((_, j) => j !== i) }))"
             @arm-drag="dragArmed = i"
           />
         </li>
       </ol>
-      <UButton icon="i-lucide-plus" :label="$t('editor.sections.addStep')" color="neutral" variant="soft" size="sm" @click="addStep" />
+      <UButton icon="i-lucide-plus" :label="$t('editor.sections.addStep')" color="neutral" variant="soft" size="sm" @click="update(s => ({ ...s, instructions: [...s.instructions, newStep()] }))" />
     </template>
   </fieldset>
 </template>
@@ -76,12 +76,14 @@
 import { computed, ref } from 'vue'
 import EditorIngredientRow from './IngredientRow.vue'
 import EditorStepRow from './StepRow.vue'
-import { newIngredient, newStep, type FormSection } from './RecipeEditorForm.vue'
+import { newIngredient, newStep, type FormSection, type SectionUpdater } from './RecipeEditorForm.vue'
 
 /**
  * Une section du formulaire (ingrédients OU étapes) : nom, lignes,
  * réordonnancement (boutons + glisser-déposer des étapes), ajout/suppression.
- * Toutes les modifications remontent par `update:section` (objet neuf).
+ * Chaque modification remonte sous forme d'« updater » (`section => section'`)
+ * que le formulaire applique sur son état courant : deux changements dans le
+ * même tick ne s'écrasent pas.
  */
 const props = defineProps<{
   section: FormSection
@@ -93,19 +95,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:section': [value: FormSection]
-  'move': [direction: -1 | 1]
-  'remove': []
+  update: [updater: SectionUpdater]
+  move: [direction: -1 | 1]
+  remove: []
 }>()
 
 const prefix = computed(() => `sections.${props.index}`)
+const update = (updater: SectionUpdater) => emit('update', updater)
 
-const patch = (changes: Partial<FormSection>) => {
-  emit('update:section', { ...props.section, ...changes })
-}
-
-function replaceAt<T>(items: T[], index: number, value: T): T[] {
-  return items.map((item, i) => (i === index ? value : item))
+function patchAt<T extends object>(items: T[], index: number, changes: Partial<T>): T[] {
+  return items.map((item, i) => (i === index ? { ...item, ...changes } : item))
 }
 
 function moveItem<T>(items: T[], from: number, direction: -1 | 1): T[] {
@@ -116,9 +115,6 @@ function moveItem<T>(items: T[], from: number, direction: -1 | 1): T[] {
   if (moved !== undefined) next.splice(to, 0, moved)
   return next
 }
-
-const addIngredient = () => patch({ ingredients: [...props.section.ingredients, newIngredient()] })
-const addStep = () => patch({ instructions: [...props.section.instructions, newStep()] })
 
 // --- Glisser-déposer des étapes (dans la section) ---------------------------
 const dragArmed = ref<number | null>(null)
@@ -140,10 +136,12 @@ const onDragStart = (index: number, event: DragEvent) => {
 const onDrop = (target: number) => {
   const from = dragIndex.value
   if (from !== null && from !== target) {
-    const next = [...props.section.instructions]
-    const [moved] = next.splice(from, 1)
-    if (moved !== undefined) next.splice(target, 0, moved)
-    patch({ instructions: next })
+    update((section) => {
+      const next = [...section.instructions]
+      const [moved] = next.splice(from, 1)
+      if (moved !== undefined) next.splice(target, 0, moved)
+      return { ...section, instructions: next }
+    })
   }
   resetDrag()
 }

@@ -57,8 +57,7 @@
               <li v-for="ingredient in ingredients" :key="ingredient.id" class="flex gap-2">
                 <UIcon name="i-lucide-dot" class="mt-1 size-5 shrink-0 text-primary" aria-hidden="true" />
                 <span>
-                  <span v-if="amountLabel(ingredient, factor)" class="font-medium tabular-nums">{{ amountLabel(ingredient, factor) }} </span>
-                  {{ ingredient.name }}
+                  <span v-if="amountLabel(ingredient, factor)" class="font-medium tabular-nums">{{ amountLabel(ingredient, factor) }}</span>{{ amountLabel(ingredient, factor) ? ' ' : '' }}{{ ingredient.name }}
                   <span v-if="ingredient.optional" class="text-sm text-muted">({{ $t('recipeDetail.ingredients.optional') }})</span>
                 </span>
               </li>

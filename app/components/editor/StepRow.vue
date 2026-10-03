@@ -19,7 +19,7 @@
         :placeholder="$t('editor.step.placeholder')"
         :aria-label="$t('recipeDetail.steps.step', { n: index + 1 })"
         class="w-full"
-        @update:model-value="emit('update:step', { ...step, content: String($event ?? '') })"
+        @update:model-value="emit('patch', { content: String($event ?? '') })"
       />
     </UFormField>
     <div class="flex items-center gap-0.5 pt-1">
@@ -44,7 +44,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:step': [value: FormStep]
+  'patch': [changes: Partial<FormStep>]
   'move': [direction: -1 | 1]
   'remove': []
   /** La poignée est pressée : la ligne devient déplaçable. */
