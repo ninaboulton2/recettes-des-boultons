@@ -6,8 +6,8 @@ import { useAuthStore } from './auth'
 interface ShoppingItem {
   id: string
   name: string
-  amount?: string | number // Peut être string (depuis Supabase) ou number (depuis l'interface)
-  unit?: string
+  amount?: string | number | null // Peut être string (depuis Supabase) ou number (depuis l'interface)
+  unit?: string | null
   note?: string
   checked: boolean
   recipeId?: string
@@ -483,6 +483,7 @@ export const useShoppingStore = defineStore('shopping', () => {
                     
           // Mettre à jour le premier item existant avec la nouvelle quantité totale
           const firstExistingItem = existingItems[0]
+          if (!firstExistingItem) continue
           
           try {
             const response = await apiFetch(`/api/shopping-items/${firstExistingItem.id}`, {
@@ -505,8 +506,7 @@ export const useShoppingStore = defineStore('shopping', () => {
             }
             
             // Supprimer les autres items avec le même nom (ils sont maintenant consolidés)
-            for (let i = 1; i < existingItems.length; i++) {
-              const itemToDelete = existingItems[i]
+            for (const itemToDelete of existingItems.slice(1)) {
               const deleteResponse = await apiFetch(`/api/shopping-items/${itemToDelete.id}`, {
                 method: 'DELETE'
               })
@@ -542,6 +542,8 @@ export const useShoppingStore = defineStore('shopping', () => {
             continue // Passer à l'ingrédient suivant si erreur
           }
         }
+
+        if (!defaultList) continue
 
         await addItem({
           name: ingredient.name,
@@ -586,14 +588,14 @@ export const useShoppingStore = defineStore('shopping', () => {
         shoppingLists.value = data.lists
         // Sélectionner la première liste par défaut
         if (shoppingLists.value.length > 0 && !currentList.value) {
-          currentList.value = shoppingLists.value[0]
+          currentList.value = shoppingLists.value[0] ?? null
         }
       } else {
         throw new Error('Erreur lors du chargement des listes')
       }
-    } catch (error) {
-      console.error('Erreur chargement listes:', error)
-      error.value = error instanceof Error ? error.message : 'Erreur inconnue'
+    } catch (err) {
+      console.error('Erreur chargement listes:', err)
+      error.value = err instanceof Error ? err.message : 'Erreur inconnue'
     } finally {
       isLoading.value = false
     }

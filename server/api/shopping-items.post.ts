@@ -47,7 +47,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (existingItems && existingItems.length > 0) {
+    const firstExistingItem = existingItems?.[0]
+
+    if (existingItems && firstExistingItem) {
 
       // Calculer la quantité totale
       const totalAmount = existingItems.reduce((sum, item) => {
@@ -56,8 +58,6 @@ export default defineEventHandler(async (event) => {
       }, 0) + amount
             
       // Mettre à jour le premier item existant avec la nouvelle quantité totale
-      const firstExistingItem = existingItems[0]
-      
       const { error: updateError } = await supabase
         .from('shopping_items')
         .update({
@@ -76,8 +76,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Supprimer les autres items avec le même nom (ils sont maintenant consolidés)
-      for (let i = 1; i < existingItems.length; i++) {
-        const itemToDelete = existingItems[i]
+      for (const itemToDelete of existingItems.slice(1)) {
         const { error: deleteError } = await supabase
           .from('shopping_items')
           .delete()

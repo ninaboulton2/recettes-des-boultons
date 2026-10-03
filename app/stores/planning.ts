@@ -18,9 +18,9 @@ interface Meal {
 interface DayMeals {
   lunch: Meal[]
   dinner: Meal[]
-  notes?: string
-  lunchGroupNote?: string
-  dinnerGroupNote?: string
+  notes?: string | null
+  lunchGroupNote?: string | null
+  dinnerGroupNote?: string | null
 }
 
 interface WeekPlanning {
@@ -282,8 +282,11 @@ export const usePlanningStore = defineStore('planning', () => {
           }
         }
         
-        const groupNoteKey = `${mealType}GroupNote` as keyof DayMeals
-        ;(weekPlanning.value[date] as any)[groupNoteKey] = note
+        if (mealType === 'lunch') {
+          weekPlanning.value[date].lunchGroupNote = note
+        } else {
+          weekPlanning.value[date].dinnerGroupNote = note
+        }
         
         return { success: true, message: data.message }
       } else {
@@ -365,12 +368,12 @@ export const usePlanningStore = defineStore('planning', () => {
         throw new Error(`Erreur HTTP: ${response.status}`)
       }
 
-      const data = await response.json()
+      const data = (await response.json()) as { success: boolean; planning: Record<string, Partial<DayMeals>> }
       if (data.success) {
         // Convertir le format de l'API vers le format local
         weekPlanning.value = {}
         
-        Object.entries(data.planning).forEach(([date, meals]: [string, any]) => {
+        Object.entries(data.planning).forEach(([date, meals]) => {
           weekPlanning.value[date] = {
             lunch: meals.lunch || [],
             dinner: meals.dinner || [],
@@ -382,9 +385,9 @@ export const usePlanningStore = defineStore('planning', () => {
       } else {
         throw new Error('Erreur lors du chargement du planning')
       }
-    } catch (error) {
-      console.error('Erreur chargement planning:', error)
-      error.value = error instanceof Error ? error.message : 'Erreur inconnue'
+    } catch (err) {
+      console.error('Erreur chargement planning:', err)
+      error.value = err instanceof Error ? err.message : 'Erreur inconnue'
     } finally {
       isLoading.value = false
     }

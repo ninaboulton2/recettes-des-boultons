@@ -2,12 +2,30 @@ import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
 import { apiFetch } from '~/composables/useApi'
 import { normalizeAccents } from '#shared/utils/text'
+import type { Recipe } from '#shared/types'
+
+interface RecipesApiResponse {
+  success: boolean
+  recipes: Recipe[]
+  error?: string
+}
+
+interface RecipeMutationResponse {
+  success: boolean
+  recipe: Recipe
+  message?: string
+}
+
+interface DeleteResponse {
+  success: boolean
+  message?: string
+}
 
 export const useRecipesStore = defineStore('recipes', () => {
-  const recipes = ref([])
-  const currentCategory = ref(null)
+  const recipes = ref<Recipe[]>([])
+  const currentCategory = ref<string | null>(null)
   const searchQuery = ref('')
-  const selectedTags = ref([])
+  const selectedTags = ref<string[]>([])
   const isLoading = ref(false)
 
   // Computed properties
@@ -40,7 +58,7 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   // Get all unique tags from recipes
   const allTags = computed(() => {
-    const tagsSet = new Set()
+    const tagsSet = new Set<string>()
     recipes.value.forEach(recipe => {
       if (recipe.tags && Array.isArray(recipe.tags)) {
         recipe.tags.forEach(tag => tagsSet.add(tag))
@@ -53,7 +71,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   const categoryTags = computed(() => {
     if (!currentCategory.value) return allTags.value
     
-    const tagsSet = new Set()
+    const tagsSet = new Set<string>()
     recipes.value
       .filter(recipe => recipe.category === currentCategory.value)
       .forEach(recipe => {
@@ -65,7 +83,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   })
 
   const recipesByCategory = computed(() => {
-    const grouped = {
+    const grouped: Record<string, Recipe[]> = {
       soupes: [],
       entrees: [],
       plats: [],
@@ -78,16 +96,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
 
     recipes.value.forEach(recipe => {
-      if (grouped[recipe.category]) {
-        grouped[recipe.category].push(recipe)
-      }
+      grouped[recipe.category]?.push(recipe)
     })
 
     return grouped
   })
 
   // Actions
-  const addRecipe = async (recipe) => {
+  const addRecipe = async (recipe: Partial<Recipe>) => {
     try {
       isLoading.value = true
       
@@ -109,7 +125,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         throw new Error(`Erreur HTTP: ${response.status}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as RecipeMutationResponse
       
       if (result.success) {
         // Ajouter directement au store local
@@ -127,7 +143,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const updateRecipe = async (id, updates) => {
+  const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
     try {
       isLoading.value = true
       
@@ -149,7 +165,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         throw new Error(`Erreur HTTP: ${response.status}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as RecipeMutationResponse
       
       if (result.success) {
         // Mettre à jour localement pour la réactivité
@@ -167,7 +183,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const deleteRecipe = async (id) => {
+  const deleteRecipe = async (id: string) => {
     try {
       isLoading.value = true
             
@@ -180,7 +196,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         throw new Error(`Erreur HTTP: ${response.status}`)
       }
       
-      const result = await response.json()
+      const result = (await response.json()) as DeleteResponse
       
       if (result.success) {
         // Supprimer de la mémoire locale immédiatement
@@ -197,17 +213,17 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const setCategory = (category) => {
+  const setCategory = (category: string | null) => {
     currentCategory.value = category
     // Clear selected tags when category changes
     selectedTags.value = []
   }
 
-  const setSearchQuery = (query) => {
+  const setSearchQuery = (query: string) => {
     searchQuery.value = query
   }
 
-  const toggleTag = (tag) => {
+  const toggleTag = (tag: string) => {
     const index = selectedTags.value.findIndex(t => t.toLowerCase() === tag.toLowerCase())
     if (index !== -1) {
       selectedTags.value.splice(index, 1)
@@ -229,7 +245,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       
       // Utiliser la nouvelle API Supabase
       const response = await apiFetch('/api/recipes')
-      const data = await response.json()
+      const data = (await response.json()) as RecipesApiResponse
       
       if (data.success) {
         // Validate and clean recipes data

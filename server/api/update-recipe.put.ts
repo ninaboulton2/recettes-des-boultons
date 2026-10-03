@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Gérer les sections si elles sont présentes dans les updates
-    let updatedSections = []
+    let updatedSections: Array<Record<string, unknown>> = []
     
     if (updates.sections !== undefined && Array.isArray(updates.sections)) {
       console.log('Mise à jour des sections pour la recette', recipeId)
