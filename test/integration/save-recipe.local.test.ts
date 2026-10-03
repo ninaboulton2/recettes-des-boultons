@@ -100,7 +100,7 @@ describe.skipIf(!reachable)('save_recipe / delete_recipe / merge_shopping_item (
     ]
   })
 
-  it('crée la recette : unit_code / amount_num remplis, JSONB legacy recalculé', async () => {
+  it('crée la recette : unit_code / amount_num remplis, colonnes JSONB supprimées (0013)', async () => {
     const { data, error } = await admin.rpc('save_recipe', { payload: toSaveRecipePayload(input) })
     expect(error).toBeNull()
     expect(typeof data).toBe('string')
@@ -120,11 +120,9 @@ describe.skipIf(!reachable)('save_recipe / delete_recipe / merge_shopping_item (
     const { data: instructions } = await admin.from('instructions').select('content').eq('recipe_id', recipeId)
     expect(instructions).toHaveLength(2)
 
-    const { data: recipe } = await admin.from('recipes').select('ingredients, instructions').eq('id', recipeId).single()
-    const legacy = recipe as { ingredients: Array<{ name: string, amount: unknown }>, instructions: string[] }
-    expect(legacy.ingredients.map(i => i.name)).toEqual(['Farine', 'Sucre', 'Œufs'])
-    expect(legacy.ingredients[0]?.amount).toBe(200)
-    expect(legacy.instructions).toEqual(['Mélanger.', 'Cuire.'])
+    // 0013 : les colonnes JSONB legacy n'existent plus (PostgREST renvoie une erreur de colonne).
+    const { error: legacyError } = await admin.from('recipes').select('ingredients').eq('id', recipeId).single()
+    expect(legacyError).not.toBeNull()
   })
 
   it('met à jour (sections réordonnées) sans créer de doublon', async () => {
