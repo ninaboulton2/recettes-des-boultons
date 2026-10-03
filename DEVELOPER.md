@@ -125,22 +125,36 @@ Notes :
 
 Légende auth : 🟢 public · 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
 
-**Recettes**
-- 🟢 `GET /api/recipes`
-- 🔑 `POST /api/add-recipe` · `PUT /api/update-recipe?id=` · `DELETE /api/delete-recipe?id=`
-- 🔑 `POST|PUT|DELETE /api/recipe-sections` · `POST /api/section-ingredients` · `POST /api/section-instructions`
-- 🔑 `POST /api/translate-recipe` (OpenAI)
+**Lectures**
+- 🟢 `GET /api/recipes` · 👤 `GET /api/favorites` · `GET /api/planning` · `GET /api/shopping-lists`
 
-**Favoris** (👤)
-- `GET|POST /api/favorites` · `DELETE /api/favorites?recipeId=`
+**Écritures** — corps validé par Zod (`shared/schemas/`), erreurs centralisées (`server/utils/errors.ts`)
 
-**Planning** (👤)
-- `GET|POST /api/planning` · `DELETE /api/planning/:id`
-- `POST /api/planning-notes` · `DELETE /api/planning-notes?dateString=&noteType=`
+| Endpoint | Auth | Body / query (schéma) | SQL | Réponse |
+|---|---|---|---|---|
+| `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput }` (`addRecipeBodySchema`) | `rpc save_recipe(payload)` | `{ success, recipe: RecipeDetail, message }` |
+| `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`) — remplacement complet | `rpc save_recipe(payload + id)` (404 si inconnue) | `{ success, recipe: RecipeDetail, message }` |
+| `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `rpc delete_recipe` (404 si inconnue) | `{ success, deletedRecipeId }` |
+| `POST /api/translate-recipe` | 🔑 | `{ recipeText, translateToFrench? }` | OpenAI | `{ success, translatedRecipe }` |
+| `POST /api/favorites` | 👤 | `{ recipeId }` | insert (409 si doublon, 404 recette) | `{ success, favorite }` |
+| `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404 si absent) | `{ success }` |
+| `POST /api/planning` | 👤 | `{ dateString: AAAA-MM-JJ, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert | `{ success, meal }` |
+| `DELETE /api/planning/:id` | 👤 | — | delete (404 si absent) | `{ success }` |
+| `POST /api/planning-notes` | 👤 | `{ dateString, noteType: day\|lunch\|dinner, content? }` | update ou insert | `{ success, note }` |
+| `DELETE /api/planning-notes?dateString=&noteType=` | 👤 | query | delete (idempotent) | `{ success, deleted }` |
+| `POST /api/shopping-lists` | 👤 | `{ name }` | insert | `{ success, list }` |
+| `PUT /api/shopping-lists/:id` | 👤 | `{ name }` | update (404 si absente) | `{ success, list }` |
+| `DELETE /api/shopping-lists/:id` | 👤 | — | delete (cascade articles, 404 si absente) | `{ success }` |
+| `POST /api/shopping-lists/:id/recipes` | 👤 | `{ recipeId, sectionIds?: uuid[], servingsFactor?: > 0 }` | `rpc add_recipe_to_list` (fusion des doublons) | `{ success, items: ShoppingItemDetail[] }` |
+| `POST /api/shopping-items` | 👤 | `{ listId, name, amount?: string\|number, unit?, recipeId? }` | `rpc parse_amount` + `normalize_unit` → `rpc merge_shopping_item` (même nom + même unité → quantités additionnées) | `{ success, item: ShoppingItemDetail }` |
+| `PUT /api/shopping-items/:id` | 👤 | `{ name?, amount?, unit?, isChecked? }` (≥ 1 champ) | update (triggers `amount_num`/`unit_code`) | `{ success, item }` |
+| `DELETE /api/shopping-items/:id` | 👤 | — | delete (404 si absent) | `{ success }` |
 
-**Courses** (👤)
-- `GET|POST /api/shopping-lists` · `PUT|DELETE /api/shopping-lists/:id`
-- `POST /api/shopping-items` · `PUT|DELETE /api/shopping-items/:id`
+`RecipeInput` (camelCase, forme de `RecipeEditor.vue`) : `title` 1–200, `category`, `description?`, `notes?`, `prepTime|cookTime|servings` entiers ≥ 0 ou `null`, `image?`, `tags: string[]`, `sections[] { name, type: ingredients|instructions|mixed, orderIndex, ingredients[] { name, amount: string|number|null, unit, unitCode?: UnitCode, optional, orderIndex }, instructions[] { content, orderIndex } | string }`. Les clés inconnues (`id`, `createdAt`, `favorite`…) sont ignorées. `amount` part en texte vers `save_recipe`, qui calcule `amount_num` (`parse_amount`) et `unit_code` (`normalize_unit`) et recalcule le JSONB legacy.
+
+`RecipeDetail` (réponse, `server/utils/recipes.ts`) : ligne `recipes` **sans** JSONB (`id, title, description, category, prepTime, cookTime, servings, image, photoPath, tags, notes, createdAt, updatedAt`) + `sections[] { id, recipeId, name, type, orderIndex, ingredients[] { id, sectionId, name, amount, amountNum, unit, unitCode, optional, orderIndex }, instructions[] { id, sectionId, content, orderIndex } }`, triés par `orderIndex`.
+
+Erreurs : `400` « Données invalides : champ : raison ; … » (Zod), `401/403` auth, `404/409` métier, erreurs SQL volontaires des RPC (`22023` → 400 avec le message français, `P0002` → 404, `42501` → 403) ; tout le reste → `500` « Une erreur est survenue, réessayez plus tard. » avec le détail uniquement dans la console serveur (`[api] <contexte>`). Côté client, `toUserMessage(err)` (`app/composables/useApiError.ts`) affiche le `statusMessage` pour les 4xx et `errors.generic` (i18n) sinon.
 
 > Les endpoints 👤/🔑 ne reçoivent plus de `userId` du client : il est dérivé de la session (cookie envoyé automatiquement par le navigateur, ou en-tête `Authorization: Bearer` pour un client externe).
 
