@@ -2,6 +2,11 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  typescript: {
+    // TypeScript strict sur tous les tsconfig générés (.nuxt/tsconfig.*.json),
+    // référencés par le tsconfig.json racine.
+    strict: true
+  },
   devServer: {
     port: 3001
   },
@@ -9,7 +14,8 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/image',
-    '@nuxtjs/i18n'
+    '@nuxtjs/i18n',
+    '@nuxtjs/supabase'
   ],
   css: [
     '~/assets/css/main.css'
@@ -69,12 +75,15 @@ export default defineNuxtConfig({
     quality: 80,
     format: ['webp', 'jpg', 'png']
   },
-  runtimeConfig: {
-    public: {
-      apiBase: process.env.API_BASE || 'http://localhost:3001',
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
-    }
+  supabase: {
+    // Le module lit SUPABASE_URL / SUPABASE_KEY ; notre .env et Vercel
+    // utilisent SUPABASE_ANON_KEY : on mappe explicitement (voir DEVELOPER.md).
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    // Pas de redirection automatique vers /login : l'app gère ses modales.
+    redirect: false,
+    // TODO(phase 2): pointer sur shared/types/database.ts (types générés)
+    types: false
   },
   nitro: {
     // Déploiement Vercel (anciennement dans nitro.config.ts, non supporté par Nuxt 4)

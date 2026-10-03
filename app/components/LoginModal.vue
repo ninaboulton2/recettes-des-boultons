@@ -156,7 +156,6 @@
 import { ref, watch } from 'vue'
 import type { LoginCredentials } from '#shared/types'
 import { useAuthStore } from '~/stores/auth'
-import { useSupabase } from '~/composables/useSupabase'
 
 interface Props {
   isOpen: boolean
@@ -172,7 +171,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const authStore = useAuthStore()
-const { supabase } = useSupabase()
+const supabase = useSupabaseClient()
 
 const credentials = ref<LoginCredentials>({
   email: '',

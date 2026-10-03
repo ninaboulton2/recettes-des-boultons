@@ -67,9 +67,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useSupabase } from '~/composables/useSupabase'
 
-const { supabase } = useSupabase()
+const supabase = useSupabaseClient()
 
 const ready = ref(false)
 const linkError = ref('')

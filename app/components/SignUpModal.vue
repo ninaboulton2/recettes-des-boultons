@@ -221,7 +221,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { SignUpCredentials } from '#shared/types'
-import { useSupabase } from '~/composables/useSupabase'
 
 interface Props {
   isOpen: boolean
@@ -235,7 +234,7 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
-const { supabase } = useSupabase()
+const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 
 const credentials = ref<SignUpCredentials>({
