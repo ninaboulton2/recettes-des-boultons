@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse } from '~/composables/useApiError'
+import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
 import type { DayMeals, MealType, PlanningMeal, WeekPlanning } from '#shared/types'
 import type { Database } from '#shared/types/database'
 import type { NoteType } from '#shared/schemas/planning'
@@ -105,7 +105,7 @@ export const usePlanningStore = defineStore('planning', () => {
       loadedForUserId.value = userId
       return planning
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Erreur inconnue'
+      error.value = toUserMessage(err)
       throw err
     } finally {
       isLoading.value = false

@@ -20,10 +20,11 @@ import { en, fr } from '@nuxt/ui/locale'
 const props = defineProps<{ error: NuxtError }>()
 
 const { locale } = useI18n()
+const localePath = useLocalePath()
 const uiLocale = computed(() => (locale.value === 'en' ? en : fr))
 const statusCode = computed(() => props.error.statusCode ?? 500)
 
 useHead({ title: () => String(statusCode.value) })
 
-const goHome = () => clearError({ redirect: '/' })
+const goHome = () => clearError({ redirect: localePath('/') })
 </script>

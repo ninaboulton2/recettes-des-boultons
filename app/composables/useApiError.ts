@@ -21,7 +21,7 @@ export class ApiError extends Error {
   readonly statusMessage: string
 
   constructor(statusCode: number, statusMessage: string) {
-    super(statusCode >= 500 || !statusMessage ? translate('errors.generic', FALLBACK_GENERIC) : statusMessage)
+    super(statusCode >= 500 || !statusMessage ? translateKey('errors.generic', FALLBACK_GENERIC) : statusMessage)
     this.name = 'ApiError'
     this.statusCode = statusCode
     this.statusMessage = statusMessage
@@ -32,8 +32,11 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError
 }
 
-/** Traduction i18n si l'app Nuxt est disponible, sinon repli français. */
-function translate(key: string, fallback: string): string {
+/**
+ * Traduction i18n si l'app Nuxt est disponible (stores, composables), sinon
+ * repli français (tests unitaires sans Nuxt).
+ */
+export function translateKey(key: string, fallback: string): string {
   try {
     const translated = useNuxtApp().$i18n.t(key)
     return translated && translated !== key ? translated : fallback
@@ -71,7 +74,7 @@ function readStatusMessage(error: StatusLike): string {
  * Ne laisse jamais passer un message technique (Supabase, réseau, 5xx).
  */
 export function toUserMessage(error: unknown): string {
-  const generic = translate('errors.generic', FALLBACK_GENERIC)
+  const generic = translateKey('errors.generic', FALLBACK_GENERIC)
 
   if (isApiError(error)) {
     return error.statusCode < 500 && error.statusMessage ? error.statusMessage : generic
@@ -79,7 +82,7 @@ export function toUserMessage(error: unknown): string {
 
   // Erreur réseau (fetch) : TypeError « Failed to fetch » / « fetch failed ».
   if (error instanceof TypeError) {
-    return translate('errors.network', FALLBACK_NETWORK)
+    return translateKey('errors.network', FALLBACK_NETWORK)
   }
 
   if (typeof error === 'object' && error !== null) {

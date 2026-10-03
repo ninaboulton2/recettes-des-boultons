@@ -217,6 +217,11 @@
       "backToList": "Retour aux recettes",
       "ingredientsLoading": "Chargement des ingrédients...",
       "noIngredients": "Cette recette n’a pas encore d’ingrédients."
+    },
+    "new": {
+      "label": "Nouvelle recette",
+      "manual": "Saisir une recette",
+      "ai": "Importer avec l'IA"
     }
   },
   "recipeDetail": {
@@ -611,16 +616,6 @@
     "noMeal": "—",
     "footer": "Recettes des Boultons"
   },
-  "recipePrint": {
-    "title": "Recettes des Boultons",
-    "category": "Catégorie :",
-    "time": "Temps :",
-    "servings": "Portions :",
-    "ingredients": "Ingrédients",
-    "instructions": "Instructions",
-    "notes": "Notes et conseils",
-    "footer": "Recettes des Boultons - {date}"
-  },
   "translator": {
     "title": "Ajouter une recette par IA",
     "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français) : l'IA la structure en sections, ingrédients et étapes. Vous vérifiez l'aperçu avant de l'ajouter.",
@@ -686,7 +681,8 @@
       "emailFirst": "Saisissez d'abord votre e-mail, puis cliquez sur « Mot de passe oublié ».",
       "resetSent": "E-mail de réinitialisation envoyé : vérifiez votre boîte mail.",
       "resetError": "Impossible d'envoyer l'e-mail de réinitialisation.",
-      "noAccount": "Pas encore de compte ?"
+      "noAccount": "Pas encore de compte ?",
+      "invalidCredentials": "E-mail ou mot de passe incorrect."
     },
     "signup": {
       "title": "Inscription",
@@ -702,7 +698,8 @@
       "error": "Erreur d'inscription",
       "success": "Inscription réussie",
       "checkEmail": "Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre compte.",
-      "hasAccount": "Déjà un compte ?"
+      "hasAccount": "Déjà un compte ?",
+      "alreadyExists": "Un compte existe déjà avec cet e-mail."
     },
     "password": {
       "show": "Afficher le mot de passe",
@@ -742,6 +739,9 @@
   },
   "errors": {
     "generic": "Une erreur est survenue, réessayez plus tard.",
-    "network": "Connexion impossible, vérifiez votre réseau puis réessayez."
+    "network": "Connexion impossible, vérifiez votre réseau puis réessayez.",
+    "invalidRecipe": "Données de recette invalides.",
+    "loginRequired": "Vous devez être connecté.",
+    "noListSelected": "Aucune liste sélectionnée."
   }
 }

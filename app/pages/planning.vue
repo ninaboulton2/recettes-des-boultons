@@ -235,8 +235,8 @@ watch(() => route.query, (query) => {
 }, { immediate: true })
 
 useHead({
-  title: `${t('planning.title')} - Recettes des Boultons`,
-  meta: [{ name: 'description', content: t('planning.subtitle') }]
+  title: () => t('planning.title'),
+  meta: [{ name: 'description', content: () => t('planning.subtitle') }]
 })
 </script>
 

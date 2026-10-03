@@ -129,9 +129,10 @@ const toggleFavorite = async () => {
     $toast.info(t('ui.card.loginRequired'))
     return
   }
+  const wasFavorite = isFavorite.value
   const result = await favoritesStore.toggleFavorite(props.recipe.id)
   if (result.success) {
-    $toast.success(t('ui.favorites.updated'), result.message)
+    $toast.success(wasFavorite ? t('recipeDetail.actions.favoriteRemoved') : t('recipeDetail.actions.favoriteAdded'))
   } else {
     $toast.error(t('ui.favorites.error'), result.error || '')
   }

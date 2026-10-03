@@ -185,8 +185,8 @@ const print = () => {
 }
 
 useHead({
-  title: `${t('shopping.title')} - Recettes des Boultons`,
-  meta: [{ name: 'description', content: t('shopping.subtitle') }]
+  title: () => t('shopping.title'),
+  meta: [{ name: 'description', content: () => t('shopping.subtitle') }]
 })
 </script>
 

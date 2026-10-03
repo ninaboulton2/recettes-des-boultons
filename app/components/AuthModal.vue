@@ -108,6 +108,7 @@ const props = defineProps<{ isOpen: boolean }>()
 const emit = defineEmits<{ close: [], success: [] }>()
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 const authStore = useAuthStore()
 const supabase = useSupabaseClient()
 const hasProviders = useAuthProviders().length > 0
@@ -191,15 +192,22 @@ const onForgotPassword = async () => {
   info.value = ''
   try {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(login.email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: `${window.location.origin}${localePath('/reset-password')}`
     })
-    if (resetError) error.value = resetError.message || t('auth.login.resetError')
+    if (resetError) error.value = t('auth.login.resetError')
     else info.value = t('auth.login.resetSent')
   } catch {
     error.value = t('auth.login.resetError')
   } finally {
     resetting.value = false
   }
+}
+
+/** Message i18n pour les codes d'erreur Supabase Auth les plus courants. */
+const signUpErrorMessage = (code: string | undefined): string => {
+  if (code === 'user_already_exists' || code === 'email_exists') return t('auth.signup.alreadyExists')
+  if (code === 'weak_password') return t('auth.signup.passwordTooShort')
+  return t('auth.signup.error')
 }
 
 const onSignup = async (event: FormSubmitEvent<SignupSchema>) => {
@@ -213,7 +221,7 @@ const onSignup = async (event: FormSubmitEvent<SignupSchema>) => {
       options: { data: { name: event.data.name, role: 'user' } }
     })
     if (signUpError) {
-      error.value = signUpError.message || t('auth.signup.error')
+      error.value = signUpErrorMessage(signUpError.code)
     } else if (data.session) {
       // Confirmation d'e-mail désactivée → connexion immédiate
       await authStore.checkAuth()

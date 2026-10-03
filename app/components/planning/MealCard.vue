@@ -28,7 +28,7 @@
     <div class="min-w-0 flex-1 lg:pr-5 print:pr-0">
       <NuxtLink
         v-if="meal.recipe"
-        :to="`/recettes/${meal.recipe.id}`"
+        :to="localePath(`/recettes/${meal.recipe.id}`)"
         class="line-clamp-2 break-words text-sm leading-snug text-default hover:text-primary lg:text-xs"
         :title="title"
       >
@@ -75,6 +75,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 const supabase = useSupabaseClient<Database>()
 
 const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled')))
@@ -88,7 +89,7 @@ const photoUrl = computed(() => {
 const menuItems = computed(() => [
   [
     ...(props.meal.recipe
-      ? [{ label: t('planning.meal.open'), icon: 'i-lucide-book-open', to: `/recettes/${props.meal.recipe.id}` }]
+      ? [{ label: t('planning.meal.open'), icon: 'i-lucide-book-open', to: localePath(`/recettes/${props.meal.recipe.id}`) }]
       : []),
     { label: t('planning.meal.move'), icon: 'i-lucide-arrow-right-left', onSelect: () => emit('move', props.meal) }
   ],

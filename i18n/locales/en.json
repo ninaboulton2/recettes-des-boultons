@@ -217,6 +217,11 @@
       "backToList": "Back to recipes",
       "ingredientsLoading": "Loading ingredients...",
       "noIngredients": "This recipe has no ingredients yet."
+    },
+    "new": {
+      "label": "New recipe",
+      "manual": "Write a recipe",
+      "ai": "Import with AI"
     }
   },
   "recipeDetail": {
@@ -624,7 +629,8 @@
       "emailFirst": "Enter your email first, then click “Forgot password”.",
       "resetSent": "Reset email sent: check your inbox.",
       "resetError": "Could not send the reset email.",
-      "noAccount": "No account yet?"
+      "noAccount": "No account yet?",
+      "invalidCredentials": "Incorrect email or password."
     },
     "signup": {
       "title": "Sign up",
@@ -640,7 +646,8 @@
       "error": "Sign-up failed",
       "success": "Signed up",
       "checkEmail": "Signed up! Check your inbox to confirm your account.",
-      "hasAccount": "Already have an account?"
+      "hasAccount": "Already have an account?",
+      "alreadyExists": "An account already exists with this email."
     },
     "password": {
       "show": "Show password",
@@ -681,13 +688,12 @@
   "footer": {
     "copyright": "© {year} Recettes des Boultons. All rights reserved."
   },
-  "language_switcher": {
-    "french": "French",
-    "english": "English"
-  },
   "errors": {
     "generic": "Something went wrong, please try again later.",
-    "network": "Unable to connect, check your network and try again."
+    "network": "Unable to connect, check your network and try again.",
+    "invalidRecipe": "Invalid recipe data.",
+    "loginRequired": "You need to be signed in.",
+    "noListSelected": "No list selected."
   },
   "translator": {
     "title": "Add a recipe with AI",
