@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
+import { apiErrorFromResponse, toUserMessage, translateKey } from '~/composables/useApiError'
 import type { Favorite, RecipeSummary } from '#shared/types'
 import type { Database } from '#shared/types/database'
 import { RECIPE_SUMMARY_COLUMNS, toRecipeSummary } from '#shared/utils/recipes'
@@ -88,7 +88,7 @@ export const useFavoritesStore = defineStore('favorites', {
         return this.favorites
       } catch (error) {
         console.error('Erreur chargement favoris:', error)
-        this.error = error instanceof Error ? error.message : 'Erreur inconnue'
+        this.error = toUserMessage(error)
         throw error
       } finally {
         this.isLoading = false
@@ -118,7 +118,7 @@ export const useFavoritesStore = defineStore('favorites', {
         const userId = authStore.currentUser?.id || null
 
         if (!userId) {
-          throw new Error('Vous devez être connecté pour ajouter des favoris')
+          throw new Error(translateKey('errors.loginRequired', 'Vous devez être connecté.'))
         }
 
         const response = await apiFetch('/api/favorites', {
@@ -136,9 +136,9 @@ export const useFavoritesStore = defineStore('favorites', {
         const data = await response.json()
         if (data.success) {
           this.favorites.push(data.favorite)
-          return { success: true, message: data.message }
+          return { success: true }
         } else {
-          throw new Error('Erreur lors de l\'ajout du favori')
+          throw new Error(translateKey('errors.generic', 'Une erreur est survenue, réessayez plus tard.'))
         }
       } catch (error) {
         console.error('Erreur ajout favori:', error)
@@ -153,7 +153,7 @@ export const useFavoritesStore = defineStore('favorites', {
         const userId = authStore.currentUser?.id || null
 
         if (!userId) {
-          throw new Error('Vous devez être connecté pour gérer vos favoris')
+          throw new Error(translateKey('errors.loginRequired', 'Vous devez être connecté.'))
         }
 
         const response = await apiFetch(`/api/favorites?recipeId=${recipeId}&userId=${userId}`, {
@@ -167,9 +167,9 @@ export const useFavoritesStore = defineStore('favorites', {
         const data = await response.json()
         if (data.success) {
           this.favorites = this.favorites.filter(f => f.recipeId !== recipeId)
-          return { success: true, message: data.message }
+          return { success: true }
         } else {
-          throw new Error('Erreur lors de la suppression du favori')
+          throw new Error(translateKey('errors.generic', 'Une erreur est survenue, réessayez plus tard.'))
         }
       } catch (error) {
         console.error('Erreur suppression favori:', error)

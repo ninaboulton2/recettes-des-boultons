@@ -126,6 +126,7 @@ import type { AiTargetLanguage } from '#shared/schemas/ai'
  * l'affichage (Nuxt UI, utilitaires sémantiques uniquement).
  */
 const { t } = useI18n()
+const localePath = useLocalePath()
 const toast = useToast()
 
 const {
@@ -165,8 +166,8 @@ const successActions = computed(() => {
   if (!added.value) return []
   const recipeId = added.value.id
   return [
-    { label: t('translator.success.view'), icon: 'i-lucide-book-open', onClick: () => { navigateTo(`/recettes/${recipeId}`) } },
-    { label: t('translator.success.all'), color: 'neutral' as const, variant: 'outline' as const, onClick: () => { navigateTo('/recettes') } },
+    { label: t('translator.success.view'), icon: 'i-lucide-book-open', onClick: () => { navigateTo(localePath(`/recettes/${recipeId}`)) } },
+    { label: t('translator.success.all'), color: 'neutral' as const, variant: 'outline' as const, onClick: () => { navigateTo(localePath('/recettes')) } },
     { label: t('translator.success.another'), color: 'neutral' as const, variant: 'ghost' as const, icon: 'i-lucide-plus', onClick: () => { reset() } }
   ]
 })

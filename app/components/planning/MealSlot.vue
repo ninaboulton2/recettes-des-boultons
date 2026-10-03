@@ -36,7 +36,7 @@
     <button
       v-else
       type="button"
-      class="flex min-h-11 w-full items-center justify-center rounded-lg border border-dashed border-default text-xs text-dimmed transition-colors hover:border-primary hover:text-primary print:hidden"
+      class="flex min-h-11 w-full items-center justify-center rounded-lg border border-dashed border-default text-xs text-muted transition-colors hover:border-primary hover:text-primary print:hidden"
       @click="emit('add', dateString, mealType)"
     >
       {{ dragOver ? $t('planning.slot.dropHere') : $t('planning.slot.empty') }}

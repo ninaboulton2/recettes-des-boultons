@@ -73,11 +73,20 @@
   }
 }
 
-@layer components {
-  /* TODO(phase 4) : classe historique encore utilisée par pages/recettes/[id].vue,
-     components/RecipeTranslator.vue et pages/courses.vue. À remplacer par
-     <UButton> puis supprimer. */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-inverted transition-colors hover:bg-primary/90 disabled:opacity-50;
+/* Impression d'une fiche recette (pages/recettes/[id].vue) : pas de navigation
+   ni d'actions, encre noire sur papier blanc, sauts de page propres. */
+@media print {
+  /* Page nommée : ne touche pas au @page (paysage) de l'impression du planning. */
+  @page recipe-sheet { margin: 1.5cm; }
+
+  body:has(#recipe-sheet) {
+    background: white !important;
+    color: black !important;
+
+    header, footer, nav, [data-print-hidden] { display: none !important; }
+    #recipe-sheet { max-width: none !important; page: recipe-sheet; }
+    #recipe-sheet :is(h1, h2, h3) { break-after: avoid; }
+    #recipe-sheet li { break-inside: avoid; }
+    #recipe-sheet a { text-decoration: none; color: inherit; }
   }
 }

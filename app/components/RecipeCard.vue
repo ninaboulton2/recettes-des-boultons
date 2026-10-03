@@ -2,18 +2,22 @@
   <article
     class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-default bg-default transition-colors hover:border-accented focus-within:border-accented"
   >
-    <!-- Visuel : photo (URL publique du bucket Storage `recipe-photos`, servie
-         telle quelle : le provider ipx n'autorise pas les domaines externes) ou
-         icône de catégorie -->
+    <!-- Visuel : photo (bucket Storage `recipe-photos`, optimisée par @nuxt/image)
+         ou icône de catégorie -->
     <div class="relative aspect-[4/3] overflow-hidden bg-muted">
-      <img
+      <NuxtImg
         v-if="photoUrl"
         :src="photoUrl"
         alt=""
+        sizes="xs:100vw sm:50vw lg:33vw xl:25vw"
+        :width="400"
+        :height="300"
+        fit="cover"
+        format="webp"
         loading="lazy"
         decoding="async"
         class="size-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
-      >
+      />
       <div v-else class="flex size-full items-center justify-center">
         <UIcon :name="categoryIcon(recipe.category)" class="size-10 text-dimmed" aria-hidden="true" />
       </div>
@@ -106,7 +110,7 @@ const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 const { $toast } = useNuxtApp()
 const { categoryIcon } = useCategories()
-const runtimeConfig = useRuntimeConfig()
+const { publicUrl } = useRecipePhoto()
 
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
 const duration = computed(() => totalTime(props.recipe))
@@ -114,12 +118,7 @@ const visibleTags = computed(() => props.recipe.tags.slice(0, MAX_TAGS))
 const hiddenTagCount = computed(() => Math.max(0, props.recipe.tags.length - MAX_TAGS))
 
 /** URL publique de la photo dans le bucket Storage `recipe-photos`. */
-const photoUrl = computed(() => {
-  const path = props.recipe.photoPath
-  if (!path) return null
-  const base = String(runtimeConfig.public.supabase.url ?? '').replace(/\/$/, '')
-  return `${base}/storage/v1/object/public/recipe-photos/${path.split('/').map(encodeURIComponent).join('/')}`
-})
+const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
 
 const showPlanningModal = ref(false)
 const showShoppingModal = ref(false)
@@ -129,9 +128,10 @@ const toggleFavorite = async () => {
     $toast.info(t('ui.card.loginRequired'))
     return
   }
+  const wasFavorite = isFavorite.value
   const result = await favoritesStore.toggleFavorite(props.recipe.id)
   if (result.success) {
-    $toast.success(t('ui.favorites.updated'), result.message)
+    $toast.success(wasFavorite ? t('recipeDetail.actions.favoriteRemoved') : t('recipeDetail.actions.favoriteAdded'))
   } else {
     $toast.error(t('ui.favorites.error'), result.error || '')
   }

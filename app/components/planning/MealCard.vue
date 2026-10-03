@@ -11,13 +11,18 @@
       class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted print:hidden"
       :class="photoUrl ? 'lg:size-7' : 'lg:hidden'"
     >
-      <img
+      <NuxtImg
         v-if="photoUrl"
         :src="photoUrl"
         alt=""
-        class="size-full object-cover"
+        :width="32"
+        :height="32"
+        densities="x1 x2"
+        fit="cover"
+        format="webp"
         loading="lazy"
-      >
+        class="size-full object-cover"
+      />
       <UIcon
         v-else
         :name="meal.recipe ? 'i-lucide-utensils' : 'i-lucide-pencil-line'"
@@ -28,7 +33,7 @@
     <div class="min-w-0 flex-1 lg:pr-5 print:pr-0">
       <NuxtLink
         v-if="meal.recipe"
-        :to="`/recettes/${meal.recipe.id}`"
+        :to="localePath(`/recettes/${meal.recipe.id}`)"
         class="line-clamp-2 break-words text-sm leading-snug text-default hover:text-primary lg:text-xs"
         :title="title"
       >
@@ -54,7 +59,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PlanningMeal } from '#shared/types'
-import type { Database } from '#shared/types/database'
 import { mealTitle } from '~/composables/usePlanningWeek'
 
 /**
@@ -75,20 +79,18 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const supabase = useSupabaseClient<Database>()
+const localePath = useLocalePath()
+const { publicUrl } = useRecipePhoto()
 
 const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled')))
 
 /** URL publique de la photo (bucket `recipe-photos`), `null` sans photo. */
-const photoUrl = computed(() => {
-  const path = props.meal.recipe?.photoPath
-  return path ? supabase.storage.from('recipe-photos').getPublicUrl(path).data.publicUrl : null
-})
+const photoUrl = computed(() => publicUrl(props.meal.recipe?.photoPath))
 
 const menuItems = computed(() => [
   [
     ...(props.meal.recipe
-      ? [{ label: t('planning.meal.open'), icon: 'i-lucide-book-open', to: `/recettes/${props.meal.recipe.id}` }]
+      ? [{ label: t('planning.meal.open'), icon: 'i-lucide-book-open', to: localePath(`/recettes/${props.meal.recipe.id}`) }]
       : []),
     { label: t('planning.meal.move'), icon: 'i-lucide-arrow-right-left', onSelect: () => emit('move', props.meal) }
   ],

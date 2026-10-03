@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { JwtPayload } from '@supabase/supabase-js'
 import type { Database } from '#shared/types/database'
 import type { LoginCredentials, User, UserRole } from '#shared/types'
+import { translateKey } from '~/composables/useApiError'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
@@ -122,10 +123,10 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (error) {
-        return { success: false, error: error.message || 'Identifiants invalides' }
+        return { success: false, error: translateKey('auth.login.invalidCredentials', 'Identifiants invalides') }
       }
       if (!data.user) {
-        return { success: false, error: 'Aucun utilisateur retourné' }
+        return { success: false, error: translateKey('auth.login.error', 'Erreur de connexion') }
       }
 
       await loadProfile(data.user.id)
@@ -134,7 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('Erreur de connexion:', error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Erreur de connexion'
+        error: translateKey('auth.login.error', 'Erreur de connexion')
       }
     }
   }

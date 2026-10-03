@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Recipe, RecipeInput } from '#shared/types'
+import type { Recipe } from '#shared/types'
 import RecipeEditorForm from './editor/RecipeEditorForm.vue'
 
 /**
@@ -40,7 +40,7 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{
   close: []
-  save: [recipe: Recipe | RecipeInput]
+  save: [recipe: Recipe]
 }>()
 
 const onOpenChange = (open: boolean) => {

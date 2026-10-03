@@ -1,3 +1,4 @@
+import { translateKey } from './useApiError'
 import type { Database } from '#shared/types/database'
 
 /** Bucket Storage public des photos de recettes (migration 0010). */
@@ -73,7 +74,7 @@ export async function resizeRecipeImage(file: File): Promise<ResizedImage> {
     return { blob: webp, contentType: 'image/webp', extension: 'webp', width, height }
   }
   const jpeg = await canvasToBlob(canvas, 'image/jpeg', JPEG_FALLBACK_QUALITY)
-  if (!jpeg) throw new Error('Encodage de l\'image impossible')
+  if (!jpeg) throw new Error(translateKey('editor.toasts.photoError', 'Encodage de l\'image impossible'))
   return { blob: jpeg, contentType: 'image/jpeg', extension: 'jpg', width, height }
 }
 

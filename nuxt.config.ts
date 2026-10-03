@@ -82,7 +82,26 @@ export default defineNuxtConfig({
   },
   image: {
     quality: 80,
-    format: ['webp', 'jpg', 'png']
+    format: ['webp', 'jpg', 'png'],
+    // Points de rupture Tailwind + `xs` (téléphones) pour les `sizes` mobile-first
+    // des photos (`xs:100vw sm:50vw …`).
+    screens: { 'xs': 320, 'sm': 640, 'md': 768, 'lg': 1024, 'xl': 1280, '2xl': 1536 },
+    // Photos de recettes : URL publique du bucket Storage `recipe-photos`.
+    // Domaines autorisés pour l'optimisation (ipx en dev, Vercel en prod) :
+    // hôte de SUPABASE_URL (lu au build) + base Supabase locale hors Vercel.
+    // Un domaine non listé n'est pas optimisé (URL d'origine). Le provider
+    // `supabase` de @nuxt/image n'est pas utilisé : il exige la transformation
+    // d'images, absente du plan Supabase gratuit.
+    domains: [
+      ...(() => {
+        try {
+          return [new URL(process.env.SUPABASE_URL ?? '').host]
+        } catch {
+          return []
+        }
+      })(),
+      ...(process.env.VERCEL ? [] : ['127.0.0.1:54321'])
+    ]
   },
   runtimeConfig: {
     // --- IA (traducteur de recettes, server/utils/ai/provider.ts) ---

@@ -76,7 +76,7 @@
             :disabled="!mode.hasPrev.value"
             @click="mode.prev()"
           />
-          <p class="hidden text-xs text-dimmed md:block">
+          <p class="hidden text-xs text-muted md:block">
             <UKbd value="arrowleft" /> <UKbd value="arrowright" /> · <UKbd value="escape" />
             <span class="ml-1">{{ $t('recipeDetail.cooking.keyboardHint') }}</span>
           </p>

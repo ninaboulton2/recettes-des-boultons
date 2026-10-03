@@ -2,6 +2,7 @@
   <UFormField :label="$t('editor.photo.label')" :help="$t('editor.photo.hint')" name="photoPath">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
       <div class="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg border border-default bg-muted sm:w-56">
+        <!-- <img> natif : l'aperçu peut être une object URL (blob:) du fichier choisi. -->
         <img v-if="previewUrl" :src="previewUrl" alt="" class="h-full w-full object-cover">
         <div v-else class="flex h-full w-full items-center justify-center text-dimmed">
           <UIcon name="i-lucide-image" class="size-8" aria-hidden="true" />

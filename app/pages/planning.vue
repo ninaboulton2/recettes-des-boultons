@@ -58,7 +58,7 @@
         <p v-if="week.isEmptyWeek.value" class="text-center text-sm text-muted print:hidden">
           {{ $t('planning.empty.title') }} — {{ $t('planning.empty.description') }}
         </p>
-        <p v-else class="hidden text-center text-xs text-dimmed lg:block print:hidden">
+        <p v-else class="hidden text-center text-xs text-muted lg:block print:hidden">
           {{ $t('planning.dnd.hint') }}
         </p>
 
@@ -235,8 +235,8 @@ watch(() => route.query, (query) => {
 }, { immediate: true })
 
 useHead({
-  title: `${t('planning.title')} - Recettes des Boultons`,
-  meta: [{ name: 'description', content: t('planning.subtitle') }]
+  title: () => t('planning.title'),
+  meta: [{ name: 'description', content: () => t('planning.subtitle') }]
 })
 </script>
 

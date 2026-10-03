@@ -7,7 +7,9 @@
       </div>
       <div class="flex items-center gap-3">
         <ActionLoading v-if="recipesStore.isLoading" :message="$t('ui.common.updating')" />
-        <UButton v-if="authStore.isAdmin" :to="localePath('/traducteur')" icon="i-lucide-plus" :label="$t('home.addRecipe')" />
+        <UDropdownMenu v-if="authStore.isAdmin" :items="newRecipeItems" :content="{ align: 'end' }">
+          <UButton icon="i-lucide-plus" trailing-icon="i-lucide-chevron-down" :label="$t('recipes.new.label')" />
+        </UDropdownMenu>
       </div>
     </header>
 
@@ -42,9 +44,7 @@
         />
       </div>
 
-      <nav v-if="totalPages > 1" class="flex justify-center" :aria-label="$t('ui.pagination.label')">
-        <UPagination v-model:page="page" :total="totalCount" :items-per-page="pageSize" :sibling-count="1" show-edges />
-      </nav>
+      <RecipePagination v-if="totalPages > 1" v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
     </template>
 
     <EmptyState v-else icon="i-lucide-search-x" :title="$t('recipes.empty.title')" :message="$t('recipes.empty.description')">
@@ -53,22 +53,25 @@
       </template>
     </EmptyState>
 
-    <RecipeEditor :show="showRecipeEditor" :recipe="editingRecipe" @close="closeRecipeEditor" @save="closeRecipeEditor" />
+    <RecipeEditor :show="showRecipeEditor" :recipe="editingRecipe" @close="closeRecipeEditor" @save="onRecipeSaved" />
 
-    <ConfirmModal
-      :show="showDeleteModal"
+    <UModal
+      :open="recipeToDelete !== null"
       :title="$t('ui.deleteRecipe.title')"
-      :message="recipeToDelete ? $t('ui.deleteRecipe.message', { title: recipeToDelete.title }) : ''"
-      :confirm-text="$t('ui.common.delete')"
-      :cancel-text="$t('ui.common.cancel')"
-      :loading="deleting"
-      @confirm="deleteRecipe"
-      @close="closeDeleteModal"
-    />
+      :description="recipeToDelete ? $t('ui.deleteRecipe.message', { title: recipeToDelete.title }) : ''"
+      :ui="{ footer: 'justify-end' }"
+      @update:open="value => !value && closeDeleteModal()"
+    >
+      <template #footer>
+        <UButton :label="$t('ui.common.cancel')" color="neutral" variant="ghost" @click="closeDeleteModal" />
+        <UButton :label="$t('ui.common.delete')" color="error" icon="i-lucide-trash-2" :loading="deleting" @click="deleteRecipe" />
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Recipe, RecipeSummary } from '#shared/types'
 import type { Database } from '#shared/types/database'
 
@@ -149,16 +152,25 @@ const availableTags = computed(() => facets.tagsForCategory(recipesStore.current
 
 const clearFilters = () => recipesStore.clearFilters()
 
-// Édition : l'éditeur a besoin des sections → requête ciblée
+// Création (saisie manuelle ou import IA) et édition : l'éditeur a besoin des sections
 const showRecipeEditor = ref(false)
 const editingRecipe = ref<Recipe | null>(null)
 
+const newRecipeItems = computed<DropdownMenuItem[]>(() => [
+  { label: t('recipes.new.manual'), icon: 'i-lucide-pencil-line', onSelect: () => openEditor(null) },
+  { label: t('recipes.new.ai'), icon: 'i-lucide-sparkles', to: localePath('/traducteur') }
+])
+
+const openEditor = (recipe: Recipe | null) => {
+  editingRecipe.value = recipe
+  showRecipeEditor.value = true
+}
+
 const editRecipe = async (recipe: RecipeSummary) => {
   try {
-    editingRecipe.value = await fetchRecipeById(supabase, recipe.id)
-    showRecipeEditor.value = editingRecipe.value !== null
-  } catch (loadError) {
-    console.error('Erreur lors du chargement de la recette :', loadError)
+    const full = await fetchRecipeById(supabase, recipe.id)
+    if (full) openEditor(full)
+  } catch {
     $toast.error(t('ui.editRecipe.loadError'))
   }
 }
@@ -169,14 +181,19 @@ const closeRecipeEditor = () => {
   // La liste observe recipesStore.revision : elle se recharge seule après un enregistrement
 }
 
-// Suppression
-const showDeleteModal = ref(false)
+/** Après une création, on ouvre la fiche de la nouvelle recette. */
+const onRecipeSaved = (saved: Recipe) => {
+  const created = editingRecipe.value === null
+  closeRecipeEditor()
+  if (created) void navigateTo(localePath(`/recettes/${saved.id}`))
+}
+
+// Suppression (photos du bucket comprises : voir recipesStore.deleteRecipe)
 const deleting = ref(false)
 const recipeToDelete = ref<RecipeSummary | null>(null)
 
 const confirmDeleteRecipe = (recipe: RecipeSummary) => {
   recipeToDelete.value = recipe
-  showDeleteModal.value = true
 }
 
 const deleteRecipe = async () => {
@@ -184,18 +201,18 @@ const deleteRecipe = async () => {
   deleting.value = true
   try {
     await recipesStore.deleteRecipe(recipeToDelete.value.id)
-    closeDeleteModal()
+    recipeToDelete.value = null
     $toast.success(t('ui.deleteRecipe.success'))
-  } catch {
-    $toast.error(t('ui.deleteRecipe.error'))
+  } catch (deleteError) {
+    $toast.error(t('ui.deleteRecipe.error'), toUserMessage(deleteError))
   } finally {
     deleting.value = false
   }
 }
 
+/** Fermeture par l'utilisateur (Annuler, Échap, fond), ignorée pendant la suppression. */
 const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  recipeToDelete.value = null
+  if (!deleting.value) recipeToDelete.value = null
 }
 
 useHead({

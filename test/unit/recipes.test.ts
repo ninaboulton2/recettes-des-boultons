@@ -15,7 +15,6 @@ const baseRow = {
   prep_time: 15,
   cook_time: 30,
   servings: 4,
-  image: null,
   photo_path: null,
   tags: null,
   notes: null,
@@ -34,7 +33,6 @@ describe('toRecipeSummary', () => {
       prepTime: 15,
       cookTime: 30,
       servings: 4,
-      image: '/images/plats.png',
       photoPath: null,
       tags: [],
       notes: '',
@@ -43,11 +41,11 @@ describe('toRecipeSummary', () => {
     })
     expect(summary).not.toHaveProperty('ingredients')
     expect(summary).not.toHaveProperty('instructions')
+    expect(summary).not.toHaveProperty('image')
   })
 
-  it('conserve photo_path et image quand ils sont renseignés', () => {
-    const summary = toRecipeSummary({ ...baseRow, image: '/images/custom.png', photo_path: 'r1/cover.webp', tags: ['vegan'] })
-    expect(summary.image).toBe('/images/custom.png')
+  it('conserve photo_path quand il est renseigné', () => {
+    const summary = toRecipeSummary({ ...baseRow, photo_path: 'r1/cover.webp', tags: ['vegan'] })
     expect(summary.photoPath).toBe('r1/cover.webp')
     expect(summary.tags).toEqual(['vegan'])
   })

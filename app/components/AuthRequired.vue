@@ -10,10 +10,11 @@
       {{ $t('auth.required.description') }}
     </p>
     <UButton class="mt-8" size="lg" block icon="i-lucide-log-in" :label="$t('auth.required.loginButton')" @click="emit('login')" />
-    <UButton class="mt-4" variant="link" color="neutral" to="/" :label="$t('auth.required.backToHome')" />
+    <UButton class="mt-4" variant="link" color="neutral" :to="localePath('/')" :label="$t('auth.required.backToHome')" />
   </div>
 </template>
 
 <script setup lang="ts">
 const emit = defineEmits<{ login: [] }>()
+const localePath = useLocalePath()
 </script>

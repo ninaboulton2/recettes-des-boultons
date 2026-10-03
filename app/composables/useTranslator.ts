@@ -1,6 +1,4 @@
-import type { Recipe, RecipeInput as StoreRecipeInput } from '#shared/types'
-import type { RecipeInput } from '#shared/schemas/recipe'
-import { amountToText } from '#shared/schemas/common'
+import type { Recipe, RecipeInput } from '#shared/types'
 import type { AiTargetLanguage, TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
 import { apiFetch } from '~/composables/useApi'
 
@@ -8,6 +6,7 @@ import { apiFetch } from '~/composables/useApi'
  * État et actions de la page /traducteur :
  *  1. `translate()` : texte collé → `POST /api/translate-recipe` → aperçu (`preview`, un `RecipeInput`) ;
  *  2. `addToRecipes()` : aperçu → `useRecipesStore().addRecipe()` → recette créée (`added`) ;
+ *     l'aperçu est déjà un `RecipeInput` (schéma Zod) : il part tel quel ;
  *  3. `editText()` / `reset()` pour revenir en arrière.
  *
  * Les erreurs passent par `toUserMessage` (messages serveur en français pour
@@ -20,49 +19,15 @@ export type TranslatorStep = 'input' | 'preview' | 'done'
 export const RECIPE_TEXT_MIN = 20
 export const RECIPE_TEXT_MAX = 20000
 
-/**
- * Le serveur renvoie la forme validée par `recipeInputSchema` (quantités
- * numériques, `null` autorisés, `unitCode`) ; le store attend la forme de
- * l'éditeur (`#shared/types` : textes, `undefined`). `unitCode` est conservé
- * par le spread : `POST /api/add-recipe` l'accepte.
- */
-export function toStoreRecipeInput(recipe: RecipeInput): StoreRecipeInput {
-  return {
-    title: recipe.title,
-    category: recipe.category,
-    description: recipe.description ?? undefined,
-    notes: recipe.notes ?? undefined,
-    image: recipe.image ?? undefined,
-    prepTime: recipe.prepTime,
-    cookTime: recipe.cookTime,
-    servings: recipe.servings,
-    tags: recipe.tags ?? [],
-    sections: (recipe.sections ?? []).map((section, sectionIndex) => ({
-      name: section.name ?? '',
-      type: section.type ?? 'mixed',
-      orderIndex: section.orderIndex ?? sectionIndex,
-      ingredients: (section.ingredients ?? []).map((ingredient, ingredientIndex) => ({
-        ...ingredient,
-        amount: amountToText(ingredient.amount),
-        unit: ingredient.unit ?? null,
-        optional: ingredient.optional ?? false,
-        orderIndex: ingredient.orderIndex ?? ingredientIndex
-      })),
-      instructions: (section.instructions ?? []).map((step, stepIndex) =>
-        typeof step === 'string'
-          ? { content: step, orderIndex: stepIndex }
-          : { content: step.content, orderIndex: step.orderIndex ?? stepIndex })
-    }))
-  }
-}
-
 export function useTranslator() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const recipesStore = useRecipesStore()
   const { toUserMessage, apiErrorFromResponse, isApiError } = useApiError()
 
   const recipeText = ref('')
-  const targetLanguage = ref<AiTargetLanguage>('fr')
+  /** Langue cible proposée : celle de l'interface. */
+  const defaultLanguage = (): AiTargetLanguage => (locale.value === 'en' ? 'en' : 'fr')
+  const targetLanguage = ref<AiTargetLanguage>(defaultLanguage())
   const isTranslating = ref(false)
   const isAdding = ref(false)
   const preview = ref<RecipeInput | null>(null)
@@ -114,7 +79,7 @@ export function useTranslator() {
     isAdding.value = true
     error.value = null
     try {
-      added.value = await recipesStore.addRecipe(toStoreRecipeInput(preview.value))
+      added.value = await recipesStore.addRecipe(preview.value)
     } catch (err: unknown) {
       error.value = describeError(err)
     } finally {
@@ -131,7 +96,7 @@ export function useTranslator() {
 
   function reset(): void {
     recipeText.value = ''
-    targetLanguage.value = 'fr'
+    targetLanguage.value = defaultLanguage()
     preview.value = null
     usage.value = null
     added.value = null

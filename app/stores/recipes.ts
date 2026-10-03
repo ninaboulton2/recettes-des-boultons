@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse } from '~/composables/useApiError'
+import { apiErrorFromResponse, translateKey } from '~/composables/useApiError'
+import { useRecipePhoto } from '~/composables/useRecipePhoto'
 import type { Recipe, RecipeInput } from '#shared/types'
 
 interface RecipeMutationResponse {
@@ -25,6 +26,7 @@ interface DeleteResponse {
  * `revision` : appeler `refresh()` après une écriture les fait recharger.
  */
 export const useRecipesStore = defineStore('recipes', () => {
+  const { removeRecipePhotos } = useRecipePhoto()
   const currentCategory = ref<string | null>(null)
   const searchQuery = ref('')
   const selectedTags = ref<string[]>([])
@@ -45,7 +47,7 @@ export const useRecipesStore = defineStore('recipes', () => {
 
       // Validate recipe before adding
       if (!recipe || !recipe.title || !recipe.category) {
-        throw new Error('Données de recette invalides')
+        throw new Error(translateKey('errors.invalidRecipe', 'Données de recette invalides'))
       }
 
       // Appeler l'API pour ajouter la recette
@@ -68,7 +70,7 @@ export const useRecipesStore = defineStore('recipes', () => {
 
         return result.recipe
       } else {
-        throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
+        throw new Error(translateKey('errors.generic', 'Une erreur est survenue, réessayez plus tard.'))
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la recette:', error)
@@ -102,7 +104,7 @@ export const useRecipesStore = defineStore('recipes', () => {
 
         return result.recipe
       } else {
-        throw new Error(result.message || 'Erreur lors de la mise à jour')
+        throw new Error(translateKey('errors.generic', 'Une erreur est survenue, réessayez plus tard.'))
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la recette:', error)
@@ -112,9 +114,16 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
+  /** Supprime la recette ; ses photos (bucket `recipe-photos`) sont retirées d'abord. */
   const deleteRecipe = async (id: string) => {
     try {
       isLoading.value = true
+
+      try {
+        await removeRecipePhotos(id)
+      } catch (photoError) {
+        console.warn('[recettes] photos non supprimées du bucket', photoError)
+      }
 
       // Appeler l'API pour supprimer la recette
       const response = await apiFetch(`/api/delete-recipe?id=${id}`, {
@@ -131,7 +140,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         refresh()
         return result
       } else {
-        throw new Error(result.message || 'Erreur lors de la suppression')
+        throw new Error(translateKey('errors.generic', 'Une erreur est survenue, réessayez plus tard.'))
       }
     } catch (error) {
       console.error('Erreur lors de la suppression de la recette:', error)
