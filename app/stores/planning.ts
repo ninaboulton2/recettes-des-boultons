@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
+import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
 import { ref, onMounted, readonly } from 'vue'
 import type { Recipe } from '#shared/types'
 import { useAuthStore } from './auth'
@@ -56,7 +57,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -71,7 +72,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur ajout repas:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -99,7 +100,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -114,7 +115,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur ajout repas personnalisé:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -133,8 +134,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       // Supprimer du planning local
@@ -145,7 +145,7 @@ export const usePlanningStore = defineStore('planning', () => {
       return { success: true, message: 'Repas supprimé du planning' }
     } catch (error) {
       console.error('Erreur suppression repas:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -184,7 +184,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -204,7 +204,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur mise à jour notes jour:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -223,7 +223,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -239,7 +239,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur suppression notes jour:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -269,7 +269,7 @@ export const usePlanningStore = defineStore('planning', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -294,7 +294,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur mise à jour note groupe:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -325,7 +325,7 @@ export const usePlanningStore = defineStore('planning', () => {
       }
     } catch (error) {
       console.error('Erreur déplacement repas:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }

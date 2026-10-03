@@ -1,77 +1,35 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler } from 'h3'
+import { planningNoteQuerySchema } from '#shared/schemas'
 
+/**
+ * DELETE /api/planning-notes?dateString=&noteType= — supprime la note
+ * (toutes les lignes de cette date/type pour l'utilisateur). Idempotent :
+ * une note absente renvoie aussi `success`.
+ */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase, user } = await requireUser(event)
+    const { dateString, noteType } = validateQuery(event, planningNoteQuerySchema)
 
-    const query = getQuery(event)
-    const dateString = String(query.dateString || '')
-    const noteType = String(query.noteType || '')
-    const userId = user.id
-
-    if (!dateString || !noteType) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Date et type de note requis'
-      })
-    }
-
-    if (!['day', 'lunch', 'dinner'].includes(noteType)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Type de note doit être "day", "lunch" ou "dinner"'
-      })
-    }
-
-    // Vérifier que la note existe et appartient à l'utilisateur
-    const { data: existingNote, error: checkError } = await supabase
-      .from('planning_notes')
-      .select('id, content')
-      .eq('date_string', dateString)
-      .eq('note_type', noteType)
-      .eq('user_id', userId)
-      .single()
-
-    if (checkError || !existingNote) {
-      console.log('⚠️ Note non trouvée ou erreur de vérification:', checkError)
-      // Si la note n'existe pas, considérer que la suppression est réussie
-      return {
-        success: true,
-        message: 'Note supprimée avec succès (n\'existait pas)'
-      }
-    }
-
-    // Supprimer la note
-    const { error: deleteError } = await supabase
+    const { data, error } = await supabase
       .from('planning_notes')
       .delete()
-      .eq('id', existingNote.id)
+      .eq('date_string', dateString)
+      .eq('note_type', noteType)
+      .eq('user_id', user.id)
+      .select('id')
 
-    if (deleteError) {
-      console.error('❌ Erreur Supabase lors de la suppression:', deleteError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la suppression de la note: ${deleteError.message}`
-      })
+    if (error) {
+      throwSupabaseError(error, 'planning-notes.delete')
     }
 
-    console.log('✅ Note supprimée avec succès:', existingNote.id)
-
+    const deleted = data?.length ?? 0
     return {
       success: true,
-      message: 'Note supprimée avec succès'
+      deleted,
+      message: deleted > 0 ? 'Note supprimée' : 'Aucune note à supprimer'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de la note:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'planning-notes.delete')
   }
 })

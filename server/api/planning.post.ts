@@ -1,129 +1,108 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { planningEntryInputSchema } from '#shared/schemas'
+
+/**
+ * POST /api/planning — ajoute un repas (recette OU titre personnalisé) au planning.
+ * Body : `{ dateString: 'AAAA-MM-JJ', mealType: 'lunch'|'dinner', recipeId?, customTitle? }`.
+ */
+
+interface PlanningRecipeRow {
+  id: string
+  title: string
+  description: string | null
+  category: string
+  prep_time: number | null
+  cook_time: number | null
+  servings: number | null
+  image: string | null
+  photo_path: string | null
+  tags: string[] | null
+  notes: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+interface PlanningRow {
+  id: string
+  user_id: string
+  date_string: string
+  meal_type: string
+  recipe_id: string | null
+  custom_title: string | null
+  created_at: string | null
+  updated_at: string | null
+  recipe: PlanningRecipeRow | null
+}
+
+const PLANNING_SELECT = '*, recipe:recipes(id, title, description, category, prep_time, cook_time, servings, image, photo_path, tags, notes, created_at, updated_at)'
 
 export default defineEventHandler(async (event) => {
   try {
     const { supabase, user } = await requireUser(event)
+    const input = await validateBody(event, planningEntryInputSchema)
 
-    const body = await readBody(event)
-    const { dateString, mealType, recipeId, customTitle } = body
-    const userId = user.id
-
-    if (!dateString || !mealType) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Date et type de repas requis'
-      })
-    }
-
-    if (!['lunch', 'dinner'].includes(mealType)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Type de repas doit être "lunch" ou "dinner"'
-      })
-    }
-
-    // Vérifier que soit recipeId soit customTitle est fourni
-    if (!recipeId && !customTitle) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de recette ou titre personnalisé requis'
-      })
-    }
-
-    let recipeTitle = ''
-    let finalRecipeId = null
-
-    if (recipeId) {
-
+    if (input.recipeId) {
       const { data: recipe, error: recipeError } = await supabase
         .from('recipes')
-        .select('title')
-        .eq('id', recipeId)
-        .single()
-
-      if (recipeError || !recipe) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Recette non trouvée'
-        })
-      }
-
-      recipeTitle = recipe.title
-      finalRecipeId = recipeId
-    } else {
-      // Repas personnalisé
-      recipeTitle = customTitle
-      finalRecipeId = null
+        .select('id')
+        .eq('id', input.recipeId)
+        .maybeSingle()
+      if (recipeError) throwSupabaseError(recipeError, 'planning.post check recipe')
+      if (!recipe) throw createError({ statusCode: 404, statusMessage: 'Recette introuvable' })
     }
 
-    // Insérer le repas dans le planning
     const { data, error } = await supabase
       .from('planning')
       .insert({
-        date_string: dateString,
-        meal_type: mealType,
-        recipe_id: finalRecipeId,
-        custom_title: customTitle || null,
-        user_id: userId
+        date_string: input.dateString,
+        meal_type: input.mealType,
+        recipe_id: input.recipeId ?? null,
+        custom_title: input.recipeId ? null : (input.customTitle ?? null),
+        user_id: user.id
       })
-      .select(`
-        *,
-        recipe:recipes(*)
-      `)
+      .select(PLANNING_SELECT)
       .single()
 
     if (error) {
-      console.error('Erreur Supabase lors de l\'ajout au planning:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de l'ajout au planning: ${error.message}`
-      })
+      throwSupabaseError(error, 'planning.post insert')
     }
 
-    // Formater la réponse
-    const formattedMeal = {
-      id: data.id,
-      dateString: data.date_string,
-      mealType: data.meal_type,
-      recipeId: data.recipe_id,
-      customTitle: data.custom_title,
-      userId: data.user_id,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      recipe: data.recipe ? {
-        id: data.recipe.id,
-        title: data.recipe.title,
-        description: data.recipe.description,
-        category: data.recipe.category,
-        ingredients: data.recipe.ingredients,
-        instructions: data.recipe.instructions,
-        prepTime: data.recipe.prep_time,
-        cookTime: data.recipe.cook_time,
-        servings: data.recipe.servings,
-        image: data.recipe.image,
-        tags: data.recipe.tags || [],
-        notes: data.recipe.notes || '',
-        createdAt: data.recipe.created_at,
-        updatedAt: data.recipe.updated_at
-      } : null
+    const row = data as unknown as PlanningRow
+    const meal = {
+      id: row.id,
+      dateString: row.date_string,
+      mealType: row.meal_type,
+      recipeId: row.recipe_id,
+      customTitle: row.custom_title,
+      userId: row.user_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      recipe: row.recipe
+        ? {
+            id: row.recipe.id,
+            title: row.recipe.title,
+            description: row.recipe.description ?? '',
+            category: row.recipe.category,
+            prepTime: row.recipe.prep_time,
+            cookTime: row.recipe.cook_time,
+            servings: row.recipe.servings,
+            image: row.recipe.image,
+            photoPath: row.recipe.photo_path,
+            tags: row.recipe.tags ?? [],
+            notes: row.recipe.notes ?? '',
+            createdAt: row.recipe.created_at,
+            updatedAt: row.recipe.updated_at
+          }
+        : null
     }
 
+    const label = meal.recipe?.title ?? meal.customTitle ?? ''
     return {
       success: true,
-      meal: formattedMeal,
-      message: `${recipeId ? 'Recette' : 'Repas personnalisé'} "${recipeTitle}" ajouté au planning du ${dateString} (${mealType === 'lunch' ? 'déjeuner' : 'dîner'})`
+      meal,
+      message: `« ${label} » ajouté au planning du ${input.dateString} (${input.mealType === 'lunch' ? 'déjeuner' : 'dîner'})`
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de l\'ajout au planning:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'planning.post')
   }
 })

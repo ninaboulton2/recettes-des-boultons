@@ -1,56 +1,30 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler } from 'h3'
+import { shoppingListInputSchema } from '#shared/schemas'
+import type { ShoppingListRow } from '~~/server/utils/shopping'
 
+/** POST /api/shopping-lists — crée une liste pour l'utilisateur connecté. */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase, user } = await requireUser(event)
+    const { name } = await validateBody(event, shoppingListInputSchema)
 
-    const body = await readBody(event)
-    const name = requireString(body.name, 'nom de la liste', { max: 200 })
-    const userId = user.id
-
-    // Insérer la nouvelle liste
     const { data, error } = await supabase
       .from('shopping_lists')
-      .insert({
-        name,
-        user_id: userId
-      })
-      .select()
+      .insert({ name, user_id: user.id })
+      .select('*')
       .single()
 
     if (error) {
-      console.error('Erreur Supabase lors de la création de la liste:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la création: ${error.message}`
-      })
+      throwSupabaseError(error, 'shopping-lists.post')
     }
 
-    // Formater la réponse
-    const formattedList = {
-      id: data.id,
-      name: data.name,
-      userId: data.user_id,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    }
-
+    const list = mapShoppingListRow(data as ShoppingListRow)
     return {
       success: true,
-      list: formattedList,
-      message: `Liste "${name}" créée avec succès`
+      list,
+      message: `Liste « ${list.name} » créée`
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la création de la liste:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'shopping-lists.post')
   }
 })

@@ -1,106 +1,71 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler } from 'h3'
+import { planningNoteInputSchema, textOrNull } from '#shared/schemas'
+
+/**
+ * POST /api/planning-notes — crée ou met à jour la note d'une date/type
+ * (`day`, `lunch`, `dinner`) pour l'utilisateur connecté.
+ * Body : `{ dateString: 'AAAA-MM-JJ', noteType, content? }`.
+ */
+
+interface PlanningNoteRow {
+  id: string
+  user_id: string | null
+  date_string: string
+  note_type: string
+  content: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+function mapNote(row: PlanningNoteRow) {
+  return {
+    id: row.id,
+    dateString: row.date_string,
+    noteType: row.note_type,
+    content: row.content,
+    userId: row.user_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
     const { supabase, user } = await requireUser(event)
+    const input = await validateBody(event, planningNoteInputSchema)
+    const content = textOrNull(input.content)
 
-    const body = await readBody(event)
-    const { dateString, noteType, content } = body
-    const userId = user.id
-
-    if (!dateString || !noteType || !['day', 'lunch', 'dinner'].includes(noteType)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Date, type de note et contenu requis. Type doit être "day", "lunch" ou "dinner"'
-      })
-    }
-
-    // Vérifier si une note existe déjà pour cette date/type/utilisateur
-    const { data: existingNote } = await supabase
+    // Pas de contrainte d'unicité en base : on cherche la note existante (la plus ancienne).
+    const { data: existingRows, error: findError } = await supabase
       .from('planning_notes')
-      .select('id, content')
-      .eq('date_string', dateString)
-      .eq('note_type', noteType)
-      .eq('user_id', userId)
-      .single()
+      .select('id')
+      .eq('date_string', input.dateString)
+      .eq('note_type', input.noteType)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+    if (findError) throwSupabaseError(findError, 'planning-notes.post find')
 
-    let result
-    if (existingNote) {
-      console.log('✅ Note existante trouvée, mise à jour...')
-      // Mettre à jour la note existante
-      const { data, error } = await supabase
-        .from('planning_notes')
-        .update({
-          content: content || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingNote.id)
-        .select()
-        .single()
+    const existing = (existingRows as Array<{ id: string }> | null)?.[0]
 
-      if (error) {
-        console.error('❌ Erreur Supabase lors de la mise à jour de la note:', error)
-        throw createError({
-          statusCode: 500,
-          statusMessage: `Erreur lors de la mise à jour de la note: ${error.message}`
-        })
-      }
+    const query = existing
+      ? supabase
+          .from('planning_notes')
+          .update({ content, updated_at: new Date().toISOString() })
+          .eq('id', existing.id)
+      : supabase
+          .from('planning_notes')
+          .insert({ date_string: input.dateString, note_type: input.noteType, content, user_id: user.id })
 
-      result = data
-      console.log('✅ Note mise à jour avec succès:', result)
-    } else {
-      console.log('🆕 Aucune note existante, création...')
-      // Créer une nouvelle note
-      const { data, error } = await supabase
-        .from('planning_notes')
-        .insert({
-          date_string: dateString,
-          note_type: noteType,
-          content: content || null,
-          user_id: userId
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ Erreur Supabase lors de la création de la note:', error)
-        throw createError({
-          statusCode: 500,
-          statusMessage: `Erreur lors de la création de la note: ${error.message}`
-        })
-      }
-
-      result = data
-      console.log('✅ Note créée avec succès:', result)
-    }
-
-    // Formater la réponse
-    const formattedNote = {
-      id: result.id,
-      dateString: result.date_string,
-      noteType: result.note_type,
-      content: result.content,
-      userId: result.user_id,
-      createdAt: result.created_at,
-      updatedAt: result.updated_at
-    }
+    const { data, error } = await query.select('*').single()
+    if (error) throwSupabaseError(error, 'planning-notes.post save')
 
     return {
       success: true,
-      note: formattedNote,
-      message: existingNote ? 'Note mise à jour avec succès' : 'Note créée avec succès'
+      note: mapNote(data as PlanningNoteRow),
+      message: existing ? 'Note mise à jour' : 'Note créée'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la gestion de la note:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'planning-notes.post')
   }
 })

@@ -156,5 +156,9 @@
   "language_switcher": {
     "french": "French",
     "english": "English"
+  },
+  "errors": {
+    "generic": "Something went wrong, please try again later.",
+    "network": "Unable to connect, check your network and try again."
   }
-} 
+}

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
+import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
 import { ref, computed, onMounted, readonly } from 'vue'
 import { useAuthStore } from './auth'
 
@@ -113,8 +114,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -136,7 +136,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       }
     } catch (error) {
       console.error('Erreur création liste:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -168,8 +168,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -179,7 +178,14 @@ export const useShoppingStore = defineStore('shopping', () => {
           note: item.note
         }
 
-        currentList.value.items.push(newItem)
+        // Le serveur fusionne les doublons (même nom + même unité) : l'article
+        // renvoyé peut être une ligne existante mise à jour → la remplacer.
+        const existingIndex = currentList.value.items.findIndex(existing => existing.id === newItem.id)
+        if (existingIndex >= 0) {
+          currentList.value.items[existingIndex] = newItem
+        } else {
+          currentList.value.items.push(newItem)
+        }
         currentList.value.updatedAt = newItem.updatedAt
         return { success: true, item: newItem }
       } else {
@@ -187,7 +193,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       }
     } catch (error) {
       console.error('Erreur ajout article:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -212,7 +218,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -237,7 +243,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -278,7 +284,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -306,7 +312,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -345,8 +351,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const data = await response.json()
@@ -411,8 +416,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.message || `Erreur lors de l'ajout à la liste cible: ${response.status}`)
+          throw await apiErrorFromResponse(response)
         }
       }
 
@@ -423,8 +427,7 @@ export const useShoppingStore = defineStore('shopping', () => {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.message || `Erreur lors de la suppression de la liste source: ${response.status}`)
+          throw await apiErrorFromResponse(response)
         }
       }
 
@@ -496,7 +499,7 @@ export const useShoppingStore = defineStore('shopping', () => {
             })
             
             if (!response.ok) {
-              throw new Error(`Erreur lors de la mise à jour: ${response.status}`)
+              throw await apiErrorFromResponse(response)
             }
             
             // Mettre à jour l'état local
@@ -559,6 +562,48 @@ export const useShoppingStore = defineStore('shopping', () => {
     await loadShoppingLists()
 
     return { success: true }
+  }
+
+  /**
+   * Ajoute les ingrédients d'une recette à une liste en un seul appel
+   * (`POST /api/shopping-lists/:id/recipes` → RPC `add_recipe_to_list`) :
+   * fusion automatique des doublons (même nom + même unité), quantités
+   * multipliées par `servingsFactor` (ex. 6 / recipe.servings).
+   * `sectionIds` limite l'ajout à certaines sections de la recette.
+   */
+  const addRecipeToList = async (listId: string, recipeId: string, sectionIds?: string[], servingsFactor?: number) => {
+    try {
+      const authStore = useAuthStore()
+      if (!authStore.currentUser?.id) {
+        throw new Error('Vous devez être connecté pour gérer vos listes de courses')
+      }
+
+      const response = await apiFetch(`/api/shopping-lists/${listId}/recipes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeId,
+          ...(sectionIds && sectionIds.length > 0 ? { sectionIds } : {}),
+          ...(servingsFactor !== undefined ? { servingsFactor } : {})
+        })
+      })
+
+      if (!response.ok) {
+        throw await apiErrorFromResponse(response)
+      }
+
+      const data = await response.json() as { success: boolean, items: ShoppingItem[], message?: string }
+      if (!data.success) {
+        throw new Error(data.message || 'Erreur lors de l\'ajout de la recette à la liste')
+      }
+
+      // Recharger pour refléter les fusions côté base
+      await loadShoppingLists()
+      return { success: true, items: data.items, message: data.message }
+    } catch (error) {
+      console.error('Erreur ajout recette à la liste:', error)
+      return { success: false, error: toUserMessage(error) }
+    }
   }
 
   // Charger les listes depuis Supabase
@@ -687,7 +732,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       }
     } catch (error) {
       console.error('Erreur réinitialisation quantités:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -756,7 +801,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       }
     } catch (error) {
       console.error('Erreur vidage liste:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      const errorMessage = toUserMessage(error)
       return { success: false, error: errorMessage }
     }
   }
@@ -850,6 +895,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     updateItemQuantity,
     moveItemToAnotherList,
     addIngredientsToLists,
+    addRecipeToList,
     loadShoppingLists,
     refreshShoppingLists,
     resetQuantities,
