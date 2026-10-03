@@ -149,126 +149,223 @@
     "loadError": "Erreur de chargement des favoris"
   },
   "planning": {
-    "title": "Planning hebdomadaire",
-    "subtitle": "Organisez vos repas de la semaine",
-    "weekOf": "Semaine du {date}",
+    "title": "Planning de la semaine",
+    "subtitle": "Organisez vos déjeuners et dîners, jour par jour.",
     "print": "Imprimer",
+    "loading": "Chargement de votre planning…",
+    "loadError": "Impossible de charger le planning",
+    "retry": "Réessayer",
+    "weekRange": "{from} – {to}",
+    "today": "Aujourd'hui",
+    "navigation": {
+      "previous": "Semaine précédente",
+      "next": "Semaine suivante",
+      "today": "Revenir à cette semaine"
+    },
     "meals": {
       "lunch": "Déjeuner",
       "dinner": "Dîner"
     },
-    "addMeal": "+ Ajouter un repas",
-    "note": {
-      "placeholder": "Note (optionnel)",
-      "edit": "Modifier la note"
+    "slot": {
+      "add": "Ajouter",
+      "empty": "Rien de prévu",
+      "dropHere": "Déposer ici"
     },
-    "actions": {
-      "remove": "Supprimer",
-      "save": "Sauvegarder",
+    "meal": {
+      "custom": "Repas personnalisé",
+      "untitled": "Repas sans titre",
+      "actions": "Actions sur ce repas",
+      "open": "Voir la recette",
+      "move": "Déplacer…",
+      "remove": "Retirer"
+    },
+    "note": {
+      "day": "Note du jour",
+      "lunch": "Note déjeuner",
+      "dinner": "Note dîner",
+      "add": "Ajouter une note",
+      "edit": "Modifier la note",
+      "placeholder": "Une idée, une courses à prévoir, un invité…",
+      "save": "Enregistrer",
       "cancel": "Annuler"
     },
-    "navigation": {
-      "previous": "Semaine précédente",
-      "next": "Semaine suivante"
+    "remove": {
+      "title": "Retirer ce repas ?",
+      "message": "« {title} » sera retiré du planning ({date}, {slot}).",
+      "confirm": "Retirer",
+      "cancel": "Annuler"
     },
-    "days": {
-      "monday": "Lundi",
-      "tuesday": "Mardi",
-      "wednesday": "Mercredi",
-      "thursday": "Jeudi",
-      "friday": "Vendredi",
-      "saturday": "Samedi",
-      "sunday": "Dimanche"
+    "move": {
+      "title": "Déplacer le repas",
+      "description": "Choisissez le nouveau jour et le créneau pour « {title} ».",
+      "day": "Jour",
+      "slot": "Créneau",
+      "confirm": "Déplacer",
+      "cancel": "Annuler"
     },
-    "dayNotes": {
-      "title": "Notes du jour",
-      "placeholder": "Notes générales (optionnel)",
-      "edit": "Modifier les notes"
+    "addModal": {
+      "title": "Ajouter au planning",
+      "description": "{date} · {slot}",
+      "recipeTab": "Une recette",
+      "customTab": "Autre chose",
+      "search": "Rechercher une recette…",
+      "noResults": "Aucune recette pour « {query} »",
+      "addAsCustom": "Ajouter « {query} » comme repas personnalisé",
+      "customLabel": "Intitulé",
+      "customPlaceholder": "Ex. : restes, pique-nique, resto…",
+      "day": "Jour",
+      "slot": "Créneau",
+      "confirm": "Ajouter",
+      "cancel": "Annuler",
+      "page": "Page {page} / {total}",
+      "previous": "Précédent",
+      "next": "Suivant"
     },
-    "mealSelector": {
-      "title": "Choisir une recette",
-      "search": "Rechercher une recette...",
-      "noRecipes": "Aucune recette trouvée",
-      "close": "Fermer"
+    "planningModal": {
+      "title": "Ajouter « {title} » au planning",
+      "description": "Choisissez un jour et un créneau.",
+      "count": "{count} repas",
+      "confirm": "Ajouter au planning",
+      "cancel": "Annuler"
     },
-    "loading": "Chargement de votre planning...",
-    "loadError": "Erreur de chargement du planning"
+    "toast": {
+      "added": "Ajouté au planning",
+      "addedDescription": "« {title} » · {date} · {slot}",
+      "removed": "Repas retiré",
+      "moved": "Repas déplacé",
+      "error": "Action impossible"
+    },
+    "empty": {
+      "title": "Rien de prévu cette semaine",
+      "description": "Ajoutez une recette ou un repas personnalisé dans un créneau."
+    },
+    "dnd": {
+      "hint": "Glissez un repas vers un autre créneau, ou utilisez son menu « Déplacer »."
+    }
   },
   "shopping": {
     "title": "Listes de courses",
-    "subtitle": "Gérez vos listes de courses.",
+    "subtitle": "Vos listes, fusionnées automatiquement : « Farine 100 g » deux fois donne une ligne de 200 g.",
     "printButton": "Imprimer",
-    "selectList": {
-      "title": "Sélectionner une liste",
-      "items": "{count} article{plural}",
+    "print": {
+      "createdOn": "Liste créée le {date}",
+      "toBuy": "{count} article à acheter | {count} article à acheter | {count} articles à acheter",
+      "footer": "Recettes des Boultons"
+    },
+    "loading": "Chargement de vos listes…",
+    "loadError": "Impossible de charger les listes",
+    "retry": "Réessayer",
+    "lists": {
+      "select": "Liste",
+      "create": "Nouvelle liste",
+      "rename": "Renommer",
+      "clear": "Vider la liste",
+      "delete": "Supprimer la liste",
+      "actions": "Actions sur la liste",
+      "items": "{count} article | {count} article | {count} articles",
       "createdOn": "Créée le {date}"
     },
-    "createList": {
-      "title": "Créer une nouvelle liste",
-      "placeholder": "Nom de la liste",
-      "button": "Créer"
+    "createModal": {
+      "title": "Nouvelle liste",
+      "label": "Nom de la liste",
+      "placeholder": "Ex. : Marché, Super U…",
+      "confirm": "Créer",
+      "cancel": "Annuler"
     },
-    "actions": {
-      "edit": "Modifier le nom",
-      "save": "Sauvegarder",
-      "cancel": "Annuler",
-      "delete": "Supprimer la liste",
-      "clearChecked": "Effacer cochés"
-    },
-    "addItem": {
-      "title": "Ajouter un article",
-      "name": "Nom de l'article",
-      "quantity": "Quantité",
-      "unit": "Unité",
-      "button": "Ajouter"
+    "renameModal": {
+      "title": "Renommer la liste",
+      "label": "Nouveau nom",
+      "confirm": "Renommer",
+      "cancel": "Annuler"
     },
     "deleteModal": {
-      "title": "Supprimer la liste",
-      "message": "Êtes-vous sûr de vouloir supprimer cette liste ? Cette action est irréversible.",
+      "title": "Supprimer la liste ?",
+      "message": "« {name} » et ses {count} article(s) seront supprimés. Cette action est irréversible.",
       "confirm": "Supprimer",
       "cancel": "Annuler"
     },
+    "clearModal": {
+      "title": "Vider la liste ?",
+      "message": "Les {count} article(s) de « {name} » seront supprimés.",
+      "confirm": "Vider",
+      "cancel": "Annuler"
+    },
+    "addItem": {
+      "title": "Ajouter un article",
+      "name": "Article",
+      "namePlaceholder": "Ex. : farine",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "unitSearch": "Rechercher une unité…",
+      "unitFree": "Utiliser « {unit} »",
+      "noUnit": "Sans unité",
+      "button": "Ajouter"
+    },
+    "groups": {
+      "toBuy": "À acheter",
+      "checked": "Dans le panier"
+    },
+    "aisles": {
+      "toggle": "Par rayon",
+      "produce": "Fruits et légumes",
+      "bakery": "Boulangerie",
+      "meatFish": "Boucherie et poissonnerie",
+      "dairy": "Crèmerie et œufs",
+      "grocery": "Épicerie",
+      "frozen": "Surgelés",
+      "beverages": "Boissons",
+      "household": "Entretien et hygiène",
+      "other": "Autres"
+    },
+    "storeMode": "Mode magasin",
+    "actions": {
+      "more": "Plus d'actions",
+      "checkAll": "Tout cocher",
+      "uncheckAll": "Tout décocher",
+      "clearChecked": "Vider les cochés",
+      "resetQuantities": "Réinitialiser les quantités"
+    },
+    "item": {
+      "actions": "Actions sur l'article",
+      "edit": "Modifier la quantité",
+      "move": "Déplacer vers",
+      "remove": "Supprimer",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "fromRecipe": "Ajouté depuis une recette"
+    },
     "empty": {
       "title": "Aucune liste de courses",
-      "description": "Créez votre première liste de courses pour commencer à organiser vos achats.",
-      "createFirst": "Créer ma première liste"
+      "description": "Créez votre première liste pour commencer à organiser vos achats.",
+      "create": "Créer ma première liste"
     },
-    "itemActions": {
-      "editQuantity": "Modifier la quantité",
-      "unit": "unité",
-      "note": "note (optionnel)",
-      "save": "Sauvegarder",
-      "cancel": "Annuler",
-      "delete": "Supprimer",
-      "moveTo": "Déplacer vers une autre liste"
+    "emptyList": {
+      "title": "Liste vide",
+      "description": "Ajoutez un article ci-dessus ou une recette depuis sa fiche."
     },
-    "moveItem": {
-      "selectList": "Déplacer vers :"
-    },
-    "emptyState": {
-      "noLists": "Aucune liste de courses",
-      "createFirstList": "Créez votre première liste de courses pour commencer à organiser vos achats."
-    },
-    "print": {
-      "title": "Recettes des Boultons",
-      "createdOn": "Liste créée le {date}",
-      "totalItems": "{count} article{plural} au total",
-      "toBuy": "{count} article{plural} à acheter",
-      "bought": "{count} article{plural} acheté{plural}",
-      "footer": "Recettes des Boultons - {date}"
-    },
-    "loading": "Chargement de vos listes de courses...",
-    "loadError": "Erreur de chargement des listes"
+    "toast": {
+      "listCreated": "Liste « {name} » créée",
+      "listRenamed": "Liste renommée en « {name} »",
+      "listDeleted": "Liste « {name} » supprimée",
+      "listCleared": "Aucun article à supprimer | {count} article supprimé | {count} articles supprimés",
+      "itemAdded": "« {name} » ajouté",
+      "itemRemoved": "« {name} » supprimé",
+      "itemMoved": "« {name} » déplacé vers « {list} »",
+      "checkedAll": "Tous les articles sont cochés",
+      "uncheckedAll": "Tous les articles sont décochés",
+      "clearedChecked": "Aucun article coché | {count} article coché supprimé | {count} articles cochés supprimés",
+      "quantitiesReset": "Quantités réinitialisées",
+      "error": "Action impossible"
+    }
   },
   "planningPrint": {
-    "title": "Planning hebdomadaire",
+    "title": "Planning de la semaine",
     "weekOf": "Semaine du {date}",
-    "breakfast": "Petit-déjeuner",
     "lunch": "Déjeuner",
     "dinner": "Dîner",
-    "dayNotes": "Notes du jour",
-    "noMeal": "Aucun repas planifié",
-    "footer": "Recettes des Boultons - {date}"
+    "notes": "Notes",
+    "noMeal": "—",
+    "footer": "Recettes des Boultons"
   },
   "recipePrint": {
     "title": "Recettes des Boultons",

@@ -146,26 +146,223 @@
     "loadError": "Could not load favorites"
   },
   "shopping": {
-    "title": "Listes de courses",
-    "subtitle": "Gérez vos listes de courses et vos ingrédients",
-    "createList": "Créer une liste",
-    "addItem": "Ajouter un article",
-    "clearChecked": "Vider les cochés",
-    "empty": "Aucune liste de courses",
-    "createFirst": "Créez votre première liste !",
-    "loading": "Loading your shopping lists...",
-    "loadError": "Could not load shopping lists"
+    "title": "Shopping lists",
+    "subtitle": "Your lists, merged automatically: “Flour 100 g” twice becomes one 200 g line.",
+    "printButton": "Print",
+    "print": {
+      "createdOn": "List created on {date}",
+      "toBuy": "{count} item to buy | {count} item to buy | {count} items to buy",
+      "footer": "Recettes des Boultons"
+    },
+    "loading": "Loading your lists…",
+    "loadError": "Could not load the lists",
+    "retry": "Retry",
+    "lists": {
+      "select": "List",
+      "create": "New list",
+      "rename": "Rename",
+      "clear": "Empty the list",
+      "delete": "Delete list",
+      "actions": "List actions",
+      "items": "{count} item | {count} item | {count} items",
+      "createdOn": "Created on {date}"
+    },
+    "createModal": {
+      "title": "New list",
+      "label": "List name",
+      "placeholder": "E.g. Market, Supermarket…",
+      "confirm": "Create",
+      "cancel": "Cancel"
+    },
+    "renameModal": {
+      "title": "Rename list",
+      "label": "New name",
+      "confirm": "Rename",
+      "cancel": "Cancel"
+    },
+    "deleteModal": {
+      "title": "Delete this list?",
+      "message": "“{name}” and its {count} item(s) will be deleted. This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "clearModal": {
+      "title": "Empty this list?",
+      "message": "The {count} item(s) of “{name}” will be deleted.",
+      "confirm": "Empty",
+      "cancel": "Cancel"
+    },
+    "addItem": {
+      "title": "Add an item",
+      "name": "Item",
+      "namePlaceholder": "E.g. flour",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitSearch": "Search a unit…",
+      "unitFree": "Use “{unit}”",
+      "noUnit": "No unit",
+      "button": "Add"
+    },
+    "groups": {
+      "toBuy": "To buy",
+      "checked": "In the basket"
+    },
+    "aisles": {
+      "toggle": "By aisle",
+      "produce": "Fruit and vegetables",
+      "bakery": "Bakery",
+      "meatFish": "Meat and fish",
+      "dairy": "Dairy and eggs",
+      "grocery": "Grocery",
+      "frozen": "Frozen",
+      "beverages": "Drinks",
+      "household": "Household",
+      "other": "Other"
+    },
+    "storeMode": "Store mode",
+    "actions": {
+      "more": "More actions",
+      "checkAll": "Check all",
+      "uncheckAll": "Uncheck all",
+      "clearChecked": "Remove checked",
+      "resetQuantities": "Reset quantities"
+    },
+    "item": {
+      "actions": "Item actions",
+      "edit": "Edit quantity",
+      "move": "Move to",
+      "remove": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "fromRecipe": "Added from a recipe"
+    },
+    "empty": {
+      "title": "No shopping list yet",
+      "description": "Create your first list to start organising your shopping.",
+      "create": "Create my first list"
+    },
+    "emptyList": {
+      "title": "Empty list",
+      "description": "Add an item above or a recipe from its page."
+    },
+    "toast": {
+      "listCreated": "List “{name}” created",
+      "listRenamed": "List renamed to “{name}”",
+      "listDeleted": "List “{name}” deleted",
+      "listCleared": "No item to remove | {count} item removed | {count} items removed",
+      "itemAdded": "“{name}” added",
+      "itemRemoved": "“{name}” removed",
+      "itemMoved": "“{name}” moved to “{list}”",
+      "checkedAll": "All items checked",
+      "uncheckedAll": "All items unchecked",
+      "clearedChecked": "No checked item | {count} checked item removed | {count} checked items removed",
+      "quantitiesReset": "Quantities reset",
+      "error": "Action failed"
+    }
   },
   "planning": {
-    "title": "Planning hebdomadaire",
-    "subtitle": "Organisez vos repas de la semaine",
-    "addMeal": "Ajouter un repas",
-    "addCustom": "Repas personnalisé",
-    "notes": "Notes du jour",
-    "empty": "Aucun repas planifié",
-    "planFirst": "Planifiez votre premier repas !",
-    "loading": "Loading your planning...",
-    "loadError": "Could not load the planning"
+    "title": "Weekly planning",
+    "subtitle": "Organise your lunches and dinners, day by day.",
+    "print": "Print",
+    "loading": "Loading your planning…",
+    "loadError": "Could not load the planning",
+    "retry": "Retry",
+    "weekRange": "{from} – {to}",
+    "today": "Today",
+    "navigation": {
+      "previous": "Previous week",
+      "next": "Next week",
+      "today": "Back to this week"
+    },
+    "meals": {
+      "lunch": "Lunch",
+      "dinner": "Dinner"
+    },
+    "slot": {
+      "add": "Add",
+      "empty": "Nothing planned",
+      "dropHere": "Drop here"
+    },
+    "meal": {
+      "custom": "Custom meal",
+      "untitled": "Untitled meal",
+      "actions": "Meal actions",
+      "open": "Open recipe",
+      "move": "Move…",
+      "remove": "Remove"
+    },
+    "note": {
+      "day": "Day note",
+      "lunch": "Lunch note",
+      "dinner": "Dinner note",
+      "add": "Add a note",
+      "edit": "Edit note",
+      "placeholder": "An idea, something to buy, a guest…",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "remove": {
+      "title": "Remove this meal?",
+      "message": "“{title}” will be removed from the planning ({date}, {slot}).",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "move": {
+      "title": "Move meal",
+      "description": "Pick the new day and slot for “{title}”.",
+      "day": "Day",
+      "slot": "Slot",
+      "confirm": "Move",
+      "cancel": "Cancel"
+    },
+    "addModal": {
+      "title": "Add to planning",
+      "description": "{date} · {slot}",
+      "recipeTab": "A recipe",
+      "customTab": "Something else",
+      "search": "Search a recipe…",
+      "noResults": "No recipe for “{query}”",
+      "addAsCustom": "Add “{query}” as a custom meal",
+      "customLabel": "Title",
+      "customPlaceholder": "E.g. leftovers, picnic, restaurant…",
+      "day": "Day",
+      "slot": "Slot",
+      "confirm": "Add",
+      "cancel": "Cancel",
+      "page": "Page {page} / {total}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "planningModal": {
+      "title": "Add “{title}” to the planning",
+      "description": "Pick a day and a slot.",
+      "count": "{count} meals",
+      "confirm": "Add to planning",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "added": "Added to planning",
+      "addedDescription": "“{title}” · {date} · {slot}",
+      "removed": "Meal removed",
+      "moved": "Meal moved",
+      "error": "Action failed"
+    },
+    "empty": {
+      "title": "Nothing planned this week",
+      "description": "Add a recipe or a custom meal to a slot."
+    },
+    "dnd": {
+      "hint": "Drag a meal to another slot, or use its “Move” menu."
+    }
+  },
+  "planningPrint": {
+    "title": "Weekly planning",
+    "weekOf": "Week of {date}",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "notes": "Notes",
+    "noMeal": "—",
+    "footer": "Recettes des Boultons"
   },
   "auth": {
     "login": {
