@@ -27,6 +27,9 @@ alter table public.recipes
   add column if not exists ingredients  jsonb,
   add column if not exists instructions jsonb;
 
+-- Recalcul sans toucher updated_at (trigger update_recipes_updated_at de la prod).
+alter table public.recipes disable trigger update_recipes_updated_at;
+
 update public.recipes r set
   ingredients = coalesce((
     select jsonb_agg(
@@ -47,6 +50,8 @@ update public.recipes r set
       join public.recipe_sections rs on rs.id = ins.section_id
      where ins.recipe_id = r.id), '[]'::jsonb)
  where r.ingredients is null or r.instructions is null;
+
+alter table public.recipes enable trigger update_recipes_updated_at;
 
 alter table public.recipes
   alter column ingredients  set not null,
