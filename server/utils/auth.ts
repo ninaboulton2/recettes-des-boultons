@@ -57,12 +57,9 @@ async function authFromBearer(event: H3Event, token: string): Promise<AuthContex
 async function authFromCookies(event: H3Event): Promise<AuthContext> {
   const supabase = await serverSupabaseClient(event)
 
-  let claims: Awaited<ReturnType<typeof serverSupabaseUser>> = null
-  try {
-    claims = await serverSupabaseUser(event)
-  } catch {
-    claims = null
-  }
+  // serverSupabaseUser lève une erreur quand il n'y a pas de session : on la
+  // traduit en 401 plutôt qu'en 500.
+  const claims = await serverSupabaseUser(event).catch(() => null)
 
   if (!claims?.sub) {
     throw unauthorized('Authentification requise')

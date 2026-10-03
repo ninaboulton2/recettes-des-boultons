@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
 
     const itemId = getRouterParam(event, 'id')
     const body = await readBody(event)
-    const { name, amount, unit, isChecked, listId } = body
+    const { name, amount, unit, isChecked } = body
 
     if (!itemId) {
       throw createError({

@@ -29,7 +29,7 @@
 
 <script setup>
 // Props: categories (array)
-const props = defineProps({
+defineProps({
   categories: {
     type: Array,
     required: true

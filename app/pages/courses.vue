@@ -415,7 +415,6 @@ import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import ErrorState from '@/components/ErrorState.vue'
-import ActionLoading from '@/components/ActionLoading.vue'
 import LoadingButton from '@/components/LoadingButton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -816,7 +815,7 @@ const saveListName = (list) => {
   editingListName.value = null
 }
 
-const cancelListNameEdit = (list) => {
+const cancelListNameEdit = (_list) => {
   editingListName.value = null
 }
 

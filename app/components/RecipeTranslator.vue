@@ -169,15 +169,6 @@ const translateAndAddRecipe = async () => {
   }
 }
 
-const copyToClipboard = async () => {
-  try {
-    await navigator.clipboard.writeText(translatedRecipe.value)
-    // Optionnel : afficher un message de succès
-  } catch (err) {
-    console.error('Erreur lors de la copie:', err)
-  }
-}
-
 const viewAllRecipes = () => {
   navigateTo('/recettes')
 }

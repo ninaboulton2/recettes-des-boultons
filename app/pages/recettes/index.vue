@@ -221,7 +221,6 @@ const showDeleteModal = ref(false)
 const recipeToDelete = ref(null)
 
 // Computed properties
-const allTags = computed(() => recipesStore.allTags)
 const availableTags = computed(() => recipesStore.categoryTags)
 
 // Computed delete confirmation message
@@ -331,7 +330,7 @@ const closeRecipeEditor = () => {
   editingRecipe.value = null
 }
 
-const onRecipeSaved = (recipe) => {
+const onRecipeSaved = (_recipe) => {
   closeRecipeEditor()
   // The recipe is already saved in the store
 }
@@ -348,7 +347,7 @@ const deleteRecipe = async () => {
       await recipesStore.deleteRecipe(recipeToDelete.value.id)
       closeDeleteModal()
       $toast.success('Succès', 'Recette supprimée avec succès !', 3000)
-    } catch (error) {
+    } catch {
       $toast.error('Erreur', 'Impossible de supprimer la recette. Veuillez réessayer.', 3000)
     }
   }

@@ -76,7 +76,6 @@ import AuthRequired from '@/components/AuthRequired.vue'
 import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import Toast from '@/components/Toast.vue'
-import PlanningModal from '@/components/PlanningModal.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 

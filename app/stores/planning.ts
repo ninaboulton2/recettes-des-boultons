@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
-import { ref, computed, onMounted, readonly } from 'vue'
+import { ref, onMounted, readonly } from 'vue'
 import type { Recipe } from '#shared/types'
 import { useAuthStore } from './auth'
 
@@ -150,7 +150,7 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  const updateMealNote = (date: string, mealType: 'lunch' | 'dinner', mealId: string, note: string) => {
+  const updateMealNote = (date: string, mealType: 'lunch' | 'dinner', mealId: string, _note: string) => {
     if (weekPlanning.value[date]) {
       const meal = weekPlanning.value[date][mealType].find(m => m.id === mealId)
       if (meal) {

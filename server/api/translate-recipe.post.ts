@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
     // Essayer de parser le JSON pour vérifier qu'il est valide
     try {
       JSON.parse(translatedRecipe)
-    } catch (parseError) {
+    } catch {
       throw createError({
         statusCode: 500,
         statusMessage: 'La réponse générée n\'est pas un JSON valide'

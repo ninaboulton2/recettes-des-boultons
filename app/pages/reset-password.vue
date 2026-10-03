@@ -122,7 +122,7 @@ const handleReset = async () => {
     }
     successMessage.value = 'Mot de passe mis à jour ! Redirection…'
     setTimeout(() => navigateTo('/'), 1500)
-  } catch (err) {
+  } catch {
     error.value = 'Erreur lors de la mise à jour du mot de passe'
   } finally {
     isLoading.value = false

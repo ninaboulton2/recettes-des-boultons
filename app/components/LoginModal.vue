@@ -223,7 +223,7 @@ const handleForgotPassword = async () => {
     } else {
       successMessage.value = 'Email de réinitialisation envoyé ! Vérifiez votre boîte mail.'
     }
-  } catch (err) {
+  } catch {
     error.value = 'Erreur lors de l\'envoi de l\'email'
   } finally {
     isLoading.value = false
@@ -248,7 +248,7 @@ const handleLogin = async () => {
     } else {
       error.value = result.error || 'Erreur de connexion'
     }
-  } catch (err) {
+  } catch {
     error.value = 'Erreur de connexion'
   } finally {
     isLoading.value = false

@@ -111,7 +111,7 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Déjeuners</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
-              v-for="(day, index) in weekDays"
+              v-for="day in weekDays"
               :key="`lunch-${day.date}`"
               class="min-h-[120px] px-3 first:pl-0 last:pr-0"
             >
@@ -175,7 +175,7 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Dîners</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
-              v-for="(day, index) in weekDays"
+              v-for="day in weekDays"
               :key="`dinner-${day.date}`"
               class="min-h-[120px] px-3 first:pl-0 last:pr-0"
             >
@@ -239,7 +239,7 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Notes</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
-              v-for="(day, index) in weekDays"
+              v-for="day in weekDays"
               :key="`notes-${day.date}`"
               class="px-3 first:pl-0 last:pr-0"
             >
@@ -719,7 +719,7 @@ const onDragEnd = (event) => {
   dragOverTarget.value = null
 }
 
-const onDragOver = (event, date, mealType) => {
+const onDragOver = (event, _date, _mealType) => {
   event.preventDefault()
   event.dataTransfer.dropEffect = 'move'
 }
@@ -738,7 +738,7 @@ const onDrop = (event, toDate, toMealType) => {
   }
   
   // Déplacer la recette
-  const success = planningStore.moveMeal(
+  planningStore.moveMeal(
     draggedFromDate.value,
     draggedFromMealType.value,
     toDate,
@@ -763,11 +763,6 @@ const onDragLeave = (event) => {
   event.preventDefault()
   // Retirer l'effet visuel
   event.currentTarget.classList.remove('drag-over')
-}
-
-const updateDayNotes = (date, notes) => {
-  const dateString = date.toISOString().split('T')[0]
-  planningStore.updateDayNotes(dateString, notes)
 }
 
 const formatWeekStart = (date) => {

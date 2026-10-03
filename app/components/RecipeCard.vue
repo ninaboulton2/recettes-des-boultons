@@ -282,7 +282,6 @@ const props = defineProps({
 
 const emit = defineEmits(['edit', 'delete'])
 
-const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()

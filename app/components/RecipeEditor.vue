@@ -549,7 +549,7 @@ const sectionsWithInstructions = computed(() => {
         name: 'Préparation',
         type: 'instructions',
         orderIndex: 0,
-        instructions: form.value.instructions.map((inst, idx) => 
+        instructions: form.value.instructions.map((inst) => 
           typeof inst === 'string' ? inst : inst.content || ''
         )
       }]
@@ -863,7 +863,7 @@ const resetDragState = () => {
 }
 
 // Gestion du drag and drop au niveau de la section (pour déplacer vers une section vide)
-const handleSectionDragOver = (event, sectionIndex) => {
+const handleSectionDragOver = (event, _sectionIndex) => {
   event.preventDefault()
   event.dataTransfer.dropEffect = 'move'
 }
@@ -1054,42 +1054,6 @@ const removeInstructionFromSection = (sectionIndex, instructionIndex) => {
         inst.orderIndex = idx
       }
     })
-  }
-}
-
-// Fonctions de compatibilité (ancien format)
-const addIngredient = () => {
-  if (sectionsWithIngredients.value.length === 0) {
-    addSection('ingredients')
-  }
-  const firstSection = sectionsWithIngredients.value[0]
-  addIngredientToSection(0)
-}
-
-const removeIngredient = (index) => {
-  // Cette fonction n'est plus utilisée mais gardée pour compatibilité
-  if (sectionsWithIngredients.value.length > 0) {
-    const firstSection = sectionsWithIngredients.value[0]
-    if (firstSection.ingredients && firstSection.ingredients[index]) {
-      removeIngredientFromSection(0, index)
-    }
-  }
-}
-
-const addInstruction = () => {
-  if (sectionsWithInstructions.value.length === 0) {
-    addSection('instructions')
-  }
-  addInstructionToSection(0)
-}
-
-const removeInstruction = (index) => {
-  // Cette fonction n'est plus utilisée mais gardée pour compatibilité
-  if (sectionsWithInstructions.value.length > 0) {
-    const firstSection = sectionsWithInstructions.value[0]
-    if (firstSection.instructions && firstSection.instructions[index]) {
-      removeInstructionFromSection(0, index)
-    }
   }
 }
 

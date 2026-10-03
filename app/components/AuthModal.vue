@@ -35,7 +35,7 @@ interface Emits {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+defineEmits<Emits>()
 
 const showSignUp = ref(false)
 

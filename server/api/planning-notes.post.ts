@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Vérifier si une note existe déjà pour cette date/type/utilisateur
-    const { data: existingNote, error: checkError } = await supabase
+    const { data: existingNote } = await supabase
       .from('planning_notes')
       .select('id, content')
       .eq('date_string', dateString)

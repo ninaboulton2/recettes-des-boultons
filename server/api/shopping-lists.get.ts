@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 
 // TODO(phase 2): typer avec shared/types/database.ts (types générés)
 interface ShoppingItemRow {

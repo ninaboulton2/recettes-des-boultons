@@ -460,15 +460,15 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+import { computed, watch, ref } from 'vue'
+
 // Nuxt 4 ordonne les routes dynamiques différemment de Nuxt 3 : sans ceci,
 // `/recettes/:category` capturait aussi les identifiants de recettes. On
 // réserve explicitement cette page aux UUID.
 definePageMeta({
   path: '/recettes/:id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})'
 })
-
-import { useRoute } from 'vue-router'
-import { computed, watch, ref } from 'vue'
 const recipesStore = useRecipesStore()
 const shoppingStore = useShoppingStore()
 const authStore = useAuthStore()
@@ -956,7 +956,7 @@ const closeRecipeEditor = () => {
   editingRecipe.value = null
 }
 
-const onRecipeSaved = (recipe) => {
+const onRecipeSaved = (_recipe) => {
   closeRecipeEditor()
   // The recipe is already saved in the store
 }
@@ -975,7 +975,7 @@ const deleteRecipe = async () => {
       $toast.success('Succès', 'Recette supprimée avec succès !', 3000)
       // Redirect to recipes list after deletion
       navigateTo('/recettes')
-    } catch (error) {
+    } catch {
       $toast.error('Erreur', 'Impossible de supprimer la recette. Veuillez réessayer.', 3000)
     }
   }

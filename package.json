@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "description": "Application de recettes des Boultons",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nuxt dev --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
     "vercel-build": "nuxt build",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@nuxt/fonts": "^0.14.0",
@@ -26,8 +31,14 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "^3.4.1",
+    "@nuxt/eslint": "^1.17.0",
+    "@nuxt/test-utils": "^4.3.3",
     "@types/node": "^22.20.5",
+    "@vue/test-utils": "^2.5.1",
+    "eslint": "^9.39.5",
+    "happy-dom": "^20.14.5",
     "typescript": "^5.9.3",
+    "vitest": "^5.0.3",
     "vue-tsc": "^3.3.12"
   },
   "engines": {

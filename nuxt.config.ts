@@ -15,7 +15,8 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxt/image',
     '@nuxtjs/i18n',
-    '@nuxtjs/supabase'
+    '@nuxtjs/supabase',
+    '@nuxt/eslint'
   ],
   css: [
     '~/assets/css/main.css'
