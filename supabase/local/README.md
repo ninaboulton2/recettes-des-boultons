@@ -1,7 +1,7 @@
 # Base de développement locale (Supabase CLI + Docker)
 
 Une stack Supabase complète sur ta machine — Postgres 17, Auth (GoTrue), PostgREST, Storage,
-Studio — avec le **schéma identique à la prod**, les **migrations 0003 → 0010 appliquées**, les
+Studio — avec le **schéma identique à la prod**, les **migrations 0003 → 0015 appliquées**, les
 **vraies recettes** (snapshot anonymisé) et des **comptes de test**. Sert à valider les
 migrations et l'application Nuxt avant toute application en production.
 
@@ -26,11 +26,13 @@ npm run dev:local          # Nuxt sur http://localhost:3001 branché sur la base
 ```
 
 `setup.sh` enchaîne : `tests/01_baseline_schema.sql` (schéma prod avant 0001) → `0001`, `0002`
-→ `local/snapshot/*.sql` (données prod) → `0003` … `0010` → `local/test_accounts.sql` →
-`local/verify.sql` (comptes attendus de `MIGRATION_NOTES.md` § 4 : 359 sections, 1 546
-ingrédients, 0 orphelin, 1 545 instructions, 42 politiques, bucket `recipe-photos`…). Il est
-idempotent : relancé sur une base déjà amorcée, il saute le schéma et l'import et rejoue
-seulement 0003 → 0010 (elles le sont par conception).
+→ `local/snapshot/*.sql` (données prod) → `0003` … `0015` (dont 0013 : colonnes JSONB
+supprimées, 0014 : sauvegardes supprimées, 0015 : nettoyage des données) →
+`local/test_accounts.sql` → `local/verify.sql` (25 contrôles : 358 sections, 1 546
+ingrédients, 1 538 étapes, 0 orphelin, colonnes JSONB absentes, 44 politiques, bucket
+`recipe-photos`…, comptés sur les recettes du snapshot). Il est idempotent : relancé sur une
+base déjà amorcée, il saute le schéma et l'import et rejoue les migrations (une fois 0013
+passée, seulement 0013 et suivantes : 0005 lit les colonnes JSONB).
 
 | Commande | Effet |
 |---|---|
@@ -38,13 +40,14 @@ seulement 0003 → 0010 (elles le sont par conception).
 | `npm run db:local:reset` | base vide (`supabase db reset`) puis amorçage complet |
 | `npm run db:local:down` | arrête les conteneurs (`supabase stop`, données conservées) |
 | `npm run db:local:status` | URL et clés locales |
-| `npm run db:local:test` | reset + `seed_test.sql` + 0003 → 0010 (+ rejeu idempotence) + `tests/test_00xx.sql` (vide les données prod : refaire `db:local:reset` ensuite) |
+| `npm run db:local:test` | reset + `seed_test.sql` + 0003 → 0012 (+ rejeu) + tests 0003-0010, puis 0013 → 0015 (+ rejeu) + tests 0013-0015 (vide les données prod : refaire `db:local:reset` ensuite) |
+| `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` | la même chose sur une base **séparée** `ci_test` de la stack : la base `postgres` (données prod, comptes) n'est pas touchée — à préférer quand d'autres utilisent la base locale (pg_dump 17 requis) |
 | `npm run db:local:snapshot` | régénère `snapshot/*.sql` depuis `snapshot/raw/*.json` (voir `export_snapshot.md`) |
 | `npm run dev:local` | `nuxt dev --dotenv .env.local` (port 3001) |
 
 Options de `supabase/local/setup.sh` : `--seed-test` (données jetables des tests au lieu du
 snapshot, sans les comptes applicatifs : les tests comptent les utilisateurs du seed),
-`--no-verify`. Variable `SUPABASE_DB_URL` (refusée si l'hôte n'est pas local).
+`--no-verify`, `--until NNNN` (s'arrête après la migration NNNN). Variable `SUPABASE_DB_URL` (refusée si l'hôte n'est pas local).
 
 Les tests SQL (`tests/test_00xx.sql`, écrits pour le shim Postgres nu de `tests/run_local.sh`)
 passent tels quels sur la vraie stack, à deux détails près, gérés par `test.sh` :
