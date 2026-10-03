@@ -1,28 +1,19 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
     <NuxtLink
       v-for="category in categories"
       :key="category.id"
-      :to="`/recettes?category=${category.id}`"
-      class="category-card group block focus:outline-hidden"
+      :to="localePath({ path: '/recettes', query: { category: category.id } })"
+      class="group flex flex-col overflow-hidden rounded-xl border border-default bg-default transition-colors hover:border-accented focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <div class="relative mb-4">
-        <div class="bg-white rounded-lg shadow p-2 overflow-hidden">
-          <NuxtImg
-            :src="category.image"
-            :alt="category.name"
-            class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
+      <div class="flex aspect-[4/3] items-center justify-center bg-muted transition-colors group-hover:bg-elevated">
+        <UIcon :name="category.icon" class="size-10 text-primary md:size-12" aria-hidden="true" />
       </div>
-      <div class="space-y-2 text-center">
-        <h3 class="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors duration-200">
+      <div class="flex flex-1 flex-col gap-0.5 p-3 md:p-4">
+        <h3 class="font-serif text-base font-semibold leading-snug text-highlighted md:text-lg">
           {{ category.name }}
         </h3>
-        <p class="text-gray-600 text-sm">
-          {{ category.description }}
-        </p>
-        <p v-if="counts" class="text-xs text-gray-500">
+        <p v-if="counts" class="text-xs text-muted">
           {{ $t('recipes.count', counts[category.id] ?? 0) }}
         </p>
       </div>
@@ -31,11 +22,13 @@
 </template>
 
 <script setup lang="ts">
-import type { Category } from '#shared/types'
+import type { CategoryEntry } from '~/composables/useCategories'
 
 defineProps<{
-  categories: Category[]
+  categories: CategoryEntry[]
   /** Nombre de recettes par catégorie (facettes) ; masqué si absent. */
   counts?: Record<string, number> | null
 }>()
+
+const localePath = useLocalePath()
 </script>

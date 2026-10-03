@@ -15,16 +15,104 @@
     "planning": "Planning"
   },
   "ui": {
-    "_agent": "3A"
+    "_agent": "3A",
+    "common": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "loading": "Loading…",
+      "updating": "Updating…",
+      "retry": "Retry",
+      "add": "Add",
+      "delete": "Delete",
+      "backHome": "Back to home",
+      "search": "Search…",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all"
+    },
+    "nav": {
+      "main": "Main navigation",
+      "mobile": "Navigation",
+      "me": "Me"
+    },
+    "colorMode": {
+      "toggle": "Toggle theme"
+    },
+    "language": {
+      "label": "Language"
+    },
+    "user": {
+      "menu": "User menu",
+      "login": "Sign in",
+      "logout": "Sign out",
+      "account": "My account",
+      "translator": "AI translator"
+    },
+    "card": {
+      "favoriteAdd": "Add to favorites",
+      "favoriteRemove": "Remove from favorites",
+      "edit": "Edit recipe",
+      "delete": "Delete recipe",
+      "addToList": "Add to a shopping list",
+      "addToPlanning": "Add to planning",
+      "minutes": "{n} min",
+      "servings": "{n} serv.",
+      "loginRequired": "Sign in to manage your favorites."
+    },
+    "favorites": {
+      "updated": "Favorites updated",
+      "error": "Could not update favorites"
+    },
+    "addToList": {
+      "title": "Add “{title}” to shopping",
+      "list": "Shopping list",
+      "noLists": "You don't have a shopping list yet.",
+      "createList": "Create a list",
+      "sections": "Ingredient sections",
+      "unnamedSection": "Unnamed",
+      "success": "Recipe added",
+      "added": "no ingredient added | {count} ingredient added to your list | {count} ingredients added to your list",
+      "error": "Could not add the recipe to the list",
+      "loadError": "Could not load the recipe ingredients."
+    },
+    "deleteRecipe": {
+      "title": "Delete recipe",
+      "message": "Delete the recipe “{title}”? This cannot be undone.",
+      "success": "Recipe deleted",
+      "error": "Could not delete the recipe. Please try again."
+    },
+    "editRecipe": {
+      "loadError": "Could not load the recipe to edit."
+    },
+    "filters": {
+      "removeTag": "Remove tag {tag}"
+    },
+    "pagination": {
+      "label": "Pagination"
+    },
+    "category": {
+      "subtitle": "All recipes in the “{category}” category"
+    },
+    "error": {
+      "loadTitle": "Loading error",
+      "notFound": {
+        "title": "Page not found",
+        "description": "This page does not exist or has moved."
+      },
+      "server": {
+        "title": "Something went wrong",
+        "description": "Please try again in a moment. If the problem persists, go back home."
+      }
+    }
   },
   "home": {
     "title": "Recettes des Boultons",
     "subtitle": "Find here all the favorite recipes of the Boultons!",
-    "viewRecipes": "View recipes",
+    "viewRecipes": "Explore recipes",
     "addRecipe": "Add a recipe",
     "categories": {
-      "title": "Explore our categories",
-      "subtitle": "Discover our recipes organized by categories to easily find what you like"
+      "title": "Explore by category",
+      "subtitle": "Soups, mains, desserts… quickly find what you're craving."
     },
     "features": {
       "title": "Features",
@@ -138,10 +226,13 @@
     "_agent": "3B"
   },
   "favorites": {
-    "title": "Mes favoris",
-    "subtitle": "Retrouvez ici toutes vos recettes préférées",
-    "empty": "Vous n'avez pas encore de favoris",
-    "addFirst": "Ajoutez votre première recette favorite !",
+    "title": "My favorite recipes",
+    "subtitle": "All your favorite recipes in one place",
+    "empty": {
+      "title": "No favorite recipes",
+      "description": "You haven't added any recipes to your favorites yet. Browse the recipes and click the heart to add some!",
+      "discover": "Discover recipes"
+    },
     "loading": "Loading your favorites...",
     "loadError": "Could not load favorites"
   },
@@ -169,21 +260,63 @@
   },
   "auth": {
     "login": {
-      "title": "Login",
+      "title": "Sign in",
+      "description": "Access your favorites, planning and shopping lists.",
       "email": "Email",
       "password": "Password",
-      "submit": "Login",
-      "error": "Login error",
-      "success": "Login successful"
+      "submit": "Sign in",
+      "error": "Sign-in failed",
+      "success": "Signed in",
+      "forgot": "Forgot password?",
+      "emailFirst": "Enter your email first, then click “Forgot password”.",
+      "resetSent": "Reset email sent: check your inbox.",
+      "resetError": "Could not send the reset email.",
+      "noAccount": "No account yet?"
     },
     "signup": {
       "title": "Sign up",
+      "description": "Create an account to save favorites and plan your meals.",
       "name": "Name",
       "email": "Email",
       "password": "Password",
+      "confirmPassword": "Confirm password",
+      "passwordHint": "At least 6 characters",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
       "submit": "Sign up",
-      "error": "Sign up error",
-      "success": "Sign up successful"
+      "error": "Sign-up failed",
+      "success": "Signed up",
+      "checkEmail": "Signed up! Check your inbox to confirm your account.",
+      "hasAccount": "Already have an account?"
+    },
+    "password": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "oauth": {
+      "google": "Continue with Google",
+      "apple": "Continue with Apple",
+      "or": "or",
+      "error": "Sign-in with this provider failed."
+    },
+    "validation": {
+      "email": "Invalid email address",
+      "required": "Required"
+    },
+    "confirm": {
+      "title": "Signing in",
+      "waiting": "Signing you in…",
+      "failedTitle": "Sign-in failed",
+      "failedDescription": "We could not complete the sign-in. Please try again from the home page."
+    },
+    "reset": {
+      "title": "Reset password",
+      "checking": "Checking the link…",
+      "invalidLink": "Invalid or expired link. Please request a new reset.",
+      "newPassword": "New password",
+      "submit": "Update password",
+      "success": "Password updated! Redirecting…",
+      "error": "Could not update the password"
     },
     "required": {
       "title": "Login required",

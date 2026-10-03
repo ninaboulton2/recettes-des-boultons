@@ -15,16 +15,104 @@
     "planning": "Planning"
   },
   "ui": {
-    "_agent": "3A"
+    "_agent": "3A",
+    "common": {
+      "close": "Fermer",
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "loading": "Chargement…",
+      "updating": "Mise à jour…",
+      "retry": "Réessayer",
+      "add": "Ajouter",
+      "delete": "Supprimer",
+      "backHome": "Retour à l'accueil",
+      "search": "Rechercher…",
+      "selectAll": "Tout sélectionner",
+      "deselectAll": "Tout désélectionner"
+    },
+    "nav": {
+      "main": "Navigation principale",
+      "mobile": "Navigation",
+      "me": "Moi"
+    },
+    "colorMode": {
+      "toggle": "Changer de thème"
+    },
+    "language": {
+      "label": "Langue"
+    },
+    "user": {
+      "menu": "Menu utilisateur",
+      "login": "Connexion",
+      "logout": "Déconnexion",
+      "account": "Mon compte",
+      "translator": "Traducteur IA"
+    },
+    "card": {
+      "favoriteAdd": "Ajouter aux favoris",
+      "favoriteRemove": "Retirer des favoris",
+      "edit": "Modifier la recette",
+      "delete": "Supprimer la recette",
+      "addToList": "Ajouter à une liste de courses",
+      "addToPlanning": "Ajouter au planning",
+      "minutes": "{n} min",
+      "servings": "{n} pers.",
+      "loginRequired": "Connectez-vous pour gérer vos favoris."
+    },
+    "favorites": {
+      "updated": "Favoris mis à jour",
+      "error": "Impossible de mettre à jour les favoris"
+    },
+    "addToList": {
+      "title": "Ajouter « {title} » aux courses",
+      "list": "Liste de courses",
+      "noLists": "Vous n'avez pas encore de liste de courses.",
+      "createList": "Créer une liste",
+      "sections": "Sections d'ingrédients",
+      "unnamedSection": "Sans nom",
+      "success": "Recette ajoutée",
+      "added": "aucun ingrédient ajouté | {count} ingrédient ajouté à votre liste | {count} ingrédients ajoutés à votre liste",
+      "error": "Impossible d'ajouter la recette à la liste",
+      "loadError": "Impossible de charger les ingrédients de la recette."
+    },
+    "deleteRecipe": {
+      "title": "Supprimer la recette",
+      "message": "Supprimer la recette « {title} » ? Cette action est irréversible.",
+      "success": "Recette supprimée",
+      "error": "Impossible de supprimer la recette. Réessayez."
+    },
+    "editRecipe": {
+      "loadError": "Impossible de charger la recette à modifier."
+    },
+    "filters": {
+      "removeTag": "Retirer le tag {tag}"
+    },
+    "pagination": {
+      "label": "Pagination"
+    },
+    "category": {
+      "subtitle": "Toutes les recettes de la catégorie « {category} »"
+    },
+    "error": {
+      "loadTitle": "Erreur de chargement",
+      "notFound": {
+        "title": "Page introuvable",
+        "description": "Cette page n'existe pas ou a été déplacée."
+      },
+      "server": {
+        "title": "Une erreur est survenue",
+        "description": "Réessayez dans quelques instants. Si le problème persiste, revenez à l'accueil."
+      }
+    }
   },
   "home": {
     "title": "Recettes des Boultons",
     "subtitle": "Retrouvez ici toutes les recettes préférées des Boultons !",
-    "viewRecipes": "Voir les recettes",
+    "viewRecipes": "Explorer les recettes",
     "addRecipe": "Ajouter une recette",
     "categories": {
-      "title": "Explorez nos catégories",
-      "subtitle": "Découvrez nos recettes organisées par catégories pour trouver facilement ce qui vous plaît"
+      "title": "Explorer par catégorie",
+      "subtitle": "Soupes, plats, desserts… trouvez rapidement ce qui vous fait envie."
     },
     "features": {
       "title": "Fonctionnalités",
@@ -289,20 +377,62 @@
   "auth": {
     "login": {
       "title": "Connexion",
+      "description": "Retrouvez vos favoris, votre planning et vos listes de courses.",
       "email": "Email",
       "password": "Mot de passe",
       "submit": "Se connecter",
       "error": "Erreur de connexion",
-      "success": "Connexion réussie"
+      "success": "Connexion réussie",
+      "forgot": "Mot de passe oublié ?",
+      "emailFirst": "Saisissez d'abord votre e-mail, puis cliquez sur « Mot de passe oublié ».",
+      "resetSent": "E-mail de réinitialisation envoyé : vérifiez votre boîte mail.",
+      "resetError": "Impossible d'envoyer l'e-mail de réinitialisation.",
+      "noAccount": "Pas encore de compte ?"
     },
     "signup": {
       "title": "Inscription",
+      "description": "Créez un compte pour enregistrer vos favoris et planifier vos repas.",
       "name": "Nom",
       "email": "Email",
       "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "passwordHint": "6 caractères minimum",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
       "submit": "S'inscrire",
       "error": "Erreur d'inscription",
-      "success": "Inscription réussie"
+      "success": "Inscription réussie",
+      "checkEmail": "Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre compte.",
+      "hasAccount": "Déjà un compte ?"
+    },
+    "password": {
+      "show": "Afficher le mot de passe",
+      "hide": "Masquer le mot de passe"
+    },
+    "oauth": {
+      "google": "Continuer avec Google",
+      "apple": "Continuer avec Apple",
+      "or": "ou",
+      "error": "La connexion avec ce fournisseur a échoué."
+    },
+    "validation": {
+      "email": "Adresse e-mail invalide",
+      "required": "Champ obligatoire"
+    },
+    "confirm": {
+      "title": "Connexion",
+      "waiting": "Connexion en cours…",
+      "failedTitle": "Connexion impossible",
+      "failedDescription": "Nous n'avons pas pu finaliser la connexion. Réessayez depuis l'accueil."
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "checking": "Vérification du lien…",
+      "invalidLink": "Lien invalide ou expiré. Refaites une demande de réinitialisation.",
+      "newPassword": "Nouveau mot de passe",
+      "submit": "Mettre à jour le mot de passe",
+      "success": "Mot de passe mis à jour ! Redirection…",
+      "error": "Erreur lors de la mise à jour du mot de passe"
     },
     "required": {
       "title": "Connexion requise",

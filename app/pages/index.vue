@@ -1,106 +1,56 @@
 <template>
-  <div class="w-full min-h-screen">
-    <!-- Hero Section - Diagonal Blue/White FULL WIDTH -->
-    <div class="relative min-h-[72vh] w-full diagonal-bg overflow-hidden flex items-center justify-center">
-      <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between min-h-[72vh] py-16">
-        <!-- Texte à gauche -->
-        <div class="flex-1 flex flex-col justify-center items-start lg:items-start py-16 lg:py-0">
-          <h1 class="text-5xl md:text-6xl font-lobster text-white mb-6 drop-shadow-lg">
-            Recettes des Boultons
-          </h1>
-          <p class="text-lg md:text-xl text-white mb-8 max-w-md">
-            Retrouvez ici toutes les recettes préférées des Boultons !
-          </p>
-          <div class="flex flex-col sm:flex-row gap-4">
-            <button
-              @click="scrollToCategories"
-              class="btn-primary text-lg px-8 py-3 shadow-lg"
-            >
-              Explorer les recettes
-            </button>
-          </div>
-        </div>
-        <!-- Illustration à droite -->
-        <div class="flex-1 flex justify-center items-center w-full lg:w-auto mt-12 lg:mt-0">
-          <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 flex items-center justify-center" style="max-width: 500px;">
-            <NuxtImg
-              src="/images/boultons.png"
-              alt="Famille Boultons"
-              class="w-full h-auto object-contain"
-              style="max-width: 420px;"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Categories Section -->
-    <section class="py-16 w-full">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12">
-          <h2 class="text-4xl font-semibold text-gray-900 mb-4">
-            Explorer les recettes par catégories
-          </h2>
-          <p v-if="facets.totalCount.value > 0" class="text-xl text-gray-600">
-            {{ $t('recipes.count', facets.totalCount.value) }}
-          </p>
-        </div>
-        <CategoryGrid :categories="categories" :counts="facets.countsByCategory.value" />
+  <div class="space-y-16 md:space-y-24">
+    <!-- Héros -->
+    <section class="flex flex-col items-start gap-6 pt-6 md:pt-12">
+      <UBadge v-if="facets.totalCount.value > 0" color="primary" variant="soft" size="lg" icon="i-lucide-chef-hat">
+        {{ $t('recipes.count', facets.totalCount.value) }}
+      </UBadge>
+      <h1 class="max-w-3xl font-serif text-4xl font-semibold leading-tight text-highlighted sm:text-5xl md:text-6xl">
+        {{ $t('home.title') }}
+      </h1>
+      <p class="max-w-xl text-lg text-muted md:text-xl">
+        {{ $t('home.subtitle') }}
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <UButton :to="localePath('/recettes')" size="xl" icon="i-lucide-book-open" :label="$t('home.viewRecipes')" />
+        <UButton
+          v-if="authStore.isAdmin"
+          :to="localePath('/traducteur')"
+          size="xl"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-plus"
+          :label="$t('home.addRecipe')"
+        />
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="py-16 bg-white w-full">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12">
-          <h2 class="text-4xl font-semibold text-gray-900 mb-4">
-            Fonctionnalités
-          </h2>
-          <p class="text-xl text-gray-600">
-            Tout ce dont vous avez besoin pour organiser vos repas
-          </p>
-        </div>
+    <!-- Catégories -->
+    <section id="categories" aria-labelledby="categories-title">
+      <div class="mb-6 md:mb-8">
+        <h2 id="categories-title" class="font-serif text-2xl font-semibold text-highlighted md:text-3xl">
+          {{ $t('home.categories.title') }}
+        </h2>
+        <p class="mt-2 text-muted">{{ $t('home.categories.subtitle') }}</p>
+      </div>
+      <CategoryGrid :categories="categories" :counts="facets.countsByCategory.value" />
+    </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div class="text-center">
-            <div class="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Recettes détaillées</h3>
-            <p class="text-gray-600">Instructions pas à pas, temps de préparation et ingrédients précis</p>
+    <!-- Fonctionnalités -->
+    <section aria-labelledby="features-title" class="border-t border-default pt-12 md:pt-16">
+      <div class="mb-6 md:mb-8">
+        <h2 id="features-title" class="font-serif text-2xl font-semibold text-highlighted md:text-3xl">
+          {{ $t('home.features.title') }}
+        </h2>
+        <p class="mt-2 text-muted">{{ $t('home.features.subtitle') }}</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div v-for="feature in features" :key="feature.key" class="rounded-xl border border-default p-5">
+          <div class="mb-4 flex size-10 items-center justify-center rounded-lg bg-primary/10">
+            <UIcon :name="feature.icon" class="size-5 text-primary" aria-hidden="true" />
           </div>
-
-          <div class="text-center">
-            <div class="bg-secondary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-8 h-8 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Listes de courses</h3>
-            <p class="text-gray-600">Générez automatiquement vos listes de courses à partir des recettes</p>
-          </div>
-
-          <div class="text-center">
-            <div class="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Planning hebdomadaire</h3>
-            <p class="text-gray-600">Organisez vos repas de la semaine et planifiez vos menus</p>
-          </div>
-
-          <div class="text-center">
-            <div class="bg-secondary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-8 h-8 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Traducteur IA</h3>
-            <p class="text-gray-600">Convertissez et ajoutez automatiquement vos recettes depuis Google Drive</p>
-          </div>
+          <h3 class="font-semibold text-highlighted">{{ $t(`home.features.${feature.key}.title`) }}</h3>
+          <p class="mt-1 text-sm text-muted">{{ $t(`home.features.${feature.key}.description`) }}</p>
         </div>
       </div>
     </section>
@@ -108,86 +58,25 @@
 </template>
 
 <script setup lang="ts">
-import type { Category } from '#shared/types'
-import { categoryImage } from '#shared/utils/recipes'
+const { t } = useI18n()
+const localePath = useLocalePath()
+const authStore = useAuthStore()
 
 // Compteurs par catégorie (requête légère, rendue côté serveur)
 const facets = useRecipeFacets()
+const { categories } = useCategories()
 
-// Fonction pour faire défiler vers la section des catégories
-const scrollToCategories = () => {
-  const categoriesSection = document.querySelector('section')
-  if (categoriesSection) {
-    categoriesSection.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    })
-  }
-}
+const features = [
+  { key: 'detailedRecipes', icon: 'i-lucide-book-open' },
+  { key: 'shoppingLists', icon: 'i-lucide-shopping-cart' },
+  { key: 'weeklyPlanning', icon: 'i-lucide-calendar-days' },
+  { key: 'aiTranslator', icon: 'i-lucide-sparkles' }
+] as const
 
-// Définition des catégories
-const categories: Category[] = [
-  {
-    id: 'soupes',
-    name: 'Soupes',
-    description: 'Soupes chaudes et froides pour toutes les saisons',
-    image: categoryImage('soupes')
-  },
-  {
-    id: 'entrees',
-    name: 'Entrées, Salades, Pains et accompagnements',
-    description: 'Entrées fraîches et accompagnements savoureux',
-    image: categoryImage('entrees')
-  },
-  {
-    id: 'plats',
-    name: 'Plats',
-    description: 'Plats principaux équilibrés et délicieux',
-    image: categoryImage('plats')
-  },
-  {
-    id: 'poissons',
-    name: 'Poissons',
-    description: 'Recettes de poissons frais et savoureux',
-    image: categoryImage('poissons')
-  },
-  {
-    id: 'viandes',
-    name: 'Viandes',
-    description: 'Plats de viandes traditionnels et modernes',
-    image: categoryImage('viandes')
-  },
-  {
-    id: 'yaourts et fromages',
-    name: 'Yaourts et fromages',
-    description: 'Produits laitiers et fromages artisanaux',
-    image: categoryImage('yaourts et fromages')
-  },
-  {
-    id: 'desserts et gâteaux',
-    name: 'Desserts et gâteaux',
-    description: 'Desserts et gâteaux sucrés et pâtisseries maison',
-    image: categoryImage('desserts et gâteaux')
-  },
-  {
-    id: 'boissons',
-    name: 'Boissons',
-    description: 'Boissons rafraîchissantes et cocktails',
-    image: categoryImage('boissons')
-  },
-  {
-    id: 'confitures',
-    name: 'Confitures',
-    description: 'Confitures et conserves maison',
-    image: categoryImage('confitures')
-  }
-]
-
-// SEO
 useHead({
-  title: 'Accueil - Recettes des Boultons',
+  title: () => t('navigation.home'),
   meta: [
-    { name: 'description', content: 'Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et gâteaux et plus encore !' }
+    { name: 'description', content: () => t('meta.home.description') }
   ]
 })
 </script>

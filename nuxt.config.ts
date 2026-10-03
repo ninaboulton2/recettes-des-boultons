@@ -50,27 +50,42 @@ export default defineNuxtConfig({
       title: 'Recettes des Boultons',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' },
+        // Couleur de la barre du navigateur : accent terracotta (clair) / fond stone (sombre)
+        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#c2603e' },
+        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#1c1917' }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/logo.png' },
-        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/logo.png' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
       ]
     }
   },
   ui: {
-    // Pas de mode sombre pour l'instant : l'app n'a aucune variante dark:.
-    colorMode: false
+    // Vrai mode sombre (classe `.dark`, bouton <UColorModeButton> dans le header).
+    colorMode: true
+  },
+  colorMode: {
+    preference: 'system',
+    fallback: 'light'
   },
   fonts: {
-    // Remplace l'ancien <link> Google Fonts : polices servies/optimisées par @nuxt/fonts
+    // Polices servies/optimisées par @nuxt/fonts : Inter (interface),
+    // Fraunces (titres), Lobster (logo uniquement).
     families: [
-      { name: 'Lobster', provider: 'google', weights: [400] },
-      { name: 'Poppins', provider: 'google', weights: [400, 600, 700] }
+      { name: 'Inter', provider: 'google', weights: [400, 500, 600, 700] },
+      { name: 'Fraunces', provider: 'google', weights: [400, 500, 600, 700] },
+      { name: 'Lobster', provider: 'google', weights: [400] }
     ]
+  },
+  runtimeConfig: {
+    public: {
+      // Fournisseurs OAuth affichés dans la modale d'authentification
+      // (liste séparée par des virgules ; NUXT_PUBLIC_AUTH_PROVIDERS=google,apple).
+      authProviders: 'google'
+    }
   },
   image: {
     quality: 80,
