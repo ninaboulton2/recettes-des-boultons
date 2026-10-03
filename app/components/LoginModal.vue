@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { LoginCredentials } from '~/types'
+import type { LoginCredentials } from '#shared/types'
 import { useAuthStore } from '~/stores/auth'
 import { useSupabase } from '~/composables/useSupabase'
 

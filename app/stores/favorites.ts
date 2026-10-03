@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
-import type { Recipe } from '~/types'
+import type { Recipe } from '#shared/types'
 import { useAuthStore } from './auth'
 
 interface Favorite {

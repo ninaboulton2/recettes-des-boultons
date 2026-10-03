@@ -220,7 +220,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { SignUpCredentials } from '~/types'
+import type { SignUpCredentials } from '#shared/types'
 import { useSupabase } from '~/composables/useSupabase'
 
 interface Props {

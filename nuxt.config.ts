@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   devServer: {
     port: 3001
@@ -17,13 +18,13 @@ export default defineNuxtConfig({
     locales: [
       {
         code: 'fr',
-        iso: 'fr-FR',
+        language: 'fr-FR',
         name: 'Français',
         file: 'fr.json'
       },
       {
         code: 'en',
-        iso: 'en-US',
+        language: 'en-US',
         name: 'English',
         file: 'en.json'
       }
@@ -68,6 +69,14 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
-    // Le preset est défini dans nitro.config.ts
+    // Déploiement Vercel (anciennement dans nitro.config.ts, non supporté par Nuxt 4)
+    preset: 'vercel',
+    vercel: {
+      functions: {
+        'server/api/**/*.ts': {
+          maxDuration: 30
+        }
+      }
+    }
   }
 }) 

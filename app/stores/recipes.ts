@@ -1,15 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
 import { apiFetch } from '~/composables/useApi'
-
-// Fonction pour normaliser les accents (insensible aux accents)
-const normalizeAccents = (str) => {
-  if (!str) return ''
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
-    .toLowerCase()
-}
+import { normalizeAccents } from '#shared/utils/text'
 
 export const useRecipesStore = defineStore('recipes', () => {
   const recipes = ref([])

@@ -61,7 +61,7 @@ const showInfoToast = (title, message = '', duration = 3000) => {
 }
 
 // Exposer les méthodes globalement
-if (process.client) {
+if (import.meta.client) {
   window.$toast = {
     show: showToast,
     success: showSuccessToast,

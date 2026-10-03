@@ -237,7 +237,7 @@ const shoppingStore = useShoppingStore()
 
 // Setup global toast container
 onMounted(() => {
-  if (process.client) {
+  if (import.meta.client) {
     window.$toastContainer = toastContainer.value
   }
 })

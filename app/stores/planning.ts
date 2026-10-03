@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
 import { ref, computed, onMounted, readonly } from 'vue'
-import type { Recipe } from '~/utils/supabase'
+import type { Recipe } from '#shared/types'
 import { useAuthStore } from './auth'
 
 interface Meal {

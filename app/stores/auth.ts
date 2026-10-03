@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { User, LoginCredentials, AuthResponse, AuthState } from '~/types'
+import type { User, LoginCredentials, AuthResponse, AuthState } from '#shared/types'
 import { useSupabase } from '~/composables/useSupabase'
 
 export const useAuthStore = defineStore('auth', {
