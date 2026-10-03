@@ -173,6 +173,48 @@ npm test           # Vitest (npm run test:watch en continu)
 
 Déploiement : push sur `main` → build automatique Vercel.
 
+## Base de dev locale
+
+Une stack Supabase complète tourne en local (Docker + CLI Supabase : Postgres 17, Auth,
+PostgREST, Storage, Studio) avec le schéma prod, les migrations `0003 → 0010` appliquées, les
+vraies recettes (snapshot anonymisé, gitignoré) et des comptes de test. Détails :
+[supabase/local/README.md](supabase/local/README.md).
+
+```bash
+npm run db:local:up        # Docker → supabase start → supabase/local/setup.sh (schéma, données, 0003→0010, vérifs)
+cp .env.local.example .env.local
+npm run dev:local          # Nuxt sur la base locale (nuxt dev --dotenv .env.local) ; npm run dev reste sur .env (prod)
+npm run db:local:reset     # repartir d'une base vide puis réamorcer
+npm run db:local:test      # reset + seed_test.sql + 0003→0010 + supabase/tests/test_00xx.sql (puis db:local:reset)
+npm run db:local:down      # arrêter les conteneurs
+```
+
+- Comptes : `admin@local.test` / `password123` (admin, uuid prod conservé : favoris, planning, listes)
+  et `user@local.test` / `password123`. Studio : http://127.0.0.1:54323, mails : http://127.0.0.1:54324.
+- La CLI ne gère **pas** l'historique prod : `[db.migrations] enabled = false` dans
+  `supabase/config.toml`, pas de `supabase link`. Les fichiers `supabase/migrations/00xx_*.sql`
+  restent appliqués à la main (prod) ou par `setup.sh` (local).
+- Le hook JWT (`custom_access_token_hook`, claim `user_role`) est actif en local, comme il le
+  sera en prod après activation dans le dashboard.
+- Prévisualisation agent : configuration `preview-local` de `.claude/launch.json` (port 3007).
+- Limites : pas d'OpenAI (`/traducteur` indisponible), pas d'e-mails sortants (Mailpit),
+  Postgres `17.11` local vs `17.4` prod (mêmes extensions).
+
+**Régressions connues de l'app actuelle face à 0003 → 0010** (constatées sur la base locale,
+à corriger côté app avant d'appliquer 0005 en prod) :
+
+- `server/api/recipes.get.ts` charge **tous** les `recipe_ingredients` et toutes les
+  `instructions` en un seul `select` chacun. Après 0005 (1 546 ingrédients, 1 545 instructions),
+  PostgREST tronque à `max_rows = 1000` (valeur par défaut Supabase, reproduite en local) :
+  57 recettes s'affichent sans aucun ingrédient et 51 sans aucune étape (ex. « Tarte à la
+  tomate » : 13 ingrédients en base, titre « Ingrédients » vide à l'écran), 18 autres sont
+  partiellement tronquées. Comme toutes les recettes ont désormais des sections, le repli JSONB
+  de `pages/recettes/[id].vue` ne joue plus. Correctif : charger par recette, paginer avec
+  `.range()`, ou passer par `search_recipes` + requête ciblée sur la fiche.
+- `components/RecipeEditor.vue` n'envoie plus `ingredients`/`instructions` JSONB : jusqu'au
+  passage par `save_recipe` (0006), une recette modifiée garde un JSONB périmé (sans effet
+  d'affichage tant que les sections existent).
+
 ## À savoir
 
 - **Tests** : Vitest via `@nuxt/test-utils` (environnement `happy-dom` par défaut ; `// @vitest-environment nuxt` pour un test nécessitant l'app). Premier test : `test/unit/text.test.ts`.
