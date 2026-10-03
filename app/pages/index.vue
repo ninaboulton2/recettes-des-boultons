@@ -12,8 +12,8 @@
             Retrouvez ici toutes les recettes préférées des Boultons !
           </p>
           <div class="flex flex-col sm:flex-row gap-4">
-            <button 
-              @click="scrollToCategories" 
+            <button
+              @click="scrollToCategories"
               class="btn-primary text-lg px-8 py-3 shadow-lg"
             >
               Explorer les recettes
@@ -23,9 +23,9 @@
         <!-- Illustration à droite -->
         <div class="flex-1 flex justify-center items-center w-full lg:w-auto mt-12 lg:mt-0">
           <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 flex items-center justify-center" style="max-width: 500px;">
-            <NuxtImg 
-              src="/images/boultons.png" 
-              alt="Famille Boultons" 
+            <NuxtImg
+              src="/images/boultons.png"
+              alt="Famille Boultons"
               class="w-full h-auto object-contain"
               style="max-width: 420px;"
             />
@@ -41,8 +41,11 @@
           <h2 class="text-4xl font-semibold text-gray-900 mb-4">
             Explorer les recettes par catégories
           </h2>
+          <p v-if="facets.totalCount.value > 0" class="text-xl text-gray-600">
+            {{ $t('recipes.count', facets.totalCount.value) }}
+          </p>
         </div>
-        <CategoryGrid :categories="categories" />
+        <CategoryGrid :categories="categories" :counts="facets.countsByCategory.value" />
       </div>
     </section>
 
@@ -104,14 +107,18 @@
   </div>
 </template>
 
-<script setup>
-import CategoryGrid from '@/components/CategoryGrid.vue'
+<script setup lang="ts">
+import type { Category } from '#shared/types'
+import { categoryImage } from '#shared/utils/recipes'
+
+// Compteurs par catégorie (requête légère, rendue côté serveur)
+const facets = useRecipeFacets()
 
 // Fonction pour faire défiler vers la section des catégories
 const scrollToCategories = () => {
   const categoriesSection = document.querySelector('section')
   if (categoriesSection) {
-    categoriesSection.scrollIntoView({ 
+    categoriesSection.scrollIntoView({
       behavior: 'smooth',
       block: 'start'
     })
@@ -119,60 +126,60 @@ const scrollToCategories = () => {
 }
 
 // Définition des catégories
-const categories = [
+const categories: Category[] = [
   {
     id: 'soupes',
     name: 'Soupes',
     description: 'Soupes chaudes et froides pour toutes les saisons',
-    image: '/images/soupes.png'
+    image: categoryImage('soupes')
   },
   {
     id: 'entrees',
     name: 'Entrées, Salades, Pains et accompagnements',
     description: 'Entrées fraîches et accompagnements savoureux',
-    image: '/images/entrees,salades,pains,accompagnements.png'
+    image: categoryImage('entrees')
   },
   {
     id: 'plats',
     name: 'Plats',
     description: 'Plats principaux équilibrés et délicieux',
-    image: '/images/plats.png'
+    image: categoryImage('plats')
   },
   {
     id: 'poissons',
     name: 'Poissons',
     description: 'Recettes de poissons frais et savoureux',
-    image: '/images/poissons.png'
+    image: categoryImage('poissons')
   },
   {
     id: 'viandes',
     name: 'Viandes',
     description: 'Plats de viandes traditionnels et modernes',
-    image: '/images/viandes.png'
+    image: categoryImage('viandes')
   },
   {
     id: 'yaourts et fromages',
     name: 'Yaourts et fromages',
     description: 'Produits laitiers et fromages artisanaux',
-    image: '/images/yaourts&fromages.png'
+    image: categoryImage('yaourts et fromages')
   },
   {
     id: 'desserts et gâteaux',
     name: 'Desserts et gâteaux',
     description: 'Desserts et gâteaux sucrés et pâtisseries maison',
-    image: '/images/desserts.png'
+    image: categoryImage('desserts et gâteaux')
   },
   {
     id: 'boissons',
     name: 'Boissons',
     description: 'Boissons rafraîchissantes et cocktails',
-    image: '/images/boissons.png'
+    image: categoryImage('boissons')
   },
   {
     id: 'confitures',
     name: 'Confitures',
     description: 'Confitures et conserves maison',
-    image: '/images/confitures.png'
+    image: categoryImage('confitures')
   }
 ]
 
@@ -183,4 +190,4 @@ useHead({
     { name: 'description', content: 'Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et gâteaux et plus encore !' }
   ]
 })
-</script> 
+</script>

@@ -1,40 +1,55 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
 import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
-import { ref, computed, onMounted, readonly } from 'vue'
+import { ref, computed } from 'vue'
+import type { Database } from '#shared/types/database'
 import { useAuthStore } from './auth'
 
-interface ShoppingItem {
+export interface ShoppingItem {
   id: string
   name: string
-  amount?: string | number | null // Peut être string (depuis Supabase) ou number (depuis l'interface)
+  amount?: string | number | null // Texte libre en base, nombre depuis l'interface
+  amountNum?: number | null
   unit?: string | null
+  unitCode?: string | null
   note?: string
   checked: boolean
-  recipeId?: string
+  recipeId?: string | null
   listId: string
-  createdAt: string
-  updatedAt: string
+  createdAt: string | null
+  updatedAt: string | null
 }
 
-interface ShoppingList {
+export interface ShoppingList {
   id: string
   name: string
   userId: string | null
   items: ShoppingItem[]
-  createdAt: string
-  updatedAt: string
+  createdAt: string | null
+  updatedAt: string | null
 }
 
-interface GroupedItem extends ShoppingItem {
+export interface GroupedItem extends ShoppingItem {
   originalIds: string[]
 }
 
+/**
+ * Listes de courses de l'utilisateur connecté.
+ *
+ * Lecture directe sous RLS (`shopping_lists` avec `shopping_items(*)` imbriqués),
+ * rendue côté serveur par la page `courses` via `useAsyncData` ; `refresh()`
+ * recharge après une écriture. Les écritures passent encore par
+ * `/api/shopping-lists*` et `/api/shopping-items*`.
+ */
 export const useShoppingStore = defineStore('shopping', () => {
+  const supabase = useSupabaseClient<Database>()
+
   const shoppingLists = ref<ShoppingList[]>([])
   const currentList = ref<ShoppingList | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  /** Utilisateur pour lequel `shoppingLists` a été chargé (`null` : personne). */
+  const loadedForUserId = ref<string | null>(null)
 
   // Computed properties
   const currentItems = computed(() => {
@@ -441,22 +456,25 @@ export const useShoppingStore = defineStore('shopping', () => {
       targetList.updatedAt = new Date().toISOString()
 
       // Recharger les listes pour avoir l'état le plus récent
-      await loadShoppingLists()
+      await refreshShoppingLists()
 
     } catch (error) {
       console.error('Erreur déplacement article:', error)
       // En cas d'erreur, recharger les listes pour restaurer l'état
-      await loadShoppingLists()
+      await refreshShoppingLists()
     }
   }
 
-  const addIngredientsToLists = async (ingredients: Array<{name: string, amount: number, unit: string, recipeId?: string}>) => {
+  const addIngredientsToLists = async (ingredients: Array<{name: string, amount: number | null, unit: string, recipeId?: string}>) => {
     const authStore = useAuthStore()
     const userId = authStore.currentUser?.id || null
     
     if (!userId) {
       throw new Error('Vous devez être connecté pour gérer vos listes de courses')
     }
+
+    // S'assurer que les listes existantes sont connues avant d'en créer une par défaut
+    await ensureLoaded()
     
     // Créer une liste par défaut "Ma liste de courses" si aucune n'existe
     if (shoppingLists.value.length === 0) {
@@ -482,7 +500,7 @@ export const useShoppingStore = defineStore('shopping', () => {
           const totalAmount = existingItems.reduce((sum, item) => {
             const itemAmount = parseFloat(item.amount as string) || 0
             return sum + itemAmount
-          }, 0) + ingredient.amount
+          }, 0) + (ingredient.amount ?? 0)
                     
           // Mettre à jour le premier item existant avec la nouvelle quantité totale
           const firstExistingItem = existingItems[0]
@@ -559,7 +577,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
 
     // Recharger les listes pour avoir l'état le plus récent
-    await loadShoppingLists()
+    await refreshShoppingLists()
 
     return { success: true }
   }
@@ -606,8 +624,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  // Charger les listes depuis Supabase
-  const loadShoppingLists = async () => {
+  // Charger les listes depuis Supabase (lecture directe sous RLS). Lève en cas d'erreur.
+  const loadShoppingLists = async (): Promise<ShoppingList[]> => {
     isLoading.value = true
     error.value = null
     
@@ -619,36 +637,73 @@ export const useShoppingStore = defineStore('shopping', () => {
       if (!userId) {
         shoppingLists.value = []
         currentList.value = null
-        return
-      }
-      
-      const response = await apiFetch(`/api/shopping-lists?userId=${userId}`)
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        loadedForUserId.value = null
+        return []
       }
 
-      const data = await response.json()
-      if (data.success) {
-        shoppingLists.value = data.lists
-        // Sélectionner la première liste par défaut
-        if (shoppingLists.value.length > 0 && !currentList.value) {
-          currentList.value = shoppingLists.value[0] ?? null
-        }
-      } else {
-        throw new Error('Erreur lors du chargement des listes')
-      }
+      const { data, error: loadError } = await supabase
+        .from('shopping_lists')
+        .select('*, items:shopping_items(*)')
+        .order('created_at', { ascending: false })
+        .order('created_at', { referencedTable: 'shopping_items', ascending: true })
+      if (loadError) throw loadError
+
+      shoppingLists.value = data.map(list => ({
+        id: list.id,
+        name: list.name,
+        userId: list.user_id,
+        createdAt: list.created_at,
+        updatedAt: list.updated_at,
+        items: list.items.map(item => ({
+          id: item.id,
+          listId: item.list_id,
+          name: item.name,
+          amount: item.amount,
+          amountNum: item.amount_num,
+          unit: item.unit,
+          unitCode: item.unit_code,
+          checked: item.is_checked ?? false,
+          recipeId: item.recipe_id,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
+        }))
+      }))
+      loadedForUserId.value = userId
+
+      // Conserver la liste sélectionnée, sinon la première par défaut
+      const selectedId = currentList.value?.id
+      currentList.value = shoppingLists.value.find(list => list.id === selectedId) ?? shoppingLists.value[0] ?? null
+      return shoppingLists.value
     } catch (err) {
       console.error('Erreur chargement listes:', err)
       error.value = err instanceof Error ? err.message : 'Erreur inconnue'
+      throw err
     } finally {
       isLoading.value = false
     }
   }
 
-  // Méthode pour recharger les listes quand l'utilisateur change
+  /** Recharge les listes (à appeler après une écriture). Lève en cas d'erreur. */
+  const refresh = () => loadShoppingLists()
+
+  /** Charge les listes une seule fois par utilisateur. */
+  const ensureLoaded = async (): Promise<void> => {
+    const userId = useAuthStore().currentUser?.id ?? null
+    if (isLoading.value || loadedForUserId.value === userId) return
+    try {
+      await loadShoppingLists()
+    } catch {
+      // Erreur déjà consignée dans `error`
+    }
+  }
+
+  // Méthode pour recharger les listes quand l'utilisateur change (layout)
   const refreshShoppingLists = async () => {
-    await loadShoppingLists()
+    try {
+      await loadShoppingLists()
+    } catch {
+      // Erreur déjà consignée dans `error`
+    }
   }
 
   // Réinitialiser les quantités et unités de tous les articles de la liste actuelle
@@ -865,17 +920,12 @@ export const useShoppingStore = defineStore('shopping', () => {
     return await toggleAllItems(false)
   }
 
-  // Initialize
-  onMounted(() => {
-    loadShoppingLists()
-  })
-
   return {
     // State
-    shoppingLists: readonly(shoppingLists),
-    currentList: readonly(currentList),
-    isLoading: readonly(isLoading),
-    error: readonly(error),
+    shoppingLists,
+    currentList,
+    isLoading,
+    error,
     
     // Computed
     currentItems,
@@ -897,6 +947,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     addIngredientsToLists,
     addRecipeToList,
     loadShoppingLists,
+    refresh,
+    ensureLoaded,
     refreshShoppingLists,
     resetQuantities,
     clearList,

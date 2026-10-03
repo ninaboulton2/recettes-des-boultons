@@ -1,15 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed, onMounted, readonly } from 'vue'
+import { ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
 import { apiErrorFromResponse } from '~/composables/useApiError'
-import { normalizeAccents } from '#shared/utils/text'
-import type { Recipe } from '#shared/types'
-
-interface RecipesApiResponse {
-  success: boolean
-  recipes: Recipe[]
-  error?: string
-}
+import type { Recipe, RecipeInput } from '#shared/types'
 
 interface RecipeMutationResponse {
   success: boolean
@@ -22,92 +15,34 @@ interface DeleteResponse {
   message?: string
 }
 
+/**
+ * Store « recettes » : uniquement l'état d'interface (catégorie, recherche,
+ * tags) et les actions d'écriture.
+ *
+ * Les lectures ne passent plus par ici : la liste vient de la RPC
+ * `search_recipes` (`useRecipeSearch`), la fiche d'une requête ciblée
+ * (`useRecipe`), les facettes de `useRecipeFacets`. Ces composables observent
+ * `revision` : appeler `refresh()` après une écriture les fait recharger.
+ */
 export const useRecipesStore = defineStore('recipes', () => {
-  const recipes = ref<Recipe[]>([])
   const currentCategory = ref<string | null>(null)
   const searchQuery = ref('')
   const selectedTags = ref<string[]>([])
   const isLoading = ref(false)
 
-  // Computed properties
-  const filteredRecipes = computed(() => {
-    let filtered = recipes.value
+  /** Incrémenté à chaque écriture ; observé par les lectures (`useAsyncData`). */
+  const revision = ref(0)
 
-    if (currentCategory.value) {
-      filtered = filtered.filter(recipe => recipe.category === currentCategory.value)
-    }
-
-    if (searchQuery.value) {
-      const normalizedQuery = normalizeAccents(searchQuery.value)
-      filtered = filtered.filter(recipe => 
-        normalizeAccents(recipe.title).includes(normalizedQuery) ||
-        normalizeAccents(recipe.description).includes(normalizedQuery) ||
-        recipe.tags.some(tag => normalizeAccents(tag).includes(normalizedQuery))
-      )
-    }
-
-    if (selectedTags.value.length > 0) {
-      filtered = filtered.filter(recipe => 
-        selectedTags.value.some(selectedTag => 
-          recipe.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
-        )
-      )
-    }
-
-    return filtered
-  })
-
-  // Get all unique tags from recipes
-  const allTags = computed(() => {
-    const tagsSet = new Set<string>()
-    recipes.value.forEach(recipe => {
-      if (recipe.tags && Array.isArray(recipe.tags)) {
-        recipe.tags.forEach(tag => tagsSet.add(tag))
-      }
-    })
-    return Array.from(tagsSet).sort()
-  })
-
-  // Get tags for current category
-  const categoryTags = computed(() => {
-    if (!currentCategory.value) return allTags.value
-    
-    const tagsSet = new Set<string>()
-    recipes.value
-      .filter(recipe => recipe.category === currentCategory.value)
-      .forEach(recipe => {
-        if (recipe.tags && Array.isArray(recipe.tags)) {
-          recipe.tags.forEach(tag => tagsSet.add(tag))
-        }
-      })
-    return Array.from(tagsSet).sort()
-  })
-
-  const recipesByCategory = computed(() => {
-    const grouped: Record<string, Recipe[]> = {
-      soupes: [],
-      entrees: [],
-      plats: [],
-      poissons: [],
-      viandes: [],
-      'yaourts et fromages': [],
-      'desserts et gâteaux': [],
-      boissons: [],
-      confitures: []
-    }
-
-    recipes.value.forEach(recipe => {
-      grouped[recipe.category]?.push(recipe)
-    })
-
-    return grouped
-  })
+  /** Signale aux lectures (liste, fiche, facettes) que les données ont changé. */
+  const refresh = () => {
+    revision.value++
+  }
 
   // Actions
-  const addRecipe = async (recipe: Partial<Recipe>) => {
+  const addRecipe = async (recipe: RecipeInput) => {
     try {
       isLoading.value = true
-      
+
       // Validate recipe before adding
       if (!recipe || !recipe.title || !recipe.category) {
         throw new Error('Données de recette invalides')
@@ -127,11 +62,10 @@ export const useRecipesStore = defineStore('recipes', () => {
       }
 
       const result = (await response.json()) as RecipeMutationResponse
-      
+
       if (result.success) {
-        // Ajouter directement au store local
-        recipes.value.push(result.recipe)
-        
+        refresh()
+
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de l\'ajout de la recette')
@@ -144,14 +78,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
+  const updateRecipe = async (id: string, updates: RecipeInput) => {
     try {
       isLoading.value = true
-      
-      const index = recipes.value.findIndex(recipe => recipe.id === id)
-      if (index === -1) {
-        throw new Error('Recette non trouvée')
-      }
 
       // Appeler l'API pour mettre à jour la recette
       const response = await apiFetch(`/api/update-recipe?id=${id}`, {
@@ -167,11 +96,10 @@ export const useRecipesStore = defineStore('recipes', () => {
       }
 
       const result = (await response.json()) as RecipeMutationResponse
-      
+
       if (result.success) {
-        // Mettre à jour localement pour la réactivité
-        recipes.value[index] = result.recipe
-        
+        refresh()
+
         return result.recipe
       } else {
         throw new Error(result.message || 'Erreur lors de la mise à jour')
@@ -187,21 +115,20 @@ export const useRecipesStore = defineStore('recipes', () => {
   const deleteRecipe = async (id: string) => {
     try {
       isLoading.value = true
-            
+
       // Appeler l'API pour supprimer la recette
       const response = await apiFetch(`/api/delete-recipe?id=${id}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         throw await apiErrorFromResponse(response)
       }
-      
+
       const result = (await response.json()) as DeleteResponse
-      
+
       if (result.success) {
-        // Supprimer de la mémoire locale immédiatement
-        recipes.value = recipes.value.filter(recipe => recipe.id !== id)
+        refresh()
         return result
       } else {
         throw new Error(result.message || 'Erreur lors de la suppression')
@@ -239,54 +166,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     selectedTags.value = []
   }
 
-  // Charger les recettes depuis Supabase
-  const loadFromSupabase = async () => {
-    try {
-      isLoading.value = true
-      
-      // Utiliser la nouvelle API Supabase
-      const response = await apiFetch('/api/recipes')
-      const data = (await response.json()) as RecipesApiResponse
-      
-      if (data.success) {
-        // Validate and clean recipes data
-        recipes.value = data.recipes.filter(recipe => 
-          recipe && recipe.id && recipe.title && recipe.category
-        )
-        
-        console.log('Recettes chargées depuis Supabase:', recipes.value.length)
-      } else {
-        console.error('Erreur lors du chargement des recettes:', data.error)
-        recipes.value = []
-      }
-      
-    } catch (error) {
-      console.error('Error loading recipes:', error)
-      recipes.value = []
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Initialize
-  onMounted(() => {
-    loadFromSupabase()
-  })
-
   return {
-    // State
-    recipes: readonly(recipes),
-    currentCategory: readonly(currentCategory),
-    searchQuery: readonly(searchQuery),
-    selectedTags: readonly(selectedTags),
-    isLoading: readonly(isLoading),
-    
-    // Computed
-    filteredRecipes,
-    allTags,
-    categoryTags,
-    recipesByCategory,
-    
+    // State (interface)
+    currentCategory,
+    searchQuery,
+    selectedTags,
+    isLoading,
+    revision,
+
     // Actions
     addRecipe,
     updateRecipe,
@@ -295,6 +182,6 @@ export const useRecipesStore = defineStore('recipes', () => {
     setSearchQuery,
     toggleTag,
     clearFilters,
-    loadFromSupabase
+    refresh
   }
 })

@@ -56,12 +56,12 @@
                   Temps de préparation (min)
                 </label>
                 <input
-                  v-model.number="form.prepTime"
+                  :value="form.prepTime ?? ''"
                   type="number"
                   min="0"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="15 (optionnel)"
-                  @input="form.prepTime = form.prepTime === '' ? null : form.prepTime"
+                  @input="form.prepTime = parseNullableNumber(($event.target as HTMLInputElement).value)"
                 >
               </div>
 
@@ -70,12 +70,12 @@
                   Temps de cuisson (min)
                 </label>
                 <input
-                  v-model.number="form.cookTime"
+                  :value="form.cookTime ?? ''"
                   type="number"
                   min="0"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="30 (optionnel)"
-                  @input="form.cookTime = form.cookTime === '' ? null : form.cookTime"
+                  @input="form.cookTime = parseNullableNumber(($event.target as HTMLInputElement).value)"
                 >
               </div>
 
@@ -100,22 +100,20 @@
                   <option value="confitures">Confitures</option>
                 </select>
               </div>
-              
+
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Nombre de portions
                 </label>
                 <input
-                  v-model.number="form.servings"
+                  :value="form.servings ?? ''"
                   type="number"
                   min="1"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="4 (optionnel)"
-                  @input="form.servings = form.servings === '' ? null : form.servings"
+                  @input="form.servings = parseNullableNumber(($event.target as HTMLInputElement).value)"
                 >
               </div>
-
-
             </div>
 
             <!-- Description -->
@@ -159,7 +157,7 @@
                   + Ajouter une section
                 </button>
               </div>
-              
+
               <div class="space-y-6">
                 <div
                   v-for="(section, sectionIndex) in sectionsWithIngredients"
@@ -176,8 +174,8 @@
                           :disabled="sectionIndex === 0"
                           :class="[
                             'p-1 rounded transition-colors relative group',
-                            sectionIndex === 0 
-                              ? 'text-gray-300 cursor-not-allowed' 
+                            sectionIndex === 0
+                              ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100'
                           ]"
                           title="Déplacer cette section vers le haut (avant la section précédente)"
@@ -196,7 +194,7 @@
                           :class="[
                             'p-1 rounded transition-colors relative group',
                             sectionIndex === sectionsWithIngredients.length - 1
-                              ? 'text-gray-300 cursor-not-allowed' 
+                              ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100'
                           ]"
                           title="Déplacer cette section vers le bas (après la section suivante)"
@@ -225,43 +223,43 @@
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                       </svg>
-                </button>
-              </div>
-              
-              <div class="space-y-3">
-                <div
+                    </button>
+                  </div>
+
+                  <div class="space-y-3">
+                    <div
                       v-for="(ingredient, index) in section.ingredients"
-                  :key="index"
-                  class="flex items-center space-x-3"
-                >
-                  <input
-                    v-model="ingredient.amount"
-                    type="text"
+                      :key="index"
+                      class="flex items-center space-x-3"
+                    >
+                      <input
+                        v-model="ingredient.amount"
+                        type="text"
                         class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                    placeholder=""
-                  >
-                  <input
-                    v-model="ingredient.unit"
-                    type="text"
+                        placeholder=""
+                      >
+                      <input
+                        v-model="ingredient.unit"
+                        type="text"
                         class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                    placeholder=""
-                  >
-                  <input
-                    v-model="ingredient.name"
-                    type="text"
-                    required
+                        placeholder=""
+                      >
+                      <input
+                        v-model="ingredient.name"
+                        type="text"
+                        required
                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                    placeholder="Nom de l'ingrédient"
-                  >
-                  <button
-                    type="button"
+                        placeholder="Nom de l'ingrédient"
+                      >
+                      <button
+                        type="button"
                         @click="removeIngredientFromSection(sectionIndex, index)"
-                    class="text-red-500 hover:text-red-700 p-1"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
+                        class="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
                     </div>
                     <button
                       type="button"
@@ -289,7 +287,7 @@
                   + Ajouter une section
                 </button>
               </div>
-              
+
               <div class="space-y-6">
                 <div
                   v-for="(section, sectionIndex) in sectionsWithInstructions"
@@ -306,8 +304,8 @@
                           :disabled="sectionIndex === 0"
                           :class="[
                             'p-1 rounded transition-colors relative group',
-                            sectionIndex === 0 
-                              ? 'text-gray-300 cursor-not-allowed' 
+                            sectionIndex === 0
+                              ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100'
                           ]"
                           title="Déplacer cette section vers le haut (avant la section précédente)"
@@ -326,7 +324,7 @@
                           :class="[
                             'p-1 rounded transition-colors relative group',
                             sectionIndex === sectionsWithInstructions.length - 1
-                              ? 'text-gray-300 cursor-not-allowed' 
+                              ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100'
                           ]"
                           title="Déplacer cette section vers le bas (après la section suivante)"
@@ -357,12 +355,12 @@
                       </svg>
                     </button>
                   </div>
-                  
-                  <div 
+
+                  <div
                     class="space-y-3"
-                    @dragover.prevent="handleSectionDragOver($event, sectionIndex)"
+                    @dragover.prevent="handleSectionDragOver($event)"
                     @drop="handleSectionDrop($event, sectionIndex)"
-                    @dragenter.prevent="handleSectionDragEnter($event, sectionIndex)"
+                    @dragenter.prevent="handleSectionDragEnter(sectionIndex)"
                     @dragleave="handleSectionDragLeave($event)"
                     :class="[
                       'min-h-[60px] rounded-lg p-2 transition-all',
@@ -378,7 +376,7 @@
                       @dragstart="handleInstructionDragStart($event, sectionIndex, index)"
                       @dragover.prevent="handleInstructionDragOver($event)"
                       @drop="handleInstructionDrop($event, sectionIndex, index)"
-                      @dragenter.prevent="handleInstructionDragEnter($event, sectionIndex, index)"
+                      @dragenter.prevent="handleInstructionDragEnter(sectionIndex, index)"
                       @dragleave="handleInstructionDragLeave($event)"
                       :class="[
                         'flex items-start space-x-3 cursor-move transition-all rounded-lg p-2 -m-2',
@@ -386,31 +384,31 @@
                           ? 'bg-primary-50 border-t-2 border-primary-500'
                           : 'hover:bg-gray-50'
                       ]"
-                >
-                  <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium mt-2">
-                    {{ index + 1 }}
-                  </span>
-                  <textarea
-                        :value="typeof section.instructions[index] === 'string' ? section.instructions[index] : section.instructions[index]?.content || ''"
-                        @input="updateInstructionContent(sectionIndex, index, $event.target.value)"
-                    rows="2"
-                    required
+                    >
+                      <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium mt-2">
+                        {{ index + 1 }}
+                      </span>
+                      <textarea
+                        :value="instructionContent(instruction)"
+                        @input="updateInstructionContent(sectionIndex, index, ($event.target as HTMLTextAreaElement).value)"
+                        rows="2"
+                        required
                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                    placeholder="Décrivez cette étape..."
+                        placeholder="Décrivez cette étape..."
                         @mousedown.stop
-                  ></textarea>
-                  <button
-                    type="button"
+                      ></textarea>
+                      <button
+                        type="button"
                         @click="removeInstructionFromSection(sectionIndex, index)"
-                    class="text-red-500 hover:text-red-700 p-1 mt-2"
+                        class="text-red-500 hover:text-red-700 p-1 mt-2"
                         @mousedown.stop
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-                    <div 
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div
                       v-if="section.instructions.length === 0 && draggedSectionIndex !== null"
                       class="text-center py-4 text-sm text-gray-500 border-2 border-dashed border-gray-300 rounded-lg"
                     >
@@ -464,134 +462,112 @@
   </Transition>
 </template>
 
-<script setup>
-const props = defineProps({
-  show: {
-    type: Boolean,
-    default: false
-  },
-  recipe: {
-    type: Object,
-    default: null
-  }
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { Recipe, RecipeInput, RecipeSectionInput, SectionType } from '#shared/types'
+import { categoryImage } from '#shared/utils/recipes'
+
+/** Formulaire : les quantités restent du texte libre, les étapes du texte. */
+interface FormIngredient {
+  id?: string
+  name: string
+  amount: string
+  unit: string
+  optional: boolean
+  orderIndex: number
+}
+
+interface FormInstruction {
+  content: string
+  orderIndex: number
+}
+
+interface FormSection {
+  id?: string
+  name: string
+  type: SectionType
+  orderIndex: number
+  ingredients: FormIngredient[]
+  instructions: FormInstruction[]
+}
+
+interface RecipeForm {
+  title: string
+  description: string
+  category: string
+  prepTime: number | null
+  cookTime: number | null
+  servings: number | null
+  image: string
+  tags: string[]
+  notes: string
+  sections: FormSection[]
+}
+
+const props = withDefaults(defineProps<{
+  show?: boolean
+  /** Recette complète (avec sections) à modifier ; `null` pour une création. */
+  recipe?: Recipe | null
+}>(), {
+  show: false,
+  recipe: null
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits<{
+  close: []
+  save: [recipe: Recipe | RecipeInput]
+}>()
 
 const recipesStore = useRecipesStore()
 const { $toast } = useNuxtApp()
 
 const isEditing = computed(() => !!props.recipe)
 
-// Form data
-const form = ref({
+const emptyForm = (): RecipeForm => ({
   title: '',
   description: '',
   category: '',
   prepTime: null,
   cookTime: null,
   servings: null,
-  image: '',
+  image: '', // Will be set automatically based on category
   tags: [],
-  ingredients: [],
-  instructions: [],
   notes: '',
   sections: []
 })
 
+// Form data
+const form = ref<RecipeForm>(emptyForm())
+
 const tagsInput = ref('')
 
-// Sections organisées pour l'affichage
-const sectionsWithIngredients = computed(() => {
-  if (!form.value.sections || form.value.sections.length === 0) {
-    // Si pas de sections, créer une section par défaut avec les ingrédients
-    if (form.value.ingredients && form.value.ingredients.length > 0) {
-      return [{
-        name: 'Ingrédients',
-        type: 'ingredients',
-        orderIndex: 0,
-        ingredients: form.value.ingredients.map(ing => ({
-          name: ing.name || '',
-          amount: ing.amount || '',
-          unit: ing.unit || '',
-          optional: ing.optional || false,
-          orderIndex: 0
-        }))
-      }]
-    }
-    return []
-  }
-  
-  // Filtrer les sections de type 'ingredients' ou 'mixed' qui ont des ingrédients OU qui sont vides (nouvelles sections)
-  // IMPORTANT: Ne pas utiliser .map() car cela crée de nouveaux objets et casse les références
-  // On modifie directement les sections pour s'assurer que ingredients est un tableau
-  const filtered = form.value.sections
-    .filter(section => 
-      (section.type === 'ingredients' || section.type === 'mixed') &&
-      (section.ingredients !== undefined)
-    )
-  
-  // S'assurer que ingredients est toujours un tableau (même vide)
-  filtered.forEach(section => {
-    if (!Array.isArray(section.ingredients)) {
-      section.ingredients = []
-    }
-  })
-  
-  return filtered.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
-})
+const parseNullableNumber = (value: string): number | null => {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
-const sectionsWithInstructions = computed(() => {
-  if (!form.value.sections || form.value.sections.length === 0) {
-    // Si pas de sections, créer une section par défaut avec les instructions
-    if (form.value.instructions && form.value.instructions.length > 0) {
-      return [{
-        name: 'Préparation',
-        type: 'instructions',
-        orderIndex: 0,
-        instructions: form.value.instructions.map((inst) => 
-          typeof inst === 'string' ? inst : inst.content || ''
-        )
-      }]
-    }
-    return []
-  }
-  
-  // Filtrer les sections de type 'instructions' ou 'mixed' qui ont des instructions OU qui sont vides (nouvelles sections)
-  // IMPORTANT: Ne pas utiliser .map() car cela crée de nouveaux objets et casse les références
-  // On modifie directement les sections pour s'assurer que instructions est un tableau
-  const filtered = form.value.sections
-    .filter(section => 
-      (section.type === 'instructions' || section.type === 'mixed') &&
-      (section.instructions !== undefined)
-    )
-  
-  // S'assurer que instructions est toujours un tableau (même vide)
-  filtered.forEach(section => {
-    if (!Array.isArray(section.instructions)) {
-      section.instructions = []
-    }
-  })
-  
-  return filtered.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
-})
+const byOrderIndex = (a: FormSection, b: FormSection) => a.orderIndex - b.orderIndex
+
+// Sections organisées pour l'affichage.
+// IMPORTANT : ne pas utiliser .map() ici, les computed renvoient des références
+// aux objets de form.sections pour que l'édition en place fonctionne.
+const sectionsWithIngredients = computed(() =>
+  form.value.sections
+    .filter(section => section.type === 'ingredients' || section.type === 'mixed')
+    .sort(byOrderIndex)
+)
+
+const sectionsWithInstructions = computed(() =>
+  form.value.sections
+    .filter(section => section.type === 'instructions' || section.type === 'mixed')
+    .sort(byOrderIndex)
+)
+
+const instructionContent = (instruction: FormInstruction) => instruction.content
 
 // Define all functions first
 const resetForm = () => {
-  form.value = {
-    title: '',
-    description: '',
-    category: '',
-    prepTime: null,
-    cookTime: null,
-    servings: null,
-    image: '', // Will be set automatically based on category
-    tags: [],
-    ingredients: [],
-    instructions: [],
-    notes: '',
-    sections: []
-  }
+  form.value = emptyForm()
   tagsInput.value = ''
 }
 
@@ -607,251 +583,179 @@ const updateTags = () => {
 }
 
 // Gestion des sections
-const addSection = (type) => {
-  if (!form.value.sections) {
-    form.value.sections = []
-  }
-  
+const addSection = (type: SectionType) => {
   // Calculer le prochain orderIndex en fonction des sections existantes du même type
   const existingSectionsOfType = form.value.sections.filter(s => s.type === type)
   const nextOrderIndex = existingSectionsOfType.length > 0
-    ? Math.max(...existingSectionsOfType.map(s => s.orderIndex || 0)) + 1
+    ? Math.max(...existingSectionsOfType.map(s => s.orderIndex)) + 1
     : form.value.sections.length
-  
-  const newSection = {
-    name: type === 'ingredients' ? 'Nouvelle section' : 'Nouvelle section',
-    type: type,
+
+  form.value.sections.push({
+    name: 'Nouvelle section',
+    type,
     orderIndex: nextOrderIndex,
-    ingredients: type === 'ingredients' ? [] : [],
-    instructions: type === 'instructions' ? [] : []
-  }
-  
-  form.value.sections.push(newSection)
-  console.log('Section ajoutée:', newSection)
-  console.log('Sections actuelles:', form.value.sections)
+    ingredients: [],
+    instructions: []
+  })
 }
 
-const removeSection = (sectionIndex, type) => {
-  const sections = type === 'ingredients' ? sectionsWithIngredients.value : sectionsWithInstructions.value
-  const section = sections[sectionIndex]
-  
+const sectionsOfType = (type: SectionType) =>
+  type === 'ingredients' ? sectionsWithIngredients.value : sectionsWithInstructions.value
+
+const removeSection = (sectionIndex: number, type: SectionType) => {
+  const section = sectionsOfType(type)[sectionIndex]
   if (!section) {
     console.error('Section non trouvée à l\'index', sectionIndex)
     return
   }
-  
-  // Les computed properties retournent des références aux objets dans form.value.sections
-  // On peut donc utiliser findIndex avec une comparaison de référence directe
-  const index = form.value.sections.findIndex(s => {
-    // Pour les sections avec ID, comparer par ID
-    if (section.id && s.id) {
-      return s.id === section.id
-    }
-    // Pour les sections sans ID (nouvelles), comparer par référence directe
-    // ou par orderIndex et type (plus fiable si le nom a été modifié)
-    return s === section || (s.type === section.type && s.orderIndex === section.orderIndex)
-  })
-  
+
+  // Les computed renvoient des références aux objets de form.sections :
+  // comparaison par identifiant si présent, sinon par référence.
+  const index = form.value.sections.findIndex(s =>
+    section.id && s.id ? s.id === section.id : s === section
+  )
+
   if (index !== -1) {
     form.value.sections.splice(index, 1)
-    console.log('Section supprimée:', section.name || 'Section sans nom')
-  } else {
-    console.error('Section non trouvée dans form.sections:', section)
-    // Fallback : utiliser filter pour supprimer la section
-    form.value.sections = form.value.sections.filter(s => {
-      if (section.id && s.id) {
-        return s.id !== section.id
-      }
-      // Pour les nouvelles sections, comparer par orderIndex et type
-      return !(s.type === section.type && s.orderIndex === section.orderIndex)
-    })
-    console.log('Section supprimée par filtrage (fallback)')
   }
 }
 
 // Fonctions pour réorganiser les sections
-const moveSectionUp = (sectionIndex, type) => {
+const moveSectionUp = (sectionIndex: number, type: SectionType) => {
   if (sectionIndex === 0) return // Déjà en première position
-  
-  const sections = type === 'ingredients' ? sectionsWithIngredients.value : sectionsWithInstructions.value
+
+  const sections = sectionsOfType(type)
   const section = sections[sectionIndex]
   const prevSection = sections[sectionIndex - 1]
-  
+
   if (!section || !prevSection) return
-  
+
   // Échanger les orderIndex
   const tempOrderIndex = section.orderIndex
   section.orderIndex = prevSection.orderIndex
   prevSection.orderIndex = tempOrderIndex
-  
-  // Trier form.value.sections par orderIndex pour maintenir l'ordre
-  form.value.sections.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+
+  // Trier form.sections par orderIndex pour maintenir l'ordre
+  form.value.sections.sort(byOrderIndex)
 }
 
-const moveSectionDown = (sectionIndex, type) => {
-  const sections = type === 'ingredients' ? sectionsWithIngredients.value : sectionsWithInstructions.value
-  
+const moveSectionDown = (sectionIndex: number, type: SectionType) => {
+  const sections = sectionsOfType(type)
+
   if (sectionIndex === sections.length - 1) return // Déjà en dernière position
-  
+
   const section = sections[sectionIndex]
   const nextSection = sections[sectionIndex + 1]
-  
+
   if (!section || !nextSection) return
-  
+
   // Échanger les orderIndex
   const tempOrderIndex = section.orderIndex
   section.orderIndex = nextSection.orderIndex
   nextSection.orderIndex = tempOrderIndex
-  
-  // Trier form.value.sections par orderIndex pour maintenir l'ordre
-  form.value.sections.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+
+  // Trier form.sections par orderIndex pour maintenir l'ordre
+  form.value.sections.sort(byOrderIndex)
 }
 
 // Variables pour le drag and drop des instructions
-const draggedInstructionIndex = ref(null)
-const draggedSectionIndex = ref(null)
-const dragOverInstructionIndex = ref(null)
-const dragOverSectionIndex = ref(null)
+const draggedInstructionIndex = ref<number | null>(null)
+const draggedSectionIndex = ref<number | null>(null)
+const dragOverInstructionIndex = ref<number | null>(null)
+const dragOverSectionIndex = ref<number | null>(null)
+
+const renumber = (instructions: FormInstruction[]) => {
+  instructions.forEach((instruction, idx) => {
+    instruction.orderIndex = idx
+  })
+}
+
+const isOutside = (event: DragEvent) => {
+  const target = event.currentTarget
+  if (!(target instanceof HTMLElement)) return true
+  const rect = target.getBoundingClientRect()
+  const { clientX: x, clientY: y } = event
+  return x < rect.left || x > rect.right || y < rect.top || y > rect.bottom
+}
 
 // Gestion du drag and drop des instructions
-const handleInstructionDragStart = (event, sectionIndex, instructionIndex) => {
+const handleInstructionDragStart = (event: DragEvent, sectionIndex: number, instructionIndex: number) => {
   draggedSectionIndex.value = sectionIndex
   draggedInstructionIndex.value = instructionIndex
-  event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('text/plain', '') // Nécessaire pour Firefox
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', '') // Nécessaire pour Firefox
+  }
   // Ne pas modifier l'opacité pour éviter le style grisé
 }
 
-const handleInstructionDragOver = (event) => {
+const handleInstructionDragOver = (event: DragEvent) => {
   event.preventDefault()
-  event.dataTransfer.dropEffect = 'move'
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
 }
 
-const handleInstructionDragEnter = (event, sectionIndex, instructionIndex) => {
+const handleInstructionDragEnter = (sectionIndex: number, instructionIndex: number) => {
   if (draggedSectionIndex.value === null) return
-  
+
   // Ne pas mettre en surbrillance si c'est la même instruction
   if (draggedSectionIndex.value === sectionIndex && draggedInstructionIndex.value === instructionIndex) {
     return
   }
-  
+
   dragOverSectionIndex.value = sectionIndex
   dragOverInstructionIndex.value = instructionIndex
 }
 
-const handleInstructionDragLeave = (event) => {
+const handleInstructionDragLeave = (event: DragEvent) => {
   // Ne réinitialiser que si on quitte vraiment l'élément (pas juste un enfant)
-  const rect = event.currentTarget.getBoundingClientRect()
-  const x = event.clientX
-  const y = event.clientY
-  
-  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+  if (isOutside(event)) {
     dragOverSectionIndex.value = null
     dragOverInstructionIndex.value = null
   }
 }
 
-const handleInstructionDrop = (event, targetSectionIndex, targetInstructionIndex) => {
+const handleInstructionDrop = (event: DragEvent, targetSectionIndex: number, targetInstructionIndex: number) => {
   event.preventDefault()
-  
+
   if (draggedSectionIndex.value === null || draggedInstructionIndex.value === null) {
     resetDragState()
     return
   }
-  
+
   const sourceSectionIndex = draggedSectionIndex.value
   const sourceInstructionIndex = draggedInstructionIndex.value
-  
+
   // Si c'est la même position, ne rien faire
   if (sourceSectionIndex === targetSectionIndex && sourceInstructionIndex === targetInstructionIndex) {
     resetDragState()
     return
   }
-  
+
   const sourceSection = sectionsWithInstructions.value[sourceSectionIndex]
   const targetSection = sectionsWithInstructions.value[targetSectionIndex]
-  
-  if (!sourceSection || !targetSection || !sourceSection.instructions || !targetSection.instructions) {
+  const instructionToMove = sourceSection?.instructions[sourceInstructionIndex]
+
+  if (!sourceSection || !targetSection || !instructionToMove) {
     resetDragState()
     return
   }
-  
-  // Récupérer l'instruction déplacée et normaliser en objet
-  let instructionToMove = sourceSection.instructions[sourceInstructionIndex]
-  
-  // Normaliser l'instruction en objet si c'est une string
-  if (typeof instructionToMove === 'string') {
-    instructionToMove = {
-      content: instructionToMove,
-      orderIndex: sourceInstructionIndex
-    }
-  } else if (!instructionToMove || typeof instructionToMove !== 'object') {
-    instructionToMove = {
-      content: instructionToMove?.content || '',
-      orderIndex: sourceInstructionIndex
-    }
-  }
-  
-  // Insérer l'instruction à sa nouvelle position
+
+  sourceSection.instructions.splice(sourceInstructionIndex, 1)
+
   if (sourceSectionIndex === targetSectionIndex) {
-    // Même section : déplacer dans le même tableau
-    // Supprimer d'abord l'élément source
-    sourceSection.instructions.splice(sourceInstructionIndex, 1)
-    
-    // Ajuster l'index de destination si nécessaire
-    let insertIndex = targetInstructionIndex
-    if (sourceInstructionIndex < targetInstructionIndex) {
-      // On déplace vers le bas : l'index de destination diminue de 1 car on a supprimé l'élément source
-      insertIndex = targetInstructionIndex - 1
-    } else {
-      // On déplace vers le haut : l'index reste le même
-      insertIndex = targetInstructionIndex
-    }
-    
-    // Insérer à la nouvelle position
+    // Même section : l'index de destination recule de 1 si on déplace vers le bas
+    const insertIndex = sourceInstructionIndex < targetInstructionIndex
+      ? targetInstructionIndex - 1
+      : targetInstructionIndex
     sourceSection.instructions.splice(insertIndex, 0, instructionToMove)
-    
-    // Mettre à jour les orderIndex et normaliser toutes les instructions
-    sourceSection.instructions.forEach((inst, idx) => {
-      if (typeof inst === 'string') {
-        sourceSection.instructions[idx] = {
-          content: inst,
-          orderIndex: idx
-        }
-      } else if (inst && typeof inst === 'object') {
-        inst.orderIndex = idx
-      }
-    })
+    renumber(sourceSection.instructions)
   } else {
-    // Section différente : supprimer de la source et insérer dans la cible
-    sourceSection.instructions.splice(sourceInstructionIndex, 1)
+    // Section différente : insérer dans la cible
     targetSection.instructions.splice(targetInstructionIndex, 0, instructionToMove)
-    
-    // Mettre à jour les orderIndex de la section source et normaliser
-    sourceSection.instructions.forEach((inst, idx) => {
-      if (typeof inst === 'string') {
-        sourceSection.instructions[idx] = {
-          content: inst,
-          orderIndex: idx
-        }
-      } else if (inst && typeof inst === 'object') {
-        inst.orderIndex = idx
-      }
-    })
-    
-    // Mettre à jour les orderIndex de la section cible et normaliser
-    targetSection.instructions.forEach((inst, idx) => {
-      if (typeof inst === 'string') {
-        targetSection.instructions[idx] = {
-          content: inst,
-          orderIndex: idx
-        }
-      } else if (inst && typeof inst === 'object') {
-        inst.orderIndex = idx
-      }
-    })
+    renumber(sourceSection.instructions)
+    renumber(targetSection.instructions)
   }
-  
+
   resetDragState()
 }
 
@@ -863,226 +767,132 @@ const resetDragState = () => {
 }
 
 // Gestion du drag and drop au niveau de la section (pour déplacer vers une section vide)
-const handleSectionDragOver = (event, _sectionIndex) => {
+const handleSectionDragOver = (event: DragEvent) => {
   event.preventDefault()
-  event.dataTransfer.dropEffect = 'move'
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
 }
 
-const handleSectionDragEnter = (event, sectionIndex) => {
+const handleSectionDragEnter = (sectionIndex: number) => {
   if (draggedSectionIndex.value === null) return
-  
+
   // Ne pas mettre en surbrillance si c'est la même section
   if (draggedSectionIndex.value === sectionIndex) {
     return
   }
-  
+
   dragOverSectionIndex.value = sectionIndex
   dragOverInstructionIndex.value = null // Pas d'instruction spécifique, juste la section
 }
 
-const handleSectionDragLeave = (event) => {
+const handleSectionDragLeave = (event: DragEvent) => {
   // Ne réinitialiser que si on quitte vraiment l'élément (pas juste un enfant)
-  const rect = event.currentTarget.getBoundingClientRect()
-  const x = event.clientX
-  const y = event.clientY
-  
-  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-    // Ne réinitialiser que si on n'est pas en train de survoler une instruction
-    if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget)) {
-      dragOverSectionIndex.value = null
-      dragOverInstructionIndex.value = null
-    }
+  if (!isOutside(event)) return
+  const target = event.currentTarget
+  const related = event.relatedTarget
+  if (!(related instanceof Node) || !(target instanceof HTMLElement) || !target.contains(related)) {
+    dragOverSectionIndex.value = null
+    dragOverInstructionIndex.value = null
   }
 }
 
-const handleSectionDrop = (event, targetSectionIndex) => {
+const handleSectionDrop = (event: DragEvent, targetSectionIndex: number) => {
   event.preventDefault()
   event.stopPropagation()
-  
+
   if (draggedSectionIndex.value === null || draggedInstructionIndex.value === null) {
     resetDragState()
     return
   }
-  
+
   const sourceSectionIndex = draggedSectionIndex.value
   const sourceInstructionIndex = draggedInstructionIndex.value
-  
+
   // Si c'est la même section, ne rien faire (géré par handleInstructionDrop)
   if (sourceSectionIndex === targetSectionIndex) {
     resetDragState()
     return
   }
-  
+
   const sourceSection = sectionsWithInstructions.value[sourceSectionIndex]
   const targetSection = sectionsWithInstructions.value[targetSectionIndex]
-  
-  if (!sourceSection || !targetSection || !sourceSection.instructions) {
+  const instructionToMove = sourceSection?.instructions[sourceInstructionIndex]
+
+  if (!sourceSection || !targetSection || !instructionToMove) {
     resetDragState()
     return
   }
-  
-  // S'assurer que targetSection.instructions existe
-  if (!targetSection.instructions) {
-    targetSection.instructions = []
-  }
-  
-  // Récupérer l'instruction déplacée et normaliser en objet
-  let instructionToMove = sourceSection.instructions[sourceInstructionIndex]
-  
-  // Normaliser l'instruction en objet si c'est une string
-  if (typeof instructionToMove === 'string') {
-    instructionToMove = {
-      content: instructionToMove,
-      orderIndex: sourceInstructionIndex
-    }
-  } else if (!instructionToMove || typeof instructionToMove !== 'object') {
-    instructionToMove = {
-      content: instructionToMove?.content || '',
-      orderIndex: sourceInstructionIndex
-    }
-  }
-  
-  // Supprimer de la source
+
+  // Supprimer de la source, ajouter à la fin de la section cible
   sourceSection.instructions.splice(sourceInstructionIndex, 1)
-  
-  // Ajouter à la fin de la section cible
-  const newIndex = targetSection.instructions.length
   targetSection.instructions.push(instructionToMove)
-  instructionToMove.orderIndex = newIndex
-  
-  // Mettre à jour les orderIndex de la section source et normaliser
-  sourceSection.instructions.forEach((inst, idx) => {
-    if (typeof inst === 'string') {
-      sourceSection.instructions[idx] = {
-        content: inst,
-        orderIndex: idx
-      }
-    } else if (inst && typeof inst === 'object') {
-      inst.orderIndex = idx
-    }
-  })
-  
-  // Mettre à jour les orderIndex de la section cible et normaliser
-  targetSection.instructions.forEach((inst, idx) => {
-    if (typeof inst === 'string') {
-      targetSection.instructions[idx] = {
-        content: inst,
-        orderIndex: idx
-      }
-    } else if (inst && typeof inst === 'object') {
-      inst.orderIndex = idx
-    }
-  })
-  
+  renumber(sourceSection.instructions)
+  renumber(targetSection.instructions)
+
   resetDragState()
 }
 
 // Fonction pour mettre à jour le contenu d'une instruction
-const updateInstructionContent = (sectionIndex, instructionIndex, value) => {
+const updateInstructionContent = (sectionIndex: number, instructionIndex: number, value: string) => {
   const section = sectionsWithInstructions.value[sectionIndex]
-  if (!section || !section.instructions) return
-  
+  if (!section) return
+
   const instruction = section.instructions[instructionIndex]
-  if (typeof instruction === 'string') {
-    // Convertir en objet si c'est une string
-    section.instructions[instructionIndex] = {
-      content: value,
-      orderIndex: instructionIndex
-    }
-  } else if (instruction && typeof instruction === 'object') {
-    // Mettre à jour le contenu
+  if (instruction) {
     instruction.content = value
   } else {
-    // Créer un nouvel objet
-    section.instructions[instructionIndex] = {
-      content: value,
-      orderIndex: instructionIndex
-    }
+    section.instructions[instructionIndex] = { content: value, orderIndex: instructionIndex }
   }
 }
 
-const addIngredientToSection = (sectionIndex) => {
+const addIngredientToSection = (sectionIndex: number) => {
   const section = sectionsWithIngredients.value[sectionIndex]
   if (section) {
-    if (!section.ingredients) {
-      section.ingredients = []
-    }
     section.ingredients.push({
       name: '',
-    amount: '',
-    unit: '',
+      amount: '',
+      unit: '',
       optional: false,
       orderIndex: section.ingredients.length
     })
   }
 }
 
-const removeIngredientFromSection = (sectionIndex, ingredientIndex) => {
+const removeIngredientFromSection = (sectionIndex: number, ingredientIndex: number) => {
   const section = sectionsWithIngredients.value[sectionIndex]
-  if (section && section.ingredients) {
+  if (section) {
     section.ingredients.splice(ingredientIndex, 1)
   }
 }
 
-const addInstructionToSection = (sectionIndex) => {
+const addInstructionToSection = (sectionIndex: number) => {
   const section = sectionsWithInstructions.value[sectionIndex]
   if (section) {
-    if (!section.instructions) {
-      section.instructions = []
-    }
-    const newIndex = section.instructions.length
     section.instructions.push({
       content: '',
-      orderIndex: newIndex
+      orderIndex: section.instructions.length
     })
   }
 }
 
-const removeInstructionFromSection = (sectionIndex, instructionIndex) => {
+const removeInstructionFromSection = (sectionIndex: number, instructionIndex: number) => {
   const section = sectionsWithInstructions.value[sectionIndex]
-  if (section && section.instructions) {
+  if (section) {
     section.instructions.splice(instructionIndex, 1)
-    
-    // Mettre à jour les orderIndex après suppression
-    section.instructions.forEach((inst, idx) => {
-      if (typeof inst === 'string') {
-        section.instructions[idx] = {
-          content: inst,
-          orderIndex: idx
-        }
-      } else if (inst && typeof inst === 'object') {
-        inst.orderIndex = idx
-      }
-    })
+    renumber(section.instructions)
   }
 }
 
 const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+  return Date.now().toString(36) + Math.random().toString(36).slice(2)
 }
 
-const getImageForCategory = (category) => {
-  const imageMap = {
-    'soupes': '/images/soupes.png',
-    'entrees': '/images/entrees,salades,pains,accompagnements.png',
-    'plats': '/images/plats.png',
-    'poissons': '/images/poissons.png',
-    'viandes': '/images/viandes.png',
-    'yaourts et fromages': '/images/yaourts&fromages.png',
-    'desserts et gâteaux': '/images/desserts.png',
-    'boissons': '/images/boissons.png',
-    'confitures': '/images/confitures.png'
-  }
-  return imageMap[category] || '/images/plats.png' // Image par défaut
-}
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Erreur inconnue')
 
 const handleSubmit = async () => {
   // Validation
-  const hasIngredients = sectionsWithIngredients.value.length > 0 && 
-    sectionsWithIngredients.value.some(s => s.ingredients && s.ingredients.length > 0)
-  const hasInstructions = sectionsWithInstructions.value.length > 0 && 
-    sectionsWithInstructions.value.some(s => s.instructions && s.instructions.length > 0)
-  
+  const hasIngredients = sectionsWithIngredients.value.some(s => s.ingredients.length > 0)
+  const hasInstructions = sectionsWithInstructions.value.some(s => s.instructions.length > 0)
+
   if (!form.value.title || !form.value.category || !hasIngredients || !hasInstructions) {
     $toast.error('Erreur', 'Veuillez remplir tous les champs obligatoires', 3000)
     return
@@ -1092,42 +902,44 @@ const handleSubmit = async () => {
   updateTags()
 
   // Assign image based on category
-  const imageUrl = getImageForCategory(form.value.category)
+  const imageUrl = categoryImage(form.value.category)
 
   // Préparer les sections avec orderIndex correct
-  const sections = []
+  const sections: RecipeSectionInput[] = []
   let orderIndex = 0
-  
+
   // Ajouter les sections d'ingrédients
-  sectionsWithIngredients.value.forEach(section => {
+  sectionsWithIngredients.value.forEach((section) => {
     sections.push({
-      ...section,
+      id: section.id,
+      name: section.name,
       type: 'ingredients',
       orderIndex: orderIndex++,
-      ingredients: section.ingredients.map((ing, idx) => ({
-        ...ing,
+      ingredients: section.ingredients.map((ingredient, idx) => ({
+        ...ingredient,
         orderIndex: idx
       })),
       instructions: []
     })
   })
-  
+
   // Ajouter les sections d'instructions
-  sectionsWithInstructions.value.forEach(section => {
+  sectionsWithInstructions.value.forEach((section) => {
     sections.push({
-      ...section,
+      id: section.id,
+      name: section.name,
       type: 'instructions',
       orderIndex: orderIndex++,
       ingredients: [],
-      instructions: section.instructions.map((inst, idx) => ({
-        content: typeof inst === 'string' ? inst : inst.content || inst,
+      instructions: section.instructions.map((instruction, idx) => ({
+        content: instruction.content,
         orderIndex: idx
       }))
     })
   })
 
   // Prepare recipe data
-  const recipeData = {
+  const recipeData: RecipeInput = {
     title: form.value.title,
     description: form.value.description,
     category: form.value.category,
@@ -1137,119 +949,71 @@ const handleSubmit = async () => {
     image: imageUrl,
     tags: form.value.tags,
     notes: form.value.notes,
-    sections: sections,
+    sections,
     id: props.recipe?.id || generateId(),
     createdAt: props.recipe?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    favorite: props.recipe?.favorite || false
+    updatedAt: new Date().toISOString()
   }
 
-  console.log('Données de la recette à sauvegarder:', recipeData)
-  console.log('Sections:', sections)
-
   // Save recipe
-  if (isEditing.value) {
+  if (isEditing.value && props.recipe) {
     try {
-      console.log('Mise à jour de la recette:', recipeData.id)
-      const updatedRecipe = await recipesStore.updateRecipe(recipeData.id, recipeData)
-      console.log('Recette mise à jour avec succès:', updatedRecipe)
-    $toast.success('Succès', 'Recette modifiée avec succès !', 3000)
+      const updatedRecipe = await recipesStore.updateRecipe(props.recipe.id, recipeData)
+      $toast.success('Succès', 'Recette modifiée avec succès !', 3000)
       emit('save', updatedRecipe || recipeData)
       handleCancel()
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error)
-      $toast.error('Erreur', `Erreur lors de la modification de la recette: ${error.message || 'Erreur inconnue'}`, 5000)
+      $toast.error('Erreur', `Erreur lors de la modification de la recette: ${errorMessage(error)}`, 5000)
     }
   } else {
     try {
-      console.log('Création de la recette')
       const addedRecipe = await recipesStore.addRecipe(recipeData)
-      console.log('Recette créée avec succès:', addedRecipe)
-    $toast.success('Succès', 'Recette créée avec succès !', 3000)
+      $toast.success('Succès', 'Recette créée avec succès !', 3000)
       emit('save', addedRecipe || recipeData)
-  handleCancel()
+      handleCancel()
     } catch (error) {
       console.error('Erreur lors de l\'ajout:', error)
-      $toast.error('Erreur', `Erreur lors de la création de la recette: ${error.message || 'Erreur inconnue'}`, 5000)
+      $toast.error('Erreur', `Erreur lors de la création de la recette: ${errorMessage(error)}`, 5000)
     }
   }
 }
 
-// Initialize form when recipe changes (after all functions are defined)
+// Initialize form when recipe changes (after all functions are defined).
+// Les sections viennent du modèle structuré (recipe_sections) : plus de repli JSONB.
 watch(() => props.recipe, (newRecipe) => {
   if (newRecipe) {
-    // Copy recipe data but exclude image (will be set automatically based on category)
-    const { image, ...recipeWithoutImage } = newRecipe
-    
-    // Si la recette a des sections, les utiliser directement
-    let sections = []
-    if (newRecipe.sections && Array.isArray(newRecipe.sections) && newRecipe.sections.length > 0) {
-      sections = newRecipe.sections.map(section => ({
-        id: section.id,
-        name: section.name || '',
-        type: section.type || 'mixed',
-        orderIndex: section.orderIndex || 0,
-        ingredients: (section.ingredients || []).map(ing => ({
-          id: ing.id,
-          name: ing.name || '',
-          amount: ing.amount || '',
-          unit: ing.unit || '',
-          optional: ing.optional || false,
-          orderIndex: ing.orderIndex || 0
-        })),
-        instructions: (section.instructions || []).map(inst => 
-          typeof inst === 'string' ? inst : inst.content || ''
-        )
-      }))
-    } else {
-      // Ancien format : créer des sections à partir des ingrédients et instructions
-      if (newRecipe.ingredients && Array.isArray(newRecipe.ingredients) && newRecipe.ingredients.length > 0) {
-        sections.push({
-          name: 'Ingrédients',
-          type: 'ingredients',
-          orderIndex: 0,
-          ingredients: newRecipe.ingredients.map(ing => ({
-            name: ing.name || '',
-            amount: ing.amount || '',
-            unit: ing.unit || '',
-            optional: ing.optional || false,
-            orderIndex: 0
-          })),
-          instructions: []
-        })
-      }
-      
-      if (newRecipe.instructions && Array.isArray(newRecipe.instructions) && newRecipe.instructions.length > 0) {
-        sections.push({
-          name: 'Préparation',
-          type: 'instructions',
-          orderIndex: sections.length,
-          ingredients: [],
-          instructions: newRecipe.instructions.map(inst => 
-            typeof inst === 'string' ? inst : inst.content || ''
-          )
-        })
-      }
-    }
-    
     form.value = {
-      ...recipeWithoutImage,
+      title: newRecipe.title,
+      description: newRecipe.description,
+      category: newRecipe.category,
+      prepTime: newRecipe.prepTime,
+      cookTime: newRecipe.cookTime,
+      servings: newRecipe.servings,
       image: '', // Will be set automatically based on category
-      sections: sections,
-      category: newRecipe.category || '', // S'assurer que la catégorie est bien récupérée
-      prepTime: newRecipe.prepTime || 0,
-      cookTime: newRecipe.cookTime || 0,
-      servings: newRecipe.servings || 4,
-      tags: newRecipe.tags || [],
-      notes: newRecipe.notes || '',
-      // Garder pour compatibilité
-      ingredients: [],
-      instructions: []
+      tags: [...newRecipe.tags],
+      notes: newRecipe.notes,
+      sections: newRecipe.sections.map(section => ({
+        id: section.id,
+        name: section.name,
+        type: section.type,
+        orderIndex: section.orderIndex,
+        ingredients: section.ingredients.map(ingredient => ({
+          id: ingredient.id,
+          name: ingredient.name,
+          amount: ingredient.amount ?? '',
+          unit: ingredient.unit ?? '',
+          optional: ingredient.optional,
+          orderIndex: ingredient.orderIndex
+        })),
+        instructions: section.instructions.map(instruction => ({
+          content: instruction.content,
+          orderIndex: instruction.orderIndex
+        }))
+      }))
     }
-    
-    tagsInput.value = (newRecipe.tags && Array.isArray(newRecipe.tags)) 
-      ? newRecipe.tags.join(', ') 
-      : ''
+
+    tagsInput.value = newRecipe.tags.join(', ')
   } else {
     resetForm()
   }
@@ -1260,24 +1024,24 @@ const handleCancel = () => {
   emit('close')
 }
 
-const handleBackdropClick = (event) => {
+const handleBackdropClick = (event: MouseEvent) => {
   if (event.target === event.currentTarget) {
     handleCancel()
   }
 }
 
 // Fermer avec la touche Escape
-onMounted(() => {
-  const handleEscape = (event) => {
-    if (event.key === 'Escape' && props.show) {
-      handleCancel()
-    }
+const handleEscape = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && props.show) {
+    handleCancel()
   }
-  
+}
+
+onMounted(() => {
   document.addEventListener('keydown', handleEscape)
-  
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleEscape)
-  })
 })
-</script> 
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscape)
+})
+</script>

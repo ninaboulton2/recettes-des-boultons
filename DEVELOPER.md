@@ -29,11 +29,14 @@ recettes-des-boultons/
 │   ├── pages/               # Routes (recettes, planning, courses, favoris, traducteur)
 │   ├── layouts/             # Layout par défaut
 │   ├── stores/              # Pinia : recipes, planning, favorites, shopping, auth
-│   ├── composables/         # useApi (apiFetch)
+│   ├── composables/         # useApi (apiFetch), useRecipeSearch, useRecipeFacets, useRecipe
+│   ├── utils/               # week.ts (semaine du planning)
 │   ├── middleware/auth.ts   # Garde de route côté client (admin)
 │   └── plugins/             # toast.client.js
 ├── shared/                  # Code partagé client/serveur (alias #shared)
-│   ├── types/index.ts       # Types métier (Recipe, User, ...)
+│   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...)
+│   ├── types/database.ts    # Types Supabase GÉNÉRÉS (ne pas éditer)
+│   ├── utils/recipes.ts     # Mapping snake_case → camelCase, formatAmount, formatIngredient
 │   └── utils/text.ts        # normalizeAccents
 ├── server/
 │   ├── api/                 # Endpoints REST (Nitro)
@@ -62,18 +65,18 @@ recettes-des-boultons/
 ### Côté client
 
 - **Session** : gérée par le module `@nuxtjs/supabase` (`redirect: false`). Un seul client (`useSupabaseClient()`), session persistée dans un **cookie** (`@supabase/ssr`), donc disponible au SSR et aux endpoints `/api/*`. `useSupabaseUser()` (claims du JWT) est la source de vérité.
-- **Store** : `app/stores/auth.ts` (setup store) suit `useSupabaseUser()` et y accole le profil applicatif lu dans `profiles` (`name`, `role`, préférences). Expose `isAuthenticated`, `isAdmin`, `currentUser`, `login`, `logout`, `checkAuth`, `init`. Plus de token ni de décodage JWT côté client.
-- **Garde de route** : `app/middleware/auth.ts` protège les pages marquées `meta.requiresAdmin` (redirige vers `/` si non-admin). ⚠️ C'est une garde **d'affichage uniquement** — la vraie sécurité est côté serveur.
-- **Appels API** : les stores passent par `apiFetch` (`app/composables/useApi.ts`), simple `fetch` same-origin : le cookie de session part automatiquement, plus besoin d'en-tête `Authorization`.
+- **Store** : `app/stores/auth.ts` (setup store) suit `useSupabaseUser()` (claims du JWT) : `isAuthenticated` vient de `sub`, `isAdmin` du claim `user_role` (hook `custom_access_token_hook`, migration 0009) avec repli sur `profiles.role` si le claim est absent. Le profil applicatif (`profiles` : nom, préférences) est accolé côté client sans bloquer le rendu. Expose `isAuthenticated`, `isAdmin`, `role`, `currentUser`, `login`, `logout`, `checkAuth`, `init`.
+- **Garde de route** : `app/middleware/auth.ts` protège les pages marquées `meta.requiresAdmin` (redirige vers `/` si non-admin) **sans requête réseau** (claims du cookie). ⚠️ C'est une garde **d'affichage uniquement** — la vraie sécurité est côté serveur.
+- **Lectures** : directes depuis le client Supabase typé (`useSupabaseClient<Database>()`, RLS) via `useAsyncData` (SSR) — voir « Lecture des données ». **Écritures** : les stores passent par `apiFetch` (`app/composables/useApi.ts`), simple `fetch` same-origin : le cookie de session part automatiquement, plus besoin d'en-tête `Authorization`.
 
 ### Côté serveur (la barrière qui fait foi)
 
 `server/utils/auth.ts` expose deux gardes, utilisées par tous les endpoints d'écriture :
 
 - **`requireUser(event)`** — accepte **soit** le cookie de session (`serverSupabaseClient` / `serverSupabaseUser` du module), **soit** un en-tête `Authorization: Bearer <jwt>` (clients externes). Renvoie `{ supabase, user }` : un client Supabase agissant au nom de l'utilisateur (le RLS s'applique avec `auth.uid()`) et son identité. `user.id` est **toujours dérivé du token validé**, jamais d'un `userId` envoyé par le client (évite l'usurpation / IDOR).
-- **`requireAdmin(event)`** — `requireUser` + vérification que `profiles.role = 'admin'`. Renvoie 401 si non connecté, 403 si non-admin.
+- **`requireAdmin(event)`** — `requireUser` + rôle admin : le claim `user_role` du JWT fait foi s'il est présent (cookie : `serverSupabaseUser`, Bearer : charge utile du token validé) ; sinon repli sur `profiles.role`. Renvoie 401 si non connecté, 403 si non-admin.
 
-Les lectures publiques (`GET /api/recipes`) utilisent `serverSupabaseClient(event)` (anonyme si aucune session).
+Il n'y a plus d'endpoint GET : les lectures se font directement depuis le client Supabase (SSR + navigateur) sous RLS.
 
 Défense en profondeur : vérification explicite côté serveur **+** RLS en base.
 
@@ -118,15 +121,37 @@ shopping_items      (id uuid PK, list_id FK, name, amount, unit, recipe_id FK?,
 ```
 
 Notes :
-- Une recette stocke ses ingrédients/instructions à la fois en JSONB (champs `ingredients`/`instructions`, compatibilité) **et** de façon structurée via `recipe_sections` → `recipe_ingredients` / `instructions` (modèle à sections).
+- Depuis la migration 0005, **toutes** les recettes sont décrites par leurs sections (`recipe_sections` → `recipe_ingredients` / `instructions`). Les colonnes JSONB `recipes.ingredients` / `instructions` subsistent en base (compatibilité, `NOT NULL`) mais **ne sont plus lues par le front** : le type `Recipe` ne les expose plus.
+- Colonnes dérivées par trigger (migrations 0003/0004) : `recipe_ingredients.amount_num` / `unit_code` et `shopping_items.amount_num` / `unit_code` (`parse_amount`, `normalize_unit`). `recipes.photo_path` (0010) et `recipes.search` (0008, tsvector généré).
 - `profiles.id` référence `auth.users.id` ; un trigger `handle_new_user` crée le profil à l'inscription.
+
+## Lecture des données (client Supabase typé)
+
+Les lectures ne passent plus par `/api/*` : le client Supabase typé (`useSupabaseClient<Database>()`,
+types générés dans `shared/types/database.ts`) interroge PostgREST directement, côté serveur (SSR,
+cookie de session) comme dans le navigateur, sous RLS. Les lignes snake_case sont converties une seule
+fois en camelCase par `shared/utils/recipes.ts` (`toRecipeSummary`, `toRecipe`, `formatAmount`…).
+
+| Besoin | Composable / store | Requête |
+|---|---|---|
+| Liste paginée (24/page), recherche, filtres | `useRecipeSearch(scope, { query, category, tags, page })` | RPC `search_recipes(p_query, p_category, p_tags, p_limit, p_offset)` → `RecipeSummary[]` + `total_count` |
+| Compteurs par catégorie, tags disponibles | `useRecipeFacets()` | `select category, tags from recipes` |
+| Fiche complète (sections, ingrédients, instructions) | `useRecipe(id)` / `fetchRecipeById(supabase, id)` | `recipes` + `recipe_sections(*, recipe_ingredients(*), instructions(*))` |
+| Favoris | `useFavoritesStore().refresh()` | `favorites` puis `recipes` par `in('id', …)` |
+| Planning d'une semaine (+ notes) | `usePlanningStore().loadWeek(date)` / `refresh()` | `planning` (+ `recipe:recipes(…)`) et `planning_notes` par plage de dates |
+| Listes de courses | `useShoppingStore().refresh()` | `shopping_lists` avec `shopping_items(*)` imbriqués |
+
+- Les pages appellent ces lectures dans `useAsyncData` (`status` / `error` branchés sur `LoadingState` / `ErrorState` / `EmptyState`).
+- Le store `recipes` ne garde que l'état d'interface (catégorie, recherche, tags) et un compteur `revision` : `useRecipesStore().refresh()` après une écriture fait recharger liste, fiche et facettes. Les stores `favorites`, `planning`, `shopping` exposent `refresh()` (recharge) et `ensureLoaded()` / `ensureWeekLoaded()` (chargement unique à la demande).
+- Régénérer les types après une migration : `npx supabase gen types typescript --local > shared/types/database.ts` (puis replacer l'en-tête « généré, ne pas éditer »).
 
 ## Endpoints API (`server/api/`)
 
-Légende auth : 🟢 public · 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
+Légende auth : 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
 
-**Lectures**
-- 🟢 `GET /api/recipes` · 👤 `GET /api/favorites` · `GET /api/planning` · `GET /api/shopping-lists`
+> Plus d'endpoints GET : `GET /api/recipes`, `/api/favorites`, `/api/planning`, `/api/shopping-lists` ont été
+> remplacés par les lectures directes ci-dessus.
+
 
 **Écritures** — corps validé par Zod (`shared/schemas/`), erreurs centralisées (`server/utils/errors.ts`)
 
@@ -214,25 +239,19 @@ npm run db:local:down      # arrêter les conteneurs
 - Limites : pas d'OpenAI (`/traducteur` indisponible), pas d'e-mails sortants (Mailpit),
   Postgres `17.11` local vs `17.4` prod (mêmes extensions).
 
-**Régressions connues de l'app actuelle face à 0003 → 0010** (constatées sur la base locale,
-à corriger côté app avant d'appliquer 0005 en prod) :
+**Régressions connues de l'app actuelle face à 0003 → 0010** :
 
-- `server/api/recipes.get.ts` charge **tous** les `recipe_ingredients` et toutes les
-  `instructions` en un seul `select` chacun. Après 0005 (1 546 ingrédients, 1 545 instructions),
-  PostgREST tronque à `max_rows = 1000` (valeur par défaut Supabase, reproduite en local) :
-  57 recettes s'affichent sans aucun ingrédient et 51 sans aucune étape (ex. « Tarte à la
-  tomate » : 13 ingrédients en base, titre « Ingrédients » vide à l'écran), 18 autres sont
-  partiellement tronquées. Comme toutes les recettes ont désormais des sections, le repli JSONB
-  de `pages/recettes/[id].vue` ne joue plus. Correctif : charger par recette, paginer avec
-  `.range()`, ou passer par `search_recipes` + requête ciblée sur la fiche.
+- ~~`server/api/recipes.get.ts` chargeait tous les ingrédients/instructions en un `select` (tronqué
+  à `max_rows = 1000` → 57 recettes sans ingrédient)~~ — corrigé : la liste passe par `search_recipes`
+  et la fiche par une requête ciblée (`useRecipe`), le repli JSONB a disparu du front.
 - `components/RecipeEditor.vue` n'envoie plus `ingredients`/`instructions` JSONB : jusqu'au
   passage par `save_recipe` (0006), une recette modifiée garde un JSONB périmé (sans effet
-  d'affichage tant que les sections existent).
+  d'affichage : le front ne lit plus le JSONB).
 
 ## À savoir
 
 - **Tests** : Vitest via `@nuxt/test-utils` (environnement `happy-dom` par défaut ; `// @vitest-environment nuxt` pour un test nécessitant l'app). Premier test : `test/unit/text.test.ts`.
 - **CI** : `.github/workflows/ci.yml` (Node 22, `npm ci`, lint, typecheck, test, build avec variables Supabase factices).
-- **Types Supabase** : pas encore de types générés ; les clients sont non typés (`// TODO(phase 2)` dans le code). Quand `shared/types/database.ts` existera, pointer `supabase.types` dessus dans `nuxt.config.ts`.
+- **Types Supabase** : générés dans `shared/types/database.ts` (`supabase.types` dans `nuxt.config.ts`) ; `useSupabaseClient()` / `serverSupabaseClient()` sont typés. Exception temporaire : `AuthContext.supabase` (`server/utils/auth.ts`) reste non typé tant que les endpoints d'écriture historiques ne compilent pas avec les types générés.
 - **Dette lint connue** (warnings) : `console.log` historiques, `catch (error: any)` dans les endpoints, plusieurs racines dans `pages/recettes/[id].vue`.
 - Migrations base de données : `supabase/migrations/`. Appliquer via le SQL Editor du dashboard Supabase ou la CLI Supabase. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md) pour l'ordre de déploiement du durcissement RLS.

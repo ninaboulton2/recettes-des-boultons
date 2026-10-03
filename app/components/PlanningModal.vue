@@ -3,7 +3,7 @@
     <div class="bg-white rounded-xl p-4 sm:p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
-          Ajouter "{{ recipe?.title }}" au planning
+          Ajouter "{{ recipe.title }}" au planning
         </h3>
         <button
           @click="closeModal"
@@ -26,7 +26,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
           </button>
-          
+
           <div class="flex flex-col items-center">
             <h4 class="text-lg font-semibold text-gray-900">
               Semaine du {{ formatWeekStart(planningCurrentWeek) }}
@@ -38,7 +38,7 @@
               Revenir à la semaine actuelle
             </button>
           </div>
-          
+
           <button
             @click="nextWeek"
             class="p-2 text-gray-600 hover:text-primary-600 transition-colors duration-200"
@@ -58,10 +58,10 @@
           class="text-center min-w-[80px] sm:min-w-[120px]"
         >
           <div class="text-sm sm:text-base font-medium text-gray-900 mb-2">{{ day.name }}</div>
-          <div 
+          <div
             class="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-colors duration-200 font-medium"
-            :class="isToday(day.date) 
-              ? 'bg-primary-100 text-primary-700' 
+            :class="isToday(day.date)
+              ? 'bg-primary-100 text-primary-700'
               : 'text-gray-500'"
           >
             {{ formatDate(day.date) }}
@@ -84,18 +84,18 @@
             >
               <span class="hidden sm:inline">Déjeuner</span>
               <span class="sm:hidden">Déj</span>
-              <span 
-                v-if="day.meals.lunch && day.meals.lunch.length > 0" 
+              <span
+                v-if="day.meals.lunch.length > 0"
                 class="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
               >
                 {{ day.meals.lunch.length }}
               </span>
             </button>
             <!-- Repas existants pour le déjeuner -->
-            <div v-if="day.meals.lunch && day.meals.lunch.length > 0" class="mt-2 space-y-1">
-              <div 
-                v-for="meal in day.meals.lunch" 
-                :key="meal.id" 
+            <div v-if="day.meals.lunch.length > 0" class="mt-2 space-y-1">
+              <div
+                v-for="meal in day.meals.lunch"
+                :key="meal.id"
                 class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
                 :title="meal.recipe?.title || 'Recette sans nom'"
               >
@@ -121,18 +121,18 @@
             >
               <span class="hidden sm:inline">Dîner</span>
               <span class="sm:hidden">Dîner</span>
-              <span 
-                v-if="day.meals.dinner && day.meals.dinner.length > 0" 
+              <span
+                v-if="day.meals.dinner.length > 0"
                 class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
               >
                 {{ day.meals.dinner.length }}
               </span>
             </button>
             <!-- Repas existants pour le dîner -->
-            <div v-if="day.meals.dinner && day.meals.dinner.length > 0" class="mt-2 space-y-1">
-              <div 
-                v-for="meal in day.meals.dinner" 
-                :key="meal.id" 
+            <div v-if="day.meals.dinner.length > 0" class="mt-2 space-y-1">
+              <div
+                v-for="meal in day.meals.dinner"
+                :key="meal.id"
                 class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
                 :title="meal.recipe?.title || 'Recette sans nom'"
               >
@@ -156,53 +156,45 @@
   </div>
 </template>
 
-<script setup>
-const props = defineProps({
-  show: {
-    type: Boolean,
-    default: false
-  },
-  recipe: {
-    type: Object,
-    required: true
-  }
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import type { MealType, RecipeSummary } from '#shared/types'
+import { toDateString, weekDates } from '~/utils/week'
+
+const props = withDefaults(defineProps<{
+  show?: boolean
+  recipe: RecipeSummary
+}>(), {
+  show: false
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
 const planningStore = usePlanningStore()
+const { $toast } = useNuxtApp()
 
 // Planning modal state
 const planningCurrentWeek = ref(new Date())
-const selectedDay = ref(null)
-const selectedMealType = ref(null)
+const selectedDay = ref<string | null>(null)
+const selectedMealType = ref<MealType | null>(null)
+
+// La semaine affichée est chargée à l'ouverture et à chaque navigation
+watch([() => props.show, planningCurrentWeek], ([isOpen]) => {
+  if (isOpen) void planningStore.ensureWeekLoaded(planningCurrentWeek.value)
+}, { immediate: true })
 
 // Planning computed properties
-const planningWeekDays = computed(() => {
-  const days = []
-  const startOfWeek = new Date(planningCurrentWeek.value)
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1) // Monday
-
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startOfWeek)
-    date.setDate(startOfWeek.getDate() + i)
-    const dateString = date.toISOString().split('T')[0]
-    
-    // Récupérer les repas existants pour ce jour
-    const existingMeals = planningStore.getDayMeals(dateString)
-    
-    days.push({
-      date: date,
-      dateString: dateString,
+const planningWeekDays = computed(() =>
+  weekDates(planningCurrentWeek.value).map((date) => {
+    const dateString = toDateString(date)
+    return {
+      date,
+      dateString,
       name: date.toLocaleDateString('fr-FR', { weekday: 'long' }),
-      meals: existingMeals
-    })
-  }
-  
-  return days
-})
-
-const { $toast } = useNuxtApp()
+      meals: planningStore.getDayMeals(dateString)
+    }
+  })
+)
 
 // Planning modal methods
 const closeModal = () => {
@@ -211,18 +203,18 @@ const closeModal = () => {
   selectedMealType.value = null
 }
 
-const selectDayAndMeal = (dateString, mealType) => {
+const selectDayAndMeal = (dateString: string, mealType: MealType) => {
   selectedDay.value = dateString
   selectedMealType.value = mealType
 }
 
 const confirmAddToPlanning = async () => {
-  if (!props.recipe || !selectedDay.value || !selectedMealType.value) return
-  
+  if (!selectedDay.value || !selectedMealType.value) return
+
   // Sauvegarder les valeurs avant de fermer la modale
   const selectedDayValue = selectedDay.value
   const selectedMealTypeValue = selectedMealType.value
-  
+
   // Formater la date pour l'affichage
   const dateObj = new Date(selectedDayValue)
   const formattedDate = dateObj.toLocaleDateString('fr-FR', {
@@ -230,15 +222,15 @@ const confirmAddToPlanning = async () => {
     day: 'numeric',
     month: 'long'
   })
-  
+
   try {
     // Ajouter la recette au planning
     const result = await planningStore.addMeal(selectedDayValue, selectedMealTypeValue, props.recipe)
-    
+
     if (result.success) {
       // Fermer la modale
       closeModal()
-      
+
       // Afficher un toast de confirmation
       $toast.success(
         'Recette ajoutée !',
@@ -272,7 +264,7 @@ const goToCurrentWeek = () => {
 }
 
 // Date formatting functions
-const formatWeekStart = (date) => {
+const formatWeekStart = (date: Date) => {
   return date.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
@@ -280,24 +272,22 @@ const formatWeekStart = (date) => {
   })
 }
 
-const formatDate = (date) => {
+const formatDate = (date: Date) => {
   return date.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short'
   })
 }
 
-const isToday = (date) => {
+const isToday = (date: Date) => {
   const today = new Date()
   return date.toDateString() === today.toDateString()
 }
 
 // Reset modal state when recipe changes
 watch(() => props.recipe, () => {
-  if (props.recipe) {
-    planningCurrentWeek.value = new Date()
-    selectedDay.value = null
-    selectedMealType.value = null
-  }
+  planningCurrentWeek.value = new Date()
+  selectedDay.value = null
+  selectedMealType.value = null
 })
 </script>

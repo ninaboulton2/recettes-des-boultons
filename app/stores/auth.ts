@@ -1,18 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { JwtPayload } from '@supabase/supabase-js'
-import type { LoginCredentials, User } from '#shared/types'
+import type { Database } from '#shared/types/database'
+import type { LoginCredentials, User, UserRole } from '#shared/types'
 
-// TODO(phase 2): typer avec shared/types/database.ts (Tables<'profiles'>)
-interface ProfileRow {
-  name?: string | null
-  role?: 'admin' | 'user' | null
-  language?: 'fr' | 'en' | null
-  theme?: 'light' | 'dark' | null
-  notifications?: boolean | null
-  created_at?: string | null
-  updated_at?: string | null
-}
+type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
 /** Identité minimale commune au JWT (cookie) et à l'objet User (login). */
 interface AuthIdentity {
@@ -29,6 +21,23 @@ function identityFromClaims(claims: JwtPayload): AuthIdentity | null {
   }
 }
 
+function toUserRole(value: unknown): UserRole | undefined {
+  return value === 'admin' || value === 'user' ? value : undefined
+}
+
+/**
+ * Rôle porté par le JWT : claim `user_role` ajouté par le hook
+ * `custom_access_token_hook` (migration 0009), à la racine des claims
+ * (ou dans `app_metadata`). `undefined` si le claim est absent.
+ */
+export function roleFromClaims(claims: JwtPayload | null | undefined): UserRole | undefined {
+  if (!claims) return undefined
+  const nested = claims.app_metadata && typeof claims.app_metadata === 'object'
+    ? (claims.app_metadata as Record<string, unknown>).user_role
+    : undefined
+  return toUserRole(claims.user_role) ?? toUserRole(nested)
+}
+
 export interface LoginResult {
   success: boolean
   error?: string
@@ -38,54 +47,70 @@ export interface LoginResult {
  * Store d'authentification.
  *
  * La session elle-même (cookie, refresh) est gérée par @nuxtjs/supabase :
- * `useSupabaseUser()` est la source de vérité, ce store ne fait qu'y accoler
- * le profil applicatif (`profiles` : nom, rôle, préférences).
+ * `useSupabaseUser()` (claims du JWT) est la source de vérité pour l'identité
+ * et le rôle (`user_role`). Ce store ne fait qu'y accoler le profil applicatif
+ * (`profiles` : nom, préférences), chargé côté client sans bloquer le rendu.
  */
 export const useAuthStore = defineStore('auth', () => {
-  const supabase = useSupabaseClient()
-  const supabaseUser = useSupabaseUser()
+  const supabase = useSupabaseClient<Database>()
+  const claims = useSupabaseUser()
 
-  const user = ref<User | null>(null)
+  const profile = ref<ProfileRow | null>(null)
 
-  const isAuthenticated = computed(() => user.value !== null)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const currentUser = computed(() => user.value)
+  const identity = computed<AuthIdentity | null>(() =>
+    claims.value ? identityFromClaims(claims.value) : null
+  )
 
-  async function loadProfile(identity: AuthIdentity): Promise<void> {
+  /** Rôle : le claim JWT fait foi ; repli sur `profiles.role` s'il est absent. */
+  const role = computed<UserRole>(() =>
+    roleFromClaims(claims.value) ?? toUserRole(profile.value?.role) ?? 'user'
+  )
+
+  const isAuthenticated = computed(() => identity.value !== null)
+  const isAdmin = computed(() => isAuthenticated.value && role.value === 'admin')
+
+  const currentUser = computed<User | null>(() => {
+    if (!identity.value) return null
+    const matchingProfile = profile.value?.id === identity.value.id ? profile.value : null
+    return {
+      id: identity.value.id,
+      email: identity.value.email ?? matchingProfile?.email ?? '',
+      name: matchingProfile?.name ?? undefined,
+      role: role.value,
+      language: matchingProfile?.language === 'en' ? 'en' : 'fr',
+      theme: matchingProfile?.theme === 'dark' ? 'dark' : 'light',
+      notifications: matchingProfile?.notifications ?? true,
+      createdAt: matchingProfile?.created_at ?? identity.value.createdAt ?? '',
+      updatedAt: matchingProfile?.updated_at ?? undefined
+    }
+  })
+
+  /** Compatibilité : l'ancien store exposait `user`. */
+  const user = currentUser
+
+  async function loadProfile(id: string): Promise<void> {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', identity.id)
+      .eq('id', id)
       .maybeSingle()
 
     if (error) {
       console.error('Erreur lors de la récupération du profil:', error)
-    }
-
-    const profile = (data ?? null) as ProfileRow | null
-
-    user.value = {
-      id: identity.id,
-      email: identity.email ?? '',
-      name: profile?.name ?? undefined,
-      role: profile?.role ?? 'user',
-      language: profile?.language ?? 'fr',
-      theme: profile?.theme ?? 'light',
-      notifications: profile?.notifications ?? true,
-      createdAt: profile?.created_at ?? identity.createdAt ?? '',
-      updatedAt: profile?.updated_at ?? undefined
-    }
-  }
-
-  /** Aligne le store sur la session Supabase courante (cookie). */
-  async function checkAuth(): Promise<void> {
-    const identity = supabaseUser.value ? identityFromClaims(supabaseUser.value) : null
-    if (!identity) {
-      user.value = null
       return
     }
-    if (user.value?.id !== identity.id) {
-      await loadProfile(identity)
+    profile.value = data
+  }
+
+  /** Aligne le profil applicatif sur la session Supabase courante (cookie). */
+  async function checkAuth(): Promise<void> {
+    const id = identity.value?.id
+    if (!id) {
+      profile.value = null
+      return
+    }
+    if (profile.value?.id !== id) {
+      await loadProfile(id)
     }
   }
 
@@ -103,7 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, error: 'Aucun utilisateur retourné' }
       }
 
-      await loadProfile({ id: data.user.id, email: data.user.email, createdAt: data.user.created_at })
+      await loadProfile(data.user.id)
       return { success: true }
     } catch (error) {
       console.error('Erreur de connexion:', error)
@@ -120,7 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error)
     } finally {
-      user.value = null
+      profile.value = null
     }
   }
 
@@ -131,13 +156,15 @@ export const useAuthStore = defineStore('auth', () => {
   // Côté client, suit les changements de session (connexion, déconnexion,
   // expiration, rechargement de page) sans écouteur manuel.
   if (import.meta.client) {
-    watch(supabaseUser, () => { void checkAuth() }, { immediate: true })
+    watch(identity, () => { void checkAuth() }, { immediate: true })
   }
 
   return {
     user,
+    profile,
     isAuthenticated,
     isAdmin,
+    role,
     currentUser,
     login,
     logout,

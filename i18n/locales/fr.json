@@ -101,12 +101,31 @@
         "selected": "{count} tag(s) sélectionné(s)"
       },
       "clear": "Effacer les filtres",
-      "count": "{count} recette{plural}"
+      "count": "aucune recette | {count} recette | {count} recettes"
     },
     "empty": {
       "title": "Aucune recette trouvée",
       "description": "Essayez de modifier vos critères de recherche ou de supprimer les filtres.",
       "clearFilters": "Effacer les filtres"
+    },
+    "count": "aucune recette | {count} recette | {count} recettes",
+    "loading": "Chargement des recettes...",
+    "loadError": {
+      "title": "Erreur de chargement des recettes",
+      "retry": "Réessayer"
+    },
+    "pagination": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "page": "Page {page} sur {total}"
+    },
+    "detail": {
+      "loading": "Chargement de la recette...",
+      "loadError": "Erreur de chargement de la recette",
+      "notFound": "Recette introuvable",
+      "backToList": "Retour aux recettes",
+      "ingredientsLoading": "Chargement des ingrédients...",
+      "noIngredients": "Cette recette n’a pas encore d’ingrédients."
     }
   },
   "favorites": {
@@ -116,7 +135,9 @@
       "title": "Aucune recette favorite",
       "description": "Vous n'avez pas encore ajouté de recettes à vos favoris. Parcourez nos recettes et cliquez sur le cœur pour les ajouter !",
       "discover": "Découvrir des recettes"
-    }
+    },
+    "loading": "Chargement de vos favoris...",
+    "loadError": "Erreur de chargement des favoris"
   },
   "planning": {
     "title": "Planning hebdomadaire",
@@ -160,7 +181,9 @@
       "search": "Rechercher une recette...",
       "noRecipes": "Aucune recette trouvée",
       "close": "Fermer"
-    }
+    },
+    "loading": "Chargement de votre planning...",
+    "loadError": "Erreur de chargement du planning"
   },
   "shopping": {
     "title": "Listes de courses",
@@ -224,7 +247,9 @@
       "toBuy": "{count} article{plural} à acheter",
       "bought": "{count} article{plural} acheté{plural}",
       "footer": "Recettes des Boultons - {date}"
-    }
+    },
+    "loading": "Chargement de vos listes de courses...",
+    "loadError": "Erreur de chargement des listes"
   },
   "planningPrint": {
     "title": "Planning hebdomadaire",
