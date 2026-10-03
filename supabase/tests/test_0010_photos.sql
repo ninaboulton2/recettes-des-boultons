@@ -7,6 +7,11 @@ declare
   user_id  constant uuid := '00000000-0000-0000-0000-00000000000b';
   b record;
 begin
+  -- Sur la vraie stack Supabase, le trigger storage.protect_delete() interdit les
+  -- DELETE SQL directs sur storage.objects sauf si ce paramètre vaut 'true'
+  -- (sans effet sur le shim Postgres nu de run_local.sh).
+  perform set_config('storage.allow_delete_query', 'true', true);
+
   select * into b from storage.buckets where id = 'recipe-photos';
   assert b.public and b.file_size_limit = 5242880, 'bucket';
   assert b.allowed_mime_types = array['image/jpeg','image/png','image/webp'], 'mime';
