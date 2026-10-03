@@ -23,8 +23,9 @@ Application de gestion de recettes familiales : recettes, planning des repas, li
 recettes-des-boultons/
 ├── app/                     # srcDir Nuxt 4 (alias ~/ et @/)
 │   ├── app.vue              # Racine : <UApp> (Nuxt UI) > <NuxtLayout> > <NuxtPage>
-│   ├── app.config.ts        # Alias de couleurs Nuxt UI (primary/secondary → palette maison)
-│   ├── assets/css/main.css  # Tailwind 4 + Nuxt UI, @theme (palettes, polices, animations)
+│   ├── app.config.ts        # Nuxt UI : primary → palette terracotta, neutral → stone
+│   ├── assets/css/main.css  # Tailwind 4 + Nuxt UI, @theme (palette primary, polices)
+│   ├── error.vue            # Page d'erreur (404 / 500) en Nuxt UI
 │   ├── components/          # Composants Vue réutilisables
 │   ├── pages/               # Routes (recettes, planning, courses, favoris, traducteur)
 │   ├── layouts/             # Layout par défaut
@@ -32,7 +33,7 @@ recettes-des-boultons/
 │   ├── composables/         # useApi (apiFetch), useRecipeSearch, useRecipeFacets, useRecipe
 │   ├── utils/               # week.ts (semaine du planning)
 │   ├── middleware/auth.ts   # Garde de route côté client (admin)
-│   └── plugins/             # toast.client.js
+│   └── plugins/             # toast.client.ts ($toast → useToast() de Nuxt UI)
 ├── shared/                  # Code partagé client/serveur (alias #shared)
 │   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...)
 │   ├── types/database.ts    # Types Supabase GÉNÉRÉS (ne pas éditer)
@@ -54,8 +55,95 @@ recettes-des-boultons/
 - `~/` pointe sur `app/` ; le code partagé s'importe via `#shared/...` (auto-importé pour `shared/utils` et `shared/types`).
 - `tsconfig.json` ne contient que des *references* vers les tsconfig générés dans `.nuxt/` (`typescript.strict: true` dans `nuxt.config.ts`).
 - Tailwind 4 : la configuration vit dans `app/assets/css/main.css` (`@theme`, `@layer components`, `@utility`). Les valeurs de l'ancien `tailwind.config.js` ont été reprises à l'identique ; quelques réglages rétablissent les défauts v3 (hover sur tous les appareils, bordures `gray-200`, placeholders `gray-400`, curseur `pointer` sur les boutons). Les blocs `<style scoped>` qui utiliseraient `@apply` doivent commencer par `@reference "~/assets/css/main.css";` (aucun cas aujourd'hui).
-- Nuxt UI : `ui.colorMode: false` (pas de mode sombre pour l'instant) ; `<UApp>` est en place, les composants maison (modales, toasts) restent utilisés et seront migrés dans une phase ultérieure.
+- Nuxt UI : mode sombre actif (`ui.colorMode: true`, classe `.dark`, bouton `<UColorModeButton>` dans le header) ; `<UApp>` reçoit la locale Nuxt UI (`fr` / `en`) depuis `app.vue`. Voir la section « Design » ci-dessous.
 - `pages/recettes/[id].vue` déclare un `path` restreint aux UUID (`definePageMeta`) : Nuxt 4 ordonne `[category]` avant `[id]`, ce qui capturait les identifiants de recettes.
+
+
+## Design (Nuxt UI 4)
+
+Système commun à toutes les pages ; les tokens vivent dans `app/assets/css/main.css`
+(`@theme static`) et `app/app.config.ts`.
+
+- **Couleurs** : uniquement les utilitaires sémantiques de Nuxt UI — surfaces `bg-default`,
+  `bg-muted`, `bg-elevated`, `bg-accented` ; textes `text-highlighted`, `text-default`,
+  `text-muted`, `text-dimmed`, `text-inverted` ; bordures `border-default`, `border-accented` ;
+  accent `text-primary` / `bg-primary` / `bg-primary/10` ; états `text-error`, `text-success`…
+  Aucun hex ni `gray-*` / `slate-*` dans les composants : ces utilitaires s'adaptent seuls au
+  mode sombre.
+- **Palette** : neutre chaud `stone` (`ui.colors.neutral`) + accent terracotta `primary`
+  (`--color-primary-50…950`, 500 = `#c2603e`). `--ui-primary` vaut la nuance 600 en clair
+  (blanc sur terracotta : 5,5:1) et 400 en sombre (texte foncé : 6:1). Pas de `secondary`.
+- **Typographie** : `font-sans` = Inter (interface), `font-serif` = Fraunces (titres de pages
+  et de recettes : `font-serif font-semibold text-highlighted`), `font-lobster` réservé au logo.
+  Hiérarchie par taille/graisse, pas par la couleur.
+- **Surfaces** : bordures fines (`border border-default`, `hover:border-accented`) plutôt
+  qu'ombres ; `rounded-lg` par défaut, `rounded-xl` pour cartes et modales.
+- **Composants** : Nuxt UI uniquement (`UButton`, `UModal`, `UDrawer`, `UCard`, `UInput`,
+  `USelectMenu`, `UForm` + `UFormField` (schémas zod), `UBadge`, `USkeleton`, `UPagination`,
+  `UDropdownMenu`, `UCheckbox`, `UAlert`, `UIcon`…). Icônes Lucide `i-lucide-*` (collection
+  locale `@iconify-json/lucide`). Boutons icône : toujours un `aria-label`.
+- **Toasts** : `useToast().add({ title, description, color, icon })` (Nuxt UI). La façade
+  `$toast` (`useNuxtApp().$toast`, plugin `toast.client.ts`) conserve l'API historique
+  `$toast.success(title, message?, duration?)` / `error` / `info` / `warning` / `show`.
+- **Composants partagés** (API inchangée, rendu Nuxt UI) : `ConfirmModal` (`show`, `title`,
+  `message`, `confirmText`, `cancelText`, `loading` ; émet `confirm`, `cancel`, `close`),
+  `LoadingButton` (`loading`, `variant`, `size`, `disabled`), `LoadingState` / `ActionLoading`
+  (`message`), `EmptyState` (`title`, `message`, `icon` Lucide, `actionText`, `actionHandler`,
+  slot `action`), `ErrorState` (`title`, `message`, `retryAction`, `retryText`),
+  `AuthRequired` (émet `login`), `AuthModal` (`isOpen` ; émet `close`, `success` — connexion,
+  inscription et OAuth réunis), `RecipeCard`, `RecipeAddToListModal`, `RecipeFilters`,
+  `RecipeGridSkeleton`, `CategoryGrid`, `LanguageSwitcher`, `AppUserMenu`, `AppMobileNav`.
+- **Layout** : header compact (logo, navigation desktop, `UColorModeButton`, langue, menu
+  utilisateur) ; sur mobile, barre d'onglets en bas (Recettes / Planning / Courses / Favoris /
+  Moi) — le layout réserve le padding bas (`pb-20 md:pb-0`), les pages n'ont rien à prévoir ;
+  conteneur unique `UContainer` pour toutes les pages ; footer desktop ; `app/error.vue`.
+- **Accessibilité** : focus visible (`outline-primary`) sur les éléments natifs, composants
+  Nuxt UI focusables au clavier, `aria-current="page"` sur la navigation, `prefers-reduced-motion`
+  respecté (animations/transitions neutralisées dans `main.css`).
+- **Catégories** : `useCategories()` (`app/composables/useCategories.ts`) fournit libellés
+  i18n (`categories.<clé>.name`) et icônes Lucide ; `categoryIcon(category)` sert de repli
+  visuel quand une recette n'a pas de `photoPath` (plus d'illustrations par catégorie).
+- **Photos** : `RecipeCard` affiche `photoPath` depuis l'URL publique du bucket Storage
+  `recipe-photos` (`<supabase.url>/storage/v1/object/public/recipe-photos/<path>`) via un
+  `<img loading="lazy">` (le provider ipx de `@nuxt/image` n'optimise pas les domaines externes).
+- **i18n** : bloc `ui` (textes communs : `ui.common.*`, `ui.nav.*`, `ui.card.*`, `ui.error.*`…)
+  et blocs `auth`, `home`, `recipes`, `favorites`, `categories`, `footer`, `navigation`.
+- **Dette** : la classe `.btn-primary` (`main.css`) est conservée en version minimale tant que
+  `pages/recettes/[id].vue`, `components/RecipeTranslator.vue` et `pages/courses.vue`
+  l'utilisent (`TODO(phase 4)`).
+
+### OAuth (Google, Apple)
+
+La modale d'authentification affiche « Continuer avec Google » (et Apple si listé) selon
+`runtimeConfig.public.authProviders` (`NUXT_PUBLIC_AUTH_PROVIDERS=google,apple`, défaut
+`google`). Le bouton appelle `supabase.auth.signInWithOAuth({ provider, options: { redirectTo:
+`${origin}/confirm` } })` ; la page `app/pages/confirm.vue` attend `useSupabaseUser()` puis
+revient sur la page d'origine (mémorisée dans `sessionStorage`) ou l'accueil.
+
+- **Google Cloud** : créer un identifiant OAuth 2.0 « Application Web » (console Google Cloud →
+  APIs & Services → Credentials) avec comme URI de redirection autorisée
+  `https://<ref>.supabase.co/auth/v1/callback` (prod) et `http://127.0.0.1:54321/auth/v1/callback`
+  (local). Récupérer `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+- **Prod (dashboard Supabase)** : Authentication → Providers → Google : activer, coller l'ID
+  et le secret ; dans Authentication → URL Configuration, ajouter `https://<domaine>/confirm`
+  (et `https://<domaine>/en/confirm`) aux *Redirect URLs*.
+- **Local (`supabase/config.toml`)** : les secrets ne sont jamais commités, ils viennent de
+  l'environnement de la CLI (`supabase/.env` gitignoré, ou variables exportées avant
+  `npm run db:local:up`) :
+
+  ```toml
+  [auth.external.google]
+  enabled = true
+  client_id = "env(GOOGLE_CLIENT_ID)"
+  secret = "env(GOOGLE_CLIENT_SECRET)"
+  # Laisser redirect_uri vide : http://127.0.0.1:54321/auth/v1/callback
+  skip_nonce_check = true   # requis pour Google One Tap / certains navigateurs en local
+  ```
+
+  et ajouter `http://localhost:3021/confirm` (port de dev) aux `additional_redirect_urls` de
+  `[auth]`, puis `npx supabase stop && npx supabase start`.
+- **Apple** : même principe (`[auth.external.apple]`, Services ID + clé `.p8` → secret JWT
+  généré) ; n'ajouter `apple` à `NUXT_PUBLIC_AUTH_PROVIDERS` qu'une fois le fournisseur activé.
 
 ## Authentification & sécurité
 
@@ -191,6 +279,7 @@ Seules ces variables sont lues par le code :
 SUPABASE_URL=            # URL du projet Supabase
 SUPABASE_ANON_KEY=       # clé publique anon
 OPENAI_API_KEY=          # traducteur IA (optionnel : page /traducteur)
+NUXT_PUBLIC_AUTH_PROVIDERS=google   # fournisseurs OAuth affichés (google, apple) — défaut : google
 ```
 
 - **Mapping Supabase** : le module `@nuxtjs/supabase` attend `SUPABASE_URL` / `SUPABASE_KEY`. Pour ne pas renommer la variable existante sur Vercel, `nuxt.config.ts` mappe explicitement `supabase: { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_ANON_KEY }`. (`NUXT_PUBLIC_SUPABASE_URL` / `NUXT_PUBLIC_SUPABASE_KEY` fonctionnent aussi à l'exécution.)
