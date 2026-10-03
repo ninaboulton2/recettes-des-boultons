@@ -10,7 +10,6 @@
         :src="photoUrl"
         alt=""
         sizes="xs:100vw sm:50vw lg:33vw xl:25vw"
-        densities="x1 x2 x3"
         :width="400"
         :height="300"
         fit="cover"
