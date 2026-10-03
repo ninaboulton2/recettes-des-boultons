@@ -220,10 +220,166 @@
     }
   },
   "recipeDetail": {
-    "_agent": "3B"
+    "_agent": "3B",
+    "back": "Retour",
+    "category": "Catégorie",
+    "prepTime": "Préparation",
+    "cookTime": "Cuisson",
+    "totalTime": "Total",
+    "minutes": "{n} min",
+    "servings": "Portions",
+    "servingsCount": "{count} portion | {count} portions",
+    "servingsIncrease": "Une portion de plus",
+    "servingsDecrease": "Une portion de moins",
+    "servingsReset": "Revenir à {count} portions",
+    "scaledNote": "Quantités ajustées pour {count} portions (recette d’origine : {base}).",
+    "photoAlt": "Photo : {title}",
+    "noPhoto": "Pas encore de photo",
+    "ingredients": {
+      "title": "Ingrédients",
+      "optional": "optionnel",
+      "progress": "{checked}/{total} cochés",
+      "resetChecks": "Tout décocher",
+      "empty": "Cette recette n’a pas encore d’ingrédients."
+    },
+    "steps": {
+      "title": "Préparation",
+      "step": "Étape {n}",
+      "empty": "Cette recette n’a pas encore d’étapes."
+    },
+    "notes": {
+      "title": "Notes et conseils"
+    },
+    "actions": {
+      "favoriteAdd": "Ajouter aux favoris",
+      "favoriteRemove": "Retirer des favoris",
+      "favoriteAdded": "Recette ajoutée aux favoris",
+      "favoriteRemoved": "Recette retirée des favoris",
+      "favoriteError": "Impossible de modifier les favoris",
+      "shopping": "Courses",
+      "planning": "Planning",
+      "cook": "Mode cuisine",
+      "print": "Imprimer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "loginRequired": "Connectez-vous pour utiliser cette fonction."
+    },
+    "shopping": {
+      "title": "Ajouter à une liste de courses",
+      "description": "Choisissez la liste et les sections d’ingrédients à ajouter.",
+      "list": "Liste",
+      "noLists": "Vous n’avez pas encore de liste de courses.",
+      "newListName": "Nom de la nouvelle liste",
+      "createList": "Créer la liste",
+      "sections": "Sections à ajouter",
+      "selectAll": "Tout sélectionner",
+      "selectNone": "Tout désélectionner",
+      "scaledFor": "Quantités calculées pour {count} portions.",
+      "add": "Ajouter à la liste",
+      "cancel": "Annuler",
+      "success": "{count} article ajouté à « {list} » | {count} articles ajoutés à « {list} »",
+      "error": "Impossible d’ajouter la recette à la liste.",
+      "noSelection": "Sélectionnez au moins une section."
+    },
+    "delete": {
+      "title": "Supprimer la recette",
+      "message": "Supprimer « {title} » ? Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler",
+      "success": "Recette supprimée",
+      "error": "Impossible de supprimer la recette."
+    },
+    "cooking": {
+      "title": "Mode cuisine",
+      "exit": "Quitter",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "stepOf": "Étape {current} sur {total}",
+      "ingredients": "Ingrédients",
+      "noSteps": "Cette recette n’a pas d’étapes à suivre.",
+      "wakeLockOn": "Écran maintenu allumé",
+      "keyboardHint": "← → pour naviguer · Échap pour quitter"
+    }
   },
   "editor": {
-    "_agent": "3B"
+    "_agent": "3B",
+    "titleNew": "Nouvelle recette",
+    "titleEdit": "Modifier la recette",
+    "fields": {
+      "title": "Titre de la recette",
+      "titlePlaceholder": "Nom de la recette",
+      "category": "Catégorie",
+      "categoryPlaceholder": "Choisir une catégorie",
+      "description": "Description",
+      "descriptionPlaceholder": "Quelques mots sur la recette…",
+      "prepTime": "Préparation (min)",
+      "cookTime": "Cuisson (min)",
+      "servings": "Portions",
+      "tags": "Tags",
+      "tagsPlaceholder": "végétarien, rapide… (Entrée pour ajouter)",
+      "notes": "Notes et conseils",
+      "notesPlaceholder": "Conseils, variantes, notes personnelles…"
+    },
+    "photo": {
+      "label": "Photo",
+      "hint": "JPEG, PNG ou WebP. Redimensionnée à 1600 px max et convertie en WebP avant l’envoi.",
+      "choose": "Choisir une photo",
+      "replace": "Remplacer",
+      "remove": "Retirer la photo",
+      "pending": "Nouvelle photo : envoyée à l’enregistrement.",
+      "removed": "La photo sera retirée à l’enregistrement.",
+      "invalid": "Choisissez une image JPEG, PNG ou WebP."
+    },
+    "sections": {
+      "ingredientsTitle": "Ingrédients",
+      "stepsTitle": "Étapes",
+      "addSection": "Ajouter une section",
+      "sectionName": "Nom de la section (ex. Pour la pâte)",
+      "defaultName": "Nouvelle section",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "remove": "Supprimer la section",
+      "addIngredient": "Ajouter un ingrédient",
+      "addStep": "Ajouter une étape",
+      "emptyIngredients": "Aucun ingrédient dans cette section.",
+      "emptySteps": "Aucune étape dans cette section."
+    },
+    "ingredient": {
+      "amount": "Quantité",
+      "amountPlaceholder": "2",
+      "unit": "Unité",
+      "unitPlaceholder": "Unité",
+      "unitSearch": "Rechercher ou saisir une unité…",
+      "unitCreate": "Utiliser « {unit} »",
+      "unitNone": "Sans unité",
+      "name": "Ingrédient",
+      "namePlaceholder": "Nom de l’ingrédient",
+      "optional": "Optionnel",
+      "remove": "Supprimer l’ingrédient"
+    },
+    "step": {
+      "placeholder": "Décrivez cette étape…",
+      "remove": "Supprimer l’étape",
+      "drag": "Glisser pour réordonner"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "create": "Créer la recette",
+      "save": "Enregistrer",
+      "close": "Fermer"
+    },
+    "validation": {
+      "needIngredients": "Ajoutez au moins un ingrédient.",
+      "needSteps": "Ajoutez au moins une étape.",
+      "fixErrors": "Corrigez les champs en erreur."
+    },
+    "toasts": {
+      "created": "Recette créée",
+      "updated": "Recette modifiée",
+      "error": "Enregistrement impossible",
+      "photoError": "La photo n’a pas pu être envoyée ; la recette a été enregistrée sans photo."
+    }
   },
   "favorites": {
     "title": "Mes recettes favorites",

@@ -94,7 +94,7 @@ else
 fi
 
 # 3. Migrations 0003 → 0010 ------------------------------------------------------
-for f in "$SUPA"/migrations/00{03,04,05,06,07,08,09,10,12}_*.sql; do run "$f"; done
+for f in "$SUPA"/migrations/00{03,04,05,06,07,08,09,10,11,12}_*.sql; do run "$f"; done
 
 # 4. Comptes de test + aide aux tests ----------------------------------------
 # En mode seed-test, les tests SQL comptent exactement les utilisateurs de

@@ -61,6 +61,8 @@ export const recipeInputSchema = z.object({
   cookTime: nullableNonNegativeInt.optional(),
   servings: nullableNonNegativeInt.optional(),
   image: optionalText(500),
+  /** Chemin dans le bucket storage `recipe-photos` (0010) ; `null` retire la photo. */
+  photoPath: optionalText(500),
   tags: z.array(z.string().trim().min(1, 'tag vide').max(50, 'trop long (max 50 caractères)')).nullish(),
   sections: z.array(recipeSectionInputSchema).max(50, 'trop de sections (max 50)').nullish()
 })
@@ -77,7 +79,7 @@ export type RecipeIngredientInput = z.infer<typeof recipeIngredientInputSchema>
 export type RecipeInstructionInput = z.infer<typeof recipeInstructionInputSchema>
 export type SectionType = z.infer<typeof sectionTypeSchema>
 
-/** Payload (snake_case) de la RPC `save_recipe(payload jsonb)` — voir 0006_save_recipe.sql. */
+/** Payload (snake_case) de la RPC `save_recipe(payload jsonb)` — voir 0006_save_recipe.sql et 0011 (`photo_path`). */
 export interface SaveRecipePayload {
   id?: string
   title: string
@@ -88,6 +90,7 @@ export interface SaveRecipePayload {
   cook_time: number | null
   servings: number | null
   image: string | null
+  photo_path: string | null
   tags: string[]
   sections: Array<{
     name: string
@@ -141,6 +144,7 @@ export function toSaveRecipePayload(input: RecipeInput, id?: string): SaveRecipe
     cook_time: input.cookTime ?? null,
     servings: input.servings ?? null,
     image: textOrNull(input.image),
+    photo_path: textOrNull(input.photoPath),
     tags: input.tags ?? [],
     sections
   }

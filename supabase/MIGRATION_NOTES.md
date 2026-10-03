@@ -424,7 +424,39 @@ et `*_orphans_20261003` y apparaîtront (RLS sans politique : inaccessibles) ; i
 
 ---
 
-## 0012 — `ai_usage`, `check_ai_quota` (traducteur IA)
+## 6. Migration 0011 — `save_recipe` écrit `photo_path` (phase 3B, fiche/éditeur)
+
+| Fichier | Rôle |
+|---|---|
+| `migrations/0011_save_recipe_photo.sql` | `create or replace function public.save_recipe(payload jsonb)` : corps identique à 0006 + écriture de `recipes.photo_path` depuis `payload->>'photo_path'` |
+
+* **Quoi** : l'update et l'insert de la recette écrivent
+  `photo_path = nullif(btrim(payload->>'photo_path'), '')`. Une clé absente ou vide **retire** la
+  photo (l'éditeur renvoie toujours la recette complète, comme pour les sections). Signature,
+  droits (`authenticated` seulement), SECURITY INVOKER, recalcul du JSONB legacy et messages
+  d'erreur inchangés ; `delete_recipe` n'est pas touchée.
+* **Pourquoi** : la photo est téléversée par le navigateur dans le bucket `recipe-photos`
+  (client Supabase, politiques admin de 0010) sous `<recipe_id>/<timestamp>.webp`, puis son chemin
+  part dans `RecipeInput.photoPath` → `toSaveRecipePayload` → `photo_path`. Sans 0011, la clé est
+  ignorée et la photo n'est jamais associée.
+* **Prérequis** : 0010 (colonne `photo_path`, bucket, politiques storage).
+* **Appliquée en local** le 2026-10-03 (`psql -f`, rejouée une seconde fois : idempotente). Test
+  effectué en tant qu'admin (`set local role authenticated` + claims `user_role=admin`) :
+  `photo_path` écrit à la création, remis à `NULL` quand la clé est absente, `delete_recipe` OK.
+  **Pas appliquée en prod** : à faire après 0003 → 0010 (procédure § 4), simplement en exécutant
+  le fichier dans le SQL Editor.
+* **Vérification prod** :
+  ```sql
+  select position('photo_path' in pg_get_functiondef('public.save_recipe(jsonb)'::regprocedure)) > 0; -- true
+  ```
+* **Rollback** : rejouer `0006_save_recipe.sql` (recrée la version sans `photo_path`). Aucune donnée
+  touchée ; la colonne reste.
+* **À savoir** : la suppression de l'objet dans le bucket est faite côté client
+  (`useRecipePhoto().removeRecipePhotos(recipeId)`) avant `delete_recipe` ; il n'y a pas de trigger
+  storage. Les types générés (`shared/types/database.ts`) n'ont pas besoin d'être régénérés
+  (signature inchangée).
+
+## 7. Migration 0012 — `ai_usage`, `check_ai_quota` (traducteur IA)
 
 Fichier : `migrations/0012_ai_usage.sql`. Prérequis : 0009 (`private.is_admin()`). **Appliquée à la
 base LOCALE uniquement** (`psql … -f`, rejouée une seconde fois pour vérifier l'idempotence) ;

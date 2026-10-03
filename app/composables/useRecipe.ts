@@ -1,8 +1,8 @@
 import { toValue, type MaybeRefOrGetter } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '#shared/types/database'
-import type { Recipe } from '#shared/types'
-import { toRecipe } from '#shared/utils/recipes'
+import type { Ingredient, Recipe } from '#shared/types'
+import { formatScaledAmount, toRecipe } from '#shared/utils/recipes'
 
 /**
  * Charge une recette complète (ligne `recipes` + sections imbriquées avec
@@ -37,4 +37,25 @@ export function useRecipe(id: MaybeRefOrGetter<string>) {
       watch: [() => toValue(id), () => recipesStore.revision]
     }
   )
+}
+
+/**
+ * Libellé « quantité + unité » d'un ingrédient, mis à l'échelle (`factor`) et
+ * avec l'unité canonique du référentiel (`useUnits().unitLabel`), repli sur
+ * le texte saisi. Partagé par la fiche, le mode cuisine et l'ajout aux courses.
+ */
+export function useIngredientLabel() {
+  const { unitLabel } = useUnits()
+
+  const amountLabel = (ingredient: Pick<Ingredient, 'amount' | 'amountNum' | 'unit' | 'unitCode'>, factor = 1): string => {
+    const amount = formatScaledAmount(ingredient.amountNum, ingredient.amount, factor)
+    const unit = unitLabel(ingredient.unitCode, ingredient.unit)
+    return [amount, unit].filter(Boolean).join(' ')
+  }
+
+  /** « 1 ½ c. à s. farine (optionnel) » sans la mention optionnelle : nom inclus. */
+  const ingredientLabel = (ingredient: Pick<Ingredient, 'name' | 'amount' | 'amountNum' | 'unit' | 'unitCode'>, factor = 1): string =>
+    [amountLabel(ingredient, factor), ingredient.name.trim()].filter(Boolean).join(' ')
+
+  return { amountLabel, ingredientLabel }
 }
