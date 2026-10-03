@@ -3,33 +3,46 @@
   "version": "1.0.0",
   "description": "Application de recettes des Boultons",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nuxt dev --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
     "vercel-build": "nuxt build",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@nuxt/image": "^1.0.0",
-    "@nuxtjs/color-mode": "^3.3.0",
-    "@nuxtjs/i18n": "^10.0.0-rc.2",
-    "@nuxtjs/tailwindcss": "^6.10.0",
-    "@pinia/nuxt": "^0.5.0",
-    "@supabase/supabase-js": "^2.56.0",
-    "dotenv": "^17.2.1",
-    "nuxt": "^3.10.0",
+    "@nuxt/fonts": "^0.14.0",
+    "@nuxt/image": "^2.1.0",
+    "@nuxt/ui": "^4.11.3",
+    "@nuxtjs/i18n": "^10.6.0",
+    "@nuxtjs/supabase": "^2.0.10",
+    "@pinia/nuxt": "^0.11.3",
+    "@supabase/supabase-js": "^2.117.2",
+    "nuxt": "^4.5.2",
     "openai": "^5.8.2",
-    "pinia": "^2.1.0",
-    "vue": "^3.4.0"
+    "pinia": "^3.0.4",
+    "vue": "^3.5.43"
   },
   "devDependencies": {
-    "@nuxt/devtools": "latest"
+    "@nuxt/devtools": "^3.4.1",
+    "@nuxt/eslint": "^1.17.0",
+    "@nuxt/test-utils": "^4.3.3",
+    "@types/node": "^22.20.5",
+    "@vue/test-utils": "^2.5.1",
+    "eslint": "^9.39.5",
+    "happy-dom": "^20.14.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3",
+    "vue-tsc": "^3.3.12"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=22"
   },
   "keywords": [
     "nuxt",

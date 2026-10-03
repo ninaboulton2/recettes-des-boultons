@@ -1,4 +1,16 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
+
+// TODO(phase 2): typer avec shared/types/database.ts (types générés)
+interface ShoppingItemRow {
+  id: string
+  name: string
+  amount: number | string | null
+  unit: string | null
+  recipe_id: string | null
+  is_checked: boolean
+  created_at: string
+  updated_at: string
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -35,7 +47,7 @@ export default defineEventHandler(async (event) => {
       userId: list.user_id,
       createdAt: list.created_at,
       updatedAt: list.updated_at,
-      items: (list.items || []).map(item => ({
+      items: ((list.items ?? []) as ShoppingItemRow[]).map((item) => ({
         id: item.id,
         name: item.name,
         amount: item.amount,

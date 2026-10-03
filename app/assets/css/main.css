@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/*
+ * Thème : reprend exactement les valeurs de l'ancien tailwind.config.js
+ * (palettes primary/secondary, polices, animations). La nuance 950 n'existait
+ * pas en v3 : elle est ajoutée uniquement pour que les alias Nuxt UI
+ * (ui.colors.primary / secondary dans app.config.ts) soient complets.
+ */
+@theme {
+  --color-primary-50: #f0f8f9;
+  --color-primary-100: #e0f1f3;
+  --color-primary-200: #c1e3e7;
+  --color-primary-300: #a2d5db;
+  --color-primary-400: #83c7cf;
+  --color-primary-500: #64b9c3;
+  --color-primary-600: #4da8b3;
+  --color-primary-700: #3d8a94;
+  --color-primary-800: #2e6c75;
+  --color-primary-900: #1f4e56;
+  --color-primary-950: #163a40;
+
+  --color-secondary-50: #f8fafc;
+  --color-secondary-100: #f1f5f9;
+  --color-secondary-200: #e2e8f0;
+  --color-secondary-300: #cbd5e1;
+  --color-secondary-400: #94a3b8;
+  --color-secondary-500: #64748b;
+  --color-secondary-600: #475569;
+  --color-secondary-700: #334155;
+  --color-secondary-800: #1e293b;
+  --color-secondary-900: #0f172a;
+  --color-secondary-950: #020617;
+
+  --font-lobster: 'Lobster', cursive;
+  --font-poppins: 'Poppins', sans-serif;
+
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+}
+
+/* Tailwind 3 appliquait `hover:` sur tous les appareils ; v4 le limite aux
+   appareils avec pointeur. On conserve le comportement v3. */
+@custom-variant hover (&:hover);
+
+@layer base {
+  /* Compatibilité Tailwind 3 : couleur de bordure par défaut, placeholders,
+     curseur des boutons (v4 a changé ces valeurs par défaut). */
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+    opacity: 1;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300;
+  }
+
+  /* Tailwind 4 n'autorise plus `@apply card` : les règles de .card sont reprises. */
+  .recipe-card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl p-6 cursor-pointer transition-transform duration-200 hover:-translate-y-1;
+  }
+
+  .category-card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl p-8 text-center cursor-pointer transition-transform duration-200 hover:-translate-y-1;
+  }
+
+  .nav-link {
+    @apply text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply text-primary-600 font-semibold;
+  }
+}
+
+@utility text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+@utility gradient-bg {
+  background: linear-gradient(135deg, #83c7cf 0%, #64b9c3 100%);
+}
+
+@utility diagonal-bg {
+  background: linear-gradient(120deg, var(--color-primary-500) 0%, var(--color-primary-500) 60%, #fff 60%, #fff 100%);
+}

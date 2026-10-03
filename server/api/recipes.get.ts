@@ -1,8 +1,31 @@
 import { defineEventHandler, createError } from 'h3'
-import { supabase } from '~/utils/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { serverSupabaseClient } from '#supabase/server'
+
+// TODO(phase 2): typer avec shared/types/database.ts (types générés)
+interface IngredientRow {
+  id: string
+  section_id: string
+  name: string
+  amount: number | string | null
+  unit: string | null
+  optional: boolean | null
+  order_index: number | null
+}
+
+interface InstructionRow {
+  id: string
+  section_id: string
+  content: string
+  order_index: number | null
+}
 
 export default defineEventHandler(async (event) => {
   try {
+    // Lecture publique (RLS) ; utilise la session cookie si présente
+    // TODO(phase 2): typer avec shared/types/database.ts
+    const supabase: SupabaseClient = await serverSupabaseClient(event)
+
     // Récupérer toutes les recettes
     const { data: recipes, error: recipesError } = await supabase
       .from('recipes')
@@ -29,7 +52,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Récupérer les ingrédients par section
-    let ingredientsBySection = {}
+    const ingredientsBySection: Record<string, IngredientRow[]> = {}
     if (sections && sections.length > 0) {
       const { data: ingredients, error: ingredientsError } = await supabase
         .from('recipe_ingredients')
@@ -41,17 +64,14 @@ export default defineEventHandler(async (event) => {
         console.error('Erreur Supabase lors de la récupération des ingrédients:', ingredientsError)
       } else {
         // Grouper les ingrédients par section
-        ingredients?.forEach(ingredient => {
-          if (!ingredientsBySection[ingredient.section_id]) {
-            ingredientsBySection[ingredient.section_id] = []
-          }
-          ingredientsBySection[ingredient.section_id].push(ingredient)
+        ingredients?.forEach((ingredient: IngredientRow) => {
+          ;(ingredientsBySection[ingredient.section_id] ??= []).push(ingredient)
         })
       }
     }
 
     // Récupérer les instructions par section
-    let instructionsBySection = {}
+    const instructionsBySection: Record<string, InstructionRow[]> = {}
     if (sections && sections.length > 0) {
       const { data: instructions, error: instructionsError } = await supabase
         .from('instructions')
@@ -63,11 +83,8 @@ export default defineEventHandler(async (event) => {
         console.error('Erreur Supabase lors de la récupération des instructions:', instructionsError)
       } else {
         // Grouper les instructions par section
-        instructions?.forEach(instruction => {
-          if (!instructionsBySection[instruction.section_id]) {
-            instructionsBySection[instruction.section_id] = []
-          }
-          instructionsBySection[instruction.section_id].push(instruction)
+        instructions?.forEach((instruction: InstructionRow) => {
+          ;(instructionsBySection[instruction.section_id] ??= []).push(instruction)
         })
       }
     }

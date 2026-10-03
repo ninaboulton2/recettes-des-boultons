@@ -1,6 +1,6 @@
 # WebApp - Recettes des Boultons
 
-Une application web de gestion de recettes familiales, construite avec **Nuxt.js 3**, **Vue 3** et **Tailwind CSS**. Cette application permet de gérer vos recettes, planifier vos repas, organiser vos courses et bien plus encore !
+Une application web de gestion de recettes familiales, construite avec **Nuxt 4**, **Vue 3**, **Nuxt UI** et **Tailwind CSS 4**. Cette application permet de gérer vos recettes, planifier vos repas, organiser vos courses et bien plus encore !
 
 ## Fonctionnalités
 
@@ -21,7 +21,7 @@ Une application web de gestion de recettes familiales, construite avec **Nuxt.js
 - **Traducteur IA** : Conversion automatique via OpenAI
 	- Depuis un copier-coller de recette, la traduire au bon format pour l'ajouter
 
-- **Authentification** : Système JWT sécurisé
+- **Authentification** : Supabase Auth (session en cookie, rôles `user` / `admin`)
 
 - **Internationalisation** : Support FR/EN
 
@@ -32,16 +32,17 @@ Une application web de gestion de recettes familiales, construite avec **Nuxt.js
 
   **Frontend**
 
-- **Nuxt.js 3** : Framework Vue.js moderne avec SSR
+- **Nuxt 4** : Framework Vue.js moderne avec SSR (structure `app/` + `shared/`)
 - **Vue 3** : Composition API et réactivité avancée
-- **Tailwind CSS** : Framework CSS utilitaire
-- **Pinia** : Gestion d'état moderne et performante
+- **Nuxt UI v4 + Tailwind CSS 4** : composants et utilitaires CSS (palette maison `primary` / `secondary`)
+- **Pinia 3** : Gestion d'état moderne et performante
+- **@nuxt/image, @nuxt/fonts, @nuxtjs/i18n** : images optimisées, polices (Lobster, Poppins), FR/EN
 
 **Backend**
 
-- **API Nuxt** : Endpoints REST intégrés
-- **Supabase Auth** : Authentification et gestion des utilisateurs
-- **Middleware** : Sécurité et validation
+- **API Nuxt (Nitro)** : Endpoints REST intégrés (`server/api/`)
+- **Supabase Auth via `@nuxtjs/supabase`** : un seul client, session portée par un cookie, lue côté serveur
+- **Gardes serveur** : `requireUser` / `requireAdmin` + validation des entrées
 
 **Base de Données**
 
@@ -60,21 +61,19 @@ Une application web de gestion de recettes familiales, construite avec **Nuxt.js
 
 ```
 recettes-des-boultons/
-
-├── components/ # Composants Vue réutilisables
-│ └── ...
-├── pages/ # Pages de l'application
-│ └── ...
-├── stores/ # Gestion d'état Pinia (Supabase uniquement)
-│ └── ...
-├── server/api/ # API backend
-│ └── ...
-├── i18n/ # Internationalisation
-│ └── ...
-├── utils/ # Utilitaires
-│ └── ...
-└── public/ # Fichiers publics
-│ └── images/ # Images des recettes
+├── app/                 # Code applicatif (Nuxt 4)
+│   ├── app.vue, app.config.ts
+│   ├── pages/           # Pages de l'application
+│   ├── components/      # Composants Vue réutilisables
+│   ├── layouts/, middleware/, plugins/, composables/
+│   ├── stores/          # Gestion d'état Pinia
+│   └── assets/css/      # main.css (Tailwind 4 + Nuxt UI + thème)
+├── shared/              # Code partagé client/serveur (types, utils)
+├── server/api/          # API backend (Nitro)
+├── i18n/locales/        # Internationalisation (fr.json, en.json)
+├── supabase/migrations/ # Migrations SQL
+├── test/                # Tests Vitest
+└── public/images/       # Fichiers publics / images des recettes
 ```
 
 ## Base de Données
@@ -203,16 +202,15 @@ Fonctionnalités Techniques :
 **Variables d'Environnement Requises :**
 
 ```bash
-# Configuration Supabase (obligatoire)
+# Configuration Supabase (obligatoire) — voir env.example
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 
 # Configuration OpenAI (pour le traducteur IA)
 OPENAI_API_KEY=
 ```
 
-**Démarrage :**
+**Démarrage :** (Node 22, voir `.nvmrc`)
 ```bash
 npm install
 npm run dev
@@ -220,20 +218,17 @@ npm run dev
 
 L'application sera accessible sur `http://localhost:3001`
 
-**Scripts pour la production**
+**Scripts**
 
 ```bash
-npm run build # Build de production
-npm run start # Démarrage production
-npm run generate # Génération statique
+npm run build      # Build de production (preset Vercel)
+npm run start      # Démarrage production
+npm run lint       # ESLint (config Nuxt)
+npm run typecheck  # vue-tsc (TypeScript strict)
+npm test           # Vitest
 ```
 
-**Scripts de tests**
-```bash
-node scripts/test-supabase.js # Test de connexion Supabase
-node scripts/test-tables-structure.js # Test de structure des tables
-node scripts/test-apis.js # Test des APIs
-```
+L'intégration continue (`.github/workflows/ci.yml`) exécute lint, typecheck, test et build à chaque push / pull request.
 
 ## Déploiement
 

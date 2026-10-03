@@ -1,14 +1,22 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  typescript: {
+    // TypeScript strict sur tous les tsconfig générés (.nuxt/tsconfig.*.json),
+    // référencés par le tsconfig.json racine.
+    strict: true
+  },
   devServer: {
     port: 3001
   },
   modules: [
-    '@nuxtjs/tailwindcss',
+    '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/image',
-    '@nuxtjs/i18n'
+    '@nuxtjs/i18n',
+    '@nuxtjs/supabase',
+    '@nuxt/eslint'
   ],
   css: [
     '~/assets/css/main.css'
@@ -17,13 +25,13 @@ export default defineNuxtConfig({
     locales: [
       {
         code: 'fr',
-        iso: 'fr-FR',
+        language: 'fr-FR',
         name: 'Français',
         file: 'fr.json'
       },
       {
         code: 'en',
-        iso: 'en-US',
+        language: 'en-US',
         name: 'English',
         file: 'en.json'
       }
@@ -49,25 +57,44 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/logo.png' },
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/logo.png' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { href: 'https://fonts.googleapis.com/css2?family=Lobster&family=Poppins:wght@400;600;700&display=swap', rel: 'stylesheet' }
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' }
       ]
     }
+  },
+  ui: {
+    // Pas de mode sombre pour l'instant : l'app n'a aucune variante dark:.
+    colorMode: false
+  },
+  fonts: {
+    // Remplace l'ancien <link> Google Fonts : polices servies/optimisées par @nuxt/fonts
+    families: [
+      { name: 'Lobster', provider: 'google', weights: [400] },
+      { name: 'Poppins', provider: 'google', weights: [400, 600, 700] }
+    ]
   },
   image: {
     quality: 80,
     format: ['webp', 'jpg', 'png']
   },
-  runtimeConfig: {
-    public: {
-      apiBase: process.env.API_BASE || 'http://localhost:3001',
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
-    }
+  supabase: {
+    // Le module lit SUPABASE_URL / SUPABASE_KEY ; notre .env et Vercel
+    // utilisent SUPABASE_ANON_KEY : on mappe explicitement (voir DEVELOPER.md).
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    // Pas de redirection automatique vers /login : l'app gère ses modales.
+    redirect: false,
+    // TODO(phase 2): pointer sur shared/types/database.ts (types générés)
+    types: false
   },
   nitro: {
-    // Le preset est défini dans nitro.config.ts
+    // Déploiement Vercel (anciennement dans nitro.config.ts, non supporté par Nuxt 4)
+    preset: 'vercel',
+    vercel: {
+      functions: {
+        'server/api/**/*.ts': {
+          maxDuration: 30
+        }
+      }
+    }
   }
 }) 
