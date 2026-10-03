@@ -14,6 +14,9 @@
     "shopping": "Courses",
     "planning": "Planning"
   },
+  "ui": {
+    "_agent": "3A"
+  },
   "home": {
     "title": "Recettes des Boultons",
     "subtitle": "Retrouvez ici toutes les recettes préférées des Boultons !",
@@ -127,6 +130,12 @@
       "ingredientsLoading": "Chargement des ingrédients...",
       "noIngredients": "Cette recette n’a pas encore d’ingrédients."
     }
+  },
+  "recipeDetail": {
+    "_agent": "3B"
+  },
+  "editor": {
+    "_agent": "3B"
   },
   "favorites": {
     "title": "Mes recettes favorites",
@@ -270,6 +279,9 @@
     "instructions": "Instructions",
     "notes": "Notes et conseils",
     "footer": "Recettes des Boultons - {date}"
+  },
+  "translator": {
+    "_agent": "3D"
   },
   "footer": {
     "copyright": "© {year} Recettes des Boultons. Tous droits réservés."

@@ -14,6 +14,9 @@
     "shopping": "Shopping",
     "planning": "Planning"
   },
+  "ui": {
+    "_agent": "3A"
+  },
   "home": {
     "title": "Recettes des Boultons",
     "subtitle": "Find here all the favorite recipes of the Boultons!",
@@ -127,6 +130,12 @@
       "ingredientsLoading": "Loading ingredients...",
       "noIngredients": "This recipe has no ingredients yet."
     }
+  },
+  "recipeDetail": {
+    "_agent": "3B"
+  },
+  "editor": {
+    "_agent": "3B"
   },
   "favorites": {
     "title": "Mes favoris",
