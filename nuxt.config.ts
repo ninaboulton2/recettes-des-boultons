@@ -83,8 +83,9 @@ export default defineNuxtConfig({
     key: process.env.SUPABASE_ANON_KEY,
     // Pas de redirection automatique vers /login : l'app gère ses modales.
     redirect: false,
-    // TODO(phase 2): pointer sur shared/types/database.ts (types générés)
-    types: false
+    // Types générés depuis la base (npx supabase gen types typescript --local) :
+    // useSupabaseClient() / serverSupabaseClient() deviennent typés.
+    types: '~~/shared/types/database.ts'
   },
   nitro: {
     // Déploiement Vercel (anciennement dans nitro.config.ts, non supporté par Nuxt 4)
