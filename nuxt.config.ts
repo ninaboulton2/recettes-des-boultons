@@ -80,16 +80,27 @@ export default defineNuxtConfig({
       { name: 'Lobster', provider: 'google', weights: [400] }
     ]
   },
+  image: {
+    quality: 80,
+    format: ['webp', 'jpg', 'png']
+  },
   runtimeConfig: {
+    // --- IA (traducteur de recettes, server/utils/ai/provider.ts) ---
+    // Clés privées (serveur). Surchargeables à l'exécution par NUXT_AI_PROVIDER,
+    // NUXT_OPENAI_API_KEY… ; les noms historiques (OPENAI_API_KEY, AI_PROVIDER…)
+    // sont aussi lus à l'exécution par getAiConfig() (repli process.env).
+    aiProvider: process.env.AI_PROVIDER || 'openai',
+    aiModel: process.env.AI_MODEL || '',
+    aiDailyQuota: process.env.AI_DAILY_QUOTA || '50',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+    mistralApiKey: process.env.MISTRAL_API_KEY || '',
     public: {
       // Fournisseurs OAuth affichés dans la modale d'authentification
       // (liste séparée par des virgules ; NUXT_PUBLIC_AUTH_PROVIDERS=google,apple).
       authProviders: 'google'
     }
-  },
-  image: {
-    quality: 80,
-    format: ['webp', 'jpg', 'png']
   },
   supabase: {
     // Le module lit SUPABASE_URL / SUPABASE_KEY ; notre .env et Vercel

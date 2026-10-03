@@ -1,40 +1,44 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Bouton retour -->
+  <div class="min-h-screen bg-default py-10">
+    <UContainer class="max-w-3xl">
       <div class="mb-6">
-        <button @click="$router.back()" class="flex items-center text-primary-600 hover:text-primary-800 font-medium transition-colors">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Retour
-        </button>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-arrow-left"
+          :label="$t('translator.back')"
+          @click="goBack"
+        />
       </div>
-      
-      <!-- Header -->
-      <div class="text-center mb-12">
-        <h1 class="text-4xl font-lobster text-gray-900 mb-4">
-          Ajouter une recette
-        </h1>
-        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-          Rentrer le texte brut d'une recette pour l'intégrer dans l'application (par exemple depuis le Google Drive des Recettes des Boultons)
-        </p>
-      </div>
-      <!-- Composant traducteur -->
-      <RecipeTranslator />
 
-    </div>
+      <header class="mb-8 text-center">
+        <h1 class="font-serif text-4xl text-highlighted">{{ $t('translator.title') }}</h1>
+        <p class="mx-auto mt-3 max-w-2xl text-muted">{{ $t('translator.subtitle') }}</p>
+      </header>
+
+      <RecipeTranslator />
+    </UContainer>
   </div>
 </template>
 
-<script setup>
-import RecipeTranslator from '@/components/RecipeTranslator.vue'
+<script setup lang="ts">
+/**
+ * Page /traducteur (administrateurs) : ajout d'une recette depuis un texte
+ * brut via l'IA. La garde `requiresAdmin` n'est qu'un confort d'affichage :
+ * le serveur revérifie (`requireAdmin`).
+ */
+definePageMeta({ requiresAdmin: true })
 
-// SEO
+const { t } = useI18n()
+const router = useRouter()
+
 useHead({
-  title: 'Traducteur de Recettes - Recettes des Boultons',
-  meta: [
-    { name: 'description', content: 'Convertissez vos recettes depuis Google Drive en format JSON structuré pour les intégrer dans votre application de recettes.' }
-  ]
+  title: `${t('translator.title')} - Recettes des Boultons`,
+  meta: [{ name: 'description', content: t('translator.subtitle') }]
 })
-</script> 
+
+function goBack(): void {
+  if (window.history.length > 1) router.back()
+  else navigateTo('/recettes')
+}
+</script>
