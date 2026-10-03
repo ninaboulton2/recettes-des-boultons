@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '~/composables/useApi'
+import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
 import type { Recipe } from '#shared/types'
 import { useAuthStore } from './auth'
 
@@ -84,7 +85,7 @@ export const useFavoritesStore = defineStore('favorites', {
         })
 
         if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`)
+          throw await apiErrorFromResponse(response)
         }
 
         const data = await response.json()
@@ -96,7 +97,7 @@ export const useFavoritesStore = defineStore('favorites', {
         }
       } catch (error) {
         console.error('Erreur ajout favori:', error)
-        this.error = error instanceof Error ? error.message : 'Erreur inconnue'
+        this.error = toUserMessage(error)
         return { success: false, error: this.error }
       }
     },
@@ -115,7 +116,7 @@ export const useFavoritesStore = defineStore('favorites', {
         })
 
         if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`)
+          throw await apiErrorFromResponse(response)
         }
 
         const data = await response.json()
@@ -127,7 +128,7 @@ export const useFavoritesStore = defineStore('favorites', {
         }
       } catch (error) {
         console.error('Erreur suppression favori:', error)
-        this.error = error instanceof Error ? error.message : 'Erreur inconnue'
+        this.error = toUserMessage(error)
         return { success: false, error: this.error }
       }
     },

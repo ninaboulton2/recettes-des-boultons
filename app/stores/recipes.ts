@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, readonly } from 'vue'
 import { apiFetch } from '~/composables/useApi'
+import { apiErrorFromResponse } from '~/composables/useApiError'
 import { normalizeAccents } from '#shared/utils/text'
 import type { Recipe } from '#shared/types'
 
@@ -122,7 +123,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const result = (await response.json()) as RecipeMutationResponse
@@ -162,7 +163,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
 
       const result = (await response.json()) as RecipeMutationResponse
@@ -193,7 +194,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       })
       
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        throw await apiErrorFromResponse(response)
       }
       
       const result = (await response.json()) as DeleteResponse

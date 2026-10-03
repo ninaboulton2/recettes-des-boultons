@@ -273,5 +273,9 @@
       "loginButton": "Se connecter",
       "backToHome": "Retour à l'accueil"
     }
+  },
+  "errors": {
+    "generic": "Une erreur est survenue, réessayez plus tard.",
+    "network": "Connexion impossible, vérifiez votre réseau puis réessayez."
   }
-} 
+}
