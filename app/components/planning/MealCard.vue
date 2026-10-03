@@ -11,13 +11,18 @@
       class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted print:hidden"
       :class="photoUrl ? 'lg:size-7' : 'lg:hidden'"
     >
-      <img
+      <NuxtImg
         v-if="photoUrl"
         :src="photoUrl"
         alt=""
-        class="size-full object-cover"
+        :width="32"
+        :height="32"
+        densities="x1 x2"
+        fit="cover"
+        format="webp"
         loading="lazy"
-      >
+        class="size-full object-cover"
+      />
       <UIcon
         v-else
         :name="meal.recipe ? 'i-lucide-utensils' : 'i-lucide-pencil-line'"
@@ -54,7 +59,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PlanningMeal } from '#shared/types'
-import type { Database } from '#shared/types/database'
 import { mealTitle } from '~/composables/usePlanningWeek'
 
 /**
@@ -76,15 +80,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const localePath = useLocalePath()
-const supabase = useSupabaseClient<Database>()
+const { publicUrl } = useRecipePhoto()
 
 const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled')))
 
 /** URL publique de la photo (bucket `recipe-photos`), `null` sans photo. */
-const photoUrl = computed(() => {
-  const path = props.meal.recipe?.photoPath
-  return path ? supabase.storage.from('recipe-photos').getPublicUrl(path).data.publicUrl : null
-})
+const photoUrl = computed(() => publicUrl(props.meal.recipe?.photoPath))
 
 const menuItems = computed(() => [
   [

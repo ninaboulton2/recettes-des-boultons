@@ -5,17 +5,21 @@
       class="relative overflow-hidden rounded-xl border border-default bg-muted print:max-h-64"
       :class="photoUrl ? 'aspect-video print:aspect-auto' : 'h-36 sm:h-44 print:hidden'"
     >
-      <!-- URL publique du bucket, déjà redimensionnée côté client (pas d'optimisation ipx :
-           `NuxtImg` exigerait `image.domains`/provider dans nuxt.config, hors périmètre 3B). -->
-      <img
+      <!-- Image principale (LCP) : chargée tout de suite, préchargée, optimisée par @nuxt/image. -->
+      <NuxtImg
         v-if="photoUrl"
         :src="photoUrl"
         :alt="$t('recipeDetail.photoAlt', { title: recipe.title })"
-        class="h-full w-full object-cover"
+        sizes="xs:100vw md:768px lg:896px"
+        :width="896"
+        :height="504"
+        fit="cover"
+        format="webp"
         loading="eager"
-        decoding="async"
         fetchpriority="high"
-      >
+        :preload="{ fetchPriority: 'high' }"
+        class="h-full w-full object-cover"
+      />
       <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 text-dimmed print:hidden">
         <UIcon name="i-lucide-chef-hat" class="size-14" aria-hidden="true" />
         <span class="text-xs">{{ $t('recipeDetail.noPhoto') }}</span>
