@@ -13,7 +13,7 @@ Application de gestion de recettes familiales : recettes, planning des repas, li
 | i18n | `@nuxtjs/i18n` v10 (FR par défaut, EN ; fichiers dans `i18n/locales/`) |
 | Backend | API Nitro intégrée (`server/api/`) |
 | Base de données / Auth | Supabase (PostgreSQL + Supabase Auth) via `@nuxtjs/supabase` |
-| IA | OpenAI (`gpt-4o-mini`) pour le traducteur de recettes |
+| IA | Vercel AI SDK (`ai` 7, `generateObject`) — fournisseur au choix (OpenAI `gpt-4.1-mini` par défaut, Anthropic, Google, Mistral, ou `mock`) — voir « IA » |
 | Qualité | TypeScript strict, ESLint (`@nuxt/eslint`), Vitest (`@nuxt/test-utils`), CI GitHub Actions |
 | Hébergement | Vercel |
 
@@ -160,7 +160,7 @@ Légende auth : 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requi
 | `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput }` (`addRecipeBodySchema`) | `rpc save_recipe(payload)` | `{ success, recipe: RecipeDetail, message }` |
 | `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`) — remplacement complet | `rpc save_recipe(payload + id)` (404 si inconnue) | `{ success, recipe: RecipeDetail, message }` |
 | `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `rpc delete_recipe` (404 si inconnue) | `{ success, deletedRecipeId }` |
-| `POST /api/translate-recipe` | 🔑 | `{ recipeText, translateToFrench? }` | OpenAI | `{ success, translatedRecipe }` |
+| `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` (`translateRecipeBodySchema`) | `rpc check_ai_quota` (429) → AI SDK `generateObject` → insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage: { provider, model, inputTokens, outputTokens, estimatedCostUsd, durationMs } }` — rien n'est enregistré, le client enchaîne sur `add-recipe` |
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (409 si doublon, 404 recette) | `{ success, favorite }` |
 | `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404 si absent) | `{ success }` |
 | `POST /api/planning` | 👤 | `{ dateString: AAAA-MM-JJ, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert | `{ success, meal }` |
@@ -190,8 +190,17 @@ Seules ces variables sont lues par le code :
 ```bash
 SUPABASE_URL=            # URL du projet Supabase
 SUPABASE_ANON_KEY=       # clé publique anon
-OPENAI_API_KEY=          # traducteur IA (optionnel : page /traducteur)
+AI_PROVIDER=openai       # traducteur IA : openai | anthropic | google | mistral | mock (défaut openai)
+AI_MODEL=                # modèle du fournisseur (vide = défaut : gpt-4.1-mini, claude-haiku-4-5, gemini-2.5-flash, mistral-small-latest)
+AI_DAILY_QUOTA=50        # appels IA max / utilisateur / jour (0 = traducteur désactivé)
+OPENAI_API_KEY=          # clé du fournisseur choisi (une seule nécessaire) ; aussi ANTHROPIC_API_KEY,
+                         # GOOGLE_GENERATIVE_AI_API_KEY, MISTRAL_API_KEY
 ```
+
+- **IA** : ces variables sont exposées au serveur via `runtimeConfig` (`nuxt.config.ts`, clés `ai*`,
+  `openaiApiKey`…) et relues à l'exécution par `getAiConfig()` (`server/utils/ai/provider.ts`) avec
+  repli sur `process.env` : sur Vercel, `OPENAI_API_KEY` existant suffit, `NUXT_AI_PROVIDER` et
+  consorts fonctionnent aussi.
 
 - **Mapping Supabase** : le module `@nuxtjs/supabase` attend `SUPABASE_URL` / `SUPABASE_KEY`. Pour ne pas renommer la variable existante sur Vercel, `nuxt.config.ts` mappe explicitement `supabase: { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_ANON_KEY }`. (`NUXT_PUBLIC_SUPABASE_URL` / `NUXT_PUBLIC_SUPABASE_KEY` fonctionnent aussi à l'exécution.)
 - **Développement** : dans `.env` (gitignoré). Modèle : `env.example`.
@@ -236,7 +245,10 @@ npm run db:local:down      # arrêter les conteneurs
 - Le hook JWT (`custom_access_token_hook`, claim `user_role`) est actif en local, comme il le
   sera en prod après activation dans le dashboard.
 - Prévisualisation agent : configuration `preview-local` de `.claude/launch.json` (port 3007).
-- Limites : pas d'OpenAI (`/traducteur` indisponible), pas d'e-mails sortants (Mailpit),
+- Traducteur IA en local : `AI_PROVIDER=mock` dans `.env.local` (recette fixe, aucun appel payant) ;
+  la migration `0012_ai_usage.sql` doit être appliquée (`psql $LOCAL_DB_URL -f supabase/migrations/0012_ai_usage.sql`
+  tant que `setup.sh` ne l'inclut pas).
+- Limites : pas d'appel IA réel (fournisseur `mock`), pas d'e-mails sortants (Mailpit),
   Postgres `17.11` local vs `17.4` prod (mêmes extensions).
 
 **Régressions connues de l'app actuelle face à 0003 → 0010** :
@@ -247,6 +259,40 @@ npm run db:local:down      # arrêter les conteneurs
 - `components/RecipeEditor.vue` n'envoie plus `ingredients`/`instructions` JSONB : jusqu'au
   passage par `save_recipe` (0006), une recette modifiée garde un JSONB périmé (sans effet
   d'affichage : le front ne lit plus le JSONB).
+
+## IA (traducteur de recettes)
+
+Page `/traducteur` (admins) : texte brut collé → recette structurée (aperçu) → ajout via
+`useRecipesStore().addRecipe()`. Tout le code IA est dans `server/utils/ai/` et
+`shared/schemas/ai.ts` ; comparatif des modèles et coûts dans [docs/IA_MODELES.md](docs/IA_MODELES.md).
+
+| Fichier | Rôle |
+|---|---|
+| `shared/schemas/ai.ts` | `translateRecipeBodySchema` (body), `aiRecipeSchema` (forme imposée au modèle : unité ∈ 37 `UNIT_CODES`, catégorie ∈ 9, tout `nullable`, rien d'optionnel), `aiRecipeToRecipeInput` (→ forme de l'éditeur), `TranslateRecipeResponse` |
+| `server/utils/ai/provider.ts` | `getAiConfig(event)` (variables `AI_*`, clés), `getModel(config)` → `LanguageModel` AI SDK (`createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI`, `createMistral`, ou mock) |
+| `server/utils/ai/mock.ts` | `MockLanguageModelV4` (`ai/test`) : recette fixe, titre = première ligne du texte, tokens ≈ caractères / 4 |
+| `server/utils/ai/prompt.ts` | prompt système (français) : règles sections / unités / conversions métriques / « ne rien inventer », langue cible ; prompt utilisateur avec le texte entre balises `<recette>` |
+| `server/utils/ai/translate.ts` | `translateRecipeText(model, text, lang)` : `generateObject` + `aiRecipeSchema`, délai 25 s, 1 retry |
+| `server/utils/ai/errors.ts` | `throwAiProviderError` : erreurs AI SDK → 401 (clé), 402 (crédit fournisseur), 422 (réponse inexploitable), 502 (modèle/autre), 504 (délai), messages français sans détail technique |
+| `server/utils/ai/usage.ts` | `assertAiQuota` (`rpc check_ai_quota`, 429), `logAiUsage` (insert `ai_usage` + coût estimé) |
+| `server/utils/ai/pricing.ts` | grille de prix datée par modèle, `estimateCostUsd` |
+| `server/utils/ai/media.ts` | préparation phase 5 : `getTranscriptionModel` (OpenAI `gpt-4o-mini-transcribe`), mode d'emploi `experimental_transcribe` et images dans `generateObject` |
+| `app/composables/useTranslator.ts`, `app/components/RecipeTranslator.vue`, `app/components/translator/RecipePreview.vue` | front (Nuxt UI) : saisie, aperçu avec unités canoniques (`useUnits`), ajout, erreurs via `toUserMessage` (502/504 → messages i18n `translator.errors.*`) |
+
+Points d'attention :
+
+- **Sorties structurées strictes** (OpenAI) : pas de champ optionnel ni de contrainte de longueur
+  dans `aiRecipeSchema` ; les longueurs sont vérifiées après conversion par `recipeInputSchema`
+  (le serveur renvoie un `RecipeInput` déjà validé).
+- **Quota** : `AI_DAILY_QUOTA` par utilisateur et par jour (Europe/Paris), admins compris, compté
+  dans `ai_usage` (appels ok et error). `0` désactive le traducteur.
+- **Ouvrir aux non-admins (phase 4)** : remplacer `requireAdmin` par `requireUser` dans
+  `translate-recipe.post.ts` et retirer `requiresAdmin` de la page ; quota et journal sont déjà
+  par utilisateur. `ai_usage` n'est pas encore dans les types générés (à régénérer après 0012 en prod).
+- **Changer de fournisseur** : `AI_PROVIDER` + la clé correspondante sur Vercel, sans code. Un
+  fournisseur hors liste : `npm i @ai-sdk/<nom>`, cas dans `getModel`, clé dans `runtimeConfig`.
+- Tests : `test/unit/schemas/ai.test.ts`, `test/unit/ai/*.test.ts` (mock, erreurs, prix),
+  `test/integration/translate-recipe.local.test.ts` (serveur dev `mock` + base locale, `APP_URL`).
 
 ## À savoir
 
