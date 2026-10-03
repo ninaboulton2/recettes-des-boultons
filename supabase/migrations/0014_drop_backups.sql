@@ -26,8 +26,9 @@
 --     tant que 0013 n'est pas passée, ces sauvegardes sont le filet de 0005 ;
 --   - aucune recette sans section, aucun ingrédient ni instruction orphelin ;
 --   - chaque recette de la sauvegarde encore présente a au moins autant de
---     sections qu'avant 0005 OU a été modifiée depuis (updated_at plus récent)
---     → sinon une recette aurait perdu des sections sans édition : arrêt ;
+--     sections qu'avant 0005 (sections vides retirées par 0015 comprises) OU
+--     a été modifiée depuis (updated_at plus récent) → sinon une recette
+--     aurait perdu des sections sans édition : arrêt ;
 --   - `drop table` SANS cascade : si un objet en dépend, erreur et rien n'est
 --     supprimé.
 --  NOTICE attendue : la liste des 6 tables avec leur nombre de lignes, puis
@@ -54,15 +55,19 @@ begin
 
   if to_regclass('public.recipes_backup_20261003') is not null
      and to_regclass('public.recipe_sections_backup_20261003') is not null then
-    select count(*), string_agg(format('« %s » (%s → %s)', b.title, b.n_before, b.n_now), ' ; ')
-      into n, sample
-      from (select rb.id, rb.title,
-                   (select count(*) from public.recipe_sections_backup_20261003 sb where sb.recipe_id = rb.id) as n_before,
-                   (select count(*) from public.recipe_sections s where s.recipe_id = rb.id) as n_now
-              from public.recipes_backup_20261003 rb) b
-      join public.recipes r on r.id = b.id
-     where b.n_now < b.n_before
-       and r.updated_at is not distinct from (select rb.updated_at from public.recipes_backup_20261003 rb where rb.id = b.id);
+    -- Sections supprimées volontairement par 0015 (R6 : sections vides) : comptées comme présentes.
+    execute format($q$
+      select count(*), string_agg(format('« %%s » (%%s → %%s)', b.title, b.n_before, b.n_now), ' ; ')
+        from (select rb.id, rb.title, rb.updated_at,
+                     (select count(*) from public.recipe_sections_backup_20261003 sb where sb.recipe_id = rb.id) as n_before,
+                     (select count(*) from public.recipe_sections s where s.recipe_id = rb.id) + %s as n_now
+                from public.recipes_backup_20261003 rb) b
+        join public.recipes r on r.id = b.id
+       where b.n_now < b.n_before and r.updated_at is not distinct from b.updated_at $q$,
+      case when to_regclass('public.recipe_sections_backup_cleanup') is not null
+           then '(select count(*) from public.recipe_sections_backup_cleanup c where c.recipe_id = rb.id)'
+           else '0' end)
+      into n, sample;
     assert n = 0, format('[0014] %s recette(s) ont perdu des sections sans avoir été modifiées : %s', n, left(sample, 1500));
   end if;
 end $$;
