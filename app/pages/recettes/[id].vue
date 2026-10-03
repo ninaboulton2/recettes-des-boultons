@@ -62,7 +62,7 @@
 
     <div v-else class="py-16 text-center">
       <h2 class="mb-4 font-serif text-2xl font-semibold text-highlighted">{{ $t('recipes.detail.notFound') }}</h2>
-      <UButton to="/recettes" :label="$t('recipes.detail.backToList')" color="primary" />
+      <UButton :to="localePath('/recettes')" :label="$t('recipes.detail.backToList')" color="primary" />
     </div>
 
     <RecipeCookingMode v-model:open="cookingOpen" :recipe="recipe" :factor="scaler.factor.value" />
@@ -111,7 +111,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const { t } = useI18n()
-const { removeRecipePhotos } = useRecipePhoto()
+const localePath = useLocalePath()
 const notesId = useId()
 
 const recipeId = computed(() => {
@@ -132,7 +132,7 @@ const cookingOpen = ref(false)
 
 const goBack = () => {
   if (import.meta.client && window.history.length > 1) router.back()
-  else void navigateTo('/recettes')
+  else void navigateTo(localePath('/recettes'))
 }
 
 // Édition (admin) : l'éditeur recharge la fiche via recipesStore.revision
@@ -147,7 +147,7 @@ const closeRecipeEditor = () => {
   editingRecipe.value = null
 }
 
-// Suppression (admin) : photos du bucket retirées avant la recette
+// Suppression (admin) : photos du bucket retirées par recipesStore.deleteRecipe
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const deleteRecipe = async () => {
@@ -155,15 +155,10 @@ const deleteRecipe = async () => {
   if (!current || deleting.value) return
   deleting.value = true
   try {
-    try {
-      await removeRecipePhotos(current.id)
-    } catch (photoError) {
-      console.warn('[recette] photos non supprimées du bucket', photoError)
-    }
     await recipesStore.deleteRecipe(current.id)
     showDeleteModal.value = false
     toast.add({ title: t('recipeDetail.delete.success'), color: 'success', icon: 'i-lucide-check' })
-    await navigateTo('/recettes')
+    await navigateTo(localePath('/recettes'))
   } catch (deleteError) {
     toast.add({ title: t('recipeDetail.delete.error'), description: toUserMessage(deleteError), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
@@ -173,7 +168,7 @@ const deleteRecipe = async () => {
 
 // Impression : pas de navigation ni d'actions, marges et sauts de page propres.
 useHead({
-  title: () => (recipe.value ? `${recipe.value.title} - ${t('meta.title')}` : t('recipes.detail.notFound')),
+  title: () => recipe.value?.title ?? t('recipes.detail.notFound'),
   meta: [
     { name: 'description', content: () => recipe.value?.description || t('recipes.detail.notFound') }
   ],
