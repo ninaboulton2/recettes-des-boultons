@@ -44,9 +44,7 @@
         />
       </div>
 
-      <nav v-if="totalPages > 1" class="flex justify-center" :aria-label="$t('ui.pagination.label')">
-        <UPagination v-model:page="page" :total="totalCount" :items-per-page="pageSize" :sibling-count="1" show-edges />
-      </nav>
+      <RecipePagination v-if="totalPages > 1" v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
     </template>
 
     <EmptyState v-else icon="i-lucide-search-x" :title="$t('recipes.empty.title')" :message="$t('recipes.empty.description')">

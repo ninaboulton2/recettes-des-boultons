@@ -3,7 +3,7 @@
     <header class="sticky top-0 z-40 border-b border-default bg-default/90 backdrop-blur">
       <UContainer class="flex h-14 items-center justify-between gap-3 md:h-16">
         <NuxtLink :to="localePath('/')" class="flex min-w-0 items-center gap-2 rounded-lg" :aria-label="$t('navigation.home')">
-          <img src="/images/logo.png" alt="" class="h-8 w-auto shrink-0 md:h-9">
+          <NuxtImg src="/images/logo.png" alt="" :height="36" densities="x1 x2" format="webp" class="h-8 w-auto shrink-0 md:h-9" />
           <span class="truncate font-lobster text-xl text-primary md:text-2xl">{{ $t('meta.title') }}</span>
         </NuxtLink>
 
@@ -31,7 +31,7 @@
       </UContainer>
     </header>
 
-    <main class="flex-1 pb-20 md:pb-0">
+    <main class="w-full min-w-0 flex-1 pb-20 md:pb-0">
       <UContainer class="py-6 md:py-8">
         <slot />
       </UContainer>
