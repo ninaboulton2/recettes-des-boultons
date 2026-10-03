@@ -1,642 +1,92 @@
 import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
-import { ref, computed } from 'vue'
+import { apiErrorFromResponse } from '~/composables/useApiError'
+import type { ShoppingItem, ShoppingList } from '#shared/types'
 import type { Database } from '#shared/types/database'
 import { useAuthStore } from './auth'
 
-export interface ShoppingItem {
-  id: string
+export type { ShoppingItem, ShoppingList }
+
+/** Champs saisis pour un nouvel article (la liste cible est optionnelle : liste courante par défaut). */
+export interface NewShoppingItem {
   name: string
-  amount?: string | number | null // Texte libre en base, nombre depuis l'interface
-  amountNum?: number | null
+  amount?: string | number | null
   unit?: string | null
-  unitCode?: string | null
-  note?: string
-  checked: boolean
   recipeId?: string | null
-  listId: string
-  createdAt: string | null
-  updatedAt: string | null
+  listId?: string
 }
 
-export interface ShoppingList {
-  id: string
+/** Modifications acceptées par `PUT /api/shopping-items/:id`. */
+export interface ShoppingItemPatch {
+  name?: string
+  amount?: string | number | null
+  unit?: string | null
+  isChecked?: boolean
+}
+
+/** Ingrédient tel que l'envoient la carte et la fiche recette (« ajouter à ma liste »). */
+export interface IngredientToAdd {
   name: string
-  userId: string | null
-  items: ShoppingItem[]
-  createdAt: string | null
-  updatedAt: string | null
+  amount: number | string | null
+  unit: string
+  recipeId?: string
 }
 
-export interface GroupedItem extends ShoppingItem {
-  originalIds: string[]
+/** Nom de la liste créée automatiquement quand l'utilisateur n'en a aucune. */
+export const DEFAULT_LIST_NAME = 'Ma liste de courses'
+
+/** Appel d'écriture vers `/api/*` : renvoie le JSON ou lève une `ApiError`. */
+async function request<T = unknown>(url: string, init: RequestInit = {}): Promise<T> {
+  const response = await apiFetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init
+  })
+  if (!response.ok) throw await apiErrorFromResponse(response)
+  return response.json() as Promise<T>
 }
 
 /**
  * Listes de courses de l'utilisateur connecté.
  *
- * Lecture directe sous RLS (`shopping_lists` avec `shopping_items(*)` imbriqués),
- * rendue côté serveur par la page `courses` via `useAsyncData` ; `refresh()`
- * recharge après une écriture. Les écritures passent encore par
- * `/api/shopping-lists*` et `/api/shopping-items*`.
+ * Lecture directe sous RLS (`shopping_lists` avec `shopping_items(*)`), rendue
+ * côté serveur par la page `courses` via `useAsyncData` ; `refresh()` recharge
+ * après chaque écriture. La fusion des doublons (même nom + même unité →
+ * quantités additionnées) est faite EN BASE par `merge_shopping_item` /
+ * `add_recipe_to_list` : aucune consolidation côté client.
+ *
+ * Les actions d'écriture LÈVENT (`ApiError`) : `useShoppingLists()` les
+ * convertit en toasts avec `toUserMessage()`.
  */
 export const useShoppingStore = defineStore('shopping', () => {
   const supabase = useSupabaseClient<Database>()
 
   const shoppingLists = ref<ShoppingList[]>([])
-  const currentList = ref<ShoppingList | null>(null)
+  const currentListId = ref<string | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   /** Utilisateur pour lequel `shoppingLists` a été chargé (`null` : personne). */
   const loadedForUserId = ref<string | null>(null)
 
-  // Computed properties
-  const currentItems = computed(() => {
-    return currentList.value?.items || []
-  })
-
-  const currentItemsGrouped = computed<GroupedItem[]>(() => {
-    if (!currentList.value?.items) return []
-    
-    const grouped: Record<string, GroupedItem> = {}
-    
-    currentList.value.items.forEach(item => {
-      const key = item.name.toLowerCase().trim()
-      
-      if (!grouped[key]) {
-        grouped[key] = {
-          ...item,
-          originalIds: [item.id]
-        }
-      } else {
-        // Additionner les quantités si elles existent
-        if (grouped[key].amount && item.amount) {
-          grouped[key].amount = parseFloat(grouped[key].amount as string) + parseFloat(item.amount as string)
-        }
-        // Garder l'unité du premier item ou combiner si différentes
-        if (grouped[key].unit !== item.unit && item.unit) {
-          if (!grouped[key].unit) {
-            grouped[key].unit = item.unit
-          } else if (grouped[key].unit !== item.unit) {
-            // Si les unités sont différentes, garder la première et ajouter un commentaire
-            grouped[key].unit = `${grouped[key].unit} + ${item.unit}`
-          }
-        }
-        // Combiner les notes si elles existent
-        if (item.note && grouped[key].note) {
-          if (grouped[key].note !== item.note) {
-            grouped[key].note = `${grouped[key].note} | ${item.note}`
-          }
-        } else if (item.note && !grouped[key].note) {
-          grouped[key].note = item.note
-        }
-        // Si l'un des items est coché, le groupe est considéré comme coché
-        if (item.checked) {
-          grouped[key].checked = true
-        }
-        grouped[key].originalIds.push(item.id)
-      }
-    })
-    
-    return Object.values(grouped)
-  })
-
-  const checkedItems = computed(() => {
-    return currentItemsGrouped.value.filter(item => item.checked)
-  })
-
-  const uncheckedItems = computed(() => {
-    return currentItemsGrouped.value.filter(item => !item.checked)
-  })
-
-  // Actions
-  const createList = async (name: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-      
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour créer des listes de courses')
-      }
-      
-      const response = await apiFetch('/api/shopping-lists', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name, userId })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        const newList: ShoppingList = {
-          id: data.list.id,
-          name: data.list.name,
-          userId: data.list.userId,
-          items: [],
-          createdAt: data.list.createdAt,
-          updatedAt: data.list.updatedAt
-        }
-        
-        shoppingLists.value.push(newList)
-        currentList.value = newList
-        return { success: true, list: newList }
-      } else {
-        throw new Error(data.message || 'Erreur lors de la création de la liste')
-      }
-    } catch (error) {
-      console.error('Erreur création liste:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const addItem = async (item: Omit<ShoppingItem, 'id' | 'checked' | 'createdAt' | 'updatedAt'>) => {
-    if (!currentList.value) return { success: false, error: 'Aucune liste sélectionnée' }
-
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-      
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer vos listes de courses')
-      }
-      
-      const response = await apiFetch('/api/shopping-items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          listId: currentList.value.id,
-          name: item.name,
-          amount: item.amount,
-          unit: item.unit,
-          recipeId: item.recipeId,
-          userId
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        const newItem: ShoppingItem = {
-          ...data.item,
-          note: item.note
-        }
-
-        // Le serveur fusionne les doublons (même nom + même unité) : l'article
-        // renvoyé peut être une ligne existante mise à jour → la remplacer.
-        const existingIndex = currentList.value.items.findIndex(existing => existing.id === newItem.id)
-        if (existingIndex >= 0) {
-          currentList.value.items[existingIndex] = newItem
-        } else {
-          currentList.value.items.push(newItem)
-        }
-        currentList.value.updatedAt = newItem.updatedAt
-        return { success: true, item: newItem }
-      } else {
-        throw new Error(data.message || 'Erreur lors de l\'ajout de l\'article')
-      }
-    } catch (error) {
-      console.error('Erreur ajout article:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const toggleItem = async (itemId: string) => {
-    if (!currentList.value) return
-
-    try {
-      // Trouver l'item à basculer
-      const item = currentList.value.items.find(item => item.id === itemId)
-      if (!item) return
-
-      // Appeler l'API pour mettre à jour l'état checked
-      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          isChecked: !item.checked
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour l'item localement
-        item.checked = !item.checked
-        item.updatedAt = data.item.updatedAt
-        currentList.value.updatedAt = new Date().toISOString()
-      }
-    } catch (error) {
-      console.error('Erreur toggle article:', error)
-    }
-  }
-
-  const removeItem = async (itemId: string) => {
-    if (!currentList.value) return
-
-    try {
-      // Appeler l'API pour supprimer l'item
-      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Supprimer l'item de la liste locale
-        currentList.value.items = currentList.value.items.filter(item => item.id !== itemId)
-        currentList.value.updatedAt = new Date().toISOString()
-      }
-    } catch (error) {
-      console.error('Erreur suppression article:', error)
-    }
-  }
-
-  const clearChecked = async () => {
-    if (!currentList.value) return
-
-    try {
-      // Supprimer tous les items cochés via l'API
-      const checkedItems = currentList.value.items.filter(item => item.checked)
-      
-      for (const item of checkedItems) {
-        await removeItem(item.id)
-      }
-    } catch (error) {
-      console.error('Erreur suppression articles cochés:', error)
-    }
-  }
-
-  const selectList = (listId: string) => {
-    currentList.value = shoppingLists.value.find(list => list.id === listId) || null
-  }
-
-  const deleteList = async (listId: string) => {
-    try {
-      // Appeler l'API pour supprimer la liste
-      const response = await apiFetch(`/api/shopping-lists/${listId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Supprimer la liste localement
-        shoppingLists.value = shoppingLists.value.filter(list => list.id !== listId)
-        if (currentList.value?.id === listId) {
-          currentList.value = shoppingLists.value[0] || null
-        }
-      }
-    } catch (error) {
-      console.error('Erreur suppression liste:', error)
-    }
-  }
-
-  const updateListName = async (listId: string, newName: string) => {
-    try {
-      // Appeler l'API pour mettre à jour le nom de la liste
-      const response = await apiFetch(`/api/shopping-lists/${listId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: newName })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour le nom localement
-        const list = shoppingLists.value.find(list => list.id === listId)
-        if (list) {
-          list.name = newName
-          list.updatedAt = data.list.updatedAt
-          // Si c'est la liste courante, mettre à jour aussi
-          if (currentList.value?.id === listId) {
-            currentList.value.name = newName
-            currentList.value.updatedAt = data.list.updatedAt
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Erreur mise à jour nom liste:', error)
-    }
-  }
-
-  const updateItemQuantity = async (itemId: string, newAmount: number, newUnit: string) => {
-    if (!currentList.value) return
-
-    try {
-      // Appeler l'API pour mettre à jour l'item
-      const response = await apiFetch(`/api/shopping-items/${itemId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: newAmount,
-          unit: newUnit
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour l'item localement
-        const item = currentList.value.items.find(item => item.id === itemId)
-        if (item) {
-          item.amount = newAmount
-          item.unit = newUnit
-          item.updatedAt = data.item.updatedAt
-          currentList.value.updatedAt = new Date().toISOString()
-        }
-      }
-    } catch (error) {
-      console.error('Erreur mise à jour quantité article:', error)
-    }
-  }
-
-  const moveItemToAnotherList = async (itemName: string, targetListId: string, sourceListId?: string) => {
-    if (!currentList.value) return
-
-    const authStore = useAuthStore()
-    const userId = authStore.currentUser?.id || null
-    
-    if (!userId) {
-      throw new Error('Vous devez être connecté pour déplacer des articles')
-    }
-
-    const targetList = shoppingLists.value.find(list => list.id === targetListId)
-    if (!targetList) return
-
-    // Si sourceListId n'est pas fourni, utiliser la liste courante
-    const sourceList = sourceListId 
-      ? shoppingLists.value.find(list => list.id === sourceListId)
-      : currentList.value
-
-    if (!sourceList) return
-
-    // Trouver tous les items avec le même nom dans la liste source
-    const itemsToMove = sourceList.items.filter(item => 
-      item.name.toLowerCase().trim() === itemName.toLowerCase().trim()
-    )
-
-    if (itemsToMove.length === 0) return
-
-    try {
-      // Ajouter les items à la liste cible via l'API
-      for (const item of itemsToMove) {
-        const response = await apiFetch('/api/shopping-items', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            listId: targetListId,
-            name: item.name,
-            amount: item.amount,
-            unit: item.unit,
-            recipeId: item.recipeId || null, // Gérer les items sans recipeId
-            userId: userId
-          })
-        })
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(response)
-        }
-      }
-
-      // Supprimer les items de la liste source via l'API
-      for (const item of itemsToMove) {
-        const response = await apiFetch(`/api/shopping-items/${item.id}`, {
-          method: 'DELETE'
-        })
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(response)
-        }
-      }
-
-      // Mettre à jour l'état local après confirmation des APIs
-      sourceList.items = sourceList.items.filter(item => 
-        item.name.toLowerCase().trim() !== itemName.toLowerCase().trim()
-      )
-
-      // Mettre à jour les dates
-      sourceList.updatedAt = new Date().toISOString()
-      targetList.updatedAt = new Date().toISOString()
-
-      // Recharger les listes pour avoir l'état le plus récent
-      await refreshShoppingLists()
-
-    } catch (error) {
-      console.error('Erreur déplacement article:', error)
-      // En cas d'erreur, recharger les listes pour restaurer l'état
-      await refreshShoppingLists()
-    }
-  }
-
-  const addIngredientsToLists = async (ingredients: Array<{name: string, amount: number | null, unit: string, recipeId?: string}>) => {
-    const authStore = useAuthStore()
-    const userId = authStore.currentUser?.id || null
-    
-    if (!userId) {
-      throw new Error('Vous devez être connecté pour gérer vos listes de courses')
-    }
-
-    // S'assurer que les listes existantes sont connues avant d'en créer une par défaut
-    await ensureLoaded()
-    
-    // Créer une liste par défaut "Ma liste de courses" si aucune n'existe
-    if (shoppingLists.value.length === 0) {
-      const result = await createList('Ma liste de courses')
-      if (!result.success) {
-        return result
-      }
-    }
-
-    for (const ingredient of ingredients) {
-      const ingredientName = ingredient.name.toLowerCase().trim()
-      let foundInAnyList = false
-
-      // Chercher l'ingrédient dans toutes les listes
-      for (const list of shoppingLists.value) {
-        const existingItems = list.items.filter(item => 
-          item.name.toLowerCase().trim() === ingredientName
-        )
-
-        if (existingItems.length > 0) {
-          // L'ingrédient existe déjà dans cette liste, mettre à jour la quantité
-          // Convertir explicitement en nombres pour éviter la concaténation de chaînes
-          const totalAmount = existingItems.reduce((sum, item) => {
-            const itemAmount = parseFloat(item.amount as string) || 0
-            return sum + itemAmount
-          }, 0) + (ingredient.amount ?? 0)
-                    
-          // Mettre à jour le premier item existant avec la nouvelle quantité totale
-          const firstExistingItem = existingItems[0]
-          if (!firstExistingItem) continue
-          
-          try {
-            const response = await apiFetch(`/api/shopping-items/${firstExistingItem.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                amount: totalAmount,
-                unit: ingredient.unit || firstExistingItem.unit
-              })
-            })
-            
-            if (!response.ok) {
-              throw await apiErrorFromResponse(response)
-            }
-            
-            // Mettre à jour l'état local
-            firstExistingItem.amount = totalAmount
-            if (ingredient.unit && ingredient.unit !== firstExistingItem.unit) {
-              firstExistingItem.unit = ingredient.unit
-            }
-            
-            // Supprimer les autres items avec le même nom (ils sont maintenant consolidés)
-            for (const itemToDelete of existingItems.slice(1)) {
-              const deleteResponse = await apiFetch(`/api/shopping-items/${itemToDelete.id}`, {
-                method: 'DELETE'
-              })
-              
-              if (!deleteResponse.ok) {
-                console.warn(`⚠️ Erreur lors de la suppression de l'item ${itemToDelete.id}`)
-              }
-            }
-            
-            // Mettre à jour la date de la liste
-            list.updatedAt = new Date().toISOString()
-            foundInAnyList = true
-            break
-            
-          } catch (error) {
-            console.error('Erreur lors de la mise à jour de la quantité:', error)
-            // En cas d'erreur, continuer avec l'ajout d'un nouvel item
-          }
-        }
-      }
-
-      // Si l'ingrédient n'a été trouvé dans aucune liste, l'ajouter à "Ma liste de courses"
-      if (!foundInAnyList) {
-        // Trouver ou créer "Ma liste de courses"
-        let defaultList = shoppingLists.value.find(list => list.name === 'Ma liste de courses')
-        
-        if (!defaultList) {
-          // Si "Ma liste de courses" n'existe pas, la créer
-          const result = await createList('Ma liste de courses')
-          if (result.success) {
-            defaultList = result.list
-          } else {
-            continue // Passer à l'ingrédient suivant si erreur
-          }
-        }
-
-        if (!defaultList) continue
-
-        await addItem({
-          name: ingredient.name,
-          amount: ingredient.amount,
-          unit: ingredient.unit,
-          recipeId: ingredient.recipeId,
-          listId: defaultList.id
-        })
-      }
-    }
-
-    // Recharger les listes pour avoir l'état le plus récent
-    await refreshShoppingLists()
-
-    return { success: true }
-  }
-
-  /**
-   * Ajoute les ingrédients d'une recette à une liste en un seul appel
-   * (`POST /api/shopping-lists/:id/recipes` → RPC `add_recipe_to_list`) :
-   * fusion automatique des doublons (même nom + même unité), quantités
-   * multipliées par `servingsFactor` (ex. 6 / recipe.servings).
-   * `sectionIds` limite l'ajout à certaines sections de la recette.
-   */
-  const addRecipeToList = async (listId: string, recipeId: string, sectionIds?: string[], servingsFactor?: number) => {
-    try {
-      const authStore = useAuthStore()
-      if (!authStore.currentUser?.id) {
-        throw new Error('Vous devez être connecté pour gérer vos listes de courses')
-      }
-
-      const response = await apiFetch(`/api/shopping-lists/${listId}/recipes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeId,
-          ...(sectionIds && sectionIds.length > 0 ? { sectionIds } : {}),
-          ...(servingsFactor !== undefined ? { servingsFactor } : {})
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json() as { success: boolean, items: ShoppingItem[], message?: string }
-      if (!data.success) {
-        throw new Error(data.message || 'Erreur lors de l\'ajout de la recette à la liste')
-      }
-
-      // Recharger pour refléter les fusions côté base
-      await loadShoppingLists()
-      return { success: true, items: data.items, message: data.message }
-    } catch (error) {
-      console.error('Erreur ajout recette à la liste:', error)
-      return { success: false, error: toUserMessage(error) }
-    }
-  }
-
-  // Charger les listes depuis Supabase (lecture directe sous RLS). Lève en cas d'erreur.
+  const currentList = computed<ShoppingList | null>(() =>
+    shoppingLists.value.find(list => list.id === currentListId.value) ?? shoppingLists.value[0] ?? null
+  )
+  const currentItems = computed<ShoppingItem[]>(() => currentList.value?.items ?? [])
+  const checkedItems = computed(() => currentItems.value.filter(item => item.checked))
+  const uncheckedItems = computed(() => currentItems.value.filter(item => !item.checked))
+
+  // --- Lecture ---
+
+  /** Charge les listes depuis Supabase (lecture directe sous RLS). Lève en cas d'erreur. */
   const loadShoppingLists = async (): Promise<ShoppingList[]> => {
     isLoading.value = true
     error.value = null
-    
+
     try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-      
-      // Si pas d'utilisateur connecté, vider les listes
+      const userId = useAuthStore().currentUser?.id ?? null
       if (!userId) {
         shoppingLists.value = []
-        currentList.value = null
+        currentListId.value = null
         loadedForUserId.value = null
         return []
       }
@@ -651,7 +101,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       shoppingLists.value = data.map(list => ({
         id: list.id,
         name: list.name,
-        userId: list.user_id,
+        userId: list.user_id ?? userId,
         createdAt: list.created_at,
         updatedAt: list.updated_at,
         items: list.items.map(item => ({
@@ -669,13 +119,11 @@ export const useShoppingStore = defineStore('shopping', () => {
         }))
       }))
       loadedForUserId.value = userId
-
-      // Conserver la liste sélectionnée, sinon la première par défaut
-      const selectedId = currentList.value?.id
-      currentList.value = shoppingLists.value.find(list => list.id === selectedId) ?? shoppingLists.value[0] ?? null
+      if (!shoppingLists.value.some(list => list.id === currentListId.value)) {
+        currentListId.value = shoppingLists.value[0]?.id ?? null
+      }
       return shoppingLists.value
     } catch (err) {
-      console.error('Erreur chargement listes:', err)
       error.value = err instanceof Error ? err.message : 'Erreur inconnue'
       throw err
     } finally {
@@ -683,7 +131,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  /** Recharge les listes (à appeler après une écriture). Lève en cas d'erreur. */
+  /** Recharge les listes (après une écriture). Lève en cas d'erreur. */
   const refresh = () => loadShoppingLists()
 
   /** Charge les listes une seule fois par utilisateur. */
@@ -697,8 +145,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  // Méthode pour recharger les listes quand l'utilisateur change (layout)
-  const refreshShoppingLists = async () => {
+  /** Recharge sans lever (changement d'utilisateur depuis le layout, par exemple). */
+  const refreshShoppingLists = async (): Promise<void> => {
     try {
       await loadShoppingLists()
     } catch {
@@ -706,254 +154,219 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
   }
 
-  // Réinitialiser les quantités et unités de tous les articles de la liste actuelle
-  const resetQuantities = async () => {
-    if (!currentList.value) return
-    
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-      
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour réinitialiser les quantités')
-      }
-      
-      // Mettre à jour tous les articles de la liste actuelle
-      const updatePromises = currentList.value.items.map(async (item) => {
-        try {
-          const response = await apiFetch(`/api/shopping-items/${item.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              amount: null,
-              unit: null,
-              userId
-            })
-          })
+  const selectList = (listId: string) => {
+    currentListId.value = listId
+  }
 
-          if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`)
-          }
+  // --- Listes ---
 
-          const data = await response.json()
-          if (!data.success) {
-            throw new Error(data.error || 'Erreur lors de la mise à jour')
-          }
+  const createList = async (name: string): Promise<ShoppingList> => {
+    const data = await request<{ list: { id: string } }>('/api/shopping-lists', {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    })
+    await refresh()
+    currentListId.value = data.list.id
+    return shoppingLists.value.find(list => list.id === data.list.id) ?? currentList.value as ShoppingList
+  }
 
-          // Mettre à jour l'état local immédiatement
-          if (currentList.value) {
-            const itemToUpdate = currentList.value.items.find(i => i.id === item.id)
-            if (itemToUpdate) {
-              itemToUpdate.amount = null
-              itemToUpdate.unit = null
-            }
-          }
+  const updateListName = async (listId: string, name: string): Promise<void> => {
+    await request(`/api/shopping-lists/${listId}`, { method: 'PUT', body: JSON.stringify({ name }) })
+    await refresh()
+  }
 
-          return data.success
-        } catch (error) {
-          console.error(`Erreur mise à jour article ${item.id}:`, error)
-          return false
-        }
+  const deleteList = async (listId: string): Promise<void> => {
+    await request(`/api/shopping-lists/${listId}`, { method: 'DELETE' })
+    if (currentListId.value === listId) currentListId.value = null
+    await refresh()
+  }
+
+  // --- Articles ---
+
+  /** Ajoute un article (fusion en base si même nom + même unité). Renvoie la ligne créée ou fusionnée. */
+  const addItem = async (input: NewShoppingItem): Promise<ShoppingItem | null> => {
+    const listId = input.listId ?? currentList.value?.id
+    if (!listId) throw new Error('Aucune liste sélectionnée')
+
+    const data = await request<{ item: { id: string } }>('/api/shopping-items', {
+      method: 'POST',
+      body: JSON.stringify({
+        listId,
+        name: input.name.trim(),
+        amount: input.amount ?? null,
+        unit: input.unit?.trim() || null,
+        recipeId: input.recipeId ?? null
       })
+    })
+    await refresh()
+    return shoppingLists.value.find(list => list.id === listId)?.items.find(item => item.id === data.item.id) ?? null
+  }
 
-      // Attendre que toutes les mises à jour soient terminées
-      const results = await Promise.all(updatePromises)
-      const successCount = results.filter(Boolean).length
-      const totalCount = currentList.value.items.length
+  const updateItem = async (itemId: string, patch: ShoppingItemPatch): Promise<void> => {
+    await request(`/api/shopping-items/${itemId}`, { method: 'PUT', body: JSON.stringify(patch) })
+    await refresh()
+  }
 
-      if (successCount > 0) {
-        // Mettre à jour aussi l'état local des autres listes si nécessaire
-        shoppingLists.value.forEach(list => {
-          if (list.id !== currentList.value?.id) {
-            list.items.forEach(item => {
-              if (item.amount !== null || item.unit !== null) {
-                item.amount = null
-                item.unit = null
-              }
-            })
-          }
+  const removeItem = async (itemId: string): Promise<void> => {
+    await request(`/api/shopping-items/${itemId}`, { method: 'DELETE' })
+    await refresh()
+  }
+
+  /** Coche / décoche un article : bascule locale immédiate, annulée si le serveur refuse. */
+  const toggleItem = async (itemId: string): Promise<void> => {
+    const item = shoppingLists.value.flatMap(list => list.items).find(candidate => candidate.id === itemId)
+    if (!item) return
+    const previous = item.checked
+    item.checked = !previous
+    try {
+      await request(`/api/shopping-items/${itemId}`, { method: 'PUT', body: JSON.stringify({ isChecked: !previous }) })
+    } catch (err) {
+      item.checked = previous
+      throw err
+    }
+  }
+
+  /** Coche (ou décoche) tous les articles de la liste courante. */
+  const toggleAllItems = async (checked: boolean): Promise<void> => {
+    const targets = currentItems.value.filter(item => item.checked !== checked)
+    await Promise.all(targets.map(item =>
+      request(`/api/shopping-items/${item.id}`, { method: 'PUT', body: JSON.stringify({ isChecked: checked }) })
+    ))
+    await refresh()
+  }
+
+  /** Supprime les articles cochés de la liste courante. */
+  const clearChecked = async (): Promise<number> => {
+    const targets = checkedItems.value
+    await Promise.all(targets.map(item => request(`/api/shopping-items/${item.id}`, { method: 'DELETE' })))
+    await refresh()
+    return targets.length
+  }
+
+  /** Vide une liste (tous ses articles). */
+  const clearList = async (listId: string): Promise<number> => {
+    const targets = shoppingLists.value.find(list => list.id === listId)?.items ?? []
+    await Promise.all(targets.map(item => request(`/api/shopping-items/${item.id}`, { method: 'DELETE' })))
+    await refresh()
+    return targets.length
+  }
+
+  /** Efface quantité et unité de tous les articles de la liste courante. */
+  const resetQuantities = async (): Promise<number> => {
+    const targets = currentItems.value
+    await Promise.all(targets.map(item =>
+      request(`/api/shopping-items/${item.id}`, { method: 'PUT', body: JSON.stringify({ amount: null, unit: null }) })
+    ))
+    await refresh()
+    return targets.length
+  }
+
+  /** Déplace un article vers une autre liste (ajout avec fusion dans la cible, puis suppression). */
+  const moveItem = async (itemId: string, targetListId: string): Promise<void> => {
+    const item = shoppingLists.value.flatMap(list => list.items).find(candidate => candidate.id === itemId)
+    if (!item || item.listId === targetListId) return
+
+    await request('/api/shopping-items', {
+      method: 'POST',
+      body: JSON.stringify({
+        listId: targetListId,
+        name: item.name,
+        amount: item.amountNum ?? item.amount ?? null,
+        unit: item.unitCode ?? item.unit ?? null,
+        recipeId: item.recipeId
+      })
+    })
+    await request(`/api/shopping-items/${itemId}`, { method: 'DELETE' })
+    await refresh()
+  }
+
+  // --- Recettes ---
+
+  /**
+   * Ajoute les ingrédients d'une recette à une liste en un seul appel
+   * (`POST /api/shopping-lists/:id/recipes` → RPC `add_recipe_to_list`) :
+   * fusion des doublons en base, quantités × `servingsFactor` (ex. 6 / recipe.servings),
+   * `sectionIds` pour limiter l'ajout à certaines sections. Renvoie le nombre d'articles touchés.
+   */
+  const addRecipeToList = async (listId: string, recipeId: string, sectionIds?: string[], servingsFactor?: number): Promise<number> => {
+    const data = await request<{ items: unknown[] }>(`/api/shopping-lists/${listId}/recipes`, {
+      method: 'POST',
+      body: JSON.stringify({
+        recipeId,
+        ...(sectionIds && sectionIds.length > 0 ? { sectionIds } : {}),
+        ...(servingsFactor !== undefined ? { servingsFactor } : {})
+      })
+    })
+    await refresh()
+    return data.items.length
+  }
+
+  /**
+   * Façade historique (carte et fiche recette) : ajoute des ingrédients déjà
+   * sélectionnés à la liste courante (créée sous `DEFAULT_LIST_NAME` si
+   * l'utilisateur n'en a aucune). La fusion des doublons est faite en base.
+   */
+  const addIngredientsToLists = async (ingredients: readonly IngredientToAdd[]): Promise<{ success: true, count: number }> => {
+    if (!useAuthStore().currentUser?.id) {
+      throw new Error('Vous devez être connecté pour gérer vos listes de courses')
+    }
+    await ensureLoaded()
+    const target = currentList.value ?? await createList(DEFAULT_LIST_NAME)
+
+    for (const ingredient of ingredients) {
+      await request('/api/shopping-items', {
+        method: 'POST',
+        body: JSON.stringify({
+          listId: target.id,
+          name: ingredient.name.trim(),
+          amount: ingredient.amount,
+          unit: ingredient.unit.trim() || null,
+          recipeId: ingredient.recipeId ?? null
         })
-        
-        return { 
-          success: true, 
-          message: `${successCount} article${successCount > 1 ? 's' : ''} mis à jour sur ${totalCount}`,
-          updatedCount: successCount,
-          totalCount
-        }
-      } else {
-        throw new Error('Aucun article n\'a pu être mis à jour')
-      }
-    } catch (error) {
-      console.error('Erreur réinitialisation quantités:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  // Vider une liste en supprimant tous ses articles
-  const clearList = async (listId: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-      
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour vider une liste')
-      }
-      
-      const list = shoppingLists.value.find(l => l.id === listId)
-      if (!list) {
-        throw new Error('Liste non trouvée')
-      }
-      
-      if (list.items.length === 0) {
-        return { success: true, message: 'La liste est déjà vide' }
-      }
-      
-      // Supprimer tous les articles de la liste
-      const deletePromises = list.items.map(async (item) => {
-        try {
-          const response = await apiFetch(`/api/shopping-items/${item.id}?userId=${userId}`, {
-            method: 'DELETE'
-          })
-
-          if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`)
-          }
-
-          return true
-        } catch (error) {
-          console.error(`Erreur suppression article ${item.id}:`, error)
-          return false
-        }
       })
-
-      // Attendre que toutes les suppressions soient terminées
-      const results = await Promise.all(deletePromises)
-      const successCount = results.filter(Boolean).length
-      const totalCount = list.items.length
-
-      if (successCount > 0) {
-        // Mettre à jour l'état local immédiatement
-        if (list) {
-          list.items = []
-        }
-        
-        // Si c'est la liste actuelle, la vider aussi
-        if (currentList.value?.id === listId) {
-          currentList.value.items = []
-        }
-        
-        return { 
-          success: true, 
-          message: `${successCount} article${successCount > 1 ? 's' : ''} supprimé${successCount > 1 ? 's' : ''} sur ${totalCount}`,
-          deletedCount: successCount,
-          totalCount
-        }
-      } else {
-        throw new Error('Aucun article n\'a pu être supprimé')
-      }
-    } catch (error) {
-      console.error('Erreur vidage liste:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
     }
-  }
-
-  // Méthodes pour la checkbox globale
-  const toggleAllItems = async (checked: boolean) => {
-    if (!currentList.value) return
-
-    try {
-      // Mettre à jour tous les items de la liste actuelle
-      const updatePromises = currentList.value.items.map(async (item) => {
-        if (item.checked !== checked) {
-          try {
-            const response = await apiFetch(`/api/shopping-items/${item.id}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                isChecked: checked
-              })
-            })
-
-            if (!response.ok) {
-              throw new Error(`Erreur HTTP: ${response.status}`)
-            }
-
-            const data = await response.json()
-            if (data.success) {
-              // Mettre à jour l'item localement
-              item.checked = checked
-              item.updatedAt = data.item.updatedAt
-            }
-            return true
-          } catch (error) {
-            console.error(`Erreur mise à jour article ${item.id}:`, error)
-            return false
-          }
-        }
-        return true
-      })
-
-      // Attendre que toutes les mises à jour soient terminées
-      await Promise.all(updatePromises)
-      
-      // Mettre à jour la date de modification de la liste
-      currentList.value.updatedAt = new Date().toISOString()
-      
-      return { success: true }
-    } catch (error) {
-      console.error('Erreur toggle tous les articles:', error)
-      return { success: false, error: 'Erreur lors de la mise à jour des articles' }
-    }
-  }
-
-  const checkAllItems = async () => {
-    return await toggleAllItems(true)
-  }
-
-  const uncheckAllItems = async () => {
-    return await toggleAllItems(false)
+    await refresh()
+    return { success: true, count: ingredients.length }
   }
 
   return {
     // State
     shoppingLists,
-    currentList,
+    currentListId,
     isLoading,
     error,
-    
+
     // Computed
+    currentList,
     currentItems,
-    currentItemsGrouped,
     checkedItems,
     uncheckedItems,
-    
-    // Actions
-    createList,
-    addItem,
-    toggleItem,
-    removeItem,
-    clearChecked,
-    selectList,
-    deleteList,
-    updateListName,
-    updateItemQuantity,
-    moveItemToAnotherList,
-    addIngredientsToLists,
-    addRecipeToList,
+
+    // Lecture
     loadShoppingLists,
     refresh,
     ensureLoaded,
     refreshShoppingLists,
-    resetQuantities,
+    selectList,
+
+    // Listes
+    createList,
+    updateListName,
+    deleteList,
     clearList,
+
+    // Articles
+    addItem,
+    updateItem,
+    removeItem,
+    toggleItem,
     toggleAllItems,
-    checkAllItems,
-    uncheckAllItems
+    clearChecked,
+    resetQuantities,
+    moveItem,
+
+    // Recettes
+    addRecipeToList,
+    addIngredientsToLists
   }
-}) 
+})

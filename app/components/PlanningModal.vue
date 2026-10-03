@@ -1,166 +1,91 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-xl p-4 sm:p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
-          Ajouter "{{ recipe.title }}" au planning
-        </h3>
-        <button
-          @click="closeModal"
-          class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-      </div>
+  <UModal
+    :open="show"
+    :title="$t('planning.planningModal.title', { title: recipe.title })"
+    :description="$t('planning.planningModal.description')"
+    :ui="{ content: 'sm:max-w-3xl' }"
+    @update:open="value => !value && closeModal()"
+  >
+    <template #body>
+      <div class="space-y-4">
+        <PlanningWeekNavigator
+          :label="week.weekLabel.value"
+          :is-current-week="week.isCurrentWeek.value"
+          @previous="week.previousWeek"
+          @next="week.nextWeek"
+          @today="week.goToToday"
+        />
 
-      <!-- Sélection de la semaine -->
-      <div class="mb-6">
-        <div class="flex justify-between items-center mb-4">
-          <button
-            @click="previousWeek"
-            class="p-2 text-gray-600 hover:text-primary-600 transition-colors duration-200"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-
-          <div class="flex flex-col items-center">
-            <h4 class="text-lg font-semibold text-gray-900">
-              Semaine du {{ formatWeekStart(planningCurrentWeek) }}
-            </h4>
-            <button
-              @click="goToCurrentWeek"
-              class="mt-2 px-3 py-1.5 text-sm bg-primary-100 text-primary-700 hover:bg-primary-200 rounded-lg transition-colors duration-200 font-medium"
-            >
-              Revenir à la semaine actuelle
-            </button>
-          </div>
-
-          <button
-            @click="nextWeek"
-            class="p-2 text-gray-600 hover:text-primary-600 transition-colors duration-200"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
+        <div v-if="week.store.isLoading && !hasData" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <USkeleton v-for="index in 7" :key="index" class="h-28 w-full" />
         </div>
-      </div>
 
-      <!-- En-tête des jours -->
-      <div class="grid grid-cols-7 gap-2 sm:gap-6 mb-6 overflow-x-auto">
-        <div
-          v-for="day in planningWeekDays"
-          :key="`header-${day.dateString}`"
-          class="text-center min-w-[80px] sm:min-w-[120px]"
-        >
-          <div class="text-sm sm:text-base font-medium text-gray-900 mb-2">{{ day.name }}</div>
+        <div v-else class="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div
-            class="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-colors duration-200 font-medium"
-            :class="isToday(day.date)
-              ? 'bg-primary-100 text-primary-700'
-              : 'text-gray-500'"
+            v-for="day in week.days.value"
+            :key="day.dateString"
+            class="flex flex-col gap-1.5 rounded-lg border p-1.5"
+            :class="day.isToday ? 'border-primary bg-primary/5' : 'border-default'"
           >
-            {{ formatDate(day.date) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Ligne des déjeuners -->
-      <div class="mb-8">
-        <div class="grid grid-cols-7 gap-2 sm:gap-6 overflow-x-auto">
-          <div
-            v-for="day in planningWeekDays"
-            :key="`lunch-${day.dateString}`"
-            class="text-center min-w-[80px] sm:min-w-[120px]"
-          >
-            <button
-              @click="selectDayAndMeal(day.dateString, 'lunch')"
-              class="w-full p-2 sm:p-3 text-xs sm:text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors duration-200 font-medium relative"
-              :class="{ 'bg-green-200 border-2 border-green-400': selectedDay === day.dateString && selectedMealType === 'lunch' }"
+            <p class="truncate text-center text-xs font-semibold capitalize text-highlighted">
+              {{ week.shortDayName(day.date) }}
+              <span class="block font-normal text-muted">{{ week.shortDate(day.date) }}</span>
+            </p>
+            <UButton
+              v-for="mealType in MEAL_TYPES"
+              :key="mealType"
+              :label="week.slotLabel(mealType)"
+              :icon="mealType === 'lunch' ? 'i-lucide-sun' : 'i-lucide-moon'"
+              :color="isSelected(day.dateString, mealType) ? 'primary' : 'neutral'"
+              :variant="isSelected(day.dateString, mealType) ? 'solid' : 'soft'"
+              size="xs"
+              class="justify-start"
+              :aria-pressed="isSelected(day.dateString, mealType)"
+              @click="select(day.dateString, mealType)"
             >
-              <span class="hidden sm:inline">Déjeuner</span>
-              <span class="sm:hidden">Déj</span>
-              <span
-                v-if="day.meals.lunch.length > 0"
-                class="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
-              >
-                {{ day.meals.lunch.length }}
-              </span>
-            </button>
-            <!-- Repas existants pour le déjeuner -->
-            <div v-if="day.meals.lunch.length > 0" class="mt-2 space-y-1">
-              <div
-                v-for="meal in day.meals.lunch"
-                :key="meal.id"
-                class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
-                :title="meal.recipe?.title || 'Recette sans nom'"
-              >
-                {{ meal.recipe?.title || 'Recette sans nom' }}
-              </div>
-            </div>
+              <template #trailing>
+                <UBadge
+                  v-if="day.meals[mealType].length > 0"
+                  :label="String(day.meals[mealType].length)"
+                  color="neutral"
+                  variant="subtle"
+                  size="xs"
+                  class="ml-auto"
+                  :aria-label="$t('planning.planningModal.count', { count: day.meals[mealType].length })"
+                />
+              </template>
+            </UButton>
           </div>
         </div>
       </div>
+    </template>
 
-      <!-- Ligne des dîners -->
-      <div class="mb-8">
-        <div class="grid grid-cols-7 gap-2 sm:gap-6 overflow-x-auto">
-          <div
-            v-for="day in planningWeekDays"
-            :key="`dinner-${day.dateString}`"
-            class="text-center min-w-[80px] sm:min-w-[120px]"
-          >
-            <button
-              @click="selectDayAndMeal(day.dateString, 'dinner')"
-              class="w-full p-2 sm:p-3 text-xs sm:text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors duration-200 font-medium relative"
-              :class="{ 'bg-blue-200 border-2 border-blue-400': selectedDay === day.dateString && selectedMealType === 'dinner' }"
-            >
-              <span class="hidden sm:inline">Dîner</span>
-              <span class="sm:hidden">Dîner</span>
-              <span
-                v-if="day.meals.dinner.length > 0"
-                class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
-              >
-                {{ day.meals.dinner.length }}
-              </span>
-            </button>
-            <!-- Repas existants pour le dîner -->
-            <div v-if="day.meals.dinner.length > 0" class="mt-2 space-y-1">
-              <div
-                v-for="meal in day.meals.dinner"
-                :key="meal.id"
-                class="text-xs text-gray-500 px-1 sm:px-2 py-1 truncate"
-                :title="meal.recipe?.title || 'Recette sans nom'"
-              >
-                {{ meal.recipe?.title || 'Recette sans nom' }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bouton de confirmation -->
-      <div v-if="selectedDay && selectedMealType" class="text-center pt-4">
-        <button
+    <template #footer>
+      <div class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <UButton :label="$t('planning.planningModal.cancel')" color="neutral" variant="ghost" @click="closeModal" />
+        <UButton
+          :label="$t('planning.planningModal.confirm')"
+          icon="i-lucide-calendar-plus"
+          :disabled="!selectedDay || !selectedMealType"
+          :loading="submitting"
           @click="confirmAddToPlanning"
-          class="px-8 py-4 bg-primary-600 text-white hover:bg-primary-700 rounded-lg transition-colors duration-200 font-medium text-xl"
-        >
-          Ajouter au planning
-        </button>
+        />
       </div>
-    </div>
-  </div>
+    </template>
+  </UModal>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { MealType, RecipeSummary } from '#shared/types'
-import { toDateString, weekDates } from '~/utils/week'
+import { MEAL_TYPES } from '#shared/schemas/planning'
+import { usePlanningWeek } from '~/composables/usePlanningWeek'
 
+/**
+ * Ajout d'une recette au planning depuis sa carte ou sa fiche : choix d'un
+ * jour et d'un créneau dans la semaine affichée (navigable).
+ * API conservée : props `show` / `recipe`, événement `close`.
+ */
 const props = withDefaults(defineProps<{
   show?: boolean
   recipe: RecipeSummary
@@ -170,124 +95,45 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const planningStore = usePlanningStore()
-const { $toast } = useNuxtApp()
+const week = usePlanningWeek()
 
-// Planning modal state
-const planningCurrentWeek = ref(new Date())
 const selectedDay = ref<string | null>(null)
 const selectedMealType = ref<MealType | null>(null)
+const submitting = ref(false)
+
+const hasData = computed(() => Object.keys(week.store.weekPlanning).length > 0)
 
 // La semaine affichée est chargée à l'ouverture et à chaque navigation
-watch([() => props.show, planningCurrentWeek], ([isOpen]) => {
-  if (isOpen) void planningStore.ensureWeekLoaded(planningCurrentWeek.value)
+watch([() => props.show, week.weekKey], ([isOpen]) => {
+  if (isOpen) void week.store.ensureWeekLoaded(week.currentWeek.value)
 }, { immediate: true })
 
-// Planning computed properties
-const planningWeekDays = computed(() =>
-  weekDates(planningCurrentWeek.value).map((date) => {
-    const dateString = toDateString(date)
-    return {
-      date,
-      dateString,
-      name: date.toLocaleDateString('fr-FR', { weekday: 'long' }),
-      meals: planningStore.getDayMeals(dateString)
-    }
-  })
-)
+// Réinitialisation à chaque changement de recette
+watch(() => props.recipe.id, () => {
+  week.goToToday()
+  selectedDay.value = null
+  selectedMealType.value = null
+})
 
-// Planning modal methods
+const isSelected = (dateString: string, mealType: MealType) =>
+  selectedDay.value === dateString && selectedMealType.value === mealType
+
+const select = (dateString: string, mealType: MealType) => {
+  selectedDay.value = dateString
+  selectedMealType.value = mealType
+}
+
 const closeModal = () => {
   emit('close')
   selectedDay.value = null
   selectedMealType.value = null
 }
 
-const selectDayAndMeal = (dateString: string, mealType: MealType) => {
-  selectedDay.value = dateString
-  selectedMealType.value = mealType
-}
-
 const confirmAddToPlanning = async () => {
   if (!selectedDay.value || !selectedMealType.value) return
-
-  // Sauvegarder les valeurs avant de fermer la modale
-  const selectedDayValue = selectedDay.value
-  const selectedMealTypeValue = selectedMealType.value
-
-  // Formater la date pour l'affichage
-  const dateObj = new Date(selectedDayValue)
-  const formattedDate = dateObj.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  })
-
-  try {
-    // Ajouter la recette au planning
-    const result = await planningStore.addMeal(selectedDayValue, selectedMealTypeValue, props.recipe)
-
-    if (result.success) {
-      // Fermer la modale
-      closeModal()
-
-      // Afficher un toast de confirmation
-      $toast.success(
-        'Recette ajoutée !',
-        `${props.recipe.title} a été ajoutée au planning du ${formattedDate} (${selectedMealTypeValue === 'lunch' ? 'déjeuner' : 'dîner'})`,
-        3000
-      )
-    } else {
-      $toast.error('Erreur !', result.error || 'Erreur lors de l\'ajout au planning', 3000)
-    }
-  } catch (error) {
-    console.error('Erreur ajout au planning:', error)
-    $toast.error('Erreur !', 'Erreur lors de l\'ajout au planning', 3000)
-  }
+  submitting.value = true
+  const ok = await week.addRecipe(selectedDay.value, selectedMealType.value, props.recipe)
+  submitting.value = false
+  if (ok) closeModal()
 }
-
-// Navigation des semaines
-const previousWeek = () => {
-  const newDate = new Date(planningCurrentWeek.value)
-  newDate.setDate(newDate.getDate() - 7)
-  planningCurrentWeek.value = newDate
-}
-
-const nextWeek = () => {
-  const newDate = new Date(planningCurrentWeek.value)
-  newDate.setDate(newDate.getDate() + 7)
-  planningCurrentWeek.value = newDate
-}
-
-const goToCurrentWeek = () => {
-  planningCurrentWeek.value = new Date()
-}
-
-// Date formatting functions
-const formatWeekStart = (date: Date) => {
-  return date.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  })
-}
-
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short'
-  })
-}
-
-const isToday = (date: Date) => {
-  const today = new Date()
-  return date.toDateString() === today.toDateString()
-}
-
-// Reset modal state when recipe changes
-watch(() => props.recipe, () => {
-  planningCurrentWeek.value = new Date()
-  selectedDay.value = null
-  selectedMealType.value = null
-})
 </script>

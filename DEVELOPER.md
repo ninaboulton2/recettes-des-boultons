@@ -30,14 +30,18 @@ recettes-des-boultons/
 │   ├── pages/               # Routes (recettes, planning, courses, favoris, traducteur)
 │   ├── layouts/             # Layout par défaut
 │   ├── stores/              # Pinia : recipes, planning, favorites, shopping, auth
-│   ├── composables/         # useApi (apiFetch), useRecipeSearch, useRecipeFacets, useRecipe
-│   ├── utils/               # week.ts (semaine du planning)
+│   ├── components/planning/ # WeekNavigator, DayColumn, MealSlot, MealCard, MealNoteEditor, AddMealModal, MoveMealModal, DaySlotPicker
+│   ├── components/shopping/ # ListTabs, AddItemForm, UnitSelect, ItemList, ItemRow
+│   ├── composables/         # useApi (apiFetch), useRecipeSearch, useRecipeFacets, useRecipe, useUnits,
+│   │                        # usePlanningWeek, useShoppingLists (toasts + état d'interface)
+│   ├── utils/               # week.ts (semaine du planning, clés locales)
 │   ├── middleware/auth.ts   # Garde de route côté client (admin)
 │   └── plugins/             # toast.client.ts ($toast → useToast() de Nuxt UI)
 ├── shared/                  # Code partagé client/serveur (alias #shared)
 │   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...)
 │   ├── types/database.ts    # Types Supabase GÉNÉRÉS (ne pas éditer)
 │   ├── utils/recipes.ts     # Mapping snake_case → camelCase, formatAmount, formatIngredient
+│   ├── utils/shopping.ts    # formatQuantity, splitChecked, aisleOf / groupByAisle (rayons)
 │   └── utils/text.ts        # normalizeAccents
 ├── server/
 │   ├── api/                 # Endpoints REST (Nitro)
@@ -252,6 +256,7 @@ Légende auth : 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requi
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (409 si doublon, 404 recette) | `{ success, favorite }` |
 | `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404 si absent) | `{ success }` |
 | `POST /api/planning` | 👤 | `{ dateString: AAAA-MM-JJ, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert | `{ success, meal }` |
+| `PUT /api/planning/:id` | 👤 | `{ dateString, mealType }` (`planningEntryMoveSchema`) | update (404 si absent) — déplacement, identifiant conservé | `{ success, meal }` |
 | `DELETE /api/planning/:id` | 👤 | — | delete (404 si absent) | `{ success }` |
 | `POST /api/planning-notes` | 👤 | `{ dateString, noteType: day\|lunch\|dinner, content? }` | update ou insert | `{ success, note }` |
 | `DELETE /api/planning-notes?dateString=&noteType=` | 👤 | query | delete (idempotent) | `{ success, deleted }` |
@@ -270,6 +275,36 @@ Légende auth : 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requi
 Erreurs : `400` « Données invalides : champ : raison ; … » (Zod), `401/403` auth, `404/409` métier, erreurs SQL volontaires des RPC (`22023` → 400 avec le message français, `P0002` → 404, `42501` → 403) ; tout le reste → `500` « Une erreur est survenue, réessayez plus tard. » avec le détail uniquement dans la console serveur (`[api] <contexte>`). Côté client, `toUserMessage(err)` (`app/composables/useApiError.ts`) affiche le `statusMessage` pour les 4xx et `errors.generic` (i18n) sinon.
 
 > Les endpoints 👤/🔑 ne reçoivent plus de `userId` du client : il est dérivé de la session (cookie envoyé automatiquement par le navigateur, ou en-tête `Authorization: Bearer` pour un client externe).
+
+## Planning et listes de courses (interface)
+
+Pages `app/pages/planning.vue` et `app/pages/courses.vue` (Nuxt UI, ≤ 300 lignes), découpées en
+composants `app/components/planning/**` et `app/components/shopping/**`. Deux composables portent
+l'état d'interface et le retour utilisateur (`useToast()` + `toUserMessage()`), les stores ne font
+que lire/écrire :
+
+| Couche | Planning | Courses |
+|---|---|---|
+| Store (données) | `usePlanningStore` : `loadWeek`, `refresh`, `ensureWeekLoaded`, `addMeal`, `addCustomMeal`, `removeMeal`, `moveMeal` (`PUT /api/planning/:id`), `saveNote` (vide → `DELETE`) | `useShoppingStore` : `refresh`, `ensureLoaded`, `createList`/`updateListName`/`deleteList`/`clearList`, `addItem` (fusion en base), `updateItem`, `toggleItem` (optimiste), `toggleAllItems`, `clearChecked`, `resetQuantities`, `moveItem`, `addRecipeToList`, `addIngredientsToLists` (façade) |
+| Composable (UI) | `usePlanningWeek(date)` : semaine courante, jours (`PlanningDay[]`), formats de date localisés, actions → toasts | `useShoppingLists()` : liste courante, groupes cochés / à acheter, rayons, préférences `storeMode` / `byAisle` (localStorage), actions → toasts |
+| Utilitaires | `app/utils/week.ts` (lundi → dimanche, clés `YYYY-MM-DD` en heure locale, `shiftWeeks`, `fromDateString`) | `shared/utils/shopping.ts` (`formatQuantity`, `splitChecked`, `aisleOf`, `groupByAisle`) |
+
+- Les actions des stores **lèvent** (`ApiError` via `apiErrorFromResponse`) ; aucune logique de
+  consolidation côté client : `merge_shopping_item` / `add_recipe_to_list` fusionnent en base
+  (même nom replié + même `unit_code`). La quantité affichée vient de `amountNum` + libellé
+  `useUnits().unitLabel(unitCode, unit)`.
+- `addIngredientsToLists(ingredients)` reste une façade pour la carte et la fiche recette
+  (`RecipeCard.vue`, `pages/recettes/[id].vue`) : un `POST /api/shopping-items` par ingrédient dans la
+  liste courante (créée sous « Ma liste de courses » si aucune). À remplacer par `addRecipeToList`
+  (un seul appel, sections et facteur de portions) quand ces écrans passeront par la RPC.
+- `PlanningModal.vue` (ajout d'une recette depuis sa carte/fiche) garde son API : props `show`,
+  `recipe: RecipeSummary`, événement `close`.
+- Planning : vue en liste par jour sur mobile, grille 7 colonnes sur `lg`, glisser-déposer natif
+  (`dataTransfer` = id du repas) avec repli accessible « Déplacer… » (modale jour/créneau) ;
+  `?week=AAAA-MM-JJ` ouvre directement une semaine ; impression via `@media print` (paysage).
+- Courses : regroupement par rayon optionnel (table de mots-clés statique, `shared/utils/shopping.ts`),
+  mode « magasin » (zones tactiles agrandies), unités via `USelectMenu` + saisie libre.
+- Textes i18n : blocs `planning`, `shopping`, `planningPrint` (fr/en).
 
 ## Variables d'environnement
 

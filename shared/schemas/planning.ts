@@ -37,9 +37,16 @@ export const planningNoteQuerySchema = z.object({
   noteType: noteTypeSchema
 })
 
+/** `PUT /api/planning/:id` — déplace un repas (nouveau jour et/ou créneau), identifiant conservé. */
+export const planningEntryMoveSchema = z.object({
+  dateString: dateStringSchema,
+  mealType: mealTypeSchema
+})
+
 export const planningIdParamsSchema = z.object({ id: uuidSchema })
 
 export type MealType = z.infer<typeof mealTypeSchema>
 export type NoteType = z.infer<typeof noteTypeSchema>
 export type PlanningEntryInput = z.infer<typeof planningEntryInputSchema>
+export type PlanningEntryMove = z.infer<typeof planningEntryMoveSchema>
 export type PlanningNoteInput = z.infer<typeof planningNoteInputSchema>
