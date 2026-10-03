@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nuxt dev --port 3001",
     "postinstall": "nuxt prepare",
+    "dev:local": "nuxt dev --dotenv .env.local --port 3001",
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
@@ -15,7 +16,13 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:local:up": "bash supabase/local/up.sh",
+    "db:local:reset": "npx supabase db reset && bash supabase/local/setup.sh",
+    "db:local:down": "npx supabase stop",
+    "db:local:status": "npx supabase status",
+    "db:local:test": "bash supabase/local/test.sh",
+    "db:local:snapshot": "node supabase/local/build_snapshot.mjs"
   },
   "dependencies": {
     "@nuxt/fonts": "^0.14.0",
