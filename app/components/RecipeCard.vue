@@ -11,33 +11,33 @@
         </div>
         <div class="absolute top-3 right-3 flex flex-col space-y-2 z-10" @click="preventNavigation">
           <!-- Favorite button -->
-          <button 
+          <button
             @click.stop.prevent="toggleFavorite"
             @mousedown.stop.prevent
             @mouseup.stop.prevent
             :class="[
               'p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl border-2',
-              isFavorite 
-                ? 'bg-red-100 border-red-400' 
+              isFavorite
+                ? 'bg-red-100 border-red-400'
                 : 'bg-white border-gray-300'
             ]"
             :title="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
             :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
             :aria-pressed="isFavorite"
           >
-            <svg 
-              v-if="isFavorite" 
-              class="w-5 h-5 text-red-600" 
-              fill="currentColor" 
+            <svg
+              v-if="isFavorite"
+              class="w-5 h-5 text-red-600"
+              fill="currentColor"
               viewBox="0 0 20 20"
             >
               <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
             </svg>
-            <svg 
-              v-else 
-              class="w-5 h-5 text-gray-600" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              v-else
+              class="w-5 h-5 text-gray-600"
+              fill="none"
+              stroke="currentColor"
               stroke-width="2"
               viewBox="0 0 24 24"
             >
@@ -46,7 +46,7 @@
           </button>
 
           <!-- Edit button - visible uniquement pour les admins -->
-          <button 
+          <button
             v-if="showAdminActions"
             @click.stop.prevent="editRecipe"
             @mousedown.stop.prevent
@@ -61,7 +61,7 @@
           </button>
 
           <!-- Delete button - visible uniquement pour les admins -->
-          <button 
+          <button
             v-if="showAdminActions"
             @click.stop.prevent="deleteRecipe"
             @mousedown.stop.prevent
@@ -83,18 +83,18 @@
             {{ recipe.title }}
           </h3>
         </NuxtLink>
-        
+
         <p class="text-gray-600 text-sm line-clamp-2 flex-1 overflow-hidden text-ellipsis">
           {{ recipe.description }}
         </p>
 
         <div class="flex items-center justify-between text-sm text-gray-500 mt-auto">
           <div class="flex items-center space-x-4">
-            <div v-if="getTotalTime() > 0" class="flex items-center space-x-1">
+            <div v-if="duration !== null" class="flex items-center space-x-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span>{{ getTotalTime() }} min</span>
+              <span>{{ duration }} min</span>
             </div>
             <div v-if="recipe.servings && recipe.servings > 0" class="flex items-center space-x-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,10 +103,10 @@
               <span>{{ recipe.servings }} pers.</span>
             </div>
           </div>
-          
+
           <div class="flex items-center space-x-2" @click="preventNavigation">
             <!-- Bouton Ajouter à la liste de courses - visible uniquement pour les utilisateurs connectés -->
-            <button 
+            <button
               v-if="authStore.isAuthenticated"
               @click.stop.prevent="showShoppingModal = true"
               @mousedown.stop.prevent
@@ -121,7 +121,7 @@
             </button>
 
             <!-- Bouton Ajouter au planning - visible uniquement pour les utilisateurs connectés -->
-            <button 
+            <button
               v-if="authStore.isAuthenticated"
               @click.stop.prevent="addToPlanning"
               @mousedown.stop.prevent
@@ -139,21 +139,21 @@
 
         <!-- Tags -->
         <div class="flex flex-wrap gap-1">
-          <span 
-              v-for="tag in recipe.tags" 
-              :key="tag" 
-              class="px-2 py-1 text-xs text-gray-600 rounded-full"
-              :class="{
-                'bg-green-500 text-white': tag === 'végétarien',
-                'bg-green-600 text-white': tag === 'vegan',
-                'bg-sky-400 text-white': tag === 'pescétarien' || tag === 'pescetarien',
-                'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan' && tag !== 'pescétarien' && tag !== 'pescetarien'
-              }"
-            >
-              {{ tag }}
+          <span
+            v-for="tag in recipe.tags"
+            :key="tag"
+            class="px-2 py-1 text-xs text-gray-600 rounded-full"
+            :class="{
+              'bg-green-500 text-white': tag === 'végétarien',
+              'bg-green-600 text-white': tag === 'vegan',
+              'bg-sky-400 text-white': tag === 'pescétarien' || tag === 'pescetarien',
+              'bg-gray-100': tag !== 'végétarien' && tag !== 'vegan' && tag !== 'pescétarien' && tag !== 'pescetarien'
+            }"
+          >
+            {{ tag }}
           </span>
-          <span 
-            v-if="recipe.tags.length > 3" 
+          <span
+            v-if="recipe.tags.length > 3"
             class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
           >
             +{{ recipe.tags.length - 3 }}
@@ -167,7 +167,7 @@
       <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
-            Ajouter "{{ recipe?.title }}" à la liste de courses
+            Ajouter "{{ recipe.title }}" à la liste de courses
           </h3>
           <button
             @click="closeShoppingModal"
@@ -179,8 +179,10 @@
           </button>
         </div>
 
-        <!-- Si des sections existent -->
-        <template v-if="recipe && recipe.sections && sectionsWithIngredients.length > 0">
+        <!-- Les sections sont chargées à l'ouverture (la liste ne transporte que le résumé) -->
+        <LoadingState v-if="isLoadingSections" :message="$t('recipes.detail.ingredientsLoading')" />
+
+        <template v-else-if="ingredientSections.length > 0">
           <div class="mb-4">
             <div class="flex items-center justify-between mb-4">
               <p class="text-sm text-gray-600">Sélectionnez les sections d'ingrédients à ajouter :</p>
@@ -199,18 +201,18 @@
                 </button>
               </div>
             </div>
-            
+
             <div class="space-y-3">
               <div
-                v-for="(section, index) in sectionsWithIngredients"
-                :key="section.id || index"
+                v-for="section in ingredientSections"
+                :key="section.id"
                 class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
               >
                 <label class="flex items-start cursor-pointer">
                   <input
                     type="checkbox"
                     v-model="selectedSections"
-                    :value="section.id || index"
+                    :value="section.id"
                     class="mt-1 mr-3 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                   >
                   <div class="flex-1">
@@ -229,17 +231,9 @@
           </div>
         </template>
 
-        <!-- Si pas de sections (ancien format) -->
-        <template v-else-if="recipe && recipe.ingredients && recipe.ingredients.length > 0">
-          <div class="mb-4">
-            <p class="text-sm text-gray-600 mb-4">Tous les ingrédients seront ajoutés :</p>
-            <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
-              <li v-for="ingredient in recipe.ingredients" :key="ingredient.name">
-                {{ ingredient.amount ? ingredient.amount + ' ' : '' }}{{ ingredient.unit ? ingredient.unit + ' ' : '' }}{{ ingredient.name }}
-              </li>
-            </ul>
-          </div>
-        </template>
+        <p v-else class="text-sm text-gray-600 mb-4">
+          {{ $t('recipes.detail.noIngredients') }}
+        </p>
 
         <div class="flex justify-end gap-3 mt-6">
           <button
@@ -250,7 +244,7 @@
           </button>
           <button
             @click="confirmAddToShoppingList"
-            :disabled="recipe && recipe.sections && sectionsWithIngredients.length > 0 && selectedSections.length === 0"
+            :disabled="isLoadingSections || selectedSections.length === 0"
             class="px-4 py-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Ajouter
@@ -268,33 +262,46 @@
   </div>
 </template>
 
-<script setup>
-const props = defineProps({
-  recipe: {
-    type: Object,
-    required: true
-  },
-  showAdminActions: {
-    type: Boolean,
-    default: false
-  }
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import type { Recipe, RecipeSection, RecipeSummary } from '#shared/types'
+import type { Database } from '#shared/types/database'
+import { formatIngredient, sectionsWithIngredients, totalTime } from '#shared/utils/recipes'
+
+const props = withDefaults(defineProps<{
+  /** Résumé (liste) ou recette complète (fiche) : les sections sont chargées à la demande. */
+  recipe: RecipeSummary | Recipe
+  showAdminActions?: boolean
+}>(), {
+  showAdminActions: false
 })
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits<{
+  edit: [recipe: RecipeSummary]
+  delete: [recipe: RecipeSummary]
+}>()
 
+const supabase = useSupabaseClient<Database>()
 const shoppingStore = useShoppingStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
+const { $toast } = useNuxtApp()
 
 // Computed property to check if recipe is favorite
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
+
+const duration = computed(() => totalTime(props.recipe))
 
 // État du modal de planning
 const showPlanningModal = ref(false)
 
 // État du modal de shopping
 const showShoppingModal = ref(false)
-const selectedSections = ref([])
+const selectedSections = ref<string[]>([])
+const loadedSections = ref<RecipeSection[] | null>(null)
+const isLoadingSections = ref(false)
+
+const ingredientSections = computed(() => sectionsWithIngredients(loadedSections.value ?? []))
 
 const toggleFavorite = async () => {
   const result = await favoritesStore.toggleFavorite(props.recipe.id)
@@ -305,30 +312,11 @@ const toggleFavorite = async () => {
   }
 }
 
-const { $toast } = useNuxtApp()
-
-// Computed properties pour les sections d'ingrédients
-const sectionsWithIngredients = computed(() => {
-  if (!props.recipe.sections || props.recipe.sections.length === 0) {
-    return []
-  }
-  
-  return props.recipe.sections
-    .filter(section => 
-      (section.type === 'ingredients' || section.type === 'mixed') &&
-      section.ingredients &&
-      section.ingredients.length > 0
-    )
-    .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
-})
-
-// Fonction pour formater un ingrédient
-const formatIngredient = (ingredient) => {
-  const parts = []
-  if (ingredient.amount) parts.push(ingredient.amount)
-  if (ingredient.unit) parts.push(ingredient.unit)
-  parts.push(ingredient.name)
-  return parts.join(' ')
+/** Sections de la recette : celles de la prop si présentes, sinon requête ciblée. */
+const loadSections = async (): Promise<RecipeSection[]> => {
+  if ('sections' in props.recipe) return props.recipe.sections
+  const full = await fetchRecipeById(supabase, props.recipe.id)
+  return full?.sections ?? []
 }
 
 const closeShoppingModal = () => {
@@ -336,16 +324,24 @@ const closeShoppingModal = () => {
   selectedSections.value = []
 }
 
-// Sélectionner toutes les sections par défaut quand le modal s'ouvre
-watch(showShoppingModal, (isOpen) => {
-  if (isOpen && props.recipe && props.recipe.sections && sectionsWithIngredients.value.length > 0) {
-    selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+// Charger les sections et les sélectionner toutes quand le modal s'ouvre
+watch(showShoppingModal, async (isOpen) => {
+  if (!isOpen) return
+  isLoadingSections.value = true
+  try {
+    loadedSections.value = await loadSections()
+    selectedSections.value = ingredientSections.value.map(section => section.id)
+  } catch (error) {
+    console.error('Erreur lors du chargement des ingrédients:', error)
+    loadedSections.value = []
+    $toast.error('Erreur !', 'Impossible de charger les ingrédients de la recette.', 3000)
+  } finally {
+    isLoadingSections.value = false
   }
 })
 
 const selectAllSections = () => {
-  if (!props.recipe || !props.recipe.sections) return
-  selectedSections.value = sectionsWithIngredients.value.map((section, index) => section.id || index.toString())
+  selectedSections.value = ingredientSections.value.map(section => section.id)
 }
 
 const deselectAllSections = () => {
@@ -353,36 +349,15 @@ const deselectAllSections = () => {
 }
 
 const confirmAddToShoppingList = async () => {
-  if (!props.recipe) return
-  
-  let ingredients = []
-  
-  // Si des sections existent et sont sélectionnées
-  if (props.recipe.sections && props.recipe.sections.length > 0 && selectedSections.value.length > 0) {
-    // Récupérer les ingrédients des sections sélectionnées
-    sectionsWithIngredients.value.forEach((section, index) => {
-      const sectionKey = section.id || index.toString()
-      if (selectedSections.value.includes(sectionKey)) {
-        section.ingredients.forEach(ingredient => {
-          ingredients.push({
-            name: ingredient.name,
-            amount: ingredient.amount || null,
-            unit: ingredient.unit || null,
-            recipeId: props.recipe.id
-          })
-        })
-      }
-    })
-  } else if (props.recipe.ingredients && props.recipe.ingredients.length > 0) {
-    // Ancien format : utiliser tous les ingrédients
-    ingredients = props.recipe.ingredients.map(ingredient => ({
+  const ingredients = ingredientSections.value
+    .filter(section => selectedSections.value.includes(section.id))
+    .flatMap(section => section.ingredients.map(ingredient => ({
       name: ingredient.name,
-      amount: ingredient.amount || null,
-      unit: ingredient.unit || null,
+      amount: ingredient.amountNum,
+      unit: ingredient.unit ?? '',
       recipeId: props.recipe.id
-    }))
-  }
-  
+    })))
+
   if (ingredients.length === 0) {
     $toast.error(
       'Erreur !',
@@ -391,18 +366,18 @@ const confirmAddToShoppingList = async () => {
     )
     return
   }
-  
+
   try {
     // Utiliser la nouvelle méthode qui vérifie toutes les listes
     await shoppingStore.addIngredientsToLists(ingredients)
-    
+
     // Afficher un toast de confirmation
     $toast.success(
       'Recette ajoutée !',
       `${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} ajouté${ingredients.length > 1 ? 's' : ''} à votre liste de courses`,
       3000
     )
-    
+
     closeShoppingModal()
   } catch (error) {
     console.error('Erreur lors de l\'ajout à la liste de courses:', error)
@@ -419,28 +394,11 @@ const addToPlanning = () => {
   showPlanningModal.value = true
 }
 
-// Fonction pour calculer le temps total
-const getTotalTime = () => {
-  if (!props.recipe) return 0
-  
-  const prepTime = props.recipe.prepTime
-  const cookTime = props.recipe.cookTime
-  
-  // Si prepTime est une string, retourner 0 (format non supporté)
-  if (typeof prepTime === 'string') return 0
-  
-  const prep = prepTime || 0
-  const cook = cookTime || 0
-  const total = prep + cook
-  
-  return total
-}
-
 const closePlanningModal = () => {
   showPlanningModal.value = false
 }
 
-const preventNavigation = (event) => {
+const preventNavigation = (event: Event) => {
   event.stopPropagation()
   event.preventDefault()
 }
@@ -462,4 +420,4 @@ const deleteRecipe = () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-</style> 
+</style>

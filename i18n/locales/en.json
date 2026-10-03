@@ -97,15 +97,44 @@
       "tags": {
         "label": "Tags",
         "all": "All tags",
-        "none": "No tags available"
-      }
+        "none": "No tags available",
+        "selected": "{count} tag(s) selected"
+      },
+      "clear": "Clear filters",
+      "count": "no recipes | {count} recipe | {count} recipes"
+    },
+    "count": "no recipes | {count} recipe | {count} recipes",
+    "empty": {
+      "title": "No recipes found",
+      "description": "Try changing your search criteria or clearing the filters.",
+      "clearFilters": "Clear filters"
+    },
+    "loading": "Loading recipes...",
+    "loadError": {
+      "title": "Could not load recipes",
+      "retry": "Retry"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    },
+    "detail": {
+      "loading": "Loading recipe...",
+      "loadError": "Could not load the recipe",
+      "notFound": "Recipe not found",
+      "backToList": "Back to recipes",
+      "ingredientsLoading": "Loading ingredients...",
+      "noIngredients": "This recipe has no ingredients yet."
     }
   },
   "favorites": {
     "title": "Mes favoris",
     "subtitle": "Retrouvez ici toutes vos recettes préférées",
     "empty": "Vous n'avez pas encore de favoris",
-    "addFirst": "Ajoutez votre première recette favorite !"
+    "addFirst": "Ajoutez votre première recette favorite !",
+    "loading": "Loading your favorites...",
+    "loadError": "Could not load favorites"
   },
   "shopping": {
     "title": "Listes de courses",
@@ -114,7 +143,9 @@
     "addItem": "Ajouter un article",
     "clearChecked": "Vider les cochés",
     "empty": "Aucune liste de courses",
-    "createFirst": "Créez votre première liste !"
+    "createFirst": "Créez votre première liste !",
+    "loading": "Loading your shopping lists...",
+    "loadError": "Could not load shopping lists"
   },
   "planning": {
     "title": "Planning hebdomadaire",
@@ -123,7 +154,9 @@
     "addCustom": "Repas personnalisé",
     "notes": "Notes du jour",
     "empty": "Aucun repas planifié",
-    "planFirst": "Planifiez votre premier repas !"
+    "planFirst": "Planifiez votre premier repas !",
+    "loading": "Loading your planning...",
+    "loadError": "Could not load the planning"
   },
   "auth": {
     "login": {
@@ -157,4 +190,4 @@
     "french": "French",
     "english": "English"
   }
-} 
+}

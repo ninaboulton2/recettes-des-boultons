@@ -47,8 +47,8 @@
             :disabled="availableTags.length === 0"
             :class="[
               'w-full px-4 py-2 border rounded-lg text-left flex justify-between items-center',
-              availableTags.length === 0 
-                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' 
+              availableTags.length === 0
+                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
                 : 'border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             ]"
           >
@@ -59,13 +59,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
           </button>
-          
+
           <!-- Dropdown -->
           <div v-if="showTagsDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
             <div class="p-2 max-h-48 overflow-y-auto">
-              <label 
-                v-for="tag in availableTags" 
-                :key="tag" 
+              <label
+                v-for="tag in availableTags"
+                :key="tag"
                 class="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
               >
                 <input
@@ -91,89 +91,137 @@
           Effacer les filtres
         </button>
         <span class="text-sm text-gray-500">
-          {{ filteredRecipes.length }} recette{{ filteredRecipes.length > 1 ? 's' : '' }}
+          {{ $t('recipes.filters.count', totalCount) }}
         </span>
       </div>
     </div>
 
-    <!-- Loading State -->
-    <LoadingState v-if="recipesStore.isLoading" message="Chargement des recettes..." />
+    <!-- Loading State (squelette) -->
+    <div v-if="status === 'pending'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6" aria-busy="true">
+      <div v-for="n in 8" :key="n" class="animate-pulse">
+        <div class="bg-gray-200 rounded-lg h-52 mb-4"></div>
+        <div class="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
+        <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </div>
 
     <!-- Error State -->
-    <ErrorState 
-      v-else-if="recipesStore.error" 
-      :message="recipesStore.error"
-      :retry-action="loadRecipes"
-      title="Erreur de chargement des recettes"
+    <ErrorState
+      v-else-if="error"
+      :message="error.message"
+      :retry-action="() => refresh()"
+      :title="$t('recipes.loadError.title')"
+      :retry-text="$t('recipes.loadError.retry')"
     />
 
     <!-- Recipes Grid -->
-    <div v-else-if="filteredRecipes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-      <NuxtLink
-        v-for="recipe in filteredRecipes"
-        :key="recipe.id"
-        :to="`/recettes/${recipe.id}`"
-        class="block h-full"
-      >
-        <RecipeCard :recipe="recipe" />
-      </NuxtLink>
-    </div>
+    <template v-else-if="recipes.length > 0">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div
+          v-for="recipe in recipes"
+          :key="recipe.id"
+          class="block h-full"
+        >
+          <RecipeCard :recipe="recipe" />
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <nav v-if="totalPages > 1" class="mt-8 flex items-center justify-center gap-4" aria-label="Pagination">
+        <button
+          type="button"
+          @click="page--"
+          :disabled="page <= 1"
+          class="px-4 py-2 text-sm font-medium text-primary-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ $t('recipes.pagination.previous') }}
+        </button>
+        <span class="text-sm text-gray-600">
+          {{ $t('recipes.pagination.page', { page, total: totalPages }) }}
+        </span>
+        <button
+          type="button"
+          @click="page++"
+          :disabled="page >= totalPages"
+          class="px-4 py-2 text-sm font-medium text-primary-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ $t('recipes.pagination.next') }}
+        </button>
+      </nav>
+    </template>
 
     <!-- Empty State -->
-    <div v-else class="text-center py-12">
-      <div class="max-w-md mx-auto">
-        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-        </svg>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">
-          Aucune recette trouvée
-        </h3>
-        <p class="text-gray-600 mb-4">
-          Essayez de modifier vos critères de recherche ou de supprimer les filtres.
-        </p>
+    <EmptyState
+      v-else
+      :title="$t('recipes.empty.title')"
+      :message="$t('recipes.empty.description')"
+    >
+      <template #action>
         <button
           @click="clearFilters"
           class="btn-primary"
         >
-          Effacer les filtres
+          {{ $t('recipes.empty.clearFilters') }}
         </button>
-      </div>
-    </div>
+      </template>
+    </EmptyState>
   </div>
 </template>
 
-<script setup>
-import { useRoute } from 'vue-router'
-import { onMounted, onUnmounted } from 'vue'
-import RecipeCard from '@/components/RecipeCard.vue'
-import LoadingState from '@/components/LoadingState.vue'
-import ErrorState from '@/components/ErrorState.vue'
-const recipesStore = useRecipesStore()
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+
 const route = useRoute()
 
-const categoryParam = computed(() => route.params.category)
-const categoryName = computed(() => {
-  // Adapter si besoin pour afficher un nom plus lisible
-  const map = {
-    'soupes': 'Soupes',
-    'entrees': 'Entrées, Salades, Pains et accompagnements',
-    'plats': 'Plats',
-    'poissons': 'Poissons',
-    'viandes': 'Viandes',
-    'yaourts et fromages': 'Yaourts et fromages',
-    'desserts et gâteaux': 'Desserts et gâteaux',
-    'boissons': 'Boissons',
-    'confitures': 'Confitures'
-  }
-  return map[categoryParam.value] || categoryParam.value
+const CATEGORY_NAMES: Record<string, string> = {
+  'soupes': 'Soupes',
+  'entrees': 'Entrées, Salades, Pains et accompagnements',
+  'plats': 'Plats',
+  'poissons': 'Poissons',
+  'viandes': 'Viandes',
+  'yaourts et fromages': 'Yaourts et fromages',
+  'desserts et gâteaux': 'Desserts et gâteaux',
+  'boissons': 'Boissons',
+  'confitures': 'Confitures'
+}
+
+const categoryParam = computed(() => {
+  const value = route.params.category
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+})
+const categoryName = computed(() => CATEGORY_NAMES[categoryParam.value] ?? categoryParam.value)
+
+// Filtres locaux à la page (la catégorie est fixée par l'URL)
+const searchQuery = ref('')
+const selectedTags = ref<string[]>([])
+const showTagsDropdown = ref(false)
+const page = ref(1)
+
+// Recherche : la RPC n'est appelée qu'après une courte pause de saisie
+const debouncedQuery = ref('')
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+watch(searchQuery, (value) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => { debouncedQuery.value = value }, 300)
+})
+onUnmounted(() => clearTimeout(debounceTimer))
+
+watch([debouncedQuery, categoryParam, () => selectedTags.value.join('\u0000')], () => {
+  page.value = 1
 })
 
-const searchQuery = ref('')
-const selectedTags = ref([])
-const showTagsDropdown = ref(false)
+// Liste paginée (RPC search_recipes, SSR)
+const { recipes, totalCount, totalPages, status, error, refresh } = useRecipeSearch('category', {
+  query: debouncedQuery,
+  category: categoryParam,
+  tags: selectedTags,
+  page
+})
 
-// Computed properties
-const availableTags = computed(() => recipesStore.categoryTags)
+// Tags disponibles dans cette catégorie (facettes)
+const facets = useRecipeFacets()
+const availableTags = computed(() => facets.tagsForCategory(categoryParam.value))
 
 // Fermer le dropdown lors d'un clic à l'extérieur
 onMounted(() => {
@@ -184,58 +232,30 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-// Fonction pour normaliser les accents (insensible aux accents)
-const normalizeAccents = (str) => {
-  if (!str) return ''
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
-    .toLowerCase()
-}
-
-const filteredRecipes = computed(() => {
-  let filtered = recipesStore.filteredRecipes.filter(r => r.category === categoryParam.value)
-  if (searchQuery.value) {
-    const normalizedQuery = normalizeAccents(searchQuery.value)
-    filtered = filtered.filter(recipe => 
-      normalizeAccents(recipe.title).includes(normalizedQuery) ||
-      normalizeAccents(recipe.description).includes(normalizedQuery) ||
-      recipe.tags.some(tag => normalizeAccents(tag).includes(normalizedQuery))
-    )
-  }
-  if (selectedTags.value.length > 0) {
-    filtered = filtered.filter(recipe => 
-      selectedTags.value.some(selectedTag => 
-        recipe.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
-      )
-    )
-  }
-  return filtered
-})
-
 const clearFilters = () => {
   searchQuery.value = ''
+  debouncedQuery.value = ''
   selectedTags.value = []
   showTagsDropdown.value = false
 }
 
-// Fonction pour recharger les recettes en cas d'erreur
-const loadRecipes = async () => {
-  await recipesStore.loadFromSupabase()
+const toggleTag = (tag: string) => {
+  const index = selectedTags.value.findIndex(t => t.toLowerCase() === tag.toLowerCase())
+  if (index !== -1) {
+    selectedTags.value.splice(index, 1)
+  } else {
+    selectedTags.value.push(tag)
+  }
 }
 
-const toggleTag = (tag) => {
-  recipesStore.toggleTag(tag)
-}
-
-const toggleTagsDropdown = (event) => {
+const toggleTagsDropdown = (event: Event) => {
   event.stopPropagation()
   showTagsDropdown.value = !showTagsDropdown.value
 }
 
-const handleClickOutside = (event) => {
+const handleClickOutside = (event: MouseEvent) => {
   const dropdown = document.querySelector('[data-tags-dropdown]')
-  if (dropdown && !dropdown.contains(event.target)) {
+  if (dropdown && event.target instanceof Node && !dropdown.contains(event.target)) {
     showTagsDropdown.value = false
   }
 }
@@ -247,4 +267,4 @@ useHead({
     { name: 'description', content: () => `Découvrez toutes les recettes de la catégorie ${categoryName.value}.` }
   ]
 })
-</script> 
+</script>

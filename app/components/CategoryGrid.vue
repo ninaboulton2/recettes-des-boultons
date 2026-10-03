@@ -22,17 +22,20 @@
         <p class="text-gray-600 text-sm">
           {{ category.description }}
         </p>
+        <p v-if="counts" class="text-xs text-gray-500">
+          {{ $t('recipes.count', counts[category.id] ?? 0) }}
+        </p>
       </div>
     </NuxtLink>
   </div>
 </template>
 
-<script setup>
-// Props: categories (array)
-defineProps({
-  categories: {
-    type: Array,
-    required: true
-  }
-})
-</script> 
+<script setup lang="ts">
+import type { Category } from '#shared/types'
+
+defineProps<{
+  categories: Category[]
+  /** Nombre de recettes par catégorie (facettes) ; masqué si absent. */
+  counts?: Record<string, number> | null
+}>()
+</script>
