@@ -180,3 +180,105 @@ export function totalTime(recipe: Pick<RecipeSummary, 'prepTime' | 'cookTime'>):
   const total = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)
   return total > 0 ? total : null
 }
+
+// ---------------------------------------------------------------------------
+// Mise à l'échelle des quantités (ajustement des portions)
+// ---------------------------------------------------------------------------
+
+/** Pas d'arrondi « lisibles » pour les petites quantités : quarts et tiers. */
+const READABLE_STEPS: readonly number[] = [0, 1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4, 1]
+
+/**
+ * Facteur d'échelle entre les portions de la recette et les portions voulues.
+ * `1` si l'une des deux valeurs est absente ou nulle (pas de mise à l'échelle).
+ */
+export function servingsFactor(baseServings: number | null | undefined, targetServings: number | null | undefined): number {
+  if (!baseServings || !targetServings || baseServings <= 0 || targetServings <= 0) return 1
+  return targetServings / baseServings
+}
+
+/**
+ * Arrondi lisible en cuisine :
+ * - < 10 : au quart ou au tiers le plus proche (½, ¼, ¾, ⅓, ⅔) ; une valeur
+ *   qui tomberait à 0 garde une décimale (0,1) pour ne pas disparaître ;
+ * - 10 à 100 : une décimale ;
+ * - ≥ 100 : entier.
+ */
+export function roundReadable(value: number): number {
+  if (!Number.isFinite(value)) return value
+  if (value < 0) return -roundReadable(-value)
+  if (value >= 100) return Math.round(value)
+  if (value >= 10) return Math.round(value * 10) / 10
+  const whole = Math.floor(value)
+  const rest = value - whole
+  let best = READABLE_STEPS[0] ?? 0
+  for (const step of READABLE_STEPS) {
+    if (Math.abs(step - rest) < Math.abs(best - rest)) best = step
+  }
+  const rounded = whole + best
+  if (rounded === 0 && value > 0) return Math.max(0.1, Math.round(value * 10) / 10)
+  return rounded
+}
+
+/** Quantité numérique mise à l'échelle et arrondie, `null` si non interprétable. */
+export function scaleAmount(amountNum: number | null | undefined, factor: number): number | null {
+  if (amountNum === null || amountNum === undefined || !Number.isFinite(amountNum)) return null
+  if (factor === 1) return amountNum
+  return roundReadable(amountNum * factor)
+}
+
+/**
+ * Quantité affichée après mise à l'échelle : fractions pour les petites
+ * quantités (« 1 ½ »), une décimale au-delà (« 12,5 »), entier au-delà de 100.
+ * Sans valeur numérique, le texte saisi est rendu tel quel (il ne peut pas
+ * être mis à l'échelle : « une pincée », « 2 à 3 »).
+ */
+export function formatScaledAmount(
+  amountNum: number | null | undefined,
+  amount: string | null | undefined,
+  factor: number
+): string {
+  const scaled = scaleAmount(amountNum, factor)
+  if (scaled === null) return amount?.trim() ?? ''
+  if (scaled >= 10) {
+    return scaled.toLocaleString('fr-FR', { maximumFractionDigits: scaled >= 100 ? 0 : 1 })
+  }
+  return formatAmount(scaled, null)
+}
+
+/** Une étape « à plat » pour le mode cuisine : section d'origine + numéro global. */
+export interface FlatStep {
+  id: string
+  sectionId: string
+  sectionName: string
+  content: string
+  /** Position dans la section (1-based). */
+  stepNumber: number
+  /** Nombre d'étapes de la section. */
+  stepCount: number
+}
+
+/** Aplatit les instructions de toutes les sections, dans l'ordre d'affichage. */
+export function flattenSteps(sections: readonly RecipeSection[]): FlatStep[] {
+  return sectionsWithInstructions(sections).flatMap(section =>
+    section.instructions.map((instruction, index) => ({
+      id: instruction.id,
+      sectionId: section.id,
+      sectionName: section.name,
+      content: instruction.content,
+      stepNumber: index + 1,
+      stepCount: section.instructions.length
+    }))
+  )
+}
+
+/** Clé i18n du nom d'une catégorie (`categories.<clé>.name`) : accents retirés, espaces → `_`. */
+export function categoryI18nKey(category: string | null | undefined): string {
+  const slug = (category ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+  return `categories.${slug}.name`
+}

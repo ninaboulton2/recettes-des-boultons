@@ -132,10 +132,166 @@
     }
   },
   "recipeDetail": {
-    "_agent": "3B"
+    "_agent": "3B",
+    "back": "Back",
+    "category": "Category",
+    "prepTime": "Prep",
+    "cookTime": "Cook",
+    "totalTime": "Total",
+    "minutes": "{n} min",
+    "servings": "Servings",
+    "servingsCount": "{count} serving | {count} servings",
+    "servingsIncrease": "One more serving",
+    "servingsDecrease": "One less serving",
+    "servingsReset": "Back to {count} servings",
+    "scaledNote": "Quantities adjusted for {count} servings (original recipe: {base}).",
+    "photoAlt": "Photo: {title}",
+    "noPhoto": "No photo yet",
+    "ingredients": {
+      "title": "Ingredients",
+      "optional": "optional",
+      "progress": "{checked}/{total} checked",
+      "resetChecks": "Uncheck all",
+      "empty": "This recipe has no ingredients yet."
+    },
+    "steps": {
+      "title": "Method",
+      "step": "Step {n}",
+      "empty": "This recipe has no steps yet."
+    },
+    "notes": {
+      "title": "Notes and tips"
+    },
+    "actions": {
+      "favoriteAdd": "Add to favorites",
+      "favoriteRemove": "Remove from favorites",
+      "favoriteAdded": "Recipe added to favorites",
+      "favoriteRemoved": "Recipe removed from favorites",
+      "favoriteError": "Could not update favorites",
+      "shopping": "Shopping",
+      "planning": "Planning",
+      "cook": "Cooking mode",
+      "print": "Print",
+      "edit": "Edit",
+      "delete": "Delete",
+      "loginRequired": "Sign in to use this feature."
+    },
+    "shopping": {
+      "title": "Add to a shopping list",
+      "description": "Choose the list and the ingredient sections to add.",
+      "list": "List",
+      "noLists": "You don’t have a shopping list yet.",
+      "newListName": "New list name",
+      "createList": "Create list",
+      "sections": "Sections to add",
+      "selectAll": "Select all",
+      "selectNone": "Select none",
+      "scaledFor": "Quantities computed for {count} servings.",
+      "add": "Add to list",
+      "cancel": "Cancel",
+      "success": "{count} item added to “{list}” | {count} items added to “{list}”",
+      "error": "Could not add the recipe to the list.",
+      "noSelection": "Select at least one section."
+    },
+    "delete": {
+      "title": "Delete recipe",
+      "message": "Delete “{title}”? This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "success": "Recipe deleted",
+      "error": "Could not delete the recipe."
+    },
+    "cooking": {
+      "title": "Cooking mode",
+      "exit": "Exit",
+      "prev": "Previous",
+      "next": "Next",
+      "finish": "Done",
+      "stepOf": "Step {current} of {total}",
+      "ingredients": "Ingredients",
+      "noSteps": "This recipe has no steps to follow.",
+      "wakeLockOn": "Screen kept awake",
+      "keyboardHint": "← → to navigate · Esc to exit"
+    }
   },
   "editor": {
-    "_agent": "3B"
+    "_agent": "3B",
+    "titleNew": "New recipe",
+    "titleEdit": "Edit recipe",
+    "fields": {
+      "title": "Recipe title",
+      "titlePlaceholder": "Recipe name",
+      "category": "Category",
+      "categoryPlaceholder": "Choose a category",
+      "description": "Description",
+      "descriptionPlaceholder": "A few words about the recipe…",
+      "prepTime": "Prep (min)",
+      "cookTime": "Cook (min)",
+      "servings": "Servings",
+      "tags": "Tags",
+      "tagsPlaceholder": "vegetarian, quick… (Enter to add)",
+      "notes": "Notes and tips",
+      "notesPlaceholder": "Tips, variations, personal notes…"
+    },
+    "photo": {
+      "label": "Photo",
+      "hint": "JPEG, PNG or WebP. Resized to 1600 px max and converted to WebP before upload.",
+      "choose": "Choose a photo",
+      "replace": "Replace",
+      "remove": "Remove photo",
+      "pending": "New photo: uploaded when you save.",
+      "removed": "The photo will be removed when you save.",
+      "invalid": "Choose a JPEG, PNG or WebP image."
+    },
+    "sections": {
+      "ingredientsTitle": "Ingredients",
+      "stepsTitle": "Steps",
+      "addSection": "Add a section",
+      "sectionName": "Section name (e.g. For the dough)",
+      "defaultName": "New section",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove section",
+      "addIngredient": "Add an ingredient",
+      "addStep": "Add a step",
+      "emptyIngredients": "No ingredient in this section.",
+      "emptySteps": "No step in this section."
+    },
+    "ingredient": {
+      "amount": "Amount",
+      "amountPlaceholder": "2",
+      "unit": "Unit",
+      "unitPlaceholder": "Unit",
+      "unitSearch": "Search or type a unit…",
+      "unitCreate": "Use “{unit}”",
+      "unitNone": "No unit",
+      "name": "Ingredient",
+      "namePlaceholder": "Ingredient name",
+      "optional": "Optional",
+      "remove": "Remove ingredient"
+    },
+    "step": {
+      "placeholder": "Describe this step…",
+      "remove": "Remove step",
+      "drag": "Drag to reorder"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "create": "Create recipe",
+      "save": "Save",
+      "close": "Close"
+    },
+    "validation": {
+      "needIngredients": "Add at least one ingredient.",
+      "needSteps": "Add at least one step.",
+      "fixErrors": "Fix the highlighted fields."
+    },
+    "toasts": {
+      "created": "Recipe created",
+      "updated": "Recipe updated",
+      "error": "Could not save",
+      "photoError": "The photo could not be uploaded; the recipe was saved without it."
+    }
   },
   "favorites": {
     "title": "Mes favoris",
