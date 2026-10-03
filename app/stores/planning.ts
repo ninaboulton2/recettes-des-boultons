@@ -1,32 +1,23 @@
 import { defineStore } from 'pinia'
-import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse, toUserMessage } from '~/composables/useApiError'
 import { ref } from 'vue'
-import type { DayMeals, MealType, PlanningMeal, RecipeSummary, WeekPlanning } from '#shared/types'
+import { apiFetch } from '~/composables/useApi'
+import { apiErrorFromResponse } from '~/composables/useApiError'
+import type { DayMeals, MealType, PlanningMeal, WeekPlanning } from '#shared/types'
 import type { Database } from '#shared/types/database'
-import { toRecipeSummary } from '#shared/utils/recipes'
+import type { NoteType } from '#shared/schemas/planning'
+import { RECIPE_SUMMARY_COLUMNS, toRecipeSummary } from '#shared/utils/recipes'
 import { weekBounds } from '~/utils/week'
 import { useAuthStore } from './auth'
 
 type Meal = PlanningMeal
 
-/** Recette « factice » affichée pour un repas personnalisé (sans recette). */
-function customMealRecipe(meal: { id: string, custom_title: string, created_at: string | null, updated_at: string | null }): RecipeSummary {
-  return {
-    id: `custom-${meal.id}`,
-    title: meal.custom_title,
-    description: 'Repas personnalisé',
-    category: 'Personnalisé',
-    prepTime: 0,
-    cookTime: 0,
-    servings: 1,
-    image: '/images/custom-meal.jpg',
-    photoPath: null,
-    tags: ['personnalisé'],
-    notes: '',
-    createdAt: meal.created_at,
-    updatedAt: meal.updated_at
-  }
+/** Appel d'écriture vers `/api/*` : lève une `ApiError` si la réponse n'est pas 2xx. */
+async function request(url: string, init: RequestInit = {}): Promise<void> {
+  const response = await apiFetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init
+  })
+  if (!response.ok) throw await apiErrorFromResponse(response)
 }
 
 /**
@@ -34,8 +25,11 @@ function customMealRecipe(meal: { id: string, custom_title: string, created_at: 
  *
  * Lecture directe sous RLS (`planning` + `planning_notes`) par plage de dates :
  * `loadWeek(date)` charge la semaine demandée (et élargit la plage connue),
- * `refresh()` recharge toute la plage déjà consultée. Les écritures passent
- * encore par `/api/planning*`.
+ * `refresh()` recharge toute la plage déjà consultée.
+ *
+ * Les écritures passent par `/api/planning*` (validation Zod côté serveur) puis
+ * rechargent la plage : les actions LÈVENT en cas d'erreur (`ApiError`), à
+ * convertir avec `toUserMessage()` par l'appelant (`usePlanningWeek`).
  */
 export const usePlanningStore = defineStore('planning', () => {
   const supabase = useSupabaseClient<Database>()
@@ -57,8 +51,6 @@ export const usePlanningStore = defineStore('planning', () => {
 
     try {
       const userId = currentUserId()
-
-      // Si pas d'utilisateur connecté, vider le planning
       if (!userId) {
         weekPlanning.value = {}
         loadedRange.value = null
@@ -69,7 +61,7 @@ export const usePlanningStore = defineStore('planning', () => {
       const [mealsResult, notesResult] = await Promise.all([
         supabase
           .from('planning')
-          .select('*, recipe:recipes(id, title, description, category, prep_time, cook_time, servings, image, photo_path, tags, notes, created_at, updated_at)')
+          .select(`*, recipe:recipes(${RECIPE_SUMMARY_COLUMNS})`)
           .gte('date_string', from)
           .lte('date_string', to)
           .order('date_string', { ascending: true })
@@ -88,11 +80,6 @@ export const usePlanningStore = defineStore('planning', () => {
 
       for (const row of mealsResult.data) {
         const mealType: MealType = row.meal_type === 'dinner' ? 'dinner' : 'lunch'
-        const recipe = row.recipe
-          ? toRecipeSummary(row.recipe)
-          : row.custom_title
-            ? customMealRecipe({ id: row.id, custom_title: row.custom_title, created_at: row.created_at, updated_at: row.updated_at })
-            : null
         dayOf(row.date_string)[mealType].push({
           id: row.id,
           dateString: row.date_string,
@@ -102,7 +89,7 @@ export const usePlanningStore = defineStore('planning', () => {
           userId: row.user_id,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
-          recipe
+          recipe: row.recipe ? toRecipeSummary(row.recipe) : null
         })
       }
 
@@ -118,7 +105,6 @@ export const usePlanningStore = defineStore('planning', () => {
       loadedForUserId.value = userId
       return planning
     } catch (err) {
-      console.error('Erreur chargement planning:', err)
       error.value = err instanceof Error ? err.message : 'Erreur inconnue'
       throw err
     } finally {
@@ -129,8 +115,9 @@ export const usePlanningStore = defineStore('planning', () => {
   /** Charge la semaine contenant `date` (élargit la plage connue si besoin). */
   const loadWeek = async (date: Date = new Date()): Promise<WeekPlanning> => {
     const { from, to } = weekBounds(date)
-    const range = loadedRange.value && loadedForUserId.value === currentUserId()
-      ? { from: from < loadedRange.value.from ? from : loadedRange.value.from, to: to > loadedRange.value.to ? to : loadedRange.value.to }
+    const known = loadedRange.value
+    const range = known && loadedForUserId.value === currentUserId()
+      ? { from: from < known.from ? from : known.from, to: to > known.to ? to : known.to }
       : { from, to }
     return loadRange(range.from, range.to)
   }
@@ -155,8 +142,8 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  // Charger le planning depuis Supabase (compatibilité : utilisé par les actions d'écriture)
-  const loadPlanning = async () => {
+  /** Recharge sans lever (changement d'utilisateur depuis le layout, par exemple). */
+  const refreshPlanning = async (): Promise<void> => {
     try {
       await refresh()
     } catch {
@@ -164,324 +151,86 @@ export const usePlanningStore = defineStore('planning', () => {
     }
   }
 
-  // Actions
-  const addMeal = async (date: string, mealType: 'lunch' | 'dinner', recipe: RecipeSummary) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
+  /** Repas et notes d'un jour (`YYYY-MM-DD`), vides si le jour est inconnu. */
+  const getDayMeals = (dateString: string): DayMeals => {
+    const day = weekPlanning.value[dateString]
+    return day ? { ...day, lunch: day.lunch, dinner: day.dinner } : { lunch: [], dinner: [] }
+  }
 
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
+  /** Repas identifié par son id dans la plage chargée. */
+  const findMeal = (mealId: string): Meal | null => {
+    for (const day of Object.values(weekPlanning.value)) {
+      const meal = [...day.lunch, ...day.dinner].find(candidate => candidate.id === mealId)
+      if (meal) return meal
+    }
+    return null
+  }
 
-      const response = await apiFetch('/api/planning', {
+  // --- Écritures (lèvent une ApiError, puis rechargent) ---
+
+  /** Ajoute une recette à un créneau. */
+  const addMeal = async (dateString: string, mealType: MealType, recipe: { id: string }): Promise<void> => {
+    await request('/api/planning', {
+      method: 'POST',
+      body: JSON.stringify({ dateString, mealType, recipeId: recipe.id })
+    })
+    await refresh()
+  }
+
+  /** Ajoute un repas personnalisé (sans recette) à un créneau. */
+  const addCustomMeal = async (dateString: string, mealType: MealType, customTitle: string): Promise<void> => {
+    await request('/api/planning', {
+      method: 'POST',
+      body: JSON.stringify({ dateString, mealType, customTitle })
+    })
+    await refresh()
+  }
+
+  /** Retire un repas (retrait local immédiat, puis rechargement). */
+  const removeMeal = async (mealId: string): Promise<void> => {
+    const meal = findMeal(mealId)
+    await request(`/api/planning/${mealId}`, { method: 'DELETE' })
+    if (meal) {
+      const day = weekPlanning.value[meal.dateString]
+      if (day) day[meal.mealType] = day[meal.mealType].filter(candidate => candidate.id !== mealId)
+    }
+    await refresh()
+  }
+
+  /** Déplace un repas vers un autre jour / créneau (`PUT /api/planning/:id`, identifiant conservé). */
+  const moveMeal = async (mealId: string, toDate: string, toMealType: MealType): Promise<void> => {
+    const meal = findMeal(mealId)
+    if (meal && meal.dateString === toDate && meal.mealType === toMealType) return
+
+    await request(`/api/planning/${mealId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ dateString: toDate, mealType: toMealType })
+    })
+
+    // Mise à jour locale immédiate (le rechargement confirme ensuite).
+    if (meal) {
+      const source = weekPlanning.value[meal.dateString]
+      if (source) source[meal.mealType] = source[meal.mealType].filter(candidate => candidate.id !== mealId)
+      const target = (weekPlanning.value[toDate] ??= { lunch: [], dinner: [] })
+      target[toMealType].push({ ...meal, dateString: toDate, mealType: toMealType })
+    }
+    await refresh()
+  }
+
+  /**
+   * Enregistre une note (`day`, `lunch` ou `dinner`) ; un contenu vide la supprime.
+   */
+  const saveNote = async (dateString: string, noteType: NoteType, content: string | null): Promise<void> => {
+    const trimmed = content?.trim() ?? ''
+    if (trimmed === '') {
+      await request(`/api/planning-notes?dateString=${dateString}&noteType=${noteType}`, { method: 'DELETE' })
+    } else {
+      await request('/api/planning-notes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dateString: date,
-          mealType,
-          recipeId: recipe.id,
-          userId
-        })
+        body: JSON.stringify({ dateString, noteType, content: trimmed })
       })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Forcer la mise à jour du store en rechargeant depuis l'API
-        // Cela garantit que les données sont synchronisées et correctement formatées
-        await loadPlanning()
-
-        return { success: true, message: data.message }
-      } else {
-        throw new Error('Erreur lors de l\'ajout au planning')
-      }
-    } catch (error) {
-      console.error('Erreur ajout repas:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
     }
-  }
-
-  const addCustomMeal = async (date: string, mealType: 'lunch' | 'dinner', customTitle: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
-
-      const response = await apiFetch('/api/planning', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dateString: date,
-          mealType,
-          customTitle,
-          userId
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Forcer la mise à jour du store en rechargeant depuis l'API
-        // Cela garantit que les données sont synchronisées et correctement formatées
-        await loadPlanning()
-
-        return { success: true, message: data.message }
-      } else {
-        throw new Error('Erreur lors de l\'ajout du repas personnalisé')
-      }
-    } catch (error) {
-      console.error('Erreur ajout repas personnalisé:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const removeMeal = async (date: string, mealType: 'lunch' | 'dinner', mealId: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
-
-      const response = await apiFetch(`/api/planning/${mealId}?userId=${userId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      // Supprimer du planning local
-      if (weekPlanning.value[date] && weekPlanning.value[date][mealType]) {
-        weekPlanning.value[date][mealType] = weekPlanning.value[date][mealType].filter(meal => meal.id !== mealId)
-      }
-
-      return { success: true, message: 'Repas supprimé du planning' }
-    } catch (error) {
-      console.error('Erreur suppression repas:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const updateMealNote = (date: string, mealType: 'lunch' | 'dinner', mealId: string, _note: string) => {
-    if (weekPlanning.value[date]) {
-      const meal = weekPlanning.value[date][mealType].find(m => m.id === mealId)
-      if (meal) {
-        // Note: Pour l'instant, on garde les notes en local
-        // TODO: Ajouter une API pour mettre à jour les notes
-        // meal.note = note // Commenté car la propriété note n'existe pas dans l'interface Meal
-      }
-    }
-  }
-
-  const updateDayNotes = async (date: string, notes: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
-
-      const response = await apiFetch('/api/planning-notes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dateString: date,
-          noteType: 'day',
-          content: notes || null,
-          userId: userId
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour le store local
-        if (!weekPlanning.value[date]) {
-          weekPlanning.value[date] = {
-            lunch: [],
-            dinner: []
-          }
-        }
-        weekPlanning.value[date].notes = notes
-
-        return { success: true, message: data.message }
-      } else {
-        throw new Error('Erreur lors de la mise à jour des notes')
-      }
-    } catch (error) {
-      console.error('Erreur mise à jour notes jour:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const deleteDayNotes = async (date: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
-
-      const response = await apiFetch(`/api/planning-notes?dateString=${date}&noteType=day&userId=${userId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour le store local
-        if (weekPlanning.value[date]) {
-          weekPlanning.value[date].notes = null
-        }
-
-        return { success: true, message: data.message }
-      } else {
-        throw new Error('Erreur lors de la suppression des notes')
-      }
-    } catch (error) {
-      console.error('Erreur suppression notes jour:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const updateGroupNote = async (date: string, mealType: 'lunch' | 'dinner', note: string) => {
-    try {
-      const authStore = useAuthStore()
-      const userId = authStore.currentUser?.id || null
-
-      if (!userId) {
-        throw new Error('Vous devez être connecté pour gérer votre planning')
-      }
-
-      const noteType = mealType === 'lunch' ? 'lunch' : 'dinner'
-
-      const response = await apiFetch('/api/planning-notes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dateString: date,
-          noteType,
-          content: note || null,
-          userId
-        })
-      })
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Mettre à jour le store local
-        if (!weekPlanning.value[date]) {
-          weekPlanning.value[date] = {
-            lunch: [],
-            dinner: []
-          }
-        }
-
-        if (mealType === 'lunch') {
-          weekPlanning.value[date].lunchGroupNote = note
-        } else {
-          weekPlanning.value[date].dinnerGroupNote = note
-        }
-
-        return { success: true, message: data.message }
-      } else {
-        throw new Error('Erreur lors de la mise à jour de la note de groupe')
-      }
-    } catch (error) {
-      console.error('Erreur mise à jour note groupe:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const moveMeal = async (fromDate: string, fromMealType: 'lunch' | 'dinner', toDate: string, toMealType: 'lunch' | 'dinner', mealId: string) => {
-    try {
-      // Récupérer le repas à déplacer
-      const mealToMove = weekPlanning.value[fromDate]?.[fromMealType]?.find(meal => meal.id === mealId)
-      if (!mealToMove) {
-        return { success: false, error: 'Repas non trouvé' }
-      }
-
-      // Supprimer de la source
-      await removeMeal(fromDate, fromMealType, mealId)
-
-      // Ajouter à la destination selon le type de repas
-      if (mealToMove.recipe && mealToMove.recipe.id.startsWith('custom-')) {
-        // Repas personnalisé
-        const customTitle = mealToMove.recipe.title
-        const result = await addCustomMeal(toDate, toMealType, customTitle)
-        return result
-      } else if (mealToMove.recipe) {
-        // Repas avec recette
-        const result = await addMeal(toDate, toMealType, mealToMove.recipe)
-        return result
-      } else {
-        return { success: false, error: 'Type de repas non reconnu' }
-      }
-    } catch (error) {
-      console.error('Erreur déplacement repas:', error)
-      const errorMessage = toUserMessage(error)
-      return { success: false, error: errorMessage }
-    }
-  }
-
-  const getDayMeals = (date: string): DayMeals => {
-    const day = weekPlanning.value[date]
-    if (!day) {
-      return {
-        lunch: [],
-        dinner: []
-      }
-    }
-
-    return {
-      lunch: day.lunch || [],
-      dinner: day.dinner || [],
-      notes: day.notes,
-      lunchGroupNote: day.lunchGroupNote,
-      dinnerGroupNote: day.dinnerGroupNote
-    }
-  }
-
-  // Méthode pour recharger le planning quand l'utilisateur change (layout)
-  const refreshPlanning = async () => {
-    await loadPlanning()
+    await refresh()
   }
 
   return {
@@ -495,19 +244,16 @@ export const usePlanningStore = defineStore('planning', () => {
     loadWeek,
     ensureWeekLoaded,
     refresh,
-    loadPlanning,
     refreshPlanning,
+    getDayMeals,
+    findMeal,
 
-    // Actions
+    // Écritures
     addMeal,
     addCustomMeal,
     removeMeal,
-    updateMealNote,
-    updateGroupNote,
-    updateDayNotes,
-    deleteDayNotes,
-    getDayMeals,
-    moveMeal
+    moveMeal,
+    saveNote
   }
 })
 
