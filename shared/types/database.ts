@@ -1,6 +1,6 @@
 // ============================================================================
 //  FICHIER GÉNÉRÉ — NE PAS ÉDITER À LA MAIN.
-//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0010) :
+//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0015) :
 //    npx supabase gen types typescript --local > shared/types/database.ts
 //  puis replacer cet en-tête. Après application des migrations en prod :
 //    npx supabase gen types typescript --project-id tzlkabxcmmbwhpyvmato --schema public
@@ -31,7 +31,20 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "favorites": {
+            "ai_usage": {
+                  Row: {
+                    "created_at": string,"duration_ms": number | null,"estimated_cost_usd": number | null,"feature": string,"id": string,"input_tokens": number,"model": string,"output_tokens": number,"provider": string,"status": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"duration_ms"?: number | null,"estimated_cost_usd"?: number | null,"feature"?: string,"id"?: string,"input_tokens"?: number,"model": string,"output_tokens"?: number,"provider": string,"status": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"duration_ms"?: number | null,"estimated_cost_usd"?: number | null,"feature"?: string,"id"?: string,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"provider"?: string,"status"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"favorites": {
                   Row: {
                     "created_at": string | null,"id": string,"recipe_id": string,"updated_at": string | null,"user_id": string
                   }
@@ -84,6 +97,19 @@ isOneToOne: false
                   }
                   Update: {
                     "content"?: string | null,"created_at"?: string | null,"id"?: string | null,"order_index"?: number | null,"recipe_id"?: string | null,"section_id"?: string | null,"updated_at"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"instructions_backup_cleanup": {
+                  Row: {
+                    "backed_up_at": string | null,"content": string | null,"correction": string | null,"created_at": string | null,"id": string | null,"order_index": number | null,"recipe_id": string | null,"section_id": string | null,"updated_at": string | null
+                  }
+                  Insert: {
+                    "backed_up_at"?: string | null,"content"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"order_index"?: number | null,"recipe_id"?: string | null,"section_id"?: string | null,"updated_at"?: string | null
+                  }
+                  Update: {
+                    "backed_up_at"?: string | null,"content"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"order_index"?: number | null,"recipe_id"?: string | null,"section_id"?: string | null,"updated_at"?: string | null
                   }
                   Relationships: [
                     
@@ -190,6 +216,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"recipe_ingredients_backup_cleanup": {
+                  Row: {
+                    "amount": string | null,"amount_num": number | null,"backed_up_at": string | null,"correction": string | null,"created_at": string | null,"id": string | null,"name": string | null,"optional": boolean | null,"order_index": number | null,"recipe_id": string | null,"section_id": string | null,"unit": string | null,"unit_code": string | null,"updated_at": string | null
+                  }
+                  Insert: {
+                    "amount"?: string | null,"amount_num"?: number | null,"backed_up_at"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"name"?: string | null,"optional"?: boolean | null,"order_index"?: number | null,"recipe_id"?: string | null,"section_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
+                  }
+                  Update: {
+                    "amount"?: string | null,"amount_num"?: number | null,"backed_up_at"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"name"?: string | null,"optional"?: boolean | null,"order_index"?: number | null,"recipe_id"?: string | null,"section_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"recipe_ingredients_orphans_20261003": {
                   Row: {
                     "amount": string | null,"amount_num": number | null,"archived_at": string | null,"created_at": string | null,"id": string | null,"name": string | null,"optional": boolean | null,"order_index": number | null,"recipe_id": string | null,"section_id": string | null,"unit": string | null,"unit_code": string | null,"updated_at": string | null
@@ -235,15 +274,28 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"recipes": {
+                },"recipe_sections_backup_cleanup": {
                   Row: {
-                    "category": string,"cook_time": number | null,"created_at": string | null,"description": string | null,"id": string,"image": string | null,"ingredients": NonNullable<Json>,"instructions": NonNullable<Json>,"notes": string | null,"photo_path": string | null,"prep_time": number | null,"search": unknown,"servings": number | null,"tags": (string)[] | null,"title": string,"updated_at": string | null
+                    "backed_up_at": string | null,"correction": string | null,"created_at": string | null,"id": string | null,"name": string | null,"order_index": number | null,"recipe_id": string | null,"type": string | null,"updated_at": string | null
                   }
                   Insert: {
-                    "category": string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"ingredients": NonNullable<Json>,"instructions": NonNullable<Json>,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title": string,"updated_at"?: string | null
+                    "backed_up_at"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"name"?: string | null,"order_index"?: number | null,"recipe_id"?: string | null,"type"?: string | null,"updated_at"?: string | null
                   }
                   Update: {
-                    "category"?: string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"ingredients"?: NonNullable<Json>,"instructions"?: NonNullable<Json>,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title"?: string,"updated_at"?: string | null
+                    "backed_up_at"?: string | null,"correction"?: string | null,"created_at"?: string | null,"id"?: string | null,"name"?: string | null,"order_index"?: number | null,"recipe_id"?: string | null,"type"?: string | null,"updated_at"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"recipes": {
+                  Row: {
+                    "category": string,"cook_time": number | null,"created_at": string | null,"description": string | null,"id": string,"image": string | null,"notes": string | null,"photo_path": string | null,"prep_time": number | null,"search": unknown,"servings": number | null,"tags": (string)[] | null,"title": string,"updated_at": string | null
+                  }
+                  Insert: {
+                    "category": string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title": string,"updated_at"?: string | null
+                  }
+                  Update: {
+                    "category"?: string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title"?: string,"updated_at"?: string | null
                   }
                   Relationships: [
                     
@@ -363,6 +415,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"check_ai_quota":
+{ Args: { "p_max_per_day": number }; Returns: boolean
+                           },
 "custom_access_token_hook":
 { Args: { "event": Json }; Returns: Json
                            },
@@ -412,7 +467,7 @@ isOneToOne: false
                            },
 "search_recipes":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_offset"?: number,"p_query"?: string,"p_tags"?: (string)[] }; Returns: {
-              "category": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"ingredients": Json,"instructions": Json,"notes": string,"photo_path": string,"prep_time": number,"servings": number,"tags": (string)[],"title": string,"total_count": number,"updated_at": string
+              "category": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"notes": string,"photo_path": string,"prep_time": number,"servings": number,"tags": (string)[],"title": string,"total_count": number,"updated_at": string
             }[]
                            }
           }

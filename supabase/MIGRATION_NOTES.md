@@ -1,4 +1,8 @@
-# Migrations 0003 → 0010 — fondations base de données
+# Migrations 0003 → 0015 — fondations base de données
+
+> **Mise en production : suivre `supabase/BASCULE_PROD.md`** (ordre de la bascule, comptes
+> attendus relevés en prod le 2026-10-03, retour arrière). Les sections 8 à 10 ci-dessous
+> décrivent la phase « contract » (0013, 0014) et le nettoyage optionnel (0015).
 
 Projet Supabase `recettes-boultons` (`tzlkabxcmmbwhpyvmato`, Postgres 17, `en_US.UTF-8`).
 Lecture de l'état prod : **2026-10-03**. Aucune de ces migrations n'a été appliquée en
@@ -29,6 +33,14 @@ correspond pas.
 | `migrations/0008_search.sql` | `unaccent`, colonne générée `recipes.search`, RPC `search_recipes(...)` |
 | `migrations/0009_admin_claim.sql` | Schéma `private`, `private.is_admin()`, bascule des 14 politiques, suppression `public.is_admin()`, hook `custom_access_token_hook` |
 | `migrations/0010_recipe_photos.sql` | `recipes.photo_path`, bucket `recipe-photos`, politiques storage, `search_recipes` + `photo_path` |
+| `migrations/0011_save_recipe_photo.sql` | `save_recipe` écrit `photo_path` (§ 6) |
+| `migrations/0012_ai_usage.sql` | Journal `ai_usage`, `check_ai_quota` (§ 7) |
+| `migrations/0013_contract_jsonb.sql` | Suppression de `recipes.ingredients`/`instructions`, `save_recipe`/`search_recipes` sans JSONB, 7 étapes orphelines (§ 8) |
+| `migrations/0014_drop_backups.sql` | Suppression des 6 tables `*_20261003` — une semaine après la bascule (§ 9) |
+| `migrations/0015_data_cleanup.sql` | Nettoyage mécanique optionnel des ingrédients (§ 10, `docs/QUALITE_DONNEES.md`) |
+| `rollback/0005_restore_from_backup.sql`, `rollback/0013_contract_jsonb_down.sql` | Retours arrière (retour à l'ancien code) |
+| `fixes/2026-10-03_carrot_cake_ingredients.sql` | Correctif prod : 17 ingrédients perdus le 2026-10-03 |
+| `BASCULE_PROD.md` | Runbook de mise en production |
 | `seed_test.sql` | Données **jetables** pour les tests locaux (jamais en prod) |
 | `tests/00_supabase_shim.sql`, `tests/01_baseline_schema.sql` | Émulation Supabase + schéma prod « avant 0001 » pour Postgres local |
 | `tests/run_local.sh` | Rejoue tout (shim → 0001/0002 → seed → 0003…0010 → rejeu idempotence → tests) sur un cluster PG17 temporaire |
@@ -333,8 +345,11 @@ Toutes les fonctions ont un `search_path` figé (advisor « Function Search Path
 ou `pg_dump` via le pooler) ; fenêtre calme (quelques secondes de verrou sur `recipes` pour la
 colonne générée en 0008).
 
-**Ordre strict** : 0003 → 0004 → 0005 → 0006 → 0007 → 0008 → 0009 → 0010 (chaque fichier dépend
-du précédent : 0005 utilise `parse_amount`/`normalize_unit`, 0007 `fold_text`, 0010 `private.is_admin()`).
+**Ordre** : celui de `BASCULE_PROD.md` — 0003, 0004, puis 0006 → 0012 (sans effet sur
+l'ancien code), fusion et déploiement, **puis 0005** immédiatement, et plus tard 0013 (0015),
+0014. Dépendances : 0005 utilise `parse_amount`/`normalize_unit` (0003/0004), 0007 `fold_text`,
+0010 et 0012 `private.is_admin()` (0009), 0011 `photo_path` (0010) ; 0005 ne dépend d'aucune de
+0006 → 0012 et passe aussi bien après elles (rejoué ainsi sur une copie conforme à la prod).
 
 **Outil** : au choix
 * MCP `apply_migration(project_id, name, query)` avec le contenu du fichier (un appel par fichier,
@@ -486,3 +501,129 @@ utilisateur ; un utilisateur simple ne voit pas les lignes de l'admin
 apparaîtront ; `server/utils/ai/usage.ts` pourra alors utiliser le client typé). Ajouter 0012 à
 la liste de `supabase/local/setup.sh` (fichier non modifié ici) pour les prochaines
 réinitialisations locales.
+
+## 8. Migration 0013 — contract : suppression des colonnes JSONB legacy
+
+Fichier : `migrations/0013_contract_jsonb.sql` (+ `rollback/0013_contract_jsonb_down.sql`).
+À appliquer en prod **quelques jours après la bascule** (`BASCULE_PROD.md`, étape 7).
+
+**Vérification préalable (2026-10-03, branche `modernisation`)**
+
+* Code : `grep -rnE "\b(ingredients|instructions)\b" app server shared` (hors
+  `shared/types/database.ts`) → uniquement les tableaux `section.ingredients` /
+  `section.instructions` du modèle par sections, les types de section, les schémas de payload
+  (`toSaveRecipePayload`) et des commentaires. Aucune lecture de `recipes.ingredients` /
+  `recipes.instructions` : toutes les lectures de `recipes` listent leurs colonnes
+  (`RECIPE_SUMMARY_COLUMNS`, `RECIPE_DETAIL_SELECT`, `fetchRecipeById`, favoris : sans JSONB),
+  aucune n'utilise `select('*')` sur `recipes` ; aucune écriture directe (tout passe par
+  `save_recipe`). `search_recipes` renvoyait les deux colonnes, mais `toRecipeSummary` les
+  ignore. Commentaires périmés à corriger (4A) : `server/api/add-recipe.post.ts` l. 8 et
+  `server/api/update-recipe.put.ts` l. 8 (« JSONB legacy recalculé »).
+* Tests : `test/integration/save-recipe.local.test.ts` (l. 103-127) lit
+  `recipes.ingredients, instructions` et vérifie le recalcul du JSONB → **à adapter** (plus
+  de JSONB après 0013 : vérifier les sections à la place).
+* SQL : seules `save_recipe` (0006/0011 : recalcul et écriture du JSONB, insert avec
+  `'[]'::jsonb`) et `search_recipes` (0008/0010 : type de retour) les mentionnent. Aucune vue,
+  aucun trigger, aucune politique, aucun index (vérifié sur `pg_proc.prosrc`, `pg_depend`,
+  `pg_trigger`, `pg_policies` de la base locale).
+
+**Quoi**
+
+1. Pré-requis vérifiés (0005, 0010/0011, 0003 appliquées ; aucun ingrédient orphelin).
+2. NOTICE d'information : recettes dont le JSONB ne correspondait plus aux sections (32 dans
+   le snapshot ; l'original reste dans `recipes_backup_20261003` jusqu'à 0014).
+3. **Instructions orphelines** (`section_id IS NULL`) : archivées dans
+   `instructions_orphans_20261003` si besoin, puis : doublon exact d'une étape rattachée de la
+   même recette (comparaison `fold_text`) → supprimée ; l'une des 2 « versions remplacées »
+   listées → supprimée ; toute autre → rattachée à la dernière section `instructions`/`mixed`
+   de sa recette (créée « Préparation » si absente), `order_index` en fin.
+   **Décision pour les 7 orphelines de la prod** (mêmes identifiants en prod et en local) :
+   | Recette | Orpheline | Comparaison avec les sections | Sort |
+   |---|---|---|---|
+   | Confiture d'oranges | « Garder les pépins et les mettre dans le saladier. » | = étape 6 de « Préparation » | doublon → supprimée |
+   | Gaspacho | « Couper grossierement les légumes en morceaux. » | = étape 1 | doublon |
+   | Gaspacho | « Servir tres frais. » ×2 | = étape 3 | doublons |
+   | Gaspacho | « Mettre les legumes au blender… hiile d'olive… » | étape 2 identique à la faute de frappe près (« huile ») : ancienne version | remplacée → supprimée |
+   | Lasagnes Épinards et Ricotta | « Si le fromage dore trop vite… » | = « La cuisson », étape 2 | doublon |
+   | Lasagnes Épinards et Ricotta | « Enfourner pour 30 à 35 minutes. » | « La cuisson », étape 1 dit « 35-40 minutes » : ancienne version | remplacée → supprimée |
+   → 7 supprimées, 0 rattachée ; rien de visible ne change pour la famille.
+4. `save_recipe(payload jsonb)` = 0011 **sans** l'étape « JSONB legacy » (diff : variables
+   `v_json_*`, colonnes de l'insert, bloc de recalcul) ; même signature, `security invoker`,
+   `search_path`, droits (`authenticated` seulement), messages d'erreur, `photo_path`.
+5. `alter table recipes drop column if exists ingredients, drop column if exists instructions`.
+6. `search_recipes` : drop + create sans les deux colonnes (même logique, droits anon /
+   authenticated / service_role).
+7. `comment on column recipe_ingredients.amount` : **colonne conservée** (texte saisi :
+   « 2 à 3 », « au goût » ; `amount_num` sert aux calculs).
+8. Assertions : 0 orpheline, étapes = avant − supprimées, sections = avant + créées,
+   ingrédients inchangés, colonnes absentes, droits des fonctions ; `notify pgrst`.
+
+**Réversibilité** : `rollback/0013_contract_jsonb_down.sql` recrée les colonnes (`jsonb not
+null`), les recalcule depuis les sections au format de 0006 (sans toucher `updated_at`) et
+recrée `search_recipes` avec elles ; puis rejouer `0011_save_recipe_photo.sql`. Testé en
+aller-retour (down → 0011 → 0013) sur une copie du snapshot. Valeurs d'origine d'avant 0005 :
+`recipes_backup_20261003` (requête dans l'en-tête de 0013).
+
+**Comptes** (prod du 2026-10-03 après 0005) : étapes 1 545 → **1 538**, sections 359,
+ingrédients 1 529 (1 546 dans le snapshot, voir « Carrot cake » dans `BASCULE_PROD.md`).
+
+**Base locale partagée** : 0013 puis 0015 appliquées le **2026-10-03 à 22 h 08** (`psql -f`,
+après une sauvegarde `pg_dump` de la base) ; NOTICE conformes (7 orphelines : 5 doublons, 2
+versions remplacées ; 0015 : 2/5/3/14/4+3/1) ; `local/verify.sql` : 25 contrôles OK ; 0014 non
+appliquée sur cette base (elle le sera au prochain `db:local:reset`).
+`test/integration/save-recipe.local.test.ts` échoue désormais sur 1 cas sur 6 (lecture du
+JSONB, attendu) : à adapter par l'équipe app.
+
+**Types** : `shared/types/database.ts` régénéré après 0013 (+ 0015) sur la base locale :
+`recipes.Row/Insert/Update` sans `ingredients`/`instructions`, `search_recipes.Returns` idem,
+tables `*_backup_cleanup` (0015) en plus. `npm run typecheck` passe.
+
+## 9. Migration 0014 — suppression des sauvegardes de 0005
+
+Fichier : `migrations/0014_drop_backups.sql`. **En prod une semaine après la bascule**, après
+0013 et un nouvel export `pg_dump` (`BASCULE_PROD.md`, étape 8).
+
+Supprime exactement : `recipes_backup_20261003`, `recipe_sections_backup_20261003`,
+`recipe_ingredients_backup_20261003`, `instructions_backup_20261003`,
+`recipe_ingredients_orphans_20261003`, `instructions_orphans_20261003` (comptes en NOTICE).
+Refuse si 0013 n'est pas appliquée, s'il reste des orphelins ou une recette sans section, ou si
+une recette du snapshot a perdu des sections sans avoir été modifiée (les sections vides
+retirées par 0015 sont comptées). `drop table` sans `cascade`. Idempotente. **Irréversible**
+(hors `pg_dump`). En local, `setup.sh` l'applique (sans risque).
+
+## 10. Migration 0015 (optionnelle) — nettoyage mécanique des données
+
+Fichier : `migrations/0015_data_cleanup.sql` ; rapport complet : `docs/QUALITE_DONNEES.md`.
+Recommandée (corrections sans perte, réversibles), applicable après 0013 ou indépendamment.
+
+Liste exacte de lignes identifiées par `(recipe_id, nom, valeur actuelle)` (les identifiants
+des ingrédients créés par 0005 diffèrent entre la prod et le local ; une ligne modifiée
+entre-temps n'est plus reconnue et reste intacte) :
+R1 plages coupées (« 10 » + « à 15 » → « 10 à 15 ») ×2 ; R2 `optional` → `optional = true` ×5 ;
+R3 `to taste` → `unit_code = 'qs'` ×3 ; R4 qualificatifs (large, medium, petit, petite, grands,
+ripe, chopped, crumbled, sliced) déplacés dans le nom ×14 ; règles générales R5 (espaces en
+trop : 4 ingrédients, 3 étapes) et R6 (section vide « Nouvelle section » : 1).
+Sauvegarde préalable dans `recipe_ingredients_backup_cleanup` (28 lignes : une par ingrédient
+et par règle), `instructions_backup_cleanup` (3), `recipe_sections_backup_cleanup` (1) — RLS
+sans politique, droits révoqués. Identifiants en NOTICE. Unités non reconnues : 22 → 6.
+Retour arrière : requêtes dans l'en-tête. À supprimer après validation : les 3 tables
+`*_backup_cleanup`.
+
+## 11. Outillage et tests (phase contract)
+
+* `tests/run_local.sh` (Postgres 17 jetable) et `local/test.sh` (`npm run db:local:test`, stack
+  Docker) : phase « expand » 0003 → 0012 + rejeu + `test_0003` → `test_0010`, puis phase
+  « contract » 0013 → 0015 + rejeu + `test_0013_contract`, `test_0014_drop_backups`,
+  `test_0015_cleanup` (ce dernier crée des recettes témoins portant les identifiants de la
+  prod, rejoue 0015, vérifie, nettoie ; ignoré sur une base avec le snapshot).
+* `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` : même suite sur une **base séparée**
+  de la stack (schéma Supabase recopié depuis `postgres` par `pg_dump --schema-only`, schéma
+  applicatif retiré) → la base `postgres` et ses données ne sont pas touchées.
+* `local/setup.sh` : toutes les migrations ≥ 0003 dans l'ordre ; une fois 0013 passée,
+  0003 → 0012 ne sont plus rejouées (0005 lit le JSONB) ; option `--until NNNN`.
+* `local/verify.sql` : état final (25 contrôles ; comptes limités aux recettes du snapshot).
+* `test_0009_admin.sql` : les 2 politiques de `ai_usage` (0012) sont exclues des comptes
+  (42 / 14), ce qui faisait échouer `db:local:test` depuis l'ajout de 0012 à `setup.sh`.
+* Retours arrière testés : `rollback/0005_restore_from_backup.sql`,
+  `rollback/0013_contract_jsonb_down.sql` ; correctif prod
+  `fixes/2026-10-03_carrot_cake_ingredients.sql` testé sur une copie dans l'état de la prod.

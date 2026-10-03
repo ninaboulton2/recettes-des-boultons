@@ -8,8 +8,8 @@ declare
   ev jsonb; n int;
 begin
   assert to_regprocedure('public.is_admin()') is null, 'public.is_admin() doit avoir disparu';
-  assert (select count(*) from pg_policies where schemaname = 'public' and (qual ~ 'private\.is_admin' or with_check ~ 'private\.is_admin')) = 14;
-  assert (select count(*) from pg_policies where schemaname = 'public') = 42, 'nombre de politiques (39 + units + unit_aliases + auth_admin)';
+  assert (select count(*) from pg_policies where schemaname = 'public' and tablename <> 'ai_usage' and (qual ~ 'private\.is_admin' or with_check ~ 'private\.is_admin')) = 14;
+  assert (select count(*) from pg_policies where schemaname = 'public' and tablename <> 'ai_usage') = 42, 'nombre de politiques (39 + units + unit_aliases + auth_admin ; ai_usage (0012) à part)';
 
   -- Repli profiles.role (pas de claim)
   perform tests.login(admin_id, 'authenticated');
