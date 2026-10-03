@@ -78,8 +78,8 @@ select (select count(*) from public.recipes)                                    
 
 | | recettes | sections | ingrédients | orphelins | étapes | étapes orph. | sans section | profils | politiques |
 |---|---|---|---|---|---|---|---|---|---|
-| **Prod, 2026-10-03 21 h 43** | 181 | 241 | **1 695** | 1 060 | 641 | 7 | 118 | **4** | 39 |
-| Snapshot local (matin du 03/10) | 181 | 241 | 1 712 | 1 060 | 641 | 7 | 118 | 5 | 39 |
+| **Prod, 2026-10-03 21 h 43** | 181 | 241 | **1 695** | 1 060 | 641 | 7 | 118 | 4 | 39 |
+| Snapshot local (matin du 03/10) | 181 | 241 | 1 712 | 1 060 | 641 | 7 | 118 | 4 (+1 créé en local) | 39 |
 
 Si les chiffres du jour J diffèrent (une recette ajoutée, modifiée…), ce n'est pas grave :
 les migrations s'adaptent, seuls les comptes attendus ci-dessous bougent (une recette sans
@@ -98,12 +98,14 @@ contrôle « 0 attendu » ne donne pas 0.
    `supabase/fixes/2026-10-03_carrot_cake_ingredients.sql` (réinsère les 17 ingrédients du
    snapshot ; refuse de tourner si la recette a changé depuis ; rejouable). Contrôle :
    `select count(*) from recipe_ingredients where recipe_id = 'b7866cf7-261a-4f2c-a9b2-e35837c954f4';` → **21**.
-2. **Un profil de moins** (4 au lieu de 5) : le compte « Les Boultons Admin » (rôle `user`,
-   créé le 2026-10-03 à 18 h 57) existe dans le snapshot mais plus en prod. Vérifier dans
-   Authentication → Users que c'est bien une suppression voulue.
+2. ~~Un profil de moins~~ : **fausse alerte** (vérifié le 2026-10-03). La prod a toujours eu
+   4 profils pour 5 comptes : le compte `04e227cb…` (créé le 2025-08-24) n'a jamais eu de
+   profil. Le 5ᵉ profil du snapshot a été créé **localement** par l'amorçage
+   (`handle_new_user`) à 18 h 57. Rien à faire.
 
-Ces deux modifications ont eu lieu **aujourd'hui en prod**, pendant les travaux : si
-personne de la famille n'en est l'auteur, vérifier qu'aucun outil de développement n'a été
+La modification de Carrot cake a eu lieu **aujourd'hui en prod** via l'ancien éditeur, avec un
+compte admin (aucun agent n'avait d'identifiants de prod). Si personne de la famille n'en est
+l'auteur, vérifier qu'aucun outil de développement n'a été
 lancé contre la prod (fichier `.env` → prod avec `npm run dev`). Pour la suite, développer
 avec `npm run dev:local`.
 
