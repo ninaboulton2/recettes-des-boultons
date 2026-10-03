@@ -17,6 +17,7 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
     '@nuxtjs/supabase',
     '@nuxt/eslint',
+    '@vite-pwa/nuxt',
     // En dernier (recommandation Sentry) : instrumente l'app déjà configurée.
     '@sentry/nuxt/module'
   ],
@@ -61,7 +62,9 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+        // Manifeste PWA généré par @vite-pwa/nuxt (clé `pwa` ci-dessous).
+        { rel: 'manifest', href: '/manifest.webmanifest' }
       ]
     }
   },
@@ -125,6 +128,103 @@ export default defineNuxtConfig({
     // SENTRY_AUTH_TOKEN est défini ; sinon build normal, sans sourcemap.
     sourcemaps: {
       disable: !process.env.SENTRY_AUTH_TOKEN
+    }
+  },
+  // Icônes de <OfflineBanner /> embarquées dans le bundle client : affichées
+  // hors ligne même si elles n'ont jamais été téléchargées.
+  icon: {
+    clientBundle: {
+      icons: ['lucide:wifi-off', 'lucide:square', 'lucide:square-check']
+    }
+  },
+  // --- PWA (@vite-pwa/nuxt) : installable + courses hors ligne ---
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Recettes des Boultons',
+      short_name: 'Boultons',
+      description: 'Retrouvez ici toutes les recettes préférées des Boultons !',
+      lang: 'fr',
+      start_url: '/',
+      scope: '/',
+      display: 'standalone',
+      theme_color: '#c2603e',
+      background_color: '#fafaf9',
+      // Icônes générées par `npm run pwa:icons` (scripts/generate-pwa-icons.mjs).
+      icons: [
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
+    },
+    workbox: {
+      // App rendue côté serveur : pas de page de repli précachée (« / » n'est
+      // pas un fichier statique). Les pages visitées sont servies par le
+      // cache « pages » ci-dessous quand le réseau manque.
+      navigateFallback: null,
+      // App shell : JS/CSS de Nuxt, icônes, manifeste. Les images de
+      // catégories et les polices sont mises en cache à la demande.
+      globPatterns: ['_nuxt/**/*.{js,css}', '*.{svg,png,ico,webmanifest}'],
+      cleanupOutdatedCaches: true,
+      runtimeCaching: [
+        {
+          // Pages HTML : réseau d'abord, cache si hors ligne (ou réseau > 4 s).
+          // Exclues : callbacks d'authentification (/confirm, /reset-password)
+          // et API. NB : la fonction est sérialisée dans sw.js (pas de
+          // variable externe).
+          urlPattern: ({ request, url }) => request.mode === 'navigate'
+            && !/^\/(?:en\/)?(?:confirm|reset-password)(?:\/|$)/.test(url.pathname)
+            && !url.pathname.startsWith('/api/'),
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pages',
+            networkTimeoutSeconds: 4,
+            expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 14 },
+            cacheableResponse: { statuses: [200] }
+          }
+        },
+        {
+          // Images de catégories, logo et images optimisées (@nuxt/image).
+          urlPattern: ({ url, sameOrigin }) => sameOrigin && (url.pathname.startsWith('/images/') || url.pathname.startsWith('/_ipx/')),
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'images',
+            expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [200] }
+          }
+        },
+        {
+          // Icônes Iconify servies par @nuxt/icon (données publiques) : les
+          // icônes rendues côté client restent visibles hors ligne.
+          urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/api/_nuxt_icon/'),
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'icons',
+            expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [200] }
+          }
+        },
+        {
+          // Polices servies par @nuxt/fonts.
+          urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/_fonts/'),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'fonts',
+            expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            cacheableResponse: { statuses: [200] }
+          }
+        }
+        // Aucune règle pour Supabase (auth/v1, rest/v1, storage) ni les autres /api/** :
+        // ces requêtes passent toujours par le réseau, jamais par le cache.
+      ]
+    },
+    client: {
+      // Pas de bannière d'installation imposée : le navigateur la propose.
+      installPrompt: false
+    },
+    // Pas de service worker en `nuxt dev` (ni dans les tests e2e en dev).
+    devOptions: {
+      enabled: false
     }
   },
   supabase: {

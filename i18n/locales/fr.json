@@ -743,5 +743,20 @@
   "errors": {
     "generic": "Une erreur est survenue, réessayez plus tard.",
     "network": "Connexion impossible, vérifiez votre réseau puis réessayez."
+  },
+  "pwa": {
+    "offline": {
+      "title": "Vous êtes hors ligne",
+      "description": "Les pages déjà consultées restent disponibles ; les modifications reprendront au retour du réseau.",
+      "shoppingDescription": "Voici la dernière copie de vos listes de courses enregistrée sur cet appareil, en lecture seule."
+    },
+    "shopping": {
+      "title": "Mes courses (hors ligne)",
+      "savedAt": "Enregistrée le {date}",
+      "emptyList": "Liste vide",
+      "none": "Aucune copie de vos listes sur cet appareil : ouvrez la page des courses une fois en ligne pour la retrouver hors ligne.",
+      "checked": "Coché",
+      "toBuy": "À acheter"
+    }
   }
 }
