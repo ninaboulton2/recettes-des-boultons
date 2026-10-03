@@ -205,7 +205,7 @@
   />
 
   <!-- Shopping List Modal -->
-  <div v-if="showShoppingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div v-if="showShoppingModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
@@ -302,7 +302,7 @@
   </div>
 
   <!-- Planning Modal -->
-  <div v-if="showPlanningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div v-if="showPlanningModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl p-4 sm:p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">
@@ -460,6 +460,13 @@
 </template>
 
 <script setup>
+// Nuxt 4 ordonne les routes dynamiques différemment de Nuxt 3 : sans ceci,
+// `/recettes/:category` capturait aussi les identifiants de recettes. On
+// réserve explicitement cette page aux UUID.
+definePageMeta({
+  path: '/recettes/:id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})'
+})
+
 import { useRoute } from 'vue-router'
 import { computed, watch, ref } from 'vue'
 const recipesStore = useRecipesStore()

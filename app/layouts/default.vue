@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 flex flex-col">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
+    <header class="bg-white shadow-xs border-b border-gray-200">
       <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <!-- Logo -->
@@ -62,7 +62,7 @@
               <button
                 @click="showLoginModal = true"
                 aria-label="Connexion"
-                class="bg-primary-600 text-white p-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+                class="bg-primary-600 text-white p-2 rounded-md hover:bg-primary-700 focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -81,7 +81,7 @@
               <button
                 @click="handleLogout"
                 aria-label="Déconnexion"
-                class="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                class="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                 title="Déconnexion"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,7 +96,7 @@
                 @click="mobileMenuOpen = !mobileMenuOpen"
                 :aria-label="mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'"
                 :aria-expanded="mobileMenuOpen"
-                class="text-gray-700 hover:text-primary-600 focus:outline-none focus:text-primary-600"
+                class="text-gray-700 hover:text-primary-600 focus:outline-hidden focus:text-primary-600"
               >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />

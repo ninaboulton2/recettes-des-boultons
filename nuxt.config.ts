@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     port: 3001
   },
   modules: [
-    '@nuxtjs/tailwindcss',
+    '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/image',
     '@nuxtjs/i18n'
@@ -50,12 +50,20 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/logo.png' },
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/logo.png' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { href: 'https://fonts.googleapis.com/css2?family=Lobster&family=Poppins:wght@400;600;700&display=swap', rel: 'stylesheet' }
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/logo.png' }
       ]
     }
+  },
+  ui: {
+    // Pas de mode sombre pour l'instant : l'app n'a aucune variante dark:.
+    colorMode: false
+  },
+  fonts: {
+    // Remplace l'ancien <link> Google Fonts : polices servies/optimisées par @nuxt/fonts
+    families: [
+      { name: 'Lobster', provider: 'google', weights: [400] },
+      { name: 'Poppins', provider: 'google', weights: [400, 600, 700] }
+    ]
   },
   image: {
     quality: 80,

@@ -49,7 +49,7 @@
       />
 
       <!-- Week Navigation -->
-      <div v-else class="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <div v-else class="bg-white rounded-xl shadow-xs p-4 mb-6">
         <div class="flex justify-between items-center">
           <button
             @click="previousWeek"
@@ -86,7 +86,7 @@
       <!-- Weekly Grid -->
       <div class="space-y-6">
         <!-- En-tête des jours -->
-        <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="bg-white rounded-xl shadow-xs p-4">
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-2">
             <div
               v-for="day in weekDays"
@@ -107,7 +107,7 @@
         </div>
 
         <!-- Ligne des déjeuners -->
-        <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="bg-white rounded-xl shadow-xs p-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Déjeuners</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
@@ -171,7 +171,7 @@
         </div>
 
         <!-- Ligne des dîners -->
-        <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="bg-white rounded-xl shadow-xs p-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Dîners</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
@@ -235,7 +235,7 @@
         </div>
 
         <!-- Notes générales pour la semaine -->
-        <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="bg-white rounded-xl shadow-xs p-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Notes</h3>
           <div class="grid grid-cols-1 lg:grid-cols-7 gap-0 divide-x divide-gray-200">
             <div
@@ -294,7 +294,7 @@
       </div>
 
       <!-- Meal Selector Modal -->
-      <div v-if="showMealSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div v-if="showMealSelector" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-semibold text-gray-900">
@@ -381,7 +381,7 @@
       </div>
 
       <!-- Custom Meal Input Modal -->
-      <div v-if="showCustomMealInput" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div v-if="showCustomMealInput" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-semibold text-gray-900">

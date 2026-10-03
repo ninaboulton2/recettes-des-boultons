@@ -49,7 +49,7 @@
 
       <!-- Lists Selection -->
       <div v-else-if="shoppingLists.length > 0" class="mb-8">
-        <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="bg-white rounded-xl shadow-xs p-6">
           <h2 class="text-xl font-semibold text-gray-900 mb-4">
             Sélectionner une liste
           </h2>
@@ -144,7 +144,7 @@
       </div>
 
       <!-- Create New List -->
-      <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+      <div class="bg-white rounded-xl shadow-xs p-6 mb-8">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">
           Créer une nouvelle liste
         </h2>
@@ -175,7 +175,7 @@
       />
 
       <!-- Current List -->
-      <div v-if="currentList" class="bg-white rounded-xl shadow-sm p-6">
+      <div v-if="currentList" class="bg-white rounded-xl shadow-xs p-6">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-xl font-semibold text-gray-900">
             {{ currentList.name }}
@@ -183,14 +183,14 @@
           <div class="flex gap-2">
             <button
               @click="clearChecked"
-              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="checkedItems.length === 0"
             >
               Effacer cochés
             </button>
             <button
               @click="resetQuantities"
-              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-900 border border-orange-300 hover:border-orange-400 rounded-lg transition-all duration-200 text-sm shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="!currentItems.length"
             >
               Réinitialiser quantités

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div v-if="show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl p-4 sm:p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">

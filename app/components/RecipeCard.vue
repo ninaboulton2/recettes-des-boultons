@@ -51,7 +51,7 @@
             @click.stop.prevent="editRecipe"
             @mousedown.stop.prevent
             @mouseup.stop.prevent
-            class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
+            class="bg-white/90 hover:bg-white p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
             title="Modifier la recette"
             aria-label="Modifier la recette"
           >
@@ -66,7 +66,7 @@
             @click.stop.prevent="deleteRecipe"
             @mousedown.stop.prevent
             @mouseup.stop.prevent
-            class="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
+            class="bg-white/90 hover:bg-white p-2 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl"
             title="Supprimer la recette"
             aria-label="Supprimer la recette"
           >
@@ -163,7 +163,7 @@
     </div>
 
     <!-- Shopping List Modal -->
-    <div v-if="showShoppingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div v-if="showShoppingModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-lg sm:text-2xl font-semibold text-gray-900 pr-4">

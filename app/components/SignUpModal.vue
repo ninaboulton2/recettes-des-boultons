@@ -1,7 +1,7 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
     <!-- Overlay -->
-    <div class="absolute inset-0 bg-black bg-opacity-50" @click="closeModal"></div>
+    <div class="absolute inset-0 bg-black/50" @click="closeModal"></div>
     
     <!-- Modal -->
     <div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-md mx-4">
@@ -32,7 +32,7 @@
             v-model="credentials.email"
             type="email"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Entrez votre email"
           />
         </div>
@@ -47,7 +47,7 @@
             v-model="credentials.name"
             type="text"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Entrez votre nom"
           />
         </div>
@@ -63,7 +63,7 @@
               v-model="credentials.password"
               :type="showPassword ? 'text' : 'password'"
               required
-              class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Entrez votre mot de passe"
             />
             <button
@@ -125,7 +125,7 @@
               v-model="confirmPassword"
               :type="showConfirmPassword ? 'text' : 'password'"
               required
-              class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Confirmez votre mot de passe"
             />
             <button
@@ -190,7 +190,7 @@
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <span v-if="isLoading" class="flex items-center justify-center">
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

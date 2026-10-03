@@ -11,7 +11,7 @@
     </div>
 
     <!-- Filters (désactivé pour la catégorie) -->
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+    <div class="bg-white rounded-xl shadow-xs p-6 mb-8">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Search -->
         <div>

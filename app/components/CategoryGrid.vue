@@ -4,7 +4,7 @@
       v-for="category in categories"
       :key="category.id"
       :to="`/recettes?category=${category.id}`"
-      class="category-card group block focus:outline-none"
+      class="category-card group block focus:outline-hidden"
     >
       <div class="relative mb-4">
         <div class="bg-white rounded-lg shadow p-2 overflow-hidden">

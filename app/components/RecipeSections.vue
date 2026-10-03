@@ -6,7 +6,7 @@
       <div 
         v-for="section in sections" 
         :key="section.id"
-        class="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm"
+        class="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-xs"
       >
         <!-- En-tête de la section -->
         <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">

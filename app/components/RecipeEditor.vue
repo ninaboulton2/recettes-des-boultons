@@ -14,7 +14,7 @@
     >
       <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"></div>
+        <div class="fixed inset-0 transition-opacity bg-gray-500/75"></div>
 
         <!-- Modal panel -->
         <div class="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto">
@@ -212,7 +212,7 @@
                       <input
                         v-model="section.name"
                         type="text"
-                        class="text-lg font-medium text-gray-700 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-2 py-1 flex-1"
+                        class="text-lg font-medium text-gray-700 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-hidden px-2 py-1 flex-1"
                         placeholder="Nom de la section (ex: Pour la pâte)"
                       >
                     </div>
@@ -342,7 +342,7 @@
                       <input
                         v-model="section.name"
                         type="text"
-                        class="text-lg font-medium text-gray-700 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-2 py-1 flex-1"
+                        class="text-lg font-medium text-gray-700 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-hidden px-2 py-1 flex-1"
                         placeholder="Nom de la section (ex: Préparation)"
                       >
                     </div>
@@ -446,13 +446,13 @@
               <button
                 type="button"
                 @click="handleCancel"
-                class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                class="px-6 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                class="px-6 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
               >
                 {{ isEditing ? 'Modifier' : 'Créer' }}
               </button>

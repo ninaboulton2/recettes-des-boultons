@@ -40,7 +40,7 @@
         id="recipe-text"
         v-model="recipeText"
         rows="15"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm leading-relaxed"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm leading-relaxed"
         style="white-space: pre-wrap; word-wrap: break-word;"
         placeholder="Collez ici le texte de votre recette depuis Google Drive...&#10;&#10;"
       ></textarea>

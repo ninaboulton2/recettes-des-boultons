@@ -21,7 +21,7 @@
       <!-- Bouton de connexion -->
       <button
         @click="$emit('login')"
-        class="w-full bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+        class="w-full bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
       >
         {{ $t('auth.required.loginButton') }}
       </button>
