@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
-import { apiErrorFromResponse } from '~/composables/useApiError'
+import { apiErrorFromResponse, toUserMessage, translateKey } from '~/composables/useApiError'
 import type { ShoppingItem, ShoppingList } from '#shared/types'
 import type { Database } from '#shared/types/database'
 import { useAuthStore } from './auth'
@@ -24,17 +24,6 @@ export interface ShoppingItemPatch {
   unit?: string | null
   isChecked?: boolean
 }
-
-/** Ingrédient tel que l'envoient la carte et la fiche recette (« ajouter à ma liste »). */
-export interface IngredientToAdd {
-  name: string
-  amount: number | string | null
-  unit: string
-  recipeId?: string
-}
-
-/** Nom de la liste créée automatiquement quand l'utilisateur n'en a aucune. */
-export const DEFAULT_LIST_NAME = 'Ma liste de courses'
 
 /** Appel d'écriture vers `/api/*` : renvoie le JSON ou lève une `ApiError`. */
 async function request<T = unknown>(url: string, init: RequestInit = {}): Promise<T> {
@@ -124,7 +113,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       }
       return shoppingLists.value
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Erreur inconnue'
+      error.value = toUserMessage(err)
       throw err
     } finally {
       isLoading.value = false
@@ -186,7 +175,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   /** Ajoute un article (fusion en base si même nom + même unité). Renvoie la ligne créée ou fusionnée. */
   const addItem = async (input: NewShoppingItem): Promise<ShoppingItem | null> => {
     const listId = input.listId ?? currentList.value?.id
-    if (!listId) throw new Error('Aucune liste sélectionnée')
+    if (!listId) throw new Error(translateKey('errors.noListSelected', 'Aucune liste sélectionnée'))
 
     const data = await request<{ item: { id: string } }>('/api/shopping-items', {
       method: 'POST',
@@ -301,34 +290,6 @@ export const useShoppingStore = defineStore('shopping', () => {
     return data.items.length
   }
 
-  /**
-   * Façade historique (carte et fiche recette) : ajoute des ingrédients déjà
-   * sélectionnés à la liste courante (créée sous `DEFAULT_LIST_NAME` si
-   * l'utilisateur n'en a aucune). La fusion des doublons est faite en base.
-   */
-  const addIngredientsToLists = async (ingredients: readonly IngredientToAdd[]): Promise<{ success: true, count: number }> => {
-    if (!useAuthStore().currentUser?.id) {
-      throw new Error('Vous devez être connecté pour gérer vos listes de courses')
-    }
-    await ensureLoaded()
-    const target = currentList.value ?? await createList(DEFAULT_LIST_NAME)
-
-    for (const ingredient of ingredients) {
-      await request('/api/shopping-items', {
-        method: 'POST',
-        body: JSON.stringify({
-          listId: target.id,
-          name: ingredient.name.trim(),
-          amount: ingredient.amount,
-          unit: ingredient.unit.trim() || null,
-          recipeId: ingredient.recipeId ?? null
-        })
-      })
-    }
-    await refresh()
-    return { success: true, count: ingredients.length }
-  }
-
   return {
     // State
     shoppingLists,
@@ -366,7 +327,6 @@ export const useShoppingStore = defineStore('shopping', () => {
     moveItem,
 
     // Recettes
-    addRecipeToList,
-    addIngredientsToLists
+    addRecipeToList
   }
 })

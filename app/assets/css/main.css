@@ -72,12 +72,3 @@
     }
   }
 }
-
-@layer components {
-  /* TODO(phase 4) : classe historique encore utilisée par pages/recettes/[id].vue,
-     components/RecipeTranslator.vue et pages/courses.vue. À remplacer par
-     <UButton> puis supprimer. */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-inverted transition-colors hover:bg-primary/90 disabled:opacity-50;
-  }
-}
