@@ -1,21 +1,24 @@
 <template>
-  <UApp>
+  <UApp :locale="uiLocale">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
   </UApp>
 </template>
 
-<script setup>
-// Configuration globale de l'application
+<script setup lang="ts">
+import { en, fr } from '@nuxt/ui/locale'
+
+const { t, locale } = useI18n()
+
+// Textes internes de Nuxt UI (pagination, modales…) dans la langue courante.
+const uiLocale = computed(() => (locale.value === 'en' ? en : fr))
+
 useHead({
-  title: $t('meta.title'),
+  htmlAttrs: { lang: locale },
+  titleTemplate: title => (title ? `${title} · ${t('meta.title')}` : t('meta.title')),
   meta: [
-    { name: 'description', content: $t('meta.description') }
-  ],
-  link: [
-    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/logo.png' }
+    { name: 'description', content: () => t('meta.description') }
   ]
 })
-</script> 
+</script>
