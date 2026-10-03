@@ -281,7 +281,53 @@
     "footer": "Recettes des Boultons - {date}"
   },
   "translator": {
-    "_agent": "3D"
+    "title": "Ajouter une recette par IA",
+    "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français) : l'IA la structure en sections, ingrédients et étapes. Vous vérifiez l'aperçu avant de l'ajouter.",
+    "back": "Retour",
+    "form": {
+      "language": "Langue de la recette structurée",
+      "languages": {
+        "fr": "Français",
+        "en": "Anglais"
+      },
+      "text": "Texte de la recette",
+      "placeholder": "Collez ici le texte de la recette (titre, ingrédients, étapes)…",
+      "hint": "Entre 20 et 20 000 caractères. Les sous-sections (« Pour la pâte : ») sont conservées, les cups, oz et °F convertis quand c'est sûr.",
+      "chars": "{count} / {max} caractères",
+      "submit": "Structurer la recette",
+      "loading": "Analyse en cours…"
+    },
+    "preview": {
+      "title": "Aperçu avant ajout",
+      "description": "Relisez la recette : rien n'est encore enregistré.",
+      "prepTime": "Préparation",
+      "cookTime": "Cuisson",
+      "servings": "Portions",
+      "minutes": "{n} min",
+      "servingsCount": "{n} pers.",
+      "ingredients": "Ingrédients",
+      "steps": "Étapes",
+      "optional": "facultatif",
+      "notes": "Notes",
+      "unknownUnits": "Unité non reconnue pour : {names}. Elle sera enregistrée telle quelle, vous pourrez la corriger dans l'éditeur.",
+      "usage": "Modèle {model} · {input} + {output} tokens",
+      "usageCost": " · ≈ {cost} $",
+      "add": "Ajouter aux recettes",
+      "adding": "Ajout en cours…",
+      "edit": "Modifier le texte",
+      "reset": "Recommencer"
+    },
+    "success": {
+      "title": "Recette « {title} » ajoutée",
+      "description": "Elle apparaît maintenant dans la liste des recettes.",
+      "view": "Voir la recette",
+      "all": "Voir toutes les recettes",
+      "another": "Ajouter une autre recette"
+    },
+    "errors": {
+      "unavailable": "Service de traduction indisponible pour le moment. Réessayez plus tard.",
+      "timeout": "Le fournisseur IA n'a pas répondu à temps. Réessayez, ou collez une recette plus courte."
+    }
   },
   "footer": {
     "copyright": "© {year} Recettes des Boultons. Tous droits réservés."

@@ -202,5 +202,54 @@
   "errors": {
     "generic": "Something went wrong, please try again later.",
     "network": "Unable to connect, check your network and try again."
+  },
+  "translator": {
+    "title": "Add a recipe with AI",
+    "subtitle": "Paste the raw text of a recipe (website, document, message — in English or French): the AI structures it into sections, ingredients and steps. You review the preview before adding it.",
+    "back": "Back",
+    "form": {
+      "language": "Language of the structured recipe",
+      "languages": {
+        "fr": "French",
+        "en": "English"
+      },
+      "text": "Recipe text",
+      "placeholder": "Paste the recipe text here (title, ingredients, steps)…",
+      "hint": "Between 20 and 20,000 characters. Sub-sections (\"For the dough:\") are kept; cups, oz and °F are converted when safe.",
+      "chars": "{count} / {max} characters",
+      "submit": "Structure the recipe",
+      "loading": "Analysing…"
+    },
+    "preview": {
+      "title": "Preview before adding",
+      "description": "Review the recipe: nothing is saved yet.",
+      "prepTime": "Prep",
+      "cookTime": "Cook",
+      "servings": "Servings",
+      "minutes": "{n} min",
+      "servingsCount": "{n} servings",
+      "ingredients": "Ingredients",
+      "steps": "Steps",
+      "optional": "optional",
+      "notes": "Notes",
+      "unknownUnits": "Unrecognised unit for: {names}. It will be saved as written; you can fix it in the editor.",
+      "usage": "Model {model} · {input} + {output} tokens",
+      "usageCost": " · ≈ ${cost}",
+      "add": "Add to recipes",
+      "adding": "Adding…",
+      "edit": "Edit the text",
+      "reset": "Start over"
+    },
+    "success": {
+      "title": "Recipe \"{title}\" added",
+      "description": "It now appears in the recipe list.",
+      "view": "View the recipe",
+      "all": "View all recipes",
+      "another": "Add another recipe"
+    },
+    "errors": {
+      "unavailable": "The translation service is unavailable right now. Please try again later.",
+      "timeout": "The AI provider did not answer in time. Try again, or paste a shorter recipe."
+    }
   }
 }
