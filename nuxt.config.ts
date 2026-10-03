@@ -16,7 +16,9 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxtjs/i18n',
     '@nuxtjs/supabase',
-    '@nuxt/eslint'
+    '@nuxt/eslint',
+    // En dernier (recommandation Sentry) : instrumente l'app déjà configurée.
+    '@sentry/nuxt/module'
   ],
   css: [
     '~/assets/css/main.css'
@@ -99,7 +101,30 @@ export default defineNuxtConfig({
     public: {
       // Fournisseurs OAuth affichés dans la modale d'authentification
       // (liste séparée par des virgules ; NUXT_PUBLIC_AUTH_PROVIDERS=google,apple).
-      authProviders: 'google'
+      authProviders: 'google',
+      // --- Sentry (sentry.client.config.ts) ---
+      // DSN vide = SDK inactif. Surchargeable à l'exécution par
+      // NUXT_PUBLIC_SENTRY_DSN ; SENTRY_DSN est lu au build en repli.
+      sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN || '',
+        // Vercel fournit VERCEL_ENV (production | preview | development) au build.
+        environment: process.env.VERCEL_ENV || 'development'
+      }
+    }
+  },
+  // --- Sentry : options de build (@sentry/nuxt) ---
+  // Le SDK lui-même est initialisé par sentry.client.config.ts et
+  // sentry.server.config.ts, seulement si un DSN est défini.
+  sentry: {
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    // Pas de télémétrie du plugin de build vers Sentry.
+    telemetry: false,
+    // Sourcemaps générées (« hidden ») et envoyées à Sentry UNIQUEMENT si
+    // SENTRY_AUTH_TOKEN est défini ; sinon build normal, sans sourcemap.
+    sourcemaps: {
+      disable: !process.env.SENTRY_AUTH_TOKEN
     }
   },
   supabase: {
