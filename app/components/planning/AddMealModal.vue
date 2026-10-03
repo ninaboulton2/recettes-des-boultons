@@ -48,14 +48,28 @@
                 :disabled="submitting"
                 @click="pickRecipe(recipe)"
               >
-                <img :src="recipe.image" alt="" class="size-10 shrink-0 rounded-md object-cover" loading="lazy">
+                <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                  <NuxtImg
+                    v-if="recipe.photoPath"
+                    :src="publicUrl(recipe.photoPath) ?? undefined"
+                    alt=""
+                    :width="40"
+                    :height="40"
+                    densities="x1 x2"
+                    fit="cover"
+                    format="webp"
+                    loading="lazy"
+                    class="size-full object-cover"
+                  />
+                  <UIcon v-else :name="categoryIcon(recipe.category)" class="size-5 text-dimmed" aria-hidden="true" />
+                </span>
                 <span class="min-w-0 flex-1">
                   <span class="block truncate text-sm font-medium text-highlighted">{{ recipe.title }}</span>
                   <span class="block truncate text-xs text-muted">
-                    {{ recipe.category }}<template v-if="totalTime(recipe) !== null"> · {{ totalTime(recipe) }} min</template>
+                    {{ categoryName(recipe.category) }}<template v-if="totalTime(recipe) !== null"> · {{ $t('ui.card.minutes', { n: totalTime(recipe) }) }}</template>
                   </span>
                 </span>
-                <UIcon name="i-lucide-plus" class="size-4 shrink-0 text-muted" />
+                <UIcon name="i-lucide-plus" class="size-4 shrink-0 text-muted" aria-hidden="true" />
               </button>
             </li>
           </ul>
@@ -114,6 +128,8 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const { categoryName, categoryIcon } = useCategories()
+const { publicUrl } = useRecipePhoto()
 
 const tab = ref<'recipe' | 'custom'>('recipe')
 const tabs = computed(() => [

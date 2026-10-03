@@ -87,8 +87,6 @@ export interface RecipeSummary {
   prepTime: number | null
   cookTime: number | null
   servings: number | null
-  /** Image par catégorie (repli quand `photoPath` est vide). */
-  image: string
   /** Chemin dans le bucket storage `recipe-photos`, `null` si aucune photo. */
   photoPath: string | null
   tags: string[]
@@ -103,60 +101,21 @@ export interface Recipe extends RecipeSummary {
 }
 
 /**
- * Charge utile d'écriture envoyée par l'éditeur (création / mise à jour).
- * Les identifiants et dates sont optionnels ; les quantités restent du texte
- * libre (la base dérive `amount_num` / `unit_code`).
+ * Charge utile d'écriture (création / mise à jour d'une recette) : un seul
+ * type, déduit du schéma Zod `recipeInputSchema` (`#shared/schemas/recipe`),
+ * partagé par l'éditeur, le traducteur, le store et les endpoints.
  */
-export interface RecipeIngredientInput {
-  id?: string
-  name: string
-  amount?: string | null
-  unit?: string | null
-  optional?: boolean
-  orderIndex?: number
-}
-
-export interface RecipeInstructionInput {
-  content: string
-  orderIndex?: number
-}
-
-export interface RecipeSectionInput {
-  id?: string
-  name: string
-  type: SectionType
-  orderIndex?: number
-  ingredients?: RecipeIngredientInput[]
-  instructions?: RecipeInstructionInput[]
-}
-
-export interface RecipeInput {
-  id?: string
-  title: string
-  description?: string
-  category: string
-  prepTime?: number | null
-  cookTime?: number | null
-  servings?: number | null
-  image?: string
-  tags?: string[]
-  notes?: string
-  sections?: RecipeSectionInput[]
-  createdAt?: string | null
-  updatedAt?: string | null
-}
+export type {
+  RecipeInput,
+  RecipeSectionInput,
+  RecipeIngredientInput,
+  RecipeInstructionInput
+} from '../schemas/recipe'
 
 /** Résultat paginé de la RPC `search_recipes`. */
 export interface RecipeSearchPage {
   recipes: RecipeSummary[]
   totalCount: number
-}
-
-export interface Category {
-  id: RecipeCategory
-  name: string
-  description: string
-  image: string
 }
 
 export interface Favorite {

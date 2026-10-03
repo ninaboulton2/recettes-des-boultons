@@ -85,7 +85,7 @@ import type { FormError, FormErrorEvent } from '@nuxt/ui'
 import type { z } from 'zod'
 import { RECIPE_CATEGORIES, type Recipe, type RecipeInput, type RecipeSectionInput, type SectionType } from '#shared/types'
 import { recipeInputSchema, type UnitCode } from '#shared/schemas'
-import { categoryI18nKey, categoryImage } from '#shared/utils/recipes'
+import { categoryI18nKey } from '#shared/utils/recipes'
 import EditorPhotoField from './PhotoField.vue'
 import EditorSectionEditor from './SectionEditor.vue'
 
@@ -102,7 +102,6 @@ export interface FormStep { key: string, content: string }
 export type FormSectionType = Exclude<SectionType, 'mixed'>
 export interface FormSection {
   key: string
-  id?: string
   name: string
   type: FormSectionType
   ingredients: FormIngredient[]
@@ -158,10 +157,10 @@ function fromRecipe(recipe: Recipe | null): RecipeFormState {
     }))
     const instructions = section.instructions.map(instruction => ({ key: newKey(), content: instruction.content }))
     if (section.type !== 'instructions' && (ingredients.length > 0 || section.type === 'ingredients')) {
-      sections.push({ key: newKey(), id: section.id, name: section.name, type: 'ingredients', ingredients, instructions: [] })
+      sections.push({ key: newKey(), name: section.name, type: 'ingredients', ingredients, instructions: [] })
     }
     if (section.type !== 'ingredients' && (instructions.length > 0 || section.type === 'instructions')) {
-      sections.push({ key: newKey(), id: section.id, name: section.name, type: 'instructions', ingredients: [], instructions })
+      sections.push({ key: newKey(), name: section.name, type: 'instructions', ingredients: [], instructions })
     }
   }
   if (!recipe) sections.push(newSection('ingredients'), newSection('instructions'))
@@ -225,12 +224,9 @@ const validateSections = (current: Partial<z.input<typeof recipeInputSchema>>): 
   return errors
 }
 
-type EditorRecipeInput = RecipeInput & { photoPath?: string | null }
-
-function toRecipeInput(photoPath: string | null): EditorRecipeInput {
+function toRecipeInput(photoPath: string | null): RecipeInput {
   const ordered = [...sectionsOf('ingredients'), ...sectionsOf('instructions')].map(entry => entry.section)
   const sections: RecipeSectionInput[] = ordered.map((section, orderIndex) => ({
-    id: section.id,
     name: section.name.trim(),
     type: section.type,
     orderIndex,
@@ -253,7 +249,6 @@ function toRecipeInput(photoPath: string | null): EditorRecipeInput {
     prepTime: state.prepTime,
     cookTime: state.cookTime,
     servings: state.servings,
-    image: categoryImage(state.category),
     tags: state.tags.map(tag => tag.trim()).filter(Boolean),
     sections,
     photoPath

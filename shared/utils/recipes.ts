@@ -16,9 +16,9 @@ import type {
  * planning) passent par ici : pas de mapping dupliqué dans les composants.
  */
 
-/** Colonnes de `recipes` utiles aux listes (sans les JSONB historiques ni `search`). */
+/** Colonnes de `recipes` utiles aux listes (sans les JSONB historiques, `image` ni `search`). */
 export const RECIPE_SUMMARY_COLUMNS
-  = 'id, title, description, category, prep_time, cook_time, servings, image, photo_path, tags, notes, created_at, updated_at'
+  = 'id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at'
 
 /** Sous-ensemble d'une ligne `recipes` suffisant pour `toRecipeSummary` (RPC `search_recipes` incluse). */
 export interface RecipeSummaryRow {
@@ -29,7 +29,6 @@ export interface RecipeSummaryRow {
   prep_time: number | null
   cook_time: number | null
   servings: number | null
-  image: string | null
   photo_path?: string | null
   tags: string[] | null
   notes: string | null
@@ -44,23 +43,6 @@ export type RecipeSectionWithChildrenRow = RecipeSectionRow & {
 
 export type RecipeWithSectionsRow = RecipeSummaryRow & {
   recipe_sections: RecipeSectionWithChildrenRow[] | null
-}
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  'soupes': '/images/soupes.png',
-  'entrees': '/images/entrees,salades,pains,accompagnements.png',
-  'plats': '/images/plats.png',
-  'poissons': '/images/poissons.png',
-  'viandes': '/images/viandes.png',
-  'yaourts et fromages': '/images/yaourts&fromages.png',
-  'desserts et gâteaux': '/images/desserts.png',
-  'boissons': '/images/boissons.png',
-  'confitures': '/images/confitures.png'
-}
-
-/** Image d'illustration par catégorie (repli : plats). */
-export function categoryImage(category: string | null | undefined): string {
-  return (category && CATEGORY_IMAGES[category]) || '/images/plats.png'
 }
 
 const byOrderIndex = <T extends { orderIndex: number }>(a: T, b: T) => a.orderIndex - b.orderIndex
@@ -115,7 +97,6 @@ export function toRecipeSummary(row: RecipeSummaryRow): RecipeSummary {
     prepTime: row.prep_time,
     cookTime: row.cook_time,
     servings: row.servings,
-    image: row.image || categoryImage(row.category),
     photoPath: row.photo_path ?? null,
     tags: row.tags ?? [],
     notes: row.notes ?? '',
