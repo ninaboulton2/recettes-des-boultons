@@ -88,6 +88,7 @@ const props = defineProps<{ recipe: RecipeSummary | Recipe }>()
 const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
+const { toUserMessage } = useApiError()
 const localePath = useLocalePath()
 const supabase = useSupabaseClient<Database>()
 const shoppingStore = useShoppingStore()
@@ -139,21 +140,15 @@ const submit = async () => {
   submitting.value = true
   try {
     const allSelected = selectedSectionIds.value.length === sections.value.length
-    const result = await shoppingStore.addRecipeToList(
+    const count = await shoppingStore.addRecipeToList(
       selectedListId.value,
       props.recipe.id,
       allSelected ? undefined : [...selectedSectionIds.value]
     )
-    if (result.success) {
-      const count = result.items?.length ?? 0
-      $toast.success(t('ui.addToList.success'), t('ui.addToList.added', { count }, count))
-      open.value = false
-    } else {
-      $toast.error(t('ui.addToList.error'), result.error || '')
-    }
+    $toast.success(t('ui.addToList.success'), t('ui.addToList.added', { count }, count))
+    open.value = false
   } catch (error) {
-    console.error('Erreur lors de l\'ajout à la liste de courses :', error)
-    $toast.error(t('ui.addToList.error'))
+    $toast.error(t('ui.addToList.error'), toUserMessage(error))
   } finally {
     submitting.value = false
   }

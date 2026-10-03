@@ -108,6 +108,7 @@ const open = defineModel<boolean>('open', { default: false })
 const shoppingStore = useShoppingStore()
 const toast = useToast()
 const { t } = useI18n()
+const { toUserMessage } = useApiError()
 const { ingredientLabel } = useIngredientLabel()
 
 const sections = computed(() => sectionsWithIngredients(props.recipe.sections))
@@ -132,7 +133,12 @@ const toggleSection = (id: string, checked: boolean) => {
 watch(open, async (isOpen) => {
   if (!isOpen) return
   selectAll()
-  await shoppingStore.ensureLoaded()
+  try {
+    await shoppingStore.ensureLoaded()
+  } catch (error) {
+    toast.add({ title: t('recipeDetail.shopping.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
   selectedListId.value = shoppingStore.currentList?.id ?? shoppingStore.shoppingLists[0]?.id
 }, { immediate: true })
 
@@ -141,13 +147,11 @@ const createList = async () => {
   if (!name || creating.value) return
   creating.value = true
   try {
-    const result = await shoppingStore.createList(name)
-    if (result.success && result.list) {
-      selectedListId.value = result.list.id
-      newListName.value = ''
-    } else {
-      toast.add({ title: t('recipeDetail.shopping.error'), description: result.error, color: 'error', icon: 'i-lucide-circle-alert' })
-    }
+    const list = await shoppingStore.createList(name)
+    selectedListId.value = list.id
+    newListName.value = ''
+  } catch (error) {
+    toast.add({ title: t('recipeDetail.shopping.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     creating.value = false
   }
@@ -162,19 +166,16 @@ const submit = async () => {
   }
   submitting.value = true
   try {
-    const result = await shoppingStore.addRecipeToList(listId, props.recipe.id, selected.value, props.factor)
-    if (result.success) {
-      const listName = shoppingStore.shoppingLists.find(list => list.id === listId)?.name ?? ''
-      const count = result.items?.length ?? 0
-      toast.add({
-        title: t('recipeDetail.shopping.success', { count, list: listName }, count),
-        color: 'success',
-        icon: 'i-lucide-check'
-      })
-      open.value = false
-    } else {
-      toast.add({ title: t('recipeDetail.shopping.error'), description: result.error, color: 'error', icon: 'i-lucide-circle-alert' })
-    }
+    const count = await shoppingStore.addRecipeToList(listId, props.recipe.id, selected.value, props.factor)
+    const listName = shoppingStore.shoppingLists.find(list => list.id === listId)?.name ?? ''
+    toast.add({
+      title: t('recipeDetail.shopping.success', { count, list: listName }, count),
+      color: 'success',
+      icon: 'i-lucide-check'
+    })
+    open.value = false
+  } catch (error) {
+    toast.add({ title: t('recipeDetail.shopping.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     submitting.value = false
   }
