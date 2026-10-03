@@ -1,61 +1,33 @@
-import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { idParamsSchema } from '#shared/schemas'
 
+/**
+ * DELETE /api/shopping-items/:id — supprime un article de ses listes.
+ * Article inconnu (ou d'une autre personne, RLS) → 404.
+ */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase } = await requireUser(event)
+    const { id } = validateRouterParams(event, idParamsSchema)
 
-    const itemId = getRouterParam(event, 'id')
-
-    if (!itemId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID d\'item manquant'
-      })
-    }
-
-    // Vérifier que l'item existe
-    const { data: existingItem, error: checkError } = await supabase
-      .from('shopping_items')
-      .select('id, name')
-      .eq('id', itemId)
-      .single()
-
-    if (checkError || !existingItem) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Item non trouvé'
-      })
-    }
-
-    // Supprimer l'item
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('shopping_items')
       .delete()
-      .eq('id', itemId)
+      .eq('id', id)
+      .select('id')
 
     if (error) {
-      console.error('Erreur Supabase lors de la suppression:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la suppression: ${error.message}`
-      })
+      throwSupabaseError(error, 'shopping-items.delete')
+    }
+    if (!data || data.length === 0) {
+      throw createError({ statusCode: 404, statusMessage: 'Article introuvable' })
     }
 
     return {
       success: true,
-      message: `Item "${existingItem.name}" supprimé avec succès`
+      message: 'Article supprimé'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de l\'item:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'shopping-items.delete')
   }
 })

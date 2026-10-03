@@ -1,96 +1,44 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { amountToText, idParamsSchema, shoppingItemUpdateSchema, textOrNull } from '#shared/schemas'
+import type { ShoppingItemRow } from '~~/server/utils/shopping'
 
+/**
+ * PUT /api/shopping-items/:id — modifie nom, quantité, unité ou état coché.
+ * `amount_num` / `unit_code` sont resynchronisés par les triggers SQL.
+ * Article inconnu (ou d'une autre personne, RLS) → 404.
+ */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase } = await requireUser(event)
+    const { id } = validateRouterParams(event, idParamsSchema)
+    const input = await validateBody(event, shoppingItemUpdateSchema)
 
-    const itemId = getRouterParam(event, 'id')
-    const body = await readBody(event)
-    const { name, amount, unit, isChecked } = body
+    const updates: Record<string, string | boolean | null> = { updated_at: new Date().toISOString() }
+    if (input.name !== undefined) updates.name = input.name
+    if (input.amount !== undefined) updates.amount = amountToText(input.amount)
+    if (input.unit !== undefined) updates.unit = textOrNull(input.unit)
+    if (input.isChecked !== undefined) updates.is_checked = input.isChecked
 
-    if (!itemId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID d\'item manquant'
-      })
-    }
-
-    // Vérifier que l'item existe
-    const { data: existingItem, error: checkError } = await supabase
-      .from('shopping_items')
-      .select('id, name')
-      .eq('id', itemId)
-      .single()
-
-    if (checkError || !existingItem) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Item non trouvé'
-      })
-    }
-
-    // Préparer les mises à jour
-    const updates: any = {
-      updated_at: new Date().toISOString()
-    }
-
-    if (name !== undefined) updates.name = name
-    if (amount !== undefined) updates.amount = amount
-    if (unit !== undefined) updates.unit = unit
-    if (isChecked !== undefined) updates.is_checked = isChecked
-
-    // Mettre à jour l'item
     const { data, error } = await supabase
       .from('shopping_items')
       .update(updates)
-      .eq('id', itemId)
-      .select(`
-        *,
-        list:shopping_lists(name)
-      `)
-      .single()
+      .eq('id', id)
+      .select('*')
+      .maybeSingle()
 
     if (error) {
-      console.error('Erreur Supabase lors de la mise à jour:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la mise à jour: ${error.message}`
-      })
+      throwSupabaseError(error, 'shopping-items.put')
     }
-
-    // Formater la réponse
-    const formattedItem = {
-      id: data.id,
-      name: data.name,
-      amount: data.amount,
-      unit: data.unit,
-      recipeId: data.recipe_id,
-      listId: data.list_id,
-      isChecked: data.is_checked,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      list: data.list ? {
-        id: data.list.id,
-        name: data.list.name
-      } : null
+    if (!data) {
+      throw createError({ statusCode: 404, statusMessage: 'Article introuvable' })
     }
 
     return {
       success: true,
-      item: formattedItem,
-      message: 'Item mis à jour avec succès'
+      item: mapShoppingItemRow(data as ShoppingItemRow),
+      message: 'Article mis à jour'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la mise à jour de l\'item:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'shopping-items.put')
   }
 })

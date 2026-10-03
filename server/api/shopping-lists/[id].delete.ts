@@ -1,61 +1,33 @@
-import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { idParamsSchema } from '#shared/schemas'
 
+/**
+ * DELETE /api/shopping-lists/:id — supprime une liste (ses articles suivent
+ * par `on delete cascade`). Liste inconnue (RLS) → 404.
+ */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase } = await requireUser(event)
+    const { id } = validateRouterParams(event, idParamsSchema)
 
-    const listId = getRouterParam(event, 'id')
-
-    if (!listId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de liste manquant'
-      })
-    }
-
-    // Supprimer d'abord tous les items de la liste
-    const { error: itemsError } = await supabase
-      .from('shopping_items')
-      .delete()
-      .eq('list_id', listId)
-
-    if (itemsError) {
-      console.error('Erreur lors de la suppression des items:', itemsError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la suppression des items: ${itemsError.message}`
-      })
-    }
-
-    // Supprimer la liste
-    const { error: listError } = await supabase
+    const { data, error } = await supabase
       .from('shopping_lists')
       .delete()
-      .eq('id', listId)
+      .eq('id', id)
+      .select('id')
 
-    if (listError) {
-      console.error('Erreur lors de la suppression de la liste:', listError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la suppression de la liste: ${listError.message}`
-      })
+    if (error) {
+      throwSupabaseError(error, 'shopping-lists.delete')
+    }
+    if (!data || data.length === 0) {
+      throw createError({ statusCode: 404, statusMessage: 'Liste introuvable' })
     }
 
     return {
       success: true,
-      message: 'Liste de courses supprimée avec succès'
+      message: 'Liste de courses supprimée'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de la liste:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'shopping-lists.delete')
   }
 })

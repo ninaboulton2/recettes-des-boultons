@@ -1,85 +1,34 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { idParamsSchema, shoppingListInputSchema } from '#shared/schemas'
+import type { ShoppingListRow } from '~~/server/utils/shopping'
 
+/** PUT /api/shopping-lists/:id — renomme une liste. Liste inconnue (RLS) → 404. */
 export default defineEventHandler(async (event) => {
   try {
     const { supabase } = await requireUser(event)
+    const { id } = validateRouterParams(event, idParamsSchema)
+    const { name } = await validateBody(event, shoppingListInputSchema)
 
-    const listId = getRouterParam(event, 'id')
-    const body = await readBody(event)
-    const { name } = body
-
-    if (!listId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID de liste manquant'
-      })
-    }
-
-    if (!name || name.trim() === '') {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Nom de liste manquant'
-      })
-    }
-
-    // Vérifier que la liste existe
-    const { data: existingList, error: checkError } = await supabase
-      .from('shopping_lists')
-      .select('id, name')
-      .eq('id', listId)
-      .single()
-
-    if (checkError || !existingList) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Liste non trouvée'
-      })
-    }
-
-    // Mettre à jour le nom de la liste
     const { data, error } = await supabase
       .from('shopping_lists')
-      .update({
-        name: name.trim(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', listId)
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', id)
       .select('*')
-      .single()
+      .maybeSingle()
 
     if (error) {
-      console.error('Erreur Supabase lors de la mise à jour:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Erreur lors de la mise à jour: ${error.message}`
-      })
+      throwSupabaseError(error, 'shopping-lists.put')
     }
-
-    // Formater la réponse
-    const formattedList = {
-      id: data.id,
-      name: data.name,
-      userId: data.user_id,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+    if (!data) {
+      throw createError({ statusCode: 404, statusMessage: 'Liste introuvable' })
     }
 
     return {
       success: true,
-      list: formattedList,
-      message: 'Nom de liste mis à jour avec succès'
+      list: mapShoppingListRow(data as ShoppingListRow),
+      message: 'Liste renommée'
     }
-
-  } catch (error: any) {
-    console.error('Erreur lors de la mise à jour du nom de liste:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Erreur interne du serveur: ${error.message || 'Erreur inconnue'}`
-    })
+  } catch (error: unknown) {
+    handleApiError(error, 'shopping-lists.put')
   }
 })
