@@ -159,22 +159,31 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    // Erreurs spécifiques OpenAI
-    if (error.code === 'invalid_api_key') {
+    // Erreurs spécifiques OpenAI.
+    // NB : OpenAI répartit l'info sur plusieurs champs — `code` (ex.
+    // "credit_balance_exhausted"), `type` (ex. "insufficient_quota") et `status`
+    // (HTTP). On teste les trois pour ne pas masquer l'erreur en 500 opaque.
+    const code = error.code || error.error?.code
+    const type = error.type || error.error?.type
+    const status = error.status || error.statusCode
+
+    if (code === 'invalid_api_key' || status === 401) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Clé API OpenAI invalide. Veuillez vérifier votre configuration.'
       })
     }
 
-    if (error.code === 'insufficient_quota') {
+    // Quota/crédits épuisés : OpenAI renvoie type "insufficient_quota" (HTTP 429)
+    // avec un code plus précis comme "credit_balance_exhausted".
+    if (type === 'insufficient_quota' || code === 'insufficient_quota' || code === 'credit_balance_exhausted' || status === 429) {
       throw createError({
         statusCode: 402,
-        statusMessage: 'Quota OpenAI insuffisant. Veuillez vérifier votre compte.'
+        statusMessage: 'Quota OpenAI épuisé. Ajoutez des crédits sur votre compte OpenAI puis réessayez.'
       })
     }
 
-    if (error.code === 'model_not_found') {
+    if (code === 'model_not_found') {
       throw createError({
         statusCode: 400,
         statusMessage: 'Modèle OpenAI non trouvé. Veuillez vérifier le nom du modèle.'

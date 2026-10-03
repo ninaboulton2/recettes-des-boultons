@@ -161,7 +161,12 @@ const translateAndAddRecipe = async () => {
 
   } catch (err) {
     console.error('Erreur lors de la traduction/ajout:', err)
-    error.value = 'Erreur lors de l\'ajout. Veuillez réessayer.'
+    // Remonter le message précis renvoyé par le serveur (quota, clé, etc.)
+    // au lieu d'un message générique. `statusMessage` est fourni par h3/$fetch.
+    const serverMessage = err?.data?.statusMessage || err?.statusMessage
+    error.value = serverMessage
+      ? `Erreur : ${serverMessage}`
+      : 'Erreur lors de l\'ajout. Veuillez réessayer.'
   } finally {
     isLoading.value = false
   }
