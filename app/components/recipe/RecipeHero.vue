@@ -20,7 +20,7 @@
         :preload="{ fetchPriority: 'high' }"
         class="h-full w-full object-cover"
       />
-      <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 text-dimmed print:hidden">
+      <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 text-muted print:hidden">
         <UIcon name="i-lucide-chef-hat" class="size-14" aria-hidden="true" />
         <span class="text-xs">{{ $t('recipeDetail.noPhoto') }}</span>
       </div>

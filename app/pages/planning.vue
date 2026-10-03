@@ -58,7 +58,7 @@
         <p v-if="week.isEmptyWeek.value" class="text-center text-sm text-muted print:hidden">
           {{ $t('planning.empty.title') }} — {{ $t('planning.empty.description') }}
         </p>
-        <p v-else class="hidden text-center text-xs text-dimmed lg:block print:hidden">
+        <p v-else class="hidden text-center text-xs text-muted lg:block print:hidden">
           {{ $t('planning.dnd.hint') }}
         </p>
 

@@ -10,7 +10,7 @@
 
       <template v-if="byAisle">
         <div v-for="group in toBuyByAisle" :key="group.aisle" class="mb-3 last:mb-0">
-          <h4 class="px-2 py-1 text-xs font-medium text-dimmed">
+          <h4 class="px-2 py-1 text-xs font-medium text-muted">
             {{ $t(`shopping.aisles.${group.aisle}`) }}
           </h4>
           <ul class="divide-y divide-default rounded-xl border border-default bg-default print:border-0">

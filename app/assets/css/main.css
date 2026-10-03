@@ -72,3 +72,21 @@
     }
   }
 }
+
+/* Impression d'une fiche recette (pages/recettes/[id].vue) : pas de navigation
+   ni d'actions, encre noire sur papier blanc, sauts de page propres. */
+@media print {
+  /* Page nommée : ne touche pas au @page (paysage) de l'impression du planning. */
+  @page recipe-sheet { margin: 1.5cm; }
+
+  body:has(#recipe-sheet) {
+    background: white !important;
+    color: black !important;
+
+    header, footer, nav, [data-print-hidden] { display: none !important; }
+    #recipe-sheet { max-width: none !important; page: recipe-sheet; }
+    #recipe-sheet :is(h1, h2, h3) { break-after: avoid; }
+    #recipe-sheet li { break-inside: avoid; }
+    #recipe-sheet a { text-decoration: none; color: inherit; }
+  }
+}

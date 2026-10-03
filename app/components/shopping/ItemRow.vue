@@ -23,7 +23,7 @@
       >
         {{ item.name }}
       </span>
-      <span v-if="item.recipeId" class="flex items-center gap-1 text-xs text-dimmed print:hidden">
+      <span v-if="item.recipeId" class="flex items-center gap-1 text-xs text-muted print:hidden">
         <UIcon name="i-lucide-book-open" class="size-3" />
         {{ $t('shopping.item.fromRecipe') }}
       </span>

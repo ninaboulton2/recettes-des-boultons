@@ -18,7 +18,7 @@
         color="neutral"
         variant="ghost"
         size="xs"
-        class="w-full justify-start text-dimmed print:hidden"
+        class="w-full justify-start text-muted print:hidden"
         @click="startEditing"
       />
     </template>

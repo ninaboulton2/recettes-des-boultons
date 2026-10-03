@@ -166,23 +166,11 @@ const deleteRecipe = async () => {
   }
 }
 
-// Impression : pas de navigation ni d'actions, marges et sauts de page propres.
+// Impression : feuille `@media print` de main.css (body:has(#recipe-sheet)).
 useHead({
   title: () => recipe.value?.title ?? t('recipes.detail.notFound'),
   meta: [
     { name: 'description', content: () => recipe.value?.description || t('recipes.detail.notFound') }
-  ],
-  style: [{
-    media: 'print',
-    innerHTML: `
-      @page { margin: 1.5cm; }
-      header, footer, nav, [data-print-hidden] { display: none !important; }
-      body { background: #fff !important; color: #000 !important; }
-      #recipe-sheet { max-width: none !important; }
-      #recipe-sheet h1, #recipe-sheet h2, #recipe-sheet h3 { break-after: avoid; }
-      #recipe-sheet li { break-inside: avoid; }
-      #recipe-sheet a { text-decoration: none; color: inherit; }
-    `
-  }]
+  ]
 })
 </script>

@@ -40,7 +40,7 @@
     <footer class="mt-auto hidden border-t border-default md:block">
       <UContainer class="flex flex-col items-center justify-between gap-2 py-6 text-sm text-muted sm:flex-row">
         <p>{{ $t('footer.copyright', { year: new Date().getFullYear() }) }}</p>
-        <p class="font-lobster text-base text-dimmed">{{ $t('meta.title') }}</p>
+        <p class="font-lobster text-base text-muted">{{ $t('meta.title') }}</p>
       </UContainer>
     </footer>
 
