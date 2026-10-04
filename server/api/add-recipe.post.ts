@@ -4,8 +4,8 @@ import { addRecipeBodySchema, toSaveRecipePayload } from '#shared/schemas'
 /**
  * POST /api/add-recipe — crée une recette (admin).
  * Body : `{ recipe: RecipeInput }` (camelCase, forme de l'éditeur).
- * Un seul appel SQL : `save_recipe(payload)` (sections, ingrédients,
- * instructions, JSONB legacy recalculé), puis relecture de la recette.
+ * Un seul appel SQL : `save_recipe(payload)` (recette, sections,
+ * ingrédients, instructions), puis relecture de la recette.
  */
 export default defineEventHandler(async (event) => {
   try {

@@ -16,7 +16,7 @@ import type {
  * planning) passent par ici : pas de mapping dupliqué dans les composants.
  */
 
-/** Colonnes de `recipes` utiles aux listes (sans les JSONB historiques, `image` ni `search`). */
+/** Colonnes de `recipes` utiles aux listes (sans `image` ni `search`). */
 export const RECIPE_SUMMARY_COLUMNS
   = 'id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at'
 
