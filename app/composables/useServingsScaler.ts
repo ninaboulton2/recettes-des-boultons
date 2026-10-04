@@ -43,8 +43,9 @@ export function useServingsScaler(recipe: MaybeRefOrGetter<Recipe | null | undef
     servings.value = baseServings.value
   }
 
+  const numberLocale = useNumberLocale()
   const scaledAmount = (ingredient: Pick<Ingredient, 'amount' | 'amountNum'>): string =>
-    formatScaledAmount(ingredient.amountNum, ingredient.amount, factor.value)
+    formatScaledAmount(ingredient.amountNum, ingredient.amount, factor.value, numberLocale.value)
 
   return { baseServings, servings, canScale, factor, isScaled, setServings, increment, decrement, reset, scaledAmount }
 }

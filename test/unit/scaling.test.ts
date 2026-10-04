@@ -93,6 +93,13 @@ describe('formatScaledAmount', () => {
     expect(formatScaledAmount(500, '500', 1 / 3)).toBe('167')
   })
 
+  it('format des nombres selon la locale', () => {
+    expect(formatScaledAmount(25, '25', 0.5, 'en-US')).toBe('12.5')
+    expect(formatScaledAmount(25, '25', 0.5, 'fr-FR')).toBe('12,5')
+    expect(formatScaledAmount(3, '3', 1.5, 'en-US')).toBe('4 ½')
+    expect(formatScaledAmount(500, '500', 1 / 3, 'en-US')).toBe('167')
+  })
+
   it('facteur 1 : même rendu que la fiche d’origine', () => {
     expect(formatScaledAmount(1.5, '1,5', 1)).toBe('1 ½')
     expect(formatScaledAmount(200, '200', 1)).toBe('200')

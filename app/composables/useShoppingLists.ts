@@ -62,7 +62,8 @@ export function useShoppingLists() {
   const allChecked = computed(() => items.value.length > 0 && groups.value.toBuy.length === 0)
 
   /** « 200 g », « 1 ½ c. à s. » … (libellé d'unité via le référentiel `units`). */
-  const quantityOf = (item: ShoppingItem) => formatQuantity(item, unitLabel(item.unitCode, item.unit))
+  const numberLocale = useNumberLocale()
+  const quantityOf = (item: ShoppingItem) => formatQuantity(item, unitLabel(item.unitCode, item.unit), numberLocale.value)
 
   // --- Actions avec retour utilisateur ---
   const notifyError = (error: unknown) => {

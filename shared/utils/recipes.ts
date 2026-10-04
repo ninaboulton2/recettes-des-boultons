@@ -122,10 +122,21 @@ const FRACTIONS: ReadonlyArray<readonly [number, string]> = [
 ]
 
 /**
- * Formate une quantité pour l'affichage : `amountNum` (fraction simple si
- * possible, sinon nombre court) avec repli sur le texte saisi `amount`.
+ * Locale par défaut des nombres affichés (« 1,5 ») ; les composants passent
+ * la langue courante (`useNumberLocale()` : `fr-FR` ou `en-US`, « 1.5 »).
  */
-export function formatAmount(amountNum: number | null | undefined, amount: string | null | undefined): string {
+export const DEFAULT_NUMBER_LOCALE = 'fr-FR'
+
+/**
+ * Formate une quantité pour l'affichage : `amountNum` (fraction simple si
+ * possible, sinon nombre court au format de `locale`) avec repli sur le
+ * texte saisi `amount` (rendu tel quel).
+ */
+export function formatAmount(
+  amountNum: number | null | undefined,
+  amount: string | null | undefined,
+  locale: string = DEFAULT_NUMBER_LOCALE
+): string {
   if (amountNum === null || amountNum === undefined || !Number.isFinite(amountNum)) {
     return amount?.trim() ?? ''
   }
@@ -136,12 +147,15 @@ export function formatAmount(amountNum: number | null | undefined, amount: strin
   if (fraction) {
     return whole > 0 ? `${whole} ${fraction[1]}` : fraction[1]
   }
-  return amountNum.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
+  return amountNum.toLocaleString(locale, { maximumFractionDigits: 2 })
 }
 
 /** « 1 ½ cuillère à soupe farine », « sel » … (unité en texte libre pour l'instant). */
-export function formatIngredient(ingredient: Pick<Ingredient, 'name' | 'amount' | 'amountNum' | 'unit'>): string {
-  return [formatAmount(ingredient.amountNum, ingredient.amount), ingredient.unit?.trim(), ingredient.name.trim()]
+export function formatIngredient(
+  ingredient: Pick<Ingredient, 'name' | 'amount' | 'amountNum' | 'unit'>,
+  locale: string = DEFAULT_NUMBER_LOCALE
+): string {
+  return [formatAmount(ingredient.amountNum, ingredient.amount, locale), ingredient.unit?.trim(), ingredient.name.trim()]
     .filter((part): part is string => Boolean(part))
     .join(' ')
 }
@@ -210,21 +224,23 @@ export function scaleAmount(amountNum: number | null | undefined, factor: number
 
 /**
  * Quantité affichée après mise à l'échelle : fractions pour les petites
- * quantités (« 1 ½ »), une décimale au-delà (« 12,5 »), entier au-delà de 100.
+ * quantités (« 1 ½ »), une décimale au-delà (« 12,5 » en `fr-FR`, « 12.5 »
+ * en `en-US`), entier au-delà de 100.
  * Sans valeur numérique, le texte saisi est rendu tel quel (il ne peut pas
  * être mis à l'échelle : « une pincée », « 2 à 3 »).
  */
 export function formatScaledAmount(
   amountNum: number | null | undefined,
   amount: string | null | undefined,
-  factor: number
+  factor: number,
+  locale: string = DEFAULT_NUMBER_LOCALE
 ): string {
   const scaled = scaleAmount(amountNum, factor)
   if (scaled === null) return amount?.trim() ?? ''
   if (scaled >= 10) {
-    return scaled.toLocaleString('fr-FR', { maximumFractionDigits: scaled >= 100 ? 0 : 1 })
+    return scaled.toLocaleString(locale, { maximumFractionDigits: scaled >= 100 ? 0 : 1 })
   }
-  return formatAmount(scaled, null)
+  return formatAmount(scaled, null, locale)
 }
 
 /** Une étape « à plat » pour le mode cuisine : section d'origine + numéro global. */

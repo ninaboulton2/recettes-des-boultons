@@ -51,7 +51,7 @@
             <div class="min-w-0 flex-1">
               <p class="font-medium text-highlighted">{{ section.name || $t('ui.addToList.unnamedSection') }}</p>
               <ul class="mt-1 space-y-0.5 text-sm text-muted">
-                <li v-for="ingredient in section.ingredients" :key="ingredient.id">{{ formatIngredient(ingredient) }}</li>
+                <li v-for="ingredient in section.ingredients" :key="ingredient.id">{{ formatIngredient(ingredient, numberLocale) }}</li>
               </ul>
             </div>
           </label>
@@ -93,6 +93,7 @@ const localePath = useLocalePath()
 const supabase = useSupabaseClient<Database>()
 const shoppingStore = useShoppingStore()
 const { $toast } = useNuxtApp()
+const numberLocale = useNumberLocale()
 
 const loading = ref(false)
 const submitting = ref(false)

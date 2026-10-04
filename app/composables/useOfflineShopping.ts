@@ -1,5 +1,6 @@
 import { computed, watch } from 'vue'
 import type { ShoppingList } from '#shared/types'
+import { DEFAULT_NUMBER_LOCALE } from '#shared/utils/recipes'
 import { formatQuantity } from '#shared/utils/shopping'
 
 /**
@@ -107,8 +108,8 @@ export function clearOfflineSnapshot(storage: SnapshotStorage | null | undefined
 }
 
 /** « 200 g », « 1 ½ pot »… (unité saisie, le référentiel `units` n'étant pas chargé hors ligne). */
-export function offlineQuantity(item: OfflineShoppingItem): string {
-  return formatQuantity(item, item.unit)
+export function offlineQuantity(item: OfflineShoppingItem, locale: string = DEFAULT_NUMBER_LOCALE): string {
+  return formatQuantity(item, item.unit, locale)
 }
 
 function browserStorage(): SnapshotStorage | null {
@@ -192,6 +193,7 @@ export function startOfflineShopping(): () => void {
 export function useOfflineShopping() {
   const { isOnline, snapshot } = useOfflineState()
   const authStore = useAuthStore()
+  const numberLocale = useNumberLocale()
 
   const ownSnapshot = computed<OfflineShoppingSnapshot | null>(() => {
     const current = snapshot.value
@@ -207,6 +209,6 @@ export function useOfflineShopping() {
     lists: computed<OfflineShoppingList[]>(() => ownSnapshot.value?.lists ?? []),
     hasSnapshot: computed(() => ownSnapshot.value !== null),
     savedAt: computed<Date | null>(() => (ownSnapshot.value ? new Date(ownSnapshot.value.savedAt) : null)),
-    quantityOf: offlineQuantity
+    quantityOf: (item: OfflineShoppingItem) => offlineQuantity(item, numberLocale.value)
   }
 }

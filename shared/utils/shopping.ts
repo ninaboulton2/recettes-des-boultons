@@ -1,5 +1,5 @@
 import type { ShoppingItem } from '#shared/types'
-import { formatAmount } from './recipes'
+import { DEFAULT_NUMBER_LOCALE, formatAmount } from './recipes'
 import { normalizeAccents } from './text'
 
 /**
@@ -16,11 +16,16 @@ export type QuantityLike = Pick<ShoppingItem, 'amount' | 'amountNum'>
 
 /**
  * « 200 g », « 1 ½ c. à s. », « 2 », « » (aucune quantité).
- * `unitLabel` est le libellé déjà résolu par `useUnits().unitLabel(unitCode, unit)`.
+ * `unitLabel` est le libellé déjà résolu par `useUnits().unitLabel(unitCode, unit)` ;
+ * `locale` : format des nombres (« 2,5 » / « 2.5 »).
  */
-export function formatQuantity(item: QuantityLike, unitLabel: string | null | undefined): string {
+export function formatQuantity(
+  item: QuantityLike,
+  unitLabel: string | null | undefined,
+  locale: string = DEFAULT_NUMBER_LOCALE
+): string {
   const amountText = typeof item.amount === 'number' ? String(item.amount) : item.amount
-  const amount = formatAmount(item.amountNum, amountText)
+  const amount = formatAmount(item.amountNum, amountText, locale)
   const unit = unitLabel?.trim() ?? ''
   return [amount, unit].filter(Boolean).join(' ')
 }

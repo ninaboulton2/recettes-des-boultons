@@ -46,9 +46,10 @@ export function useRecipe(id: MaybeRefOrGetter<string>) {
  */
 export function useIngredientLabel() {
   const { unitLabel } = useUnits()
+  const numberLocale = useNumberLocale()
 
   const amountLabel = (ingredient: Pick<Ingredient, 'amount' | 'amountNum' | 'unit' | 'unitCode'>, factor = 1): string => {
-    const amount = formatScaledAmount(ingredient.amountNum, ingredient.amount, factor)
+    const amount = formatScaledAmount(ingredient.amountNum, ingredient.amount, factor, numberLocale.value)
     const unit = unitLabel(ingredient.unitCode, ingredient.unit)
     return [amount, unit].filter(Boolean).join(' ')
   }
