@@ -36,8 +36,16 @@
         </div>
       </header>
 
+      <!--
+        Hors ligne : dernière copie des listes (lecture seule) à la place des
+        listes, du chargement ou de l'erreur réseau. Après le montage
+        seulement : le rendu serveur (et la page en cache du service worker)
+        est toujours « en ligne », sans écart à l'hydratation.
+      -->
+      <ShoppingOfflineCopy v-if="showOfflineCopy" />
+
       <!-- Chargement initial -->
-      <div v-if="status === 'pending' && !hasData" class="space-y-3" aria-busy="true">
+      <div v-else-if="status === 'pending' && !hasData" class="space-y-3" aria-busy="true">
         <USkeleton class="h-10 w-full" />
         <USkeleton class="h-16 w-full" />
         <USkeleton v-for="index in 5" :key="index" class="h-12 w-full" />
@@ -136,8 +144,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { AddItemPayload } from '~/components/shopping/AddItemForm.vue'
+import { useOfflineShopping } from '~/composables/useOfflineShopping'
 import { useShoppingLists } from '~/composables/useShoppingLists'
 
 const authStore = useAuthStore()
@@ -145,6 +154,12 @@ const { t } = useI18n()
 const shopping = useShoppingLists()
 
 const showLoginModal = ref(false)
+
+// Hors ligne (PWA) : copie locale des listes au lieu de l'état d'erreur.
+const { isOffline } = useOfflineShopping()
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
+const showOfflineCopy = computed(() => mounted.value && isOffline.value)
 
 // Listes : lecture directe sous RLS (store), rendue côté serveur
 const { status, error, refresh } = await useAsyncData(

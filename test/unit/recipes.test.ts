@@ -139,4 +139,13 @@ describe('formatAmount / formatIngredient', () => {
     expect(formatIngredient({ name: 'sel', amount: null, amountNum: null, unit: null })).toBe('sel')
     expect(formatIngredient({ name: 'oeufs', amount: '2', amountNum: 2, unit: '' })).toBe('2 oeufs')
   })
+
+  it('formate les nombres selon la locale (fr-FR par défaut)', () => {
+    expect(formatAmount(2.2, null, 'fr-FR')).toBe('2,2')
+    expect(formatAmount(2.2, null, 'en-US')).toBe('2.2')
+    expect(formatAmount(1.5, null, 'en-US')).toBe('1 ½')
+    // Texte saisi : rendu tel quel, quelle que soit la locale.
+    expect(formatAmount(null, '1,5', 'en-US')).toBe('1,5')
+    expect(formatIngredient({ name: 'flour', amount: null, amountNum: 2.2, unit: 'cups' }, 'en-US')).toBe('2.2 cups flour')
+  })
 })

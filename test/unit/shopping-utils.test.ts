@@ -19,6 +19,11 @@ describe('formatQuantity', () => {
     expect(formatQuantity({ amount: null, amountNum: null }, '  ')).toBe('')
     expect(formatQuantity({ amount: null, amountNum: null }, 'g')).toBe('g')
   })
+
+  it('formate les nombres selon la locale', () => {
+    expect(formatQuantity({ amount: '2.2', amountNum: 2.2 }, 'kg')).toBe('2,2 kg')
+    expect(formatQuantity({ amount: '2.2', amountNum: 2.2 }, 'kg', 'en-US')).toBe('2.2 kg')
+  })
 })
 
 describe('splitChecked', () => {

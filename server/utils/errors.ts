@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nuxt'
 import { createError, type H3Error } from 'h3'
 
 /**
@@ -5,8 +6,11 @@ import { createError, type H3Error } from 'h3'
  *
  * Règle : aucun détail technique (message Supabase/Postgres, stack) ne sort
  * vers le client. Les erreurs « métier » (statut < 500) sont relancées telles
- * quelles ; tout le reste est journalisé côté serveur et remplacé par un 500
- * au message générique.
+ * quelles ; tout le reste est journalisé côté serveur, envoyé à Sentry
+ * (`captureException`, tag `api` = contexte ; sans effet si le SDK n'est pas
+ * initialisé, c.-à-d. sans DSN) et remplacé par un 500 au message générique.
+ * L'erreur d'origine reste attachée en `cause` (jamais sérialisée vers le
+ * client).
  */
 
 export const GENERIC_ERROR_MESSAGE = 'Une erreur est survenue, réessayez plus tard.'
@@ -27,14 +31,22 @@ function isH3Error(error: unknown): error is H3Error {
 /**
  * À appeler dans le `catch` final d'un endpoint :
  *  - `statusCode` < 500 → relancé tel quel (déjà destiné au client) ;
- *  - sinon → `console.error('[api] <context>', error)` et 500 générique.
+ *  - 500 générique de `throwSupabaseError` → relancé tel quel (déjà traité) ;
+ *  - sinon → `console.error('[api] <context>', error)`, envoi à Sentry et
+ *    500 générique.
  */
 export function handleApiError(error: unknown, context: string): never {
   if (isH3Error(error) && error.statusCode < 500) {
     throw error
   }
+  // 500 générique déjà produit (et journalisé / envoyé) par
+  // `throwSupabaseError` dans le `try` : relancé tel quel, sans doublon.
+  if (isH3Error(error) && error.statusMessage === GENERIC_ERROR_MESSAGE) {
+    throw error
+  }
   console.error(`[api] ${context}`, error)
-  throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE })
+  Sentry.captureException(error, { tags: { api: context } })
+  throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE, cause: error })
 }
 
 /**
@@ -64,6 +76,7 @@ export function throwSupabaseError(error: SupabaseErrorLike, context: string, op
       throw createError({ statusCode: 409, statusMessage: options.conflictMessage ?? 'Cet élément existe déjà' })
     default:
       console.error(`[api] ${context}`, error)
-      throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE })
+      Sentry.captureException(error, { tags: { api: context } })
+      throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE, cause: error })
   }
 }

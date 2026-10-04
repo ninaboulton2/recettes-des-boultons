@@ -43,7 +43,9 @@ test('(b) filtre par catégorie + pagination', async ({ page }) => {
   const firstTitle = (await cards.first().getByRole('heading').textContent())?.trim() ?? ''
 
   const pagination = page.getByRole('navigation', { name: 'Pagination' })
-  await pagination.getByRole('button', { name: /(^|\s)2$/ }).click()
+  // Libellés accessibles traduits (reka-ui les écrit en dur en anglais).
+  await expect(pagination.getByRole('button', { name: 'Page suivante', exact: true })).toBeVisible()
+  await pagination.getByRole('button', { name: 'Page 2', exact: true }).click()
   await expect(page).toHaveURL(/[?&]page=2/)
   await expect(page).toHaveURL(new RegExp(`category=${PAGINATION_CATEGORY}`))
   await expect(cards.first().getByRole('heading')).not.toHaveText(firstTitle)

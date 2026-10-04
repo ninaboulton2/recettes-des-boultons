@@ -42,11 +42,9 @@ export async function loginThroughUi(page: Page, role: AccountRole): Promise<voi
 }
 
 /**
- * Champ de recherche de /recettes. Pas de sélection par libellé : dans le
- * build de production, le `for` du label « Rechercher » ne correspond pas à
- * l'id du champ (useId SSR/client, voir le rapport) — le nom accessible
- * devient alors le placeholder.
+ * Champ de recherche de /recettes, par son libellé « Rechercher » (relié au
+ * champ par un id fixe, y compris dans le build de production).
  */
 export function searchBox(page: Page) {
-  return page.getByRole('main').getByRole('searchbox')
+  return page.getByRole('main').getByRole('searchbox', { name: 'Rechercher', exact: true })
 }

@@ -5,7 +5,7 @@ import { recipeIdQuerySchema, toSaveRecipePayload, updateRecipeBodySchema } from
  * PUT /api/update-recipe?id= — remplace intégralement une recette (admin).
  * Body : `{ updates: RecipeInput }` (même forme que la création : l'éditeur
  * renvoie toujours la recette complète). `save_recipe` remplace toutes les
- * sections/ingrédients/instructions (pas de doublon) et recalcule le JSONB.
+ * sections/ingrédients/instructions (pas de doublon).
  */
 export default defineEventHandler(async (event) => {
   try {

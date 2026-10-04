@@ -88,7 +88,12 @@
       "removeTag": "Retirer le tag {tag}"
     },
     "pagination": {
-      "label": "Pagination"
+      "label": "Pagination",
+      "first": "Première page",
+      "previous": "Page précédente",
+      "page": "Page {page}",
+      "next": "Page suivante",
+      "last": "Dernière page"
     },
     "category": {
       "subtitle": "Toutes les recettes de la catégorie « {category} »"
@@ -273,6 +278,7 @@
       "title": "Ajouter à une liste de courses",
       "description": "Choisissez la liste et les sections d’ingrédients à ajouter.",
       "list": "Liste",
+      "listsLoading": "Chargement des listes…",
       "noLists": "Vous n’avez pas encore de liste de courses.",
       "newListName": "Nom de la nouvelle liste",
       "createList": "Créer la liste",

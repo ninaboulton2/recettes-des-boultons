@@ -79,7 +79,7 @@ export type RecipeIngredientInput = z.infer<typeof recipeIngredientInputSchema>
 export type RecipeInstructionInput = z.infer<typeof recipeInstructionInputSchema>
 export type SectionType = z.infer<typeof sectionTypeSchema>
 
-/** Payload (snake_case) de la RPC `save_recipe(payload jsonb)` — voir 0006_save_recipe.sql et 0011 (`photo_path`). */
+/** Payload (snake_case) de la RPC `save_recipe(payload jsonb)` — voir 0006_save_recipe.sql, 0011 (`photo_path`) et 0013 (version actuelle). */
 export interface SaveRecipePayload {
   id?: string
   title: string

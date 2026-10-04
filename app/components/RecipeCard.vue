@@ -113,6 +113,8 @@ const { categoryIcon } = useCategories()
 const { publicUrl } = useRecipePhoto()
 
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
+// Cœur : favoris chargés une seule fois par utilisateur (attendus en SSR).
+useFavoritesLoader()
 const duration = computed(() => totalTime(props.recipe))
 const visibleTags = computed(() => props.recipe.tags.slice(0, MAX_TAGS))
 const hiddenTagCount = computed(() => Math.max(0, props.recipe.tags.length - MAX_TAGS))

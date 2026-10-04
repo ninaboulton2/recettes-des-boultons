@@ -88,7 +88,12 @@
       "removeTag": "Remove tag {tag}"
     },
     "pagination": {
-      "label": "Pagination"
+      "label": "Pagination",
+      "first": "First page",
+      "previous": "Previous page",
+      "page": "Page {page}",
+      "next": "Next page",
+      "last": "Last page"
     },
     "category": {
       "subtitle": "All recipes in the “{category}” category"
@@ -273,6 +278,7 @@
       "title": "Add to a shopping list",
       "description": "Choose the list and the ingredient sections to add.",
       "list": "List",
+      "listsLoading": "Loading lists…",
       "noLists": "You don’t have a shopping list yet.",
       "newListName": "New list name",
       "createList": "Create list",

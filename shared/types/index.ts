@@ -5,9 +5,9 @@ import type { Tables } from './database'
  *
  * Les lignes brutes de la base (snake_case) viennent de `./database.ts`
  * (généré) et sont converties une seule fois par `#shared/utils/recipes`.
- * Les champs JSONB historiques (`recipes.ingredients` / `recipes.instructions`)
- * ne font plus partie du modèle : depuis la migration 0005, toutes les
- * recettes sont décrites par leurs sections.
+ * Toutes les recettes sont décrites par leurs sections (ingrédients et
+ * instructions en tables) ; les anciennes colonnes `recipes.ingredients` /
+ * `recipes.instructions` ont été supprimées par la migration 0013.
  */
 
 export type RecipeRow = Tables<'recipes'>

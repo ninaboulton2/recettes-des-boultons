@@ -4,11 +4,11 @@ import { throwSupabaseError } from './errors'
 
 /**
  * Lecture d'une recette après écriture (`save_recipe`) : ligne `recipes`
- * (sans les colonnes JSONB legacy) + `sections[]` avec ingrédients
- * (`unitCode`, `amountNum`) et instructions, en camelCase.
+ * + `sections[]` avec ingrédients (`unitCode`, `amountNum`) et
+ * instructions, en camelCase.
  *
  * La forme `RecipeDetail` est celle attendue par le front (type `Recipe`
- * de la lecture : `recipes` sans JSONB + `sections`).
+ * de la lecture : `recipes` + `sections`).
  */
 
 export interface RecipeIngredientDetail {

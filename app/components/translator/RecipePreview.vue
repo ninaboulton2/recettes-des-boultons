@@ -87,6 +87,7 @@ const props = defineProps<{
 }>()
 
 const { unitLabel } = useUnits()
+const numberLocale = useNumberLocale()
 
 interface PreviewSection {
   name: string
@@ -111,7 +112,7 @@ const unknownUnitNames = computed(() =>
 
 function formatAmount(amount: RecipeIngredientInput['amount']): string {
   if (amount === null || amount === undefined) return ''
-  if (typeof amount === 'number') return Number.isInteger(amount) ? String(amount) : String(Math.round(amount * 100) / 100).replace('.', ',')
+  if (typeof amount === 'number') return amount.toLocaleString(numberLocale.value, { maximumFractionDigits: 2, useGrouping: false })
   return amount
 }
 

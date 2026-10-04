@@ -9,7 +9,14 @@
       <div class="space-y-5">
         <!-- Liste cible -->
         <UFormField :label="$t('recipeDetail.shopping.list')" :name="'list'">
-          <div v-if="shoppingStore.shoppingLists.length === 0" class="space-y-3">
+          <!-- Listes pas encore connues : pas d'état « aucune liste » trompeur -->
+          <USkeleton
+            v-if="listsLoading"
+            class="h-8 w-full"
+            role="status"
+            :aria-label="$t('recipeDetail.shopping.listsLoading')"
+          />
+          <div v-else-if="shoppingStore.shoppingLists.length === 0" class="space-y-3">
             <p class="text-sm text-muted">{{ $t('recipeDetail.shopping.noLists') }}</p>
             <div class="flex gap-2">
               <UInput
@@ -78,7 +85,7 @@
         :label="$t('recipeDetail.shopping.add')"
         icon="i-lucide-shopping-basket"
         :loading="submitting"
-        :disabled="selected.length === 0 || !selectedListId"
+        :disabled="listsLoading || selected.length === 0 || !selectedListId"
         @click="submit"
       />
     </template>
@@ -117,6 +124,8 @@ const selectedListId = ref<string | undefined>(undefined)
 const newListName = ref('')
 const creating = ref(false)
 const submitting = ref(false)
+/** Vrai tant que les listes de l'utilisateur ne sont pas connues. */
+const listsLoading = ref(false)
 
 const listItems = computed(() => shoppingStore.shoppingLists.map(list => ({ label: list.name, value: list.id })))
 
@@ -133,11 +142,14 @@ const toggleSection = (id: string, checked: boolean) => {
 watch(open, async (isOpen) => {
   if (!isOpen) return
   selectAll()
+  listsLoading.value = true
   try {
     await shoppingStore.ensureLoaded()
   } catch (error) {
     toast.add({ title: t('recipeDetail.shopping.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
     return
+  } finally {
+    listsLoading.value = false
   }
   selectedListId.value = shoppingStore.currentList?.id ?? shoppingStore.shoppingLists[0]?.id
 }, { immediate: true })

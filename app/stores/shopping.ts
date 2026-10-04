@@ -66,8 +66,24 @@ export const useShoppingStore = defineStore('shopping', () => {
 
   // --- Lecture ---
 
+  /**
+   * Chargement en cours (hors état : non sérialisé dans le payload SSR, où un
+   * `isLoading: true` hydraté bloquerait sinon le chargement côté client).
+   */
+  let pendingLoad: Promise<ShoppingList[]> | null = null
+
   /** Charge les listes depuis Supabase (lecture directe sous RLS). Lève en cas d'erreur. */
   const loadShoppingLists = async (): Promise<ShoppingList[]> => {
+    const load = fetchShoppingLists()
+    pendingLoad = load
+    try {
+      return await load
+    } finally {
+      if (pendingLoad === load) pendingLoad = null
+    }
+  }
+
+  const fetchShoppingLists = async (): Promise<ShoppingList[]> => {
     isLoading.value = true
     error.value = null
 
@@ -123,10 +139,18 @@ export const useShoppingStore = defineStore('shopping', () => {
   /** Recharge les listes (après une écriture). Lève en cas d'erreur. */
   const refresh = () => loadShoppingLists()
 
-  /** Charge les listes une seule fois par utilisateur. */
+  /**
+   * Charge les listes une seule fois par utilisateur. Un chargement en cours
+   * est ATTENDU (et non ignoré) : à la résolution, les listes sont connues —
+   * les modales n'affichent plus « aucune liste » pendant le chargement.
+   */
   const ensureLoaded = async (): Promise<void> => {
     const userId = useAuthStore().currentUser?.id ?? null
-    if (isLoading.value || loadedForUserId.value === userId) return
+    if (loadedForUserId.value === userId) return
+    if (pendingLoad) {
+      await pendingLoad.catch(() => undefined)
+      if (loadedForUserId.value === userId) return
+    }
     try {
       await loadShoppingLists()
     } catch {
