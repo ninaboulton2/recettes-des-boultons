@@ -35,3 +35,68 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: Tests e2e (Playwright + Supabase local)
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Pas de Sentry en CI (SDK inactif sans DSN) ; pas d'appel IA.
+      NUXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          # Version testée avec supabase/config.toml (voir supabase/local/README.md).
+          version: 2.119.0
+
+      # Services inutiles aux parcours exclus (Studio, Realtime, logs, mails…).
+      - name: Start Supabase (local)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit
+
+      - name: psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Données jetables (seed_test.sql, pas de snapshot) + comptes
+      # admin@local.test / user@local.test.
+      - name: Seed database
+        run: bash scripts/ci-seed.sh
+
+      - name: Write .env.local
+        run: bash scripts/ci-env-local.sh
+
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      # Build Node (et non Vercel) : servi par `node .output/server/index.mjs`.
+      - name: Build
+        run: npm run build -- --dotenv .env.local
+        env:
+          NITRO_PRESET: node-server
+
+      - name: Tests e2e
+        run: npm run test:e2e
+
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            test-results/report
+            test-results/artifacts
+          retention-days: 7
+
+      - name: Logs Supabase
+        if: failure()
+        run: docker ps -a && supabase status || true

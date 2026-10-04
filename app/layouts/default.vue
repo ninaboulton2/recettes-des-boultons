@@ -33,6 +33,7 @@
 
     <main class="w-full min-w-0 flex-1 pb-20 md:pb-0">
       <UContainer class="py-6 md:py-8">
+        <OfflineBanner />
         <slot />
       </UContainer>
     </main>

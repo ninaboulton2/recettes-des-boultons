@@ -474,3 +474,80 @@ Composables :
 - **Types Supabase** : générés dans `shared/types/database.ts` (`supabase.types` dans `nuxt.config.ts`) ; `useSupabaseClient()` / `serverSupabaseClient()` sont typés. Exception temporaire : `AuthContext.supabase` (`server/utils/auth.ts`) reste non typé tant que les endpoints d'écriture historiques ne compilent pas avec les types générés.
 - **Dette lint connue** (warnings) : `console.log` historiques, `catch (error: any)` dans les endpoints, plusieurs racines dans `pages/recettes/[id].vue`.
 - Migrations base de données : `supabase/migrations/`. Appliquer via le SQL Editor du dashboard Supabase ou la CLI Supabase. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md) pour l'ordre de déploiement du durcissement RLS.
+
+## Observabilité, PWA et tests e2e
+
+### Sentry (`@sentry/nuxt`)
+
+- Module `@sentry/nuxt/module` (dernier de `modules`), init dans `sentry.client.config.ts` et
+  `sentry.server.config.ts` (racine). Le SDK n'est **initialisé que si un DSN est défini**
+  (`NUXT_PUBLIC_SENTRY_DSN`, repli `SENTRY_DSN`) : sans DSN, aucune requête ni instrumentation.
+- `environment` = `VERCEL_ENV` (`production` / `preview`) ou `development` ;
+  `tracesSampleRate` = 0,1 en production, 0 ailleurs ; **pas de Session Replay** ;
+  `dataCollection` restrictif (ni utilisateur, cookies, en-têtes, corps, paramètres d'URL — le
+  `?code=` OAuth —, ni variables locales).
+- Serveur : depuis la v11 le module intègre `sentry.server.config.ts` au bundle Nitro (pas de
+  `node --import`, compatible fonctions Vercel). Le hook Nitro `error` capture les erreurs
+  ≥ 500 des handlers (les 4xx sont ignorées).
+- **Limite actuelle** : `handleApiError` / `throwSupabaseError` (`server/utils/errors.ts`)
+  journalisent l'erreur d'origine puis lèvent un 500 générique **sans `cause`** : Sentry reçoit
+  « Une erreur est survenue… » avec une pile pointant sur `errors.ts`. Pour remonter l'erreur
+  réelle (sans rien exposer au client), dans les deux branches 500 :
+  ```ts
+  import * as Sentry from '@sentry/nuxt'
+  // …
+  console.error(`[api] ${context}`, error)
+  Sentry.captureException(error, { tags: { api: context } })   // no-op sans DSN
+  throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE, cause: error })
+  ```
+  (le hook Nitro ignore alors le 500 dont la `cause` est déjà capturée : pas de doublon).
+- Sourcemaps : envoyées (puis supprimées du build) **seulement si `SENTRY_AUTH_TOKEN`** est défini
+  (+ `SENTRY_ORG`, `SENTRY_PROJECT`) ; sinon `sentry.sourcemaps.disable` et build inchangé.
+- Mise en service : créer un projet **Nuxt** sur sentry.io (plan Developer gratuit), puis dans
+  Vercel → Environment Variables : `NUXT_PUBLIC_SENTRY_DSN` (Production + Preview) et,
+  facultatif, `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` (build).
+
+### PWA (`@vite-pwa/nuxt`)
+
+- Manifeste « Recettes des Boultons » (`short_name` Boultons, `#c2603e` / `#fafaf9`), icônes
+  `public/pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png` générées depuis
+  `public/favicon.svg` par `npm run pwa:icons` (`scripts/generate-pwa-icons.mjs`, `sharp`).
+- Service worker Workbox (`registerType: 'autoUpdate'`, pas de SW en `nuxt dev`) :
+  précache de l'app shell (`_nuxt/*.js|css`, icônes, manifeste) ; pages HTML en
+  `NetworkFirst` (cache `pages`, sauf `/confirm`, `/reset-password`, `/api/**`) ; images,
+  icônes Iconify et polices à la demande. **Aucune** requête Supabase (`/auth/v1`, `/rest/v1`,
+  storage) ni `/api/**` n'est mise en cache. Le cache `pages` est purgé à la déconnexion
+  (`app/plugins/pwa-offline.client.ts`).
+- **Courses hors ligne** : `useOfflineShopping()` (`app/composables/useOfflineShopping.ts`)
+  observe `useShoppingStore().shoppingLists` (sans modifier le store) et en garde une copie
+  minimale dans `localStorage` (`offline:shopping:v1`, effacée à la déconnexion).
+  `<OfflineBanner />` (layout) affiche l'alerte hors ligne et, sur `/courses`, la dernière copie
+  **en lecture seule**. API : `isOffline`, `lists`, `hasSnapshot`, `savedAt`, `quantityOf`.
+- Vérifier : `NITRO_PRESET=node-server npm run build -- --dotenv .env.local` puis
+  `node --env-file=.env.local .output/server/index.mjs` (DevTools → Application → Manifest /
+  Service workers ; installabilité sans erreur).
+
+### Tests de bout en bout (Playwright)
+
+```bash
+npm run test:e2e        # chromium desktop + Pixel 7 contre la base LOCALE (.env.local)
+npm run test:e2e:ui     # mode interactif
+E2E_SERVER=preview npm run test:e2e   # sur le build (après le build ci-dessus) : + tests du service worker
+npm run test:coverage   # couverture Vitest (rapport coverage/, aucun seuil bloquant)
+```
+
+- `playwright.config.ts` : serveur `nuxt dev --dotenv .env.local --port 3042` (réutilisé s'il
+  tourne) ou, en CI / `E2E_SERVER=preview`, `node .output/server/index.mjs` ; `E2E_BASE_URL`
+  pour viser un serveur existant. Exécution en série (`workers: 1`) : base partagée.
+- Refus si `SUPABASE_URL` n'est pas locale. Toutes les données créées sont préfixées `E2E_` et
+  supprimées (projet `cleanup`, plus `afterEach`) ; les sessions de `auth.setup.ts` sont dans
+  `test-results/.auth/` (gitignoré), rapports dans `test-results/report`.
+- Parcours (`e2e/`) : recherche sans accent → fiche ; catégorie + pagination ; favori ;
+  « Ajouter aux courses » (liste `E2E_` dédiée : la base fusionne les doublons) ; repas
+  personnalisé au planning ; bouton « Modifier » admin / absent pour un user ; `/en` sans clé
+  manquante ; courses hors ligne. Ils passent sur le snapshot local **et** sur `seed_test.sql`
+  (les recettes manquantes pour la pagination sont créées par `data.setup.ts`).
+- CI : job `e2e` de `.github/workflows/ci.yml` — `supabase start` (services inutiles exclus),
+  `scripts/ci-seed.sh` (`setup.sh --seed-test` + `test_accounts.sql`), `scripts/ci-env-local.sh`
+  (`.env.local` depuis `supabase status -o env`), build Node, `npm run test:e2e`, rapport
+  Playwright en artefact en cas d'échec.

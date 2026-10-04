@@ -743,5 +743,20 @@
       "unavailable": "The translation service is unavailable right now. Please try again later.",
       "timeout": "The AI provider did not answer in time. Try again, or paste a shorter recipe."
     }
+  },
+  "pwa": {
+    "offline": {
+      "title": "You are offline",
+      "description": "Pages you already visited remain available; changes will resume once you are back online.",
+      "shoppingDescription": "Here is the latest copy of your shopping lists saved on this device, read-only."
+    },
+    "shopping": {
+      "title": "My shopping (offline)",
+      "savedAt": "Saved on {date}",
+      "emptyList": "Empty list",
+      "none": "No copy of your lists on this device: open the shopping page once while online to find it offline.",
+      "checked": "Checked",
+      "toBuy": "To buy"
+    }
   }
 }
