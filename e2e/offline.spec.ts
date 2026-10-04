@@ -7,7 +7,8 @@ test.use({ storageState: storageStatePath('user') })
 
 /**
  * Courses hors ligne (PWA) : copie des listes dans localStorage à chaque
- * chargement, affichée en lecture seule par <OfflineBanner /> hors ligne.
+ * chargement, affichée en lecture seule par la page des courses hors ligne
+ * (le bandeau <OfflineBanner /> ne garde que l'alerte).
  * Le rechargement hors ligne (page servie par le service worker) n'est
  * testable que sur le build de production (E2E_SERVER=preview, CI) : pas de
  * service worker en `nuxt dev`.
@@ -35,7 +36,11 @@ test.afterEach(async ({ context }) => {
 async function expectOfflineCopy(page: Page): Promise<void> {
   const banner = page.getByTestId('offline-banner')
   await expect(banner.getByText('Vous êtes hors ligne')).toBeVisible()
-  const copy = banner.getByRole('region', { name: 'Mes courses (hors ligne)' })
+  // La copie est affichée par la page (à la place des listes), une seule fois.
+  const copies = page.getByRole('region', { name: 'Mes courses (hors ligne)' })
+  await expect(copies).toHaveCount(1)
+  await expect(banner.getByRole('region', { name: 'Mes courses (hors ligne)' })).toHaveCount(0)
+  const copy = page.getByRole('main').getByRole('region', { name: 'Mes courses (hors ligne)' })
   await expect(copy.getByRole('heading', { name: listName })).toBeVisible()
   await expect(copy.getByText(itemName)).toBeVisible()
 }
@@ -51,6 +56,7 @@ test('courses : copie en lecture seule quand le réseau tombe', async ({ page, c
 
   await context.setOffline(false)
   await expect(page.getByTestId('offline-banner')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Mes courses (hors ligne)' })).toHaveCount(0)
 })
 
 test('courses : rechargement hors ligne servi par le service worker', async ({ page, context }) => {

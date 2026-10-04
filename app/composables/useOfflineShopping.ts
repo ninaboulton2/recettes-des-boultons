@@ -8,7 +8,7 @@ import { formatQuantity } from '#shared/utils/shopping'
  * À chaque chargement réussi des listes (`useShoppingStore().shoppingLists`,
  * observé sans modifier le store), une copie minimale est gardée dans
  * `localStorage` ; hors ligne, `useOfflineShopping()` l'expose en LECTURE
- * SEULE (affichée par `<OfflineBanner />` sur la page des courses).
+ * SEULE (affichée par `<ShoppingOfflineCopy />` sur la page des courses).
  *
  * - `startOfflineShopping()` : écouteurs `online` / `offline` + sauvegarde,
  *   installés une seule fois par le plugin `pwa-offline.client.ts`.
