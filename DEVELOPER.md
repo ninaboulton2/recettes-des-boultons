@@ -1,553 +1,722 @@
 # Guide technique — Recettes des Boultons
 
-Application de gestion de recettes familiales : recettes, planning des repas, listes de courses, favoris, et traducteur de recettes par IA.
+Référence technique de l'application : recettes en sections, recherche, planning des repas,
+listes de courses, favoris, traducteur IA. Pour une présentation rapide, voir
+[README.md](README.md).
 
-## Stack technique
+> ⚠️ **Ne jamais lancer `npm run dev` avec un `.env` qui pointe sur la base de production.**
+> Toutes les écritures (recettes, listes, planning) partiraient en prod. Développer avec
+> `npm run dev:local`, branché sur la base Supabase locale (`.env.local`).
+
+## Table des matières
+
+1. [Stack et versions](#1-stack-et-versions)
+2. [Structure des dossiers](#2-structure-des-dossiers)
+3. [Développement local](#3-développement-local)
+4. [Modèle de données](#4-modèle-de-données)
+5. [Authentification](#5-authentification)
+6. [Lecture des données](#6-lecture-des-données)
+7. [Écriture : endpoints API](#7-écriture--endpoints-api)
+8. [Design](#8-design)
+9. [Fiche recette, éditeur et photos](#9-fiche-recette-éditeur-et-photos)
+10. [Planning et listes de courses](#10-planning-et-listes-de-courses)
+11. [Traducteur IA](#11-traducteur-ia)
+12. [Observabilité (Sentry)](#12-observabilité-sentry)
+13. [PWA et hors ligne](#13-pwa-et-hors-ligne)
+14. [Tests et CI](#14-tests-et-ci)
+15. [Variables d'environnement](#15-variables-denvironnement)
+16. [Déploiement](#16-déploiement)
+17. [À savoir](#17-à-savoir)
+
+---
+
+## 1. Stack et versions
+
+Versions installées (`package-lock.json`).
 
 | Couche | Technologie |
 |---|---|
 | Runtime | Node 22 (`.nvmrc`, `engines.node >= 22`) |
-| Framework | Nuxt 4 (SSR, structure `app/` + `shared/`) + Vue 3 (Composition API) |
-| UI | Nuxt UI v4 (embarque Tailwind CSS 4, `@nuxt/fonts`, `@nuxt/icon`), `@nuxt/image` |
-| État | Pinia 3 (`app/stores/`) |
-| i18n | `@nuxtjs/i18n` v10 (FR par défaut, EN ; fichiers dans `i18n/locales/`) |
-| Backend | API Nitro intégrée (`server/api/`) |
-| Base de données / Auth | Supabase (PostgreSQL + Supabase Auth) via `@nuxtjs/supabase` |
-| IA | Vercel AI SDK (`ai` 7, `generateObject`) — fournisseur au choix (OpenAI `gpt-4.1-mini` par défaut, Anthropic, Google, Mistral, ou `mock`) — voir « IA » |
-| Qualité | TypeScript strict, ESLint (`@nuxt/eslint`), Vitest (`@nuxt/test-utils`), CI GitHub Actions |
+| Framework | Nuxt 4.5.2 (SSR, structure `app/` + `shared/`), Vue 3.5.43 |
+| UI | Nuxt UI 4.11.3 (Tailwind CSS 4.3, `@nuxt/fonts`, `@nuxt/icon`), `@nuxt/image` 2.1, icônes Lucide (`@iconify-json/lucide`) |
+| État | Pinia 3.0.4 (`@pinia/nuxt`) |
+| i18n | `@nuxtjs/i18n` 10.6 (FR par défaut, EN sous `/en`) |
+| Serveur | Nitro (Nuxt), endpoints dans `server/api/`, preset `vercel` |
+| Données / Auth / fichiers | Supabase : PostgreSQL 17, Auth, Storage, via `@nuxtjs/supabase` 2.0.10 et `@supabase/supabase-js` 2.117 |
+| Validation | Zod 3.25 (`shared/schemas/`) |
+| IA | Vercel AI SDK `ai` 7.0 + `@ai-sdk/openai`, `anthropic`, `google`, `mistral` |
+| Observabilité | `@sentry/nuxt` 11.4 |
+| PWA | `@vite-pwa/nuxt` 1.1 (Workbox) |
+| Qualité | TypeScript 5.9 strict, ESLint 9 (`@nuxt/eslint`), Vitest 5 (`@nuxt/test-utils`, couverture v8), Playwright 1.63, GitHub Actions |
 | Hébergement | Vercel |
 
-## Structure du projet
+## 2. Structure des dossiers
 
 ```
 recettes-des-boultons/
-├── app/                     # srcDir Nuxt 4 (alias ~/ et @/)
-│   ├── app.vue              # Racine : <UApp> (Nuxt UI) > <NuxtLayout> > <NuxtPage>
-│   ├── app.config.ts        # Nuxt UI : primary → palette terracotta, neutral → stone
-│   ├── assets/css/main.css  # Tailwind 4 + Nuxt UI, @theme (palette primary, polices)
-│   ├── error.vue            # Page d'erreur (404 / 500) en Nuxt UI
-│   ├── components/          # Composants Vue réutilisables
-│   ├── pages/               # Routes (recettes, planning, courses, favoris, traducteur)
-│   ├── layouts/             # Layout par défaut
-│   ├── stores/              # Pinia : recipes, planning, favorites, shopping, auth
-│   ├── components/planning/ # WeekNavigator, DayColumn, MealSlot, MealCard, MealNoteEditor, AddMealModal, MoveMealModal, DaySlotPicker
-│   ├── components/shopping/ # ListTabs, AddItemForm, UnitSelect, ItemList, ItemRow
-│   ├── composables/         # useApi (apiFetch), useRecipeSearch, useRecipeFacets, useRecipe, useUnits,
-│   │                        # usePlanningWeek, useShoppingLists (toasts + état d'interface)
-│   ├── utils/               # week.ts (semaine du planning, clés locales)
-│   ├── middleware/auth.ts   # Garde de route côté client (admin)
-│   └── plugins/             # toast.client.ts ($toast → useToast() de Nuxt UI)
-├── shared/                  # Code partagé client/serveur (alias #shared)
-│   ├── types/index.ts       # Modèle de lecture (RecipeSummary, Recipe, Favorite, ...) + ré-export de RecipeInput (schéma Zod)
-│   ├── types/database.ts    # Types Supabase GÉNÉRÉS (ne pas éditer)
-│   ├── utils/recipes.ts     # Mapping snake_case → camelCase, formatAmount, formatIngredient
-│   ├── utils/shopping.ts    # formatQuantity, splitChecked, aisleOf / groupByAisle (rayons)
-│   └── utils/text.ts        # normalizeAccents
+├── app/                      # srcDir Nuxt 4 (alias ~/ et @/)
+│   ├── app.vue, app.config.ts, error.vue
+│   ├── assets/css/main.css   # Tailwind 4 + Nuxt UI, @theme (palette, polices), impression
+│   ├── components/           # composants partagés (RecipeCard, AuthModal, OfflineBanner…)
+│   │   ├── recipe/           # fiche recette (préfixe Recipe* : RecipeHero, RecipeCookingMode…)
+│   │   ├── editor/           # éditeur de recette (RecipeEditorForm, SectionEditor…)
+│   │   ├── planning/         # planning (WeekNavigator, DayColumn, MealSlot, MealCard…)
+│   │   ├── shopping/         # courses (ListTabs, AddItemForm, ItemList, ItemRow, UnitSelect)
+│   │   └── translator/       # aperçu du traducteur (RecipePreview)
+│   ├── composables/          # useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
+│   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
+│   ├── middleware/auth.ts    # garde d'affichage des pages admin
+│   ├── pages/                # recettes, planning, courses, favoris, traducteur, confirm, reset-password
+│   ├── plugins/              # toast.client.ts, pwa-offline.client.ts
+│   ├── stores/               # Pinia : auth, recipes, favorites, planning, shopping
+│   └── utils/week.ts         # semaines du planning
+├── shared/                   # code commun client/serveur (alias #shared)
+│   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, units, common
+│   ├── types/index.ts        # modèle de lecture (RecipeSummary, Recipe, ShoppingList…)
+│   ├── types/database.ts     # types Supabase GÉNÉRÉS (ne pas éditer)
+│   └── utils/                # recipes.ts (mapping, quantités), shopping.ts (rayons), text.ts
 ├── server/
-│   ├── api/                 # Endpoints REST (Nitro)
-│   └── utils/               # auth.ts (requireUser / requireAdmin), validate.ts
-├── i18n/locales/            # fr.json, en.json
-├── supabase/migrations/     # Migrations SQL (RLS, etc.)
-├── test/                    # Tests Vitest (test/unit/...)
-├── public/images/           # logo.png (header, NuxtImg), google.svg (bouton OAuth)
-├── nuxt.config.ts, eslint.config.mjs, vitest.config.ts, tsconfig.json
-└── .github/workflows/ci.yml # Lint + typecheck + test + build
+│   ├── api/                  # endpoints d'écriture (voir § 7)
+│   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
+├── i18n/locales/             # fr.json, en.json
+├── supabase/
+│   ├── migrations/           # 0001 → 0015 (SQL, appliquées à la main, voir § 4)
+│   ├── rollback/             # retours arrière (0005, 0013)
+│   ├── fixes/                # correctifs de données ponctuels
+│   ├── local/                # base de dev locale : up.sh, setup.sh, test.sh, comptes, snapshot
+│   ├── tests/                # tests SQL par migration + schéma de base
+│   ├── config.toml           # stack Supabase locale (CLI)
+│   ├── seed_test.sql         # données jetables des tests
+│   ├── MIGRATION_NOTES.md    # détail de chaque migration
+│   └── BASCULE_PROD.md       # mise en production pas à pas
+├── e2e/                      # tests Playwright (+ support/)
+├── test/                     # tests Vitest : unit/, integration/ (base locale)
+├── scripts/                  # ci-seed.sh, ci-env-local.sh, generate-pwa-icons.mjs
+├── docs/                     # IA_MODELES.md, QUALITE_DONNEES.md
+├── public/                   # favicons, icônes PWA, images/logo.png, images/google.svg
+├── nuxt.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.mjs
+├── sentry.client.config.ts, sentry.server.config.ts
+└── .github/workflows/ci.yml
 ```
 
-### Conventions Nuxt 4 / Tailwind 4
+Conventions :
 
-- `~/` pointe sur `app/` ; le code partagé s'importe via `#shared/...` (auto-importé pour `shared/utils` et `shared/types`).
-- `tsconfig.json` ne contient que des *references* vers les tsconfig générés dans `.nuxt/` (`typescript.strict: true` dans `nuxt.config.ts`).
-- Tailwind 4 : la configuration vit dans `app/assets/css/main.css` (`@theme`, `@layer components`, `@utility`). Les valeurs de l'ancien `tailwind.config.js` ont été reprises à l'identique ; quelques réglages rétablissent les défauts v3 (hover sur tous les appareils, bordures `gray-200`, placeholders `gray-400`, curseur `pointer` sur les boutons). Les blocs `<style scoped>` qui utiliseraient `@apply` doivent commencer par `@reference "~/assets/css/main.css";` (aucun cas aujourd'hui).
-- Nuxt UI : mode sombre actif (`ui.colorMode: true`, classe `.dark`, bouton `<UColorModeButton>` dans le header) ; `<UApp>` reçoit la locale Nuxt UI (`fr` / `en`) depuis `app.vue`. Voir la section « Design » ci-dessous.
-- `pages/recettes/[id].vue` déclare un `path` restreint aux UUID (`definePageMeta`) : Nuxt 4 ordonne `[category]` avant `[id]`, ce qui capturait les identifiants de recettes.
+- `~/` pointe sur `app/`, `~~/` sur la racine. Le code partagé s'importe via `#shared/...`
+  (auto-import de `shared/utils` et `shared/types`).
+- Les composants des sous-dossiers prennent le nom du dossier en préfixe :
+  `components/recipe/CookingMode.vue` s'utilise comme `<RecipeCookingMode>`.
+- `tsconfig.json` ne contient que des références aux tsconfig générés dans `.nuxt/`
+  (`typescript.strict: true` dans `nuxt.config.ts`).
+- Tailwind 4 se configure dans `app/assets/css/main.css` (`@theme`, `@layer`). Un bloc
+  `<style scoped>` qui utilise `@apply` doit commencer par
+  `@reference "~/assets/css/main.css";` (aucun cas aujourd'hui).
+- `pages/recettes/[id].vue` restreint son `path` aux UUID (`definePageMeta`) : sinon
+  `[category].vue` capturerait les identifiants de recettes.
 
+## 3. Développement local
 
-## Design (Nuxt UI 4)
+### 3.1 Démarrage
 
-Système commun à toutes les pages ; les tokens vivent dans `app/assets/css/main.css`
-(`@theme static`) et `app/app.config.ts`.
-
-- **Couleurs** : uniquement les utilitaires sémantiques de Nuxt UI — surfaces `bg-default`,
-  `bg-muted`, `bg-elevated`, `bg-accented` ; textes `text-highlighted`, `text-default`,
-  `text-muted`, `text-dimmed`, `text-inverted` ; bordures `border-default`, `border-accented` ;
-  accent `text-primary` / `bg-primary` / `bg-primary/10` ; états `text-error`, `text-success`…
-  Aucun hex ni `gray-*` / `slate-*` dans les composants : ces utilitaires s'adaptent seuls au
-  mode sombre.
-- **Palette** : neutre chaud `stone` (`ui.colors.neutral`) + accent terracotta `primary`
-  (`--color-primary-50…950`, 500 = `#c2603e`). `--ui-primary` vaut la nuance 600 en clair
-  (blanc sur terracotta : 5,5:1) et 400 en sombre (texte foncé : 6:1). Pas de `secondary`.
-- **Typographie** : `font-sans` = Inter (interface), `font-serif` = Fraunces (titres de pages
-  et de recettes : `font-serif font-semibold text-highlighted`), `font-lobster` réservé au logo.
-  Hiérarchie par taille/graisse, pas par la couleur.
-- **Surfaces** : bordures fines (`border border-default`, `hover:border-accented`) plutôt
-  qu'ombres ; `rounded-lg` par défaut, `rounded-xl` pour cartes et modales.
-- **Composants** : Nuxt UI uniquement (`UButton`, `UModal`, `UDrawer`, `UCard`, `UInput`,
-  `USelectMenu`, `UForm` + `UFormField` (schémas zod), `UBadge`, `USkeleton`, `UPagination`,
-  `UDropdownMenu`, `UCheckbox`, `UAlert`, `UIcon`…). Icônes Lucide `i-lucide-*` (collection
-  locale `@iconify-json/lucide`). Boutons icône : toujours un `aria-label`.
-- **Toasts** : `useToast().add({ title, description, color, icon })` (Nuxt UI). La façade
-  `$toast` (`useNuxtApp().$toast`, plugin `toast.client.ts`) conserve l'API historique
-  `$toast.success(title, message?, duration?)` / `error` / `info` / `warning` / `show`.
-- **Composants partagés** (rendu Nuxt UI) : `LoadingState` / `ActionLoading` (`message`), `EmptyState` (`title`, `message`, `icon` Lucide, `actionText`, `actionHandler`,
-  slot `action`), `ErrorState` (`title`, `message`, `retryAction`, `retryText`),
-  `AuthRequired` (émet `login`), `AuthModal` (`isOpen` ; émet `close`, `success` — connexion,
-  inscription et OAuth réunis), `RecipeCard`, `RecipeAddToListModal`, `RecipeFilters`,
-  `RecipeGridSkeleton`, `RecipePagination` (`v-model:page`, `total`, `itemsPerPage` ; sans pages
-  voisines sous `sm`), `CategoryGrid`, `LanguageSwitcher`, `AppUserMenu`, `AppMobileNav`.
-  Les confirmations sont des `UModal` dans la page (plus de `ConfirmModal` ni de `LoadingButton`).
-- **Layout** : header compact (logo, navigation desktop, `UColorModeButton`, langue, menu
-  utilisateur) ; sur mobile, barre d'onglets en bas (Recettes / Planning / Courses / Favoris /
-  Moi) — le layout réserve le padding bas (`pb-20 md:pb-0`), les pages n'ont rien à prévoir ;
-  conteneur unique `UContainer` pour toutes les pages ; `<main class="w-full min-w-0">` (un contenu
-  `nowrap` ne peut plus élargir la page : aucune page ne défile horizontalement à 375 px) ;
-  footer desktop ; `app/error.vue`.
-- **Accessibilité** : focus visible (`outline-primary`) sur les éléments natifs, composants
-  Nuxt UI focusables au clavier, `aria-current="page"` sur la navigation, `prefers-reduced-motion`
-  respecté (animations/transitions neutralisées dans `main.css`).
-- **Catégories** : `useCategories()` (`app/composables/useCategories.ts`) fournit libellés
-  i18n (`categories.<clé>.name`) et icônes Lucide ; `categoryIcon(category)` sert de repli
-  visuel quand une recette n'a pas de `photoPath` (plus d'illustrations par catégorie).
-- **Photos** : `NuxtImg` sur l'URL publique du bucket `recipe-photos` (`useRecipePhoto().publicUrl`),
-  voir « Photos » plus bas. Aucune illustration par catégorie : `recipes.image` n'est plus lu ni
-  écrit par l'application (`RecipeSummary` n'a plus de champ `image`).
-- **i18n** : bloc `ui` (textes communs : `ui.common.*`, `ui.nav.*`, `ui.card.*`, `ui.error.*`…)
-  et blocs `auth`, `home`, `recipes`, `favorites`, `categories`, `footer`, `navigation`, `errors`
-  (erreurs levées côté client : `translateKey(clé, repliFrançais)` de `useApiError.ts`, utilisable
-  dans les stores). Aucun texte visible en dur ; liens et redirections via `localePath()`.
-  `test/unit/i18n.test.ts` vérifie que `fr.json` et `en.json` ont les mêmes clés, aucune valeur
-  vide, les mêmes paramètres `{…}`, et que toute clé littérale utilisée dans `app/` existe.
-  Les messages d'erreur 4xx renvoyés par `server/api` restent en français.
-- **Couleurs codées en dur** : aucune dans `app/` hors `main.css` (logo Google dans
-  `public/images/google.svg`, feuille d'impression de la fiche dans `main.css`).
-- **Création d'une recette** (admin, `pages/recettes/index.vue`) : `UDropdownMenu` « Nouvelle
-  recette » → « Saisir une recette » (`RecipeEditor` en création, puis ouverture de la fiche) ou
-  « Importer avec l'IA » (`/traducteur`).
-
-### OAuth (Google, Apple)
-
-La modale d'authentification affiche « Continuer avec Google » (et Apple si listé) selon
-`runtimeConfig.public.authProviders` (`NUXT_PUBLIC_AUTH_PROVIDERS=google,apple`, défaut
-`google`). Le bouton appelle `supabase.auth.signInWithOAuth({ provider, options: { redirectTo:
-`${origin}/confirm` } })` ; la page `app/pages/confirm.vue` attend `useSupabaseUser()` puis
-revient sur la page d'origine (mémorisée dans `sessionStorage`) ou l'accueil.
-
-- **Google Cloud** : créer un identifiant OAuth 2.0 « Application Web » (console Google Cloud →
-  APIs & Services → Credentials) avec comme URI de redirection autorisée
-  `https://<ref>.supabase.co/auth/v1/callback` (prod) et `http://127.0.0.1:54321/auth/v1/callback`
-  (local). Récupérer `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
-- **Prod (dashboard Supabase)** : Authentication → Providers → Google : activer, coller l'ID
-  et le secret ; dans Authentication → URL Configuration, ajouter `https://<domaine>/confirm`
-  (et `https://<domaine>/en/confirm`) aux *Redirect URLs*.
-- **Local (`supabase/config.toml`)** : les secrets ne sont jamais commités, ils viennent de
-  l'environnement de la CLI (`supabase/.env` gitignoré, ou variables exportées avant
-  `npm run db:local:up`) :
-
-  ```toml
-  [auth.external.google]
-  enabled = true
-  client_id = "env(GOOGLE_CLIENT_ID)"
-  secret = "env(GOOGLE_CLIENT_SECRET)"
-  # Laisser redirect_uri vide : http://127.0.0.1:54321/auth/v1/callback
-  skip_nonce_check = true   # requis pour Google One Tap / certains navigateurs en local
-  ```
-
-  et ajouter `http://localhost:3021/confirm` (port de dev) aux `additional_redirect_urls` de
-  `[auth]`, puis `npx supabase stop && npx supabase start`.
-- **Apple** : même principe (`[auth.external.apple]`, Services ID + clé `.p8` → secret JWT
-  généré) ; n'ajouter `apple` à `NUXT_PUBLIC_AUTH_PROVIDERS` qu'une fois le fournisseur activé.
-
-## Authentification & sécurité
-
-> ⚠️ L'authentification repose sur **Supabase Auth**, pas sur un système JWT/bcrypt maison.
-> Le rôle d'administrateur est porté par la colonne `role` de la table `profiles`.
-
-### Côté client
-
-- **Session** : gérée par le module `@nuxtjs/supabase` (`redirect: false`). Un seul client (`useSupabaseClient()`), session persistée dans un **cookie** (`@supabase/ssr`), donc disponible au SSR et aux endpoints `/api/*`. `useSupabaseUser()` (claims du JWT) est la source de vérité.
-- **Store** : `app/stores/auth.ts` (setup store) suit `useSupabaseUser()` (claims du JWT) : `isAuthenticated` vient de `sub`, `isAdmin` du claim `user_role` (hook `custom_access_token_hook`, migration 0009) avec repli sur `profiles.role` si le claim est absent. Le profil applicatif (`profiles` : nom, préférences) est accolé côté client sans bloquer le rendu. Expose `isAuthenticated`, `isAdmin`, `role`, `currentUser`, `login`, `logout`, `checkAuth`, `init`.
-- **Garde de route** : `app/middleware/auth.ts` protège les pages marquées `meta.requiresAdmin` (redirige vers `/` si non-admin) **sans requête réseau** (claims du cookie). ⚠️ C'est une garde **d'affichage uniquement** — la vraie sécurité est côté serveur.
-- **Lectures** : directes depuis le client Supabase typé (`useSupabaseClient<Database>()`, RLS) via `useAsyncData` (SSR) — voir « Lecture des données ». **Écritures** : les stores passent par `apiFetch` (`app/composables/useApi.ts`), simple `fetch` same-origin : le cookie de session part automatiquement, plus besoin d'en-tête `Authorization`.
-
-### Côté serveur (la barrière qui fait foi)
-
-`server/utils/auth.ts` expose deux gardes, utilisées par tous les endpoints d'écriture :
-
-- **`requireUser(event)`** — accepte **soit** le cookie de session (`serverSupabaseClient` / `serverSupabaseUser` du module), **soit** un en-tête `Authorization: Bearer <jwt>` (clients externes). Renvoie `{ supabase, user }` : un client Supabase agissant au nom de l'utilisateur (le RLS s'applique avec `auth.uid()`) et son identité. `user.id` est **toujours dérivé du token validé**, jamais d'un `userId` envoyé par le client (évite l'usurpation / IDOR).
-- **`requireAdmin(event)`** — `requireUser` + rôle admin : le claim `user_role` du JWT fait foi s'il est présent (cookie : `serverSupabaseUser`, Bearer : charge utile du token validé) ; sinon repli sur `profiles.role`. Renvoie 401 si non connecté, 403 si non-admin.
-
-Il n'y a plus d'endpoint GET : les lectures se font directement depuis le client Supabase (SSR + navigateur) sous RLS.
-
-Défense en profondeur : vérification explicite côté serveur **+** RLS en base.
-
-### Modèle RLS (Row Level Security)
-
-Défini dans `supabase/migrations/0001_harden_rls.sql` :
-
-| Tables | Lecture | Écriture |
-|---|---|---|
-| `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions` | publique | admin uniquement (`is_admin()`) |
-| `favorites`, `planning`, `planning_notes`, `shopping_lists` | propriétaire (`auth.uid() = user_id`) | propriétaire |
-| `shopping_items` | propriétaire (via la liste parente) | propriétaire (via la liste parente) |
-| `profiles` | sa ligne (ou admin) | sa ligne ; un trigger empêche un non-admin de changer son `role` |
-
-Fonctions `SECURITY DEFINER` : **les RPC favoris n'existent plus** (migration `0002_drop_unused_secdef_functions.sql`) ; favoris et planning passent en accès direct aux tables sous RLS. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
-
-## Base de données (schéma réel)
-
-```sql
-profiles            (id uuid PK = auth.users.id, email, name, role 'user'|'admin',
-                     language, theme, notifications, created_at, updated_at)
-
-recipes             (id uuid PK, title, description, category, ingredients jsonb,
-                     instructions jsonb, prep_time, cook_time, servings, image,
-                     tags text[], notes, created_at, updated_at)
-
-recipe_sections     (id uuid PK, recipe_id FK, name, type, order_index,
-                     created_at, updated_at)
-recipe_ingredients  (id uuid PK, recipe_id FK, section_id FK, name, amount, unit,
-                     optional, order_index, created_at, updated_at)
-instructions        (id uuid PK, recipe_id FK, section_id FK, content, order_index,
-                     created_at, updated_at)
-
-favorites           (id uuid PK, user_id, recipe_id FK, created_at, updated_at)
-planning            (id uuid PK, user_id, date_string, meal_type 'lunch'|'dinner',
-                     recipe_id FK?, custom_title, created_at, updated_at)
-planning_notes      (id uuid PK, user_id, date_string, note_type 'day'|'lunch'|'dinner',
-                     content, created_at, updated_at)
-shopping_lists      (id uuid PK, user_id, name, created_at, updated_at)
-shopping_items      (id uuid PK, list_id FK, name, amount, unit, recipe_id FK?,
-                     is_checked, created_at, updated_at)
-```
-
-Notes :
-- Depuis la migration 0005, **toutes** les recettes sont décrites par leurs sections (`recipe_sections` → `recipe_ingredients` / `instructions`). Les colonnes JSONB `recipes.ingredients` / `instructions` subsistent en base (compatibilité, `NOT NULL`) mais **ne sont plus lues par le front** : le type `Recipe` ne les expose plus.
-- Colonnes dérivées par trigger (migrations 0003/0004) : `recipe_ingredients.amount_num` / `unit_code` et `shopping_items.amount_num` / `unit_code` (`parse_amount`, `normalize_unit`). `recipes.photo_path` (0010) et `recipes.search` (0008, tsvector généré).
-- `profiles.id` référence `auth.users.id` ; un trigger `handle_new_user` crée le profil à l'inscription.
-
-## Lecture des données (client Supabase typé)
-
-Les lectures ne passent plus par `/api/*` : le client Supabase typé (`useSupabaseClient<Database>()`,
-types générés dans `shared/types/database.ts`) interroge PostgREST directement, côté serveur (SSR,
-cookie de session) comme dans le navigateur, sous RLS. Les lignes snake_case sont converties une seule
-fois en camelCase par `shared/utils/recipes.ts` (`toRecipeSummary`, `toRecipe`, `formatAmount`…).
-
-| Besoin | Composable / store | Requête |
-|---|---|---|
-| Liste paginée (24/page), recherche, filtres | `useRecipeSearch(scope, { query, category, tags, page })` | RPC `search_recipes(p_query, p_category, p_tags, p_limit, p_offset)` → `RecipeSummary[]` + `total_count` |
-| Compteurs par catégorie, tags disponibles | `useRecipeFacets()` | `select category, tags from recipes` |
-| Fiche complète (sections, ingrédients, instructions) | `useRecipe(id)` / `fetchRecipeById(supabase, id)` | `recipes` + `recipe_sections(*, recipe_ingredients(*), instructions(*))` |
-| Favoris | `useFavoritesStore().refresh()` | `favorites` puis `recipes` par `in('id', …)` |
-| Planning d'une semaine (+ notes) | `usePlanningStore().loadWeek(date)` / `refresh()` | `planning` (+ `recipe:recipes(…)`) et `planning_notes` par plage de dates |
-| Listes de courses | `useShoppingStore().refresh()` | `shopping_lists` avec `shopping_items(*)` imbriqués |
-
-- Les pages appellent ces lectures dans `useAsyncData` (`status` / `error` branchés sur `LoadingState` / `ErrorState` / `EmptyState`).
-- Le store `recipes` ne garde que l'état d'interface (catégorie, recherche, tags) et un compteur `revision` : `useRecipesStore().refresh()` après une écriture fait recharger liste, fiche et facettes. Les stores `favorites`, `planning`, `shopping` exposent `refresh()` (recharge) et `ensureLoaded()` / `ensureWeekLoaded()` (chargement unique à la demande).
-- Régénérer les types après une migration : `npx supabase gen types typescript --local > shared/types/database.ts` (puis replacer l'en-tête « généré, ne pas éditer »).
-
-## Endpoints API (`server/api/`)
-
-Légende auth : 👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
-
-> Plus d'endpoints GET : `GET /api/recipes`, `/api/favorites`, `/api/planning`, `/api/shopping-lists` ont été
-> remplacés par les lectures directes ci-dessus.
-
-
-**Écritures** — corps validé par Zod (`shared/schemas/`), erreurs centralisées (`server/utils/errors.ts`)
-
-| Endpoint | Auth | Body / query (schéma) | SQL | Réponse |
-|---|---|---|---|---|
-| `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput }` (`addRecipeBodySchema`) | `rpc save_recipe(payload)` | `{ success, recipe: RecipeDetail, message }` |
-| `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`) — remplacement complet | `rpc save_recipe(payload + id)` (404 si inconnue) | `{ success, recipe: RecipeDetail, message }` |
-| `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `rpc delete_recipe` (404 si inconnue) | `{ success, deletedRecipeId }` |
-| `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` (`translateRecipeBodySchema`) | `rpc check_ai_quota` (429) → AI SDK `generateObject` → insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage: { provider, model, inputTokens, outputTokens, estimatedCostUsd, durationMs } }` — rien n'est enregistré, le client enchaîne sur `add-recipe` |
-| `POST /api/favorites` | 👤 | `{ recipeId }` | insert (409 si doublon, 404 recette) | `{ success, favorite }` |
-| `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404 si absent) | `{ success }` |
-| `POST /api/planning` | 👤 | `{ dateString: AAAA-MM-JJ, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert | `{ success, meal }` |
-| `PUT /api/planning/:id` | 👤 | `{ dateString, mealType }` (`planningEntryMoveSchema`) | update (404 si absent) — déplacement, identifiant conservé | `{ success, meal }` |
-| `DELETE /api/planning/:id` | 👤 | — | delete (404 si absent) | `{ success }` |
-| `POST /api/planning-notes` | 👤 | `{ dateString, noteType: day\|lunch\|dinner, content? }` | update ou insert | `{ success, note }` |
-| `DELETE /api/planning-notes?dateString=&noteType=` | 👤 | query | delete (idempotent) | `{ success, deleted }` |
-| `POST /api/shopping-lists` | 👤 | `{ name }` | insert | `{ success, list }` |
-| `PUT /api/shopping-lists/:id` | 👤 | `{ name }` | update (404 si absente) | `{ success, list }` |
-| `DELETE /api/shopping-lists/:id` | 👤 | — | delete (cascade articles, 404 si absente) | `{ success }` |
-| `POST /api/shopping-lists/:id/recipes` | 👤 | `{ recipeId, sectionIds?: uuid[], servingsFactor?: > 0 }` | `rpc add_recipe_to_list` (fusion des doublons) | `{ success, items: ShoppingItemDetail[] }` |
-| `POST /api/shopping-items` | 👤 | `{ listId, name, amount?: string\|number, unit?, recipeId? }` | `rpc parse_amount` + `normalize_unit` → `rpc merge_shopping_item` (même nom + même unité → quantités additionnées) | `{ success, item: ShoppingItemDetail }` |
-| `PUT /api/shopping-items/:id` | 👤 | `{ name?, amount?, unit?, isChecked? }` (≥ 1 champ) | update (triggers `amount_num`/`unit_code`) | `{ success, item }` |
-| `DELETE /api/shopping-items/:id` | 👤 | — | delete (404 si absent) | `{ success }` |
-
-`RecipeInput` (camelCase, forme de `RecipeEditor.vue`) : `title` 1–200, `category`, `description?`, `notes?`, `prepTime|cookTime|servings` entiers ≥ 0 ou `null`, `image?`, `tags: string[]`, `sections[] { name, type: ingredients|instructions|mixed, orderIndex, ingredients[] { name, amount: string|number|null, unit, unitCode?: UnitCode, optional, orderIndex }, instructions[] { content, orderIndex } | string }`. Les clés inconnues (`id`, `createdAt`, `favorite`…) sont ignorées. `amount` part en texte vers `save_recipe`, qui calcule `amount_num` (`parse_amount`) et `unit_code` (`normalize_unit`) et recalcule le JSONB legacy.
-
-`RecipeDetail` (réponse, `server/utils/recipes.ts`) : ligne `recipes` **sans** JSONB (`id, title, description, category, prepTime, cookTime, servings, image, photoPath, tags, notes, createdAt, updatedAt`) + `sections[] { id, recipeId, name, type, orderIndex, ingredients[] { id, sectionId, name, amount, amountNum, unit, unitCode, optional, orderIndex }, instructions[] { id, sectionId, content, orderIndex } }`, triés par `orderIndex`.
-
-Erreurs : `400` « Données invalides : champ : raison ; … » (Zod), `401/403` auth, `404/409` métier, erreurs SQL volontaires des RPC (`22023` → 400 avec le message français, `P0002` → 404, `42501` → 403) ; tout le reste → `500` « Une erreur est survenue, réessayez plus tard. » avec le détail uniquement dans la console serveur (`[api] <contexte>`). Côté client, `toUserMessage(err)` (`app/composables/useApiError.ts`) affiche le `statusMessage` pour les 4xx et `errors.generic` (i18n) sinon.
-
-> Les endpoints 👤/🔑 ne reçoivent plus de `userId` du client : il est dérivé de la session (cookie envoyé automatiquement par le navigateur, ou en-tête `Authorization: Bearer` pour un client externe).
-
-## Planning et listes de courses (interface)
-
-Pages `app/pages/planning.vue` et `app/pages/courses.vue` (Nuxt UI, ≤ 300 lignes), découpées en
-composants `app/components/planning/**` et `app/components/shopping/**`. Deux composables portent
-l'état d'interface et le retour utilisateur (`useToast()` + `toUserMessage()`), les stores ne font
-que lire/écrire :
-
-| Couche | Planning | Courses |
-|---|---|---|
-| Store (données) | `usePlanningStore` : `loadWeek`, `refresh`, `ensureWeekLoaded`, `addMeal`, `addCustomMeal`, `removeMeal`, `moveMeal` (`PUT /api/planning/:id`), `saveNote` (vide → `DELETE`) | `useShoppingStore` : `refresh`, `ensureLoaded`, `createList`/`updateListName`/`deleteList`/`clearList`, `addItem` (fusion en base), `updateItem`, `toggleItem` (optimiste), `toggleAllItems`, `clearChecked`, `resetQuantities`, `moveItem`, `addRecipeToList` |
-| Composable (UI) | `usePlanningWeek(date)` : semaine courante, jours (`PlanningDay[]`), formats de date localisés, actions → toasts | `useShoppingLists()` : liste courante, groupes cochés / à acheter, rayons, préférences `storeMode` / `byAisle` (localStorage), actions → toasts |
-| Utilitaires | `app/utils/week.ts` (lundi → dimanche, clés `YYYY-MM-DD` en heure locale, `shiftWeeks`, `fromDateString`) | `shared/utils/shopping.ts` (`formatQuantity`, `splitChecked`, `aisleOf`, `groupByAisle`) |
-
-- Les actions des stores **lèvent** (`ApiError` via `apiErrorFromResponse`) ; aucune logique de
-  consolidation côté client : `merge_shopping_item` / `add_recipe_to_list` fusionnent en base
-  (même nom replié + même `unit_code`). La quantité affichée vient de `amountNum` + libellé
-  `useUnits().unitLabel(unitCode, unit)`.
-- La carte (`RecipeAddToListModal`) et la fiche (`RecipeAddToShoppingModal`) passent toutes deux
-  par `addRecipeToList` (un seul appel, sections et facteur de portions).
-- `PlanningModal.vue` (ajout d'une recette depuis sa carte/fiche) garde son API : props `show`,
-  `recipe: RecipeSummary`, événement `close`.
-- Planning : vue en liste par jour sur mobile, grille 7 colonnes sur `lg`, glisser-déposer natif
-  (`dataTransfer` = id du repas) avec repli accessible « Déplacer… » (modale jour/créneau) ;
-  `?week=AAAA-MM-JJ` ouvre directement une semaine ; impression via `@media print` (paysage).
-- Courses : regroupement par rayon optionnel (table de mots-clés statique, `shared/utils/shopping.ts`),
-  mode « magasin » (zones tactiles agrandies), unités via `USelectMenu` + saisie libre.
-- Textes i18n : blocs `planning`, `shopping`, `planningPrint` (fr/en).
-
-## Variables d'environnement
-
-Seules ces variables sont lues par le code :
-
-```bash
-SUPABASE_URL=            # URL du projet Supabase
-SUPABASE_ANON_KEY=       # clé publique anon
-AI_PROVIDER=openai       # traducteur IA : openai | anthropic | google | mistral | mock (défaut openai)
-AI_MODEL=                # modèle du fournisseur (vide = défaut : gpt-4.1-mini, claude-haiku-4-5, gemini-2.5-flash, mistral-small-latest)
-AI_DAILY_QUOTA=50        # appels IA max / utilisateur / jour (0 = traducteur désactivé)
-OPENAI_API_KEY=          # clé du fournisseur choisi (une seule nécessaire) ; aussi ANTHROPIC_API_KEY,
-                         # GOOGLE_GENERATIVE_AI_API_KEY, MISTRAL_API_KEY
-NUXT_PUBLIC_AUTH_PROVIDERS=google   # fournisseurs OAuth affichés (google, apple) — défaut : google
-```
-
-- **IA** : ces variables sont exposées au serveur via `runtimeConfig` (`nuxt.config.ts`, clés `ai*`,
-  `openaiApiKey`…) et relues à l'exécution par `getAiConfig()` (`server/utils/ai/provider.ts`) avec
-  repli sur `process.env` : sur Vercel, `OPENAI_API_KEY` existant suffit, `NUXT_AI_PROVIDER` et
-  consorts fonctionnent aussi.
-
-- **Mapping Supabase** : le module `@nuxtjs/supabase` attend `SUPABASE_URL` / `SUPABASE_KEY`. Pour ne pas renommer la variable existante sur Vercel, `nuxt.config.ts` mappe explicitement `supabase: { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_ANON_KEY }`. (`NUXT_PUBLIC_SUPABASE_URL` / `NUXT_PUBLIC_SUPABASE_KEY` fonctionnent aussi à l'exécution.)
-- **Développement** : dans `.env` (gitignoré). Modèle : `env.example`.
-- **Production** : dans le dashboard **Vercel** (Settings → Environment Variables) — aucun fichier `.env` n'est déployé.
-- ❌ La clé `service_role` n'est **pas** utilisée par l'application et ne doit jamais être exposée côté client.
-
-## Commandes
+Prérequis : Node 22, Docker Desktop, `psql` (`brew install libpq` ou `postgresql@17`).
 
 ```bash
 npm install
-npm run dev        # http://localhost:3001 (prévisualisation agent : .claude/launch.json → port 3007)
-npm run build      # build de production (preset Vercel, .vercel/output)
-npm run start      # serveur de production
-npm run lint       # ESLint (npm run lint:fix pour corriger)
-npm run typecheck  # vue-tsc, TypeScript strict
-npm test           # Vitest (npm run test:watch en continu)
-```
-
-Déploiement : push sur `main` → build automatique Vercel.
-
-## Base de dev locale
-
-Une stack Supabase complète tourne en local (Docker + CLI Supabase : Postgres 17, Auth,
-PostgREST, Storage, Studio) avec le schéma prod, les migrations `0003 → 0010` appliquées, les
-vraies recettes (snapshot anonymisé, gitignoré) et des comptes de test. Détails :
-[supabase/local/README.md](supabase/local/README.md).
-
-```bash
-npm run db:local:up        # Docker → supabase start → supabase/local/setup.sh (schéma, données, 0003→0010, vérifs)
+npm run db:local:up          # Docker → supabase start → supabase/local/setup.sh
 cp .env.local.example .env.local
-npm run dev:local          # Nuxt sur la base locale (nuxt dev --dotenv .env.local) ; npm run dev reste sur .env (prod)
-npm run db:local:reset     # repartir d'une base vide puis réamorcer
-npm run db:local:test      # reset + seed_test.sql + 0003→0010 + supabase/tests/test_00xx.sql (puis db:local:reset)
-npm run db:local:down      # arrêter les conteneurs
+npm run dev:local            # http://localhost:3001, branché sur la base locale
 ```
 
-- Comptes : `admin@local.test` / `password123` (admin, uuid prod conservé : favoris, planning, listes)
-  et `user@local.test` / `password123`. Studio : http://127.0.0.1:54323, mails : http://127.0.0.1:54324.
-- La CLI ne gère **pas** l'historique prod : `[db.migrations] enabled = false` dans
-  `supabase/config.toml`, pas de `supabase link`. Les fichiers `supabase/migrations/00xx_*.sql`
-  restent appliqués à la main (prod) ou par `setup.sh` (local).
-- Le hook JWT (`custom_access_token_hook`, claim `user_role`) est actif en local, comme il le
-  sera en prod après activation dans le dashboard.
-- Prévisualisation agent : configuration `preview-local` de `.claude/launch.json` (port 3007).
-- Traducteur IA en local : `AI_PROVIDER=mock` dans `.env.local` (recette fixe, aucun appel payant) ;
-  la migration `0012_ai_usage.sql` doit être appliquée (`psql $LOCAL_DB_URL -f supabase/migrations/0012_ai_usage.sql`
-  tant que `setup.sh` ne l'inclut pas).
-- Limites : pas d'appel IA réel (fournisseur `mock`), pas d'e-mails sortants (Mailpit),
-  Postgres `17.11` local vs `17.4` prod (mêmes extensions).
-
-**Régressions connues de l'app actuelle face à 0003 → 0010** :
-
-- ~~`server/api/recipes.get.ts` chargeait tous les ingrédients/instructions en un `select` (tronqué
-  à `max_rows = 1000` → 57 recettes sans ingrédient)~~ — corrigé : la liste passe par `search_recipes`
-  et la fiche par une requête ciblée (`useRecipe`), le repli JSONB a disparu du front.
-- `components/RecipeEditor.vue` n'envoie plus `ingredients`/`instructions` JSONB : jusqu'au
-  passage par `save_recipe` (0006), une recette modifiée garde un JSONB périmé (sans effet
-  d'affichage : le front ne lit plus le JSONB).
-
-## IA (traducteur de recettes)
-
-Page `/traducteur` (admins) : texte brut collé → recette structurée (aperçu) → ajout via
-`useRecipesStore().addRecipe()`. Tout le code IA est dans `server/utils/ai/` et
-`shared/schemas/ai.ts` ; comparatif des modèles et coûts dans [docs/IA_MODELES.md](docs/IA_MODELES.md).
-
-| Fichier | Rôle |
+| Service local | Adresse |
 |---|---|
-| `shared/schemas/ai.ts` | `translateRecipeBodySchema` (body), `aiRecipeSchema` (forme imposée au modèle : unité ∈ 37 `UNIT_CODES`, catégorie ∈ 9, tout `nullable`, rien d'optionnel), `aiRecipeToRecipeInput` (→ forme de l'éditeur), `TranslateRecipeResponse` |
-| `server/utils/ai/provider.ts` | `getAiConfig(event)` (variables `AI_*`, clés), `getModel(config)` → `LanguageModel` AI SDK (`createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI`, `createMistral`, ou mock) |
-| `server/utils/ai/mock.ts` | `MockLanguageModelV4` (`ai/test`) : recette fixe, titre = première ligne du texte, tokens ≈ caractères / 4 |
-| `server/utils/ai/prompt.ts` | prompt système (français) : règles sections / unités / conversions métriques / « ne rien inventer », langue cible ; prompt utilisateur avec le texte entre balises `<recette>` |
-| `server/utils/ai/translate.ts` | `translateRecipeText(model, text, lang)` : `generateObject` + `aiRecipeSchema`, délai 25 s, 1 retry |
-| `server/utils/ai/errors.ts` | `throwAiProviderError` : erreurs AI SDK → 401 (clé), 402 (crédit fournisseur), 422 (réponse inexploitable), 502 (modèle/autre), 504 (délai), messages français sans détail technique |
-| `server/utils/ai/usage.ts` | `assertAiQuota` (`rpc check_ai_quota`, 429), `logAiUsage` (insert `ai_usage` + coût estimé) |
-| `server/utils/ai/pricing.ts` | grille de prix datée par modèle, `estimateCostUsd` |
-| `server/utils/ai/media.ts` | préparation phase 5 : `getTranscriptionModel` (OpenAI `gpt-4o-mini-transcribe`), mode d'emploi `experimental_transcribe` et images dans `generateObject` |
-| `app/composables/useTranslator.ts`, `app/components/RecipeTranslator.vue`, `app/components/translator/RecipePreview.vue` | front (Nuxt UI) : saisie, aperçu avec unités canoniques (`useUnits`), ajout, erreurs via `toUserMessage` (502/504 → messages i18n `translator.errors.*`) |
+| Application | http://localhost:3001 |
+| API Supabase (PostgREST, Auth, Storage) | http://127.0.0.1:54321 |
+| Studio | http://127.0.0.1:54323 |
+| Mails (Mailpit) | http://127.0.0.1:54324 |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
 
-Points d'attention :
+Comptes (mot de passe `password123`) : `admin@local.test` (admin) et `user@local.test`
+(user). Avec le snapshot, d'autres comptes existent (`admin2@…`, `user2@…`, `user3@…`).
+Détails : [supabase/local/README.md](supabase/local/README.md).
 
-- **Sorties structurées strictes** (OpenAI) : pas de champ optionnel ni de contrainte de longueur
-  dans `aiRecipeSchema` ; les longueurs sont vérifiées après conversion par `recipeInputSchema`
-  (le serveur renvoie un `RecipeInput` déjà validé).
-- **Quota** : `AI_DAILY_QUOTA` par utilisateur et par jour (Europe/Paris), admins compris, compté
-  dans `ai_usage` (appels ok et error). `0` désactive le traducteur.
-- **Ouvrir aux non-admins (phase 4)** : remplacer `requireAdmin` par `requireUser` dans
-  `translate-recipe.post.ts` et retirer `requiresAdmin` de la page ; quota et journal sont déjà
-  par utilisateur. `ai_usage` n'est pas encore dans les types générés (à régénérer après 0012 en prod).
-- **Changer de fournisseur** : `AI_PROVIDER` + la clé correspondante sur Vercel, sans code. Un
-  fournisseur hors liste : `npm i @ai-sdk/<nom>`, cas dans `getModel`, clé dans `runtimeConfig`.
-- Tests : `test/unit/schemas/ai.test.ts`, `test/unit/ai/*.test.ts` (mock, erreurs, prix),
-  `test/integration/translate-recipe.local.test.ts` (serveur dev `mock` + base locale, `APP_URL`).
+### 3.2 Fichiers d'environnement
 
-## Fiche recette, éditeur et photos (phase 3B)
+- `.env.local` (gitignoré) : base locale. Modèle : `.env.local.example`. C'est le fichier
+  lu par `npm run dev:local` (`nuxt dev --dotenv .env.local`), par les tests e2e et par les
+  tests d'intégration.
+- `.env` (gitignoré) : lu par `npm run dev` et `npm run build`. **Ne pas le faire pointer sur
+  la prod.** La configuration de production vit uniquement dans Vercel.
+- Liste complète des variables : § 15 et [env.example](env.example).
 
-### Fiche (`app/pages/recettes/[id].vue`, ≈ 190 lignes)
+Ajouts conseillés dans `.env.local` : `AI_PROVIDER=mock` (traducteur sans appel payant) et
+`NUXT_PUBLIC_AUTH_PROVIDERS=none` (Google n'est pas configuré dans la stack locale, voir
+§ 5.3).
 
-La page assemble des composants Nuxt UI sous `app/components/recipe/` :
+### 3.3 Scripts npm
+
+| Script | Effet |
+|---|---|
+| `npm run dev:local` | Nuxt sur la base locale (`.env.local`), port 3001 |
+| `npm run dev` | Nuxt avec `.env`, port 3001 — à éviter (voir l'avertissement en tête) |
+| `npm run build` / `start` | build de production (preset Vercel) / serveur Nuxt |
+| `npm run lint` / `lint:fix` | ESLint |
+| `npm run typecheck` | `nuxt typecheck` puis `tsc -p e2e/tsconfig.json` |
+| `npm test` / `test:watch` / `test:coverage` | Vitest |
+| `npm run test:e2e` / `test:e2e:ui` | Playwright (base locale) |
+| `npm run pwa:icons` | régénère les icônes PWA depuis `public/favicon.svg` |
+| `npm run db:local:up` | démarre Docker et la stack Supabase, puis amorce la base (rejouable) |
+| `npm run db:local:reset` | `supabase db reset` puis amorçage complet |
+| `npm run db:local:down` | arrête les conteneurs (données conservées) |
+| `npm run db:local:status` | URL et clés locales |
+| `npm run db:local:test` | rejoue les migrations et les tests SQL (voir § 14.4) |
+| `npm run db:local:snapshot` | régénère `supabase/local/snapshot/*.sql` depuis `snapshot/raw/*.json` |
+
+### 3.4 Données locales : snapshot ou données de test
+
+`supabase/local/setup.sh` enchaîne : schéma de base (`supabase/tests/01_baseline_schema.sql`,
+la prod avant 0001) → 0001, 0002 → données → 0003 … 0015 → comptes de test →
+`local/verify.sql` (25 contrôles). Il est idempotent : relancé sur une base amorcée, il saute
+le schéma et l'import et ne rejoue que 0013 et suivantes.
+
+- **Avec snapshot** : `supabase/local/snapshot/*.sql` contient les vraies recettes
+  (export anonymisé, gitignoré : données familiales). Régénération :
+  `supabase/local/export_snapshot.md`.
+- **Sans snapshot** (nouvelle machine) : la base démarre sans recettes, avec les deux comptes
+  de test. Pour avoir des recettes jetables, partir d'une base vide et lancer
+  `scripts/ci-seed.sh` (`seed_test.sql` + comptes) :
+  ```bash
+  npx supabase db reset        # seulement si la base a déjà été amorcée
+  bash scripts/ci-seed.sh
+  ```
+
+Options de `setup.sh` (transmises par `npm run db:local:up -- …`) :
+
+| Option | Effet |
+|---|---|
+| `--seed-test` | `seed_test.sql` au lieu du snapshot, **sans** les comptes applicatifs (les tests SQL comptent les utilisateurs du seed) |
+| `--no-verify` | saute `local/verify.sql` |
+| `--until NNNN` | s'arrête après la migration NNNN (ex. `--until 0012` : état d'avant la contraction) |
+| `SUPABASE_DB_URL=…` | autre base ; refusée si l'hôte n'est pas local |
+
+Autres dossiers :
+
+- `supabase/rollback/` : `0005_restore_from_backup.sql` (remet les données d'avant 0005 tant
+  que 0014 n'est pas passée) et `0013_contract_jsonb_down.sql` (recrée les colonnes JSONB).
+  Utilisés seulement pour revenir à l'ancien code ; voir `BASCULE_PROD.md`, « Retour arrière ».
+- `supabase/fixes/` : correctifs de données datés, à exécuter une fois en prod
+  (`2026-10-03_carrot_cake_ingredients.sql`). Ils refusent de tourner si la donnée a changé.
+
+La CLI ne gère pas l'historique des migrations : `[db.migrations] enabled = false` dans
+`supabase/config.toml`, pas de `supabase link`. Aucun `db push` vers la prod n'est possible.
+
+Écarts avec la prod : Postgres 17.11 en local, 17.4 en prod (mêmes extensions) ; pas d'envoi
+d'e-mail (Mailpit), inscription sans confirmation ; `max_rows = 1000` comme en prod.
+
+## 4. Modèle de données
+
+### 4.1 Tables (état après la migration 0015)
+
+```
+profiles            id (= auth.users.id), email, name, role 'user'|'admin', language, theme,
+                    notifications, created_at, updated_at
+recipes             id, title, description, category, prep_time, cook_time, servings,
+                    image, photo_path, tags text[], notes, search (tsvector généré),
+                    created_at, updated_at
+recipe_sections     id, recipe_id, name, type 'ingredients'|'instructions'|'mixed',
+                    order_index, created_at, updated_at
+recipe_ingredients  id, recipe_id, section_id, name, amount (texte saisi), amount_num,
+                    unit (texte saisi), unit_code → units, optional, order_index, …
+instructions        id, recipe_id, section_id, content, order_index, created_at, updated_at
+favorites           id, user_id, recipe_id, created_at, updated_at
+planning            id, user_id, date_string 'AAAA-MM-JJ', meal_type 'lunch'|'dinner',
+                    recipe_id?, custom_title?, created_at, updated_at
+planning_notes      id, user_id, date_string, note_type 'day'|'lunch'|'dinner', content, …
+shopping_lists      id, user_id, name, created_at, updated_at
+shopping_items      id, list_id, name, amount, amount_num, unit, unit_code, recipe_id?,
+                    is_checked, created_at, updated_at
+units               code, label_fr, label_en, abbr, kind, to_base, sort_order   (37 unités)
+unit_aliases        alias (replié), code                                         (190 alias)
+ai_usage            id, user_id, created_at, provider, model, feature, input_tokens,
+                    output_tokens, estimated_cost_usd, status 'ok'|'error', duration_ms
+```
+
+- Toutes les recettes sont décrites par leurs sections. Les colonnes JSONB
+  `recipes.ingredients` / `instructions` ont été supprimées par 0013.
+- `amount_num` et `unit_code` sont dérivés par trigger de `amount` et `unit` (0003, 0004).
+- `recipes.image` n'est plus utilisée (voir § 17).
+- Le trigger `handle_new_user` crée le profil à l'inscription ; `prevent_role_change`
+  empêche un non-admin de changer son `role`.
+- Tables temporaires : `*_backup_20261003` et `*_orphans_20261003` (créées par 0005,
+  supprimées par 0014), `*_backup_cleanup` (0015, à supprimer après validation). RLS activé
+  sans politique : invisibles par l'API.
+
+### 4.2 Fonctions SQL
+
+Toutes en `SECURITY INVOKER` (le RLS s'applique), `search_path` figé.
+
+| Fonction | Migration | Rôle | Appelée par |
+|---|---|---|---|
+| `fold_text(text)` | 0003 | clé de comparaison (sans accents, minuscules, ponctuation) | fusion des articles |
+| `normalize_unit(text)` | 0003 | graphie libre → code d'unité | trigger, `POST /api/shopping-items` |
+| `parse_amount(text)` | 0004 | « 1/2 », « 1,5 », « 2 à 3 » → nombre (borne basse) | trigger, `POST /api/shopping-items` |
+| `format_amount(numeric)` | 0004 | nombre → texte | `save_recipe`, fusion |
+| `save_recipe(payload jsonb)` | 0006, 0011, 0013 | crée ou remplace une recette entière (sections, ingrédients, étapes, `photo_path`) en une transaction | `add-recipe`, `update-recipe` |
+| `delete_recipe(p_id)` | 0006 | supprime une recette | `delete-recipe` |
+| `merge_shopping_item(…)` | 0007 | ajoute un article ou l'additionne à un article de même nom replié et même `unit_code` | `POST /api/shopping-items` |
+| `add_recipe_to_list(…)` | 0007 | ajoute les ingrédients d'une recette (sections choisies, facteur de portions) avec fusion | `POST /api/shopping-lists/:id/recipes` |
+| `search_recipes(p_query, p_category, p_tags, p_limit, p_offset)` | 0008, 0010, 0013 | recherche plein texte sans accents, filtres, pagination, `total_count` | `useRecipeSearch` |
+| `check_ai_quota(p_max_per_day)` | 0012 | vrai si l'appelant est sous son quota du jour (Europe/Paris) | traducteur |
+| `custom_access_token_hook(event)` | 0009 | hook Auth : ajoute le claim `user_role` au JWT | Supabase Auth |
+| `private.is_admin()` | 0009 | vrai si le claim `user_role` vaut `admin`, sinon repli sur `profiles.role` | politiques RLS |
+
+Erreurs volontaires des RPC : SQLSTATE `22023` (donnée invalide), `P0002` (introuvable),
+`42501` (non autorisé), avec un message en français (voir § 7.3). Signatures et exemples :
+[supabase/MIGRATION_NOTES.md](supabase/MIGRATION_NOTES.md).
+
+### 4.3 Sécurité en base (RLS)
+
+| Tables | Lecture | Écriture |
+|---|---|---|
+| `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions` | publique | admin (`private.is_admin()`) |
+| `favorites`, `planning`, `planning_notes`, `shopping_lists` | propriétaire (`auth.uid() = user_id`) | propriétaire |
+| `shopping_items` | propriétaire de la liste parente | propriétaire de la liste parente |
+| `profiles` | sa ligne, ou admin ; `supabase_auth_admin` pour le hook | sa ligne, ou admin (sans changer son rôle) |
+| `units`, `unit_aliases` | publique | migrations uniquement |
+| `ai_usage` | ses lignes, ou admin | insertion de ses propres lignes ; ni modification ni suppression |
+| Storage `recipe-photos` | publique | admin |
+
+`private.is_admin()` remplace `public.is_admin()` (supprimée par 0009) : le schéma `private`
+n'est pas exposé par l'API. Les anciennes RPC favoris en `SECURITY DEFINER` ont été
+supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
+
+### 4.4 Migrations
+
+| Fichiers | Contenu |
+|---|---|
+| 0001, 0002 | durcissement RLS, suppression des fonctions `SECURITY DEFINER` inutiles (appliquées en prod) |
+| 0003, 0004 | unités (`units`, `unit_code`), quantités numériques (`amount_num`) |
+| 0005 | recettes sans section → section « Recette » ; orphelins archivés |
+| 0006, 0007, 0008 | `save_recipe`, RPC des courses, recherche |
+| 0009 | `private.is_admin()`, hook JWT |
+| 0010, 0011 | photos (bucket `recipe-photos`, `photo_path`) |
+| 0012 | `ai_usage`, `check_ai_quota` |
+| 0013 | suppression des colonnes JSONB |
+| 0014 | suppression des sauvegardes de 0005 (une semaine après la bascule) |
+| 0015 | nettoyage mécanique des ingrédients (optionnel, voir [docs/QUALITE_DONNEES.md](docs/QUALITE_DONNEES.md)) |
+
+Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
+Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
+Les migrations sont appliquées par Claude avec l'outil MCP Supabase `apply_migration` ; le
+SQL Editor du dashboard reste le plan B.
+
+Régénérer les types après une migration :
+`npx supabase gen types typescript --local > shared/types/database.ts`, puis remettre
+l'en-tête « fichier généré ».
+
+## 5. Authentification
+
+### 5.1 Session et rôle
+
+- Supabase Auth via `@nuxtjs/supabase` (`redirect: false`) : un seul client, session dans un
+  **cookie** (`@supabase/ssr`), donc lue au rendu serveur et par les endpoints `/api/*`.
+- Le rôle vient du claim **`user_role`** du JWT, ajouté par le hook
+  `custom_access_token_hook` (0009). Tant que le hook n'est pas activé dans le dashboard, ou
+  pour un ancien token, le claim manque : le client, le serveur et `private.is_admin()`
+  retombent sur `profiles.role`.
+- `app/stores/auth.ts` suit `useSupabaseUser()` : `isAuthenticated`, `isAdmin`, `role`,
+  `currentUser`, `login`, `logout`, `checkAuth`, `init`. Le profil (`profiles`) est chargé en
+  arrière-plan.
+- `app/middleware/auth.ts` protège les pages `definePageMeta({ requiresAdmin: true })`
+  (aujourd'hui `/traducteur`), sans requête réseau. C'est une garde d'affichage : la sécurité
+  est côté serveur et en base.
+
+### 5.2 Côté serveur
+
+`server/utils/auth.ts` :
+
+- `requireUser(event)` accepte le cookie de session ou un en-tête
+  `Authorization: Bearer <jwt>` (client externe). Il renvoie un client Supabase agissant au
+  nom de l'utilisateur (RLS) et son identité. `user.id` vient toujours du token validé,
+  jamais du corps de la requête.
+- `requireAdmin(event)` ajoute le contrôle du rôle (claim, sinon `profiles.role`) :
+  401 si non connecté, 403 si non admin.
+- `AuthContext.supabase` n'est pas typé `Database` (dette connue).
+
+### 5.3 Connexion e-mail et OAuth
+
+- `AuthModal` réunit connexion, inscription et « mot de passe oublié » (lien vers
+  `/reset-password`).
+- `AuthProviderButtons` affiche « Continuer avec Google » (et Apple) selon
+  `NUXT_PUBLIC_AUTH_PROVIDERS` : liste séparée par des virgules, défaut `google`. Les valeurs
+  inconnues sont ignorées : **`none`** masque tous les boutons OAuth.
+- Le bouton appelle `signInWithOAuth` avec `redirectTo = <origine>/confirm` (ou `/en/confirm`) ;
+  `app/pages/confirm.vue` attend la session puis revient à la page d'origine (mémorisée dans
+  `sessionStorage`).
+- Prod : Authentication → URL Configuration → *Redirect URLs* doit contenir `/confirm`,
+  `/en/confirm`, `/reset-password` et `/en/reset-password` du domaine ; Google se configure
+  dans Authentication → Sign In / Providers (client OAuth « Web application », URI de
+  redirection `https://<ref>.supabase.co/auth/v1/callback`).
+- Local : Google n'est pas configuré dans `supabase/config.toml`. Pour le tester, ajouter
+  un bloc `[auth.external.google]` avec `client_id = "env(GOOGLE_CLIENT_ID)"` et
+  `secret = "env(GOOGLE_CLIENT_SECRET)"` (secrets dans l'environnement de la CLI, jamais
+  commités), autoriser `http://127.0.0.1:54321/auth/v1/callback` dans Google Cloud, puis
+  `npx supabase stop && npx supabase start`. Sinon : `NUXT_PUBLIC_AUTH_PROVIDERS=none`.
+- Apple : même principe (`[auth.external.apple]`) ; n'ajouter `apple` à la variable qu'une
+  fois le fournisseur activé.
+
+## 6. Lecture des données
+
+Les lectures ne passent pas par `/api/*`. Le client Supabase typé
+(`useSupabaseClient<Database>()`) interroge PostgREST directement, au rendu serveur comme
+dans le navigateur, sous RLS. Les pages appellent ces lectures dans `useAsyncData` (SSR) et
+branchent `status` / `error` sur `LoadingState`, `ErrorState`, `EmptyState`. Les lignes
+snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
+
+| Besoin | Composable / store | Requête |
+|---|---|---|
+| Liste paginée (24 par page), recherche, filtres | `useRecipeSearch(scope, { query, category, tags, page })` | RPC `search_recipes` |
+| Compteurs par catégorie, tags | `useRecipeFacets()` | `recipes` (`category, tags`) |
+| Fiche complète | `useRecipe(id)` / `fetchRecipeById` | `recipes` + `recipe_sections(*, recipe_ingredients(*), instructions(*))` |
+| Favoris | `useFavoritesStore().refresh()` | `favorites`, puis `recipes` par identifiants |
+| Planning d'une semaine et notes | `usePlanningStore().loadWeek(date)` | `planning` (+ recette) et `planning_notes` par dates |
+| Listes de courses | `useShoppingStore().refresh()` | `shopping_lists` avec `shopping_items(*)` |
+
+- Le store `recipes` garde l'état d'interface (catégorie, recherche, tags) et un compteur
+  `revision` : `useRecipesStore().refresh()` après une écriture recharge liste, fiche et
+  facettes.
+- Les stores `favorites`, `planning`, `shopping` exposent `refresh()` et
+  `ensureLoaded()` / `ensureWeekLoaded()` (chargement unique à la demande).
+
+## 7. Écriture : endpoints API
+
+### 7.1 Principe
+
+- Les écritures passent par `server/api/` via `apiFetch` (`app/composables/useApi.ts`) : un
+  `fetch` same-origin, le cookie de session part seul.
+- Chaque endpoint : `requireUser` / `requireAdmin` → validation Zod
+  (`validateBody`, `validateQuery`, `validateRouterParams` de `server/utils/validate.ts`,
+  schémas de `shared/schemas/`) → requête ou RPC Supabase sous RLS → `handleApiError` dans
+  le `catch`.
+- Aucun endpoint `GET` : les lectures sont décrites au § 6.
+
+### 7.2 Liste des endpoints
+
+👤 utilisateur connecté (`requireUser`) · 🔑 admin (`requireAdmin`)
+
+| Endpoint | Auth | Entrée (schéma) | SQL | Réponse |
+|---|---|---|---|---|
+| `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput }` (`addRecipeBodySchema`) | `save_recipe` | `{ success, recipe: RecipeDetail, message }` |
+| `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`), remplacement complet | vérification d'existence (404), `save_recipe` | `{ success, recipe, message }` |
+| `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `delete_recipe` | `{ success, deletedRecipeId, message }` |
+| `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage }` ; rien n'est enregistré |
+| `POST /api/favorites` | 👤 | `{ recipeId }` | insert (404 recette, 409 doublon) | `{ success, favorite, message }` |
+| `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404) | `{ success, message }` |
+| `POST /api/planning` | 👤 | `{ dateString, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert (404 recette) | `{ success, meal, message }` |
+| `PUT /api/planning/:id` | 👤 | `{ dateString, mealType }` (`planningEntryMoveSchema`) | update (404), identifiant conservé | `{ success, meal, message }` |
+| `DELETE /api/planning/:id` | 👤 | — | delete (404) | `{ success, message }` |
+| `POST /api/planning-notes` | 👤 | `{ dateString, noteType: day\|lunch\|dinner, content? }` | update ou insert | `{ success, note, message }` |
+| `DELETE /api/planning-notes?dateString=&noteType=` | 👤 | query | delete (idempotent) | `{ success, deleted, message }` |
+| `POST /api/shopping-lists` | 👤 | `{ name }` | insert | `{ success, list, message }` |
+| `PUT /api/shopping-lists/:id` | 👤 | `{ name }` | update (404) | `{ success, list, message }` |
+| `DELETE /api/shopping-lists/:id` | 👤 | — | delete, articles en cascade (404) | `{ success, message }` |
+| `POST /api/shopping-lists/:id/recipes` | 👤 | `{ recipeId, sectionIds?, servingsFactor? }` | `add_recipe_to_list` | `{ success, items, message }` |
+| `POST /api/shopping-items` | 👤 | `{ listId, name, amount?, unit?, recipeId? }` | `parse_amount`, `normalize_unit`, `merge_shopping_item` | `{ success, item, message }` |
+| `PUT /api/shopping-items/:id` | 👤 | `{ name?, amount?, unit?, isChecked? }` | update (triggers `amount_num` / `unit_code`, 404) | `{ success, item, message }` |
+| `DELETE /api/shopping-items/:id` | 👤 | — | delete (404) | `{ success, message }` |
+
+`RecipeInput` = `z.infer<typeof recipeInputSchema>` (`shared/schemas/recipe.ts`), la forme
+de l'éditeur : `title`, `category`, `description?`, `notes?`, `prepTime` / `cookTime` /
+`servings` (entiers ≥ 0 ou `null`), `image?`, `photoPath?`, `tags`, `sections[]` (`name`,
+`type`, `orderIndex`, `ingredients[]` { `name`, `amount`, `unit`, `unitCode?`, `optional`,
+`orderIndex` }, `instructions[]` { `content`, `orderIndex` } ou texte). Les clés inconnues
+sont ignorées. `toSaveRecipePayload` le convertit en payload snake_case pour `save_recipe`.
+
+`RecipeDetail` (`server/utils/recipes.ts`) : la recette et ses sections, ingrédients et
+étapes, triés par `orderIndex`.
+
+### 7.3 Erreurs
+
+- `400` « Données invalides : champ : raison ; … » (Zod, en français, 5 champs au plus).
+- `401` / `403` (auth), `404` / `409` (métier), `429` (quota IA).
+- `throwSupabaseError` n'expose que les erreurs volontaires des RPC : `22023` → 400 avec le
+  message SQL, `P0002` → 404, `42501` → 403, `23505` → 409.
+- Tout le reste → `500` « Une erreur est survenue, réessayez plus tard. ». Le détail est
+  écrit dans les journaux serveur (`[api] <contexte>`), jamais renvoyé au client.
+- Côté client, les stores lèvent une `ApiError` (`apiErrorFromResponse`) ; `toUserMessage`
+  (`app/composables/useApiError.ts`) affiche le message du serveur pour une 4xx et
+  `errors.generic` (i18n) sinon.
+
+## 8. Design
+
+Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
+
+- **Couleurs** : uniquement les utilitaires sémantiques de Nuxt UI (`bg-default`,
+  `bg-muted`, `bg-elevated`, `text-highlighted`, `text-muted`, `border-default`,
+  `text-primary`, `text-error`…). Aucun hex ni `gray-*` dans les composants : le mode sombre
+  suit seul. Exceptions : le logo Google (`public/images/google.svg`) et la feuille
+  d'impression dans `main.css`.
+- **Palette** : neutre `stone` + accent terracotta `primary` (500 = `#c2603e`).
+  `--ui-primary` vaut la nuance 600 en clair, 400 en sombre (contraste AA).
+- **Typographie** : Inter (`font-sans`, interface), Fraunces (`font-serif`, titres de pages
+  et de recettes), Lobster (`font-lobster`, logo uniquement), servies par `@nuxt/fonts`.
+- **Surfaces** : bordures fines plutôt qu'ombres ; `rounded-lg`, `rounded-xl` pour cartes
+  et modales.
+- **Composants** : Nuxt UI (`UButton`, `UModal`, `UForm` + Zod, `USelectMenu`…), icônes
+  `i-lucide-*`. Un bouton icône a toujours un `aria-label`. Confirmations en `UModal`.
+- **Toasts** : `useToast()` ; la façade `$toast` (`plugins/toast.client.ts`) garde l'ancienne
+  API `$toast.success(title, message?)`.
+- **Layout** : header compact (navigation, mode sombre, langue, menu utilisateur) ; sur
+  mobile, barre d'onglets en bas (Recettes, Planning, Courses, Favoris, Moi) ; `<main>` en
+  `w-full min-w-0` (aucun défilement horizontal à 375 px).
+- **Accessibilité** : focus visible, navigation au clavier, `aria-current="page"`,
+  `prefers-reduced-motion` respecté.
+- **i18n** : stratégie `prefix_except_default` (FR sans préfixe, EN sous `/en`). Aucun texte
+  visible en dur ; liens via `localePath()`. `test/unit/i18n.test.ts` vérifie la parité des
+  clés fr/en, l'absence de valeur vide, les paramètres `{…}` et l'existence des clés
+  utilisées dans `app/`.
+- **Catégories** : `useCategories()` fournit libellés et icônes ; l'icône sert de repli
+  quand une recette n'a pas de photo.
+- **Création de recette** (admin, `/recettes`) : menu « Nouvelle recette » → « Saisir une
+  recette » (éditeur) ou « Importer avec l'IA » (`/traducteur`).
+
+## 9. Fiche recette, éditeur et photos
+
+### 9.1 Fiche (`app/pages/recettes/[id].vue`)
 
 | Composant | Rôle |
 |---|---|
-| `RecipeHero` | photo du bucket (ou icône de repli sur `bg-muted`), catégorie en `UBadge`, tags, titre `font-serif`, temps, compteur de portions (`RecipeServingsControl`) |
-| `RecipeIngredients` | ingrédients par section avec **cases à cocher** (suivi en cuisinant, état local), quantités mises à l'échelle, unité canonique via `useUnits().unitLabel(unitCode, unit)` |
+| `RecipeHero` | photo (ou icône de catégorie), catégorie, tags, titre, temps, compteur de portions (`RecipeServingsControl`) |
+| `RecipeIngredients` | ingrédients par section, cases à cocher (état local), quantités mises à l'échelle |
 | `RecipeSteps` | étapes numérotées par section |
-| `RecipeActions` | favori, courses, planning (`PlanningModal` de 3C, API `show`/`recipe`/`close`), mode cuisine, impression (`window.print()`), modifier/supprimer (admin). La confirmation de suppression est une `UModal` dans la page |
-| `RecipeAddToShoppingModal` | choix de la liste (création inline si aucune) et des **sections** à ajouter → `useShoppingStore().addRecipeToList(listId, recipeId, sectionIds, servingsFactor)` |
-| `RecipeCookingMode` | `UModal fullscreen` : une étape à la fois, ingrédients de la section, `UProgress`, ←/→/Échap, Wake Lock |
+| `RecipeActions` | favori, courses, planning (`PlanningModal`), mode cuisine, impression, modifier / supprimer (admin) |
+| `RecipeAddToShoppingModal` | choix de la liste et des sections → `useShoppingStore().addRecipeToList(…)` |
+| `RecipeCookingMode` | plein écran, une étape à la fois, ←/→/Échap, Wake Lock |
 
-Composables :
+- `useServingsScaler(recipe)` : portions cibles, `factor`, `scaledAmount()`. Calculs dans
+  `shared/utils/recipes.ts` (`servingsFactor`, `roundReadable` : fractions ½ ¼ ¾ ⅓ ⅔ sous 10,
+  une décimale jusqu'à 100, entier au-delà). Le facteur est transmis à `add_recipe_to_list`.
+- `useCookingMode(recipe)` : étapes à plat, section d'ingrédients associée,
+  `navigator.wakeLock` (silencieux si refusé ou non supporté).
+- Impression : `@media print` de `main.css`, limitée à la fiche (`body:has(#recipe-sheet)`).
 
-- `useServingsScaler(recipe)` — `servings` cible, `factor` (= cible / portions de la recette, `1` si inconnues), `scaledAmount(ingredient)`. La mise à l'échelle vit dans `shared/utils/recipes.ts` : `servingsFactor`, `roundReadable` (< 10 : au quart ou au tiers → ½ ¼ ¾ ⅓ ⅔ ; 10–100 : une décimale ; ≥ 100 : entier), `scaleAmount`, `formatScaledAmount` (texte libre non numérique rendu tel quel). Le facteur est passé à `add_recipe_to_list`.
-- `useIngredientLabel()` (`useRecipe.ts`) — « quantité + unité » / « quantité + unité + nom » partagé par la fiche, le mode cuisine et la modale courses.
-- `useCookingMode(recipe)` — `flattenSteps` des sections, navigation, `currentIngredientSection` (section de l'étape, sinon section d'ingrédients de même nom, sinon l'unique section d'ingrédients), `navigator.wakeLock.request('screen')` à l'ouverture (redemandé au retour de l'onglet, relâché à la fermeture, **silencieux** si non supporté ou refusé), écouteurs clavier posés/retirés avec `isOpen`.
-- Impression : utilitaires `print:` sur les actions/navigation de la page + feuille `@media print` de `main.css` limitée à `body:has(#recipe-sheet)` (en-tête/pied du layout masqués, page nommée `recipe-sheet` à marges 1,5 cm pour ne pas écraser le `@page` paysage du planning, sauts de page évités dans les listes).
+### 9.2 Éditeur (`RecipeEditor.vue` → `components/editor/`)
 
-### Éditeur (`app/components/RecipeEditor.vue` → `app/components/editor/`)
+- `RecipeEditor` : façade (`show`, `recipe`, émet `close` / `save`) qui ouvre une `UModal`
+  avec `RecipeEditorForm`.
+- `RecipeEditorForm` : `UForm` + `recipeInputSchema`, erreurs sous chaque champ, au moins un
+  ingrédient et une étape. Une section `mixed` est éditée comme une section d'ingrédients et
+  une section d'étapes du même nom. Enregistrement via `useRecipesStore().addRecipe` /
+  `updateRecipe`.
+- `SectionEditor` : réordonner sections, ingrédients et étapes ; glisser-déposer des étapes.
+- `IngredientRow` : quantité libre, unité choisie dans `USelectMenu` (`useUnits()`) ou saisie
+  libre ; la base dérive `unit_code`.
+- `PhotoField` : aperçu, remplacer, retirer.
 
-`RecipeEditor.vue` est une **façade** qui garde l'API historique utilisée par `pages/recettes/index.vue` et `[id].vue` : props `show` / `recipe: Recipe | null`, émissions `close` / `save(recipe)`. Elle rend une `UModal` contenant `editor/RecipeEditorForm.vue` (recréé à chaque ouverture : `v-if="show"`).
+### 9.3 Photos (`useRecipePhoto`, bucket `recipe-photos`)
 
-- `RecipeEditorForm` — `UForm` + `recipeInputSchema` (Zod, erreurs sous chaque champ par chemin `sections.0.ingredients.1.name`) + validation custom « au moins un ingrédient et une étape ». L'état du formulaire a la forme du schéma (+ `key` stables). Les sections `mixed` (0005) sont chargées comme une section d'ingrédients **et** une section d'étapes du même nom ; à l'enregistrement les sections d'ingrédients précèdent celles d'étapes (`orderIndex` recalculé). Soumission via `useRecipesStore().addRecipe / updateRecipe`.
-- `SectionEditor` — nom, lignes, monter/descendre (sections, ingrédients, étapes), glisser-déposer des étapes par la poignée (dans la section). Les modifications remontent en **updater** `(section) => section'` appliqué sur l'état courant du formulaire (robuste à deux changements dans le même tick).
-- `IngredientRow` — quantité (texte libre, `parse_amount` côté base), **unité en `USelectMenu`** alimenté par `useUnits()` (libellé `abbr — label`, valeur = `abbr`, qui se normalise en `unit_code` par `normalize_unit`) avec `create-item` pour une saisie libre ; « sans unité » passe par une sentinelle (`''` est interdit par Reka). `unitCode` n'est pas envoyé : la base le dérive.
-- `StepRow`, `PhotoField` (aperçu bucket ou object URL du fichier choisi, remplacer/retirer).
+- Redimensionnement dans le navigateur (canvas, plus grand côté 1600 px, WebP qualité 0,82,
+  repli JPEG) : le plan Supabase gratuit n'a pas de transformation d'images.
+- Chemin : `recipe-photos/<recipeId>/<timestamp>.webp`. Envoi par le client Supabase de
+  l'admin (politiques de 0010). En modification, la photo part d'abord puis `photoPath` est
+  enregistré ; en création, la recette d'abord, puis la photo, puis `updateRecipe`.
+  `photoPath` vide → `photo_path` remis à `NULL`.
+- Suppression d'une recette : `removeRecipePhotos(recipeId)` puis `delete_recipe` (pas de
+  trigger Storage).
+- Affichage : `NuxtImg` sur l'URL publique. `image.domains` = hôte de `SUPABASE_URL` (lu au
+  build) + `127.0.0.1:54321` hors Vercel ; ipx en dev, optimisation Vercel en prod. Le
+  provider `supabase` de `@nuxt/image` n'est pas utilisé. `RecipeHero` charge l'image en
+  priorité (LCP) ; cartes et planning en différé.
 
-### Photos (`useRecipePhoto`, bucket `recipe-photos`, migrations 0010 + 0011)
+## 10. Planning et listes de courses
 
-- Pas de transformation d'images sur le plan Supabase gratuit : **redimensionnement client** (`resizeRecipeImage` : canvas, `createImageBitmap` avec orientation EXIF, plus grand côté 1600 px, WebP qualité 0,82, repli JPEG).
-- `uploadPhoto(recipeId, file)` → `recipe-photos/<recipeId>/<timestamp>.webp` (client Supabase de l'admin, politiques de 0010), `removePhoto(path)`, `removeRecipePhotos(recipeId)` (appelé par `useRecipesStore().deleteRecipe` avant `delete_recipe`, depuis la liste comme depuis la fiche), `publicUrl(path)`.
-- Flux : modification → la photo est téléversée d'abord (id connu), `photoPath` part dans `RecipeInput`, l'ancien objet est supprimé après l'enregistrement ; création → recette d'abord, puis photo, puis `updateRecipe` avec `photoPath`. `photoPath` absent/vide → `save_recipe` (0011) remet `photo_path` à `NULL`.
-- Affichage : `NuxtImg` (`format="webp"`, qualité 80). `nuxt.config.ts` → `image.domains` = hôte de `SUPABASE_URL` (lu au build) + `127.0.0.1:54321` hors Vercel ; ipx en dev, optimisation Vercel en prod (un domaine non listé est servi tel quel). Le provider `supabase` de `@nuxt/image` n'est pas utilisé : il passe par la transformation d'images Supabase, absente du plan gratuit. Écrans : Tailwind + `xs: 320` pour des `sizes` mobile-first (`xs:100vw sm:50vw …`).
-  - `RecipeCard` : `sizes="xs:100vw sm:50vw lg:33vw xl:25vw"`, 4:3, `loading="lazy"` ;
-  - `RecipeHero` (image principale, LCP) : `sizes="xs:100vw md:768px lg:896px"`, `loading="eager"`, `fetchpriority="high"`, `preload` ;
-  - `planning/MealCard` (32 px) et `planning/AddMealModal` (40 px) : `densities="x1 x2"`, lazy ; repli icône de catégorie inchangé ;
-  - `editor/PhotoField` garde un `<img>` natif (l'aperçu peut être une object URL `blob:`).
-- Type d'écriture unique : `RecipeInput` = `z.infer<typeof recipeInputSchema>` (`photoPath` compris), ré-exporté par `#shared/types` ; l'éditeur, le traducteur (plus de pont `toStoreRecipeInput`) et le store l'emploient tel quel.
+| Couche | Planning | Courses |
+|---|---|---|
+| Page | `pages/planning.vue` + `components/planning/` | `pages/courses.vue` + `components/shopping/` |
+| Store (données) | `usePlanningStore` : `loadWeek`, `addMeal`, `addCustomMeal`, `removeMeal`, `moveMeal` (`PUT /api/planning/:id`), `saveNote` (vide → `DELETE`) | `useShoppingStore` : listes, `addItem`, `updateItem`, `toggleItem` (optimiste), `clearChecked`, `moveItem`, `addRecipeToList`… |
+| Composable (interface) | `usePlanningWeek(date)` : jours, dates localisées, toasts | `useShoppingLists()` : liste courante, à acheter / cochés, rayons, préférences `storeMode` / `byAisle` (localStorage) |
+| Utilitaires | `app/utils/week.ts` (lundi → dimanche, clés locales `AAAA-MM-JJ`) | `shared/utils/shopping.ts` (`formatQuantity`, `splitChecked`, `aisleOf`, `groupByAisle`) |
 
-## À savoir
+- Aucune consolidation côté client : `merge_shopping_item` et `add_recipe_to_list`
+  additionnent en base (même nom replié, même `unit_code`). Deux unités différentes donnent
+  deux articles (pas de conversion `kg` / `g`).
+- Planning : liste par jour sur mobile, grille 7 colonnes sur grand écran, glisser-déposer
+  natif avec repli « Déplacer… » ; `?week=AAAA-MM-JJ` ouvre une semaine ; impression en
+  paysage.
+- Courses : rayons par mots-clés (table statique), mode « magasin » (zones tactiles
+  agrandies).
 
-- **Tests** : Vitest via `@nuxt/test-utils` (environnement `happy-dom` par défaut ; `// @vitest-environment nuxt` pour un test nécessitant l'app). Premier test : `test/unit/text.test.ts`.
-- **CI** : `.github/workflows/ci.yml` (Node 22, `npm ci`, lint, typecheck, test, build avec variables Supabase factices).
-- **Types Supabase** : générés dans `shared/types/database.ts` (`supabase.types` dans `nuxt.config.ts`) ; `useSupabaseClient()` / `serverSupabaseClient()` sont typés. Exception temporaire : `AuthContext.supabase` (`server/utils/auth.ts`) reste non typé tant que les endpoints d'écriture historiques ne compilent pas avec les types générés.
-- **Dette lint connue** (warnings) : `console.log` historiques, `catch (error: any)` dans les endpoints, plusieurs racines dans `pages/recettes/[id].vue`.
-- Migrations base de données : `supabase/migrations/`. Appliquer via le SQL Editor du dashboard Supabase ou la CLI Supabase. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md) pour l'ordre de déploiement du durcissement RLS.
+## 11. Traducteur IA
 
-## Observabilité, PWA et tests e2e
+Page `/traducteur` (admins) : texte collé → recette structurée → aperçu → ajout par
+`POST /api/add-recipe`. Comparatif des modèles et coûts :
+[docs/IA_MODELES.md](docs/IA_MODELES.md).
 
-### Sentry (`@sentry/nuxt`)
+| Fichier | Rôle |
+|---|---|
+| `shared/schemas/ai.ts` | `translateRecipeBodySchema`, `aiRecipeSchema` (unité parmi les 37 codes, catégorie parmi 9), `aiRecipeToRecipeInput` |
+| `server/utils/ai/provider.ts` | `getAiConfig()` (variables `AI_*`, clés), `getModel()` |
+| `server/utils/ai/translate.ts` | `generateObject` + `aiRecipeSchema`, délai 25 s, 1 nouvel essai |
+| `server/utils/ai/prompt.ts` | prompt système en français |
+| `server/utils/ai/errors.ts` | erreurs du fournisseur → 401, 402, 422, 502, 504, messages sans détail technique |
+| `server/utils/ai/usage.ts` | quota (`check_ai_quota`, 429) et journal `ai_usage` |
+| `server/utils/ai/pricing.ts` | grille de prix datée, coût estimé |
+| `server/utils/ai/mock.ts` | fournisseur `mock` : recette fixe, aucun appel réseau |
+| `server/utils/ai/media.ts` | préparation de la transcription audio et des images (non branchée) |
+| `app/composables/useTranslator.ts`, `RecipeTranslator.vue`, `translator/RecipePreview.vue` | interface |
 
-- Module `@sentry/nuxt/module` (dernier de `modules`), init dans `sentry.client.config.ts` et
-  `sentry.server.config.ts` (racine). Le SDK n'est **initialisé que si un DSN est défini**
-  (`NUXT_PUBLIC_SENTRY_DSN`, repli `SENTRY_DSN`) : sans DSN, aucune requête ni instrumentation.
-- `environment` = `VERCEL_ENV` (`production` / `preview`) ou `development` ;
-  `tracesSampleRate` = 0,1 en production, 0 ailleurs ; **pas de Session Replay** ;
-  `dataCollection` restrictif (ni utilisateur, cookies, en-têtes, corps, paramètres d'URL — le
-  `?code=` OAuth —, ni variables locales).
-- Serveur : depuis la v11 le module intègre `sentry.server.config.ts` au bundle Nitro (pas de
-  `node --import`, compatible fonctions Vercel). Le hook Nitro `error` capture les erreurs
-  ≥ 500 des handlers (les 4xx sont ignorées).
-- **Limite actuelle** : `handleApiError` / `throwSupabaseError` (`server/utils/errors.ts`)
-  journalisent l'erreur d'origine puis lèvent un 500 générique **sans `cause`** : Sentry reçoit
-  « Une erreur est survenue… » avec une pile pointant sur `errors.ts`. Pour remonter l'erreur
-  réelle (sans rien exposer au client), dans les deux branches 500 :
-  ```ts
-  import * as Sentry from '@sentry/nuxt'
-  // …
-  console.error(`[api] ${context}`, error)
-  Sentry.captureException(error, { tags: { api: context } })   // no-op sans DSN
-  throw createError({ statusCode: 500, statusMessage: GENERIC_ERROR_MESSAGE, cause: error })
-  ```
-  (le hook Nitro ignore alors le 500 dont la `cause` est déjà capturée : pas de doublon).
-- Sourcemaps : envoyées (puis supprimées du build) **seulement si `SENTRY_AUTH_TOKEN`** est défini
-  (+ `SENTRY_ORG`, `SENTRY_PROJECT`) ; sinon `sentry.sourcemaps.disable` et build inchangé.
-- Mise en service : créer un projet **Nuxt** sur sentry.io (plan Developer gratuit), puis dans
-  Vercel → Environment Variables : `NUXT_PUBLIC_SENTRY_DSN` (Production + Preview) et,
-  facultatif, `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` (build).
+- Fournisseur : `AI_PROVIDER` = `openai` (défaut, `gpt-4.1-mini`), `anthropic`, `google`,
+  `mistral` ou `mock`. Changer de fournisseur = changer la variable et la clé, sans code.
+- Quota : `AI_DAILY_QUOTA` appels par personne et par jour (défaut 50, admins compris) ;
+  `0` désactive le traducteur. Si `check_ai_quota` est indisponible, l'appel passe (le quota
+  est un garde-fou, la barrière reste `requireAdmin`).
+- Sorties structurées strictes : pas de champ optionnel ni de longueur dans `aiRecipeSchema` ;
+  le résultat converti est revalidé par `recipeInputSchema`.
+- Ouvrir à tous : remplacer `requireAdmin` par `requireUser` dans
+  `translate-recipe.post.ts` et retirer `requiresAdmin` de la page.
 
-### PWA (`@vite-pwa/nuxt`)
+## 12. Observabilité (Sentry)
 
-- Manifeste « Recettes des Boultons » (`short_name` Boultons, `#c2603e` / `#fafaf9`), icônes
-  `public/pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png` générées depuis
-  `public/favicon.svg` par `npm run pwa:icons` (`scripts/generate-pwa-icons.mjs`, `sharp`).
-- Service worker Workbox (`registerType: 'autoUpdate'`, pas de SW en `nuxt dev`) :
-  précache de l'app shell (`_nuxt/*.js|css`, icônes, manifeste) ; pages HTML en
-  `NetworkFirst` (cache `pages`, sauf `/confirm`, `/reset-password`, `/api/**`) ; images,
-  icônes Iconify et polices à la demande. **Aucune** requête Supabase (`/auth/v1`, `/rest/v1`,
-  storage) ni `/api/**` n'est mise en cache. Le cache `pages` est purgé à la déconnexion
-  (`app/plugins/pwa-offline.client.ts`).
-- **Courses hors ligne** : `useOfflineShopping()` (`app/composables/useOfflineShopping.ts`)
-  observe `useShoppingStore().shoppingLists` (sans modifier le store) et en garde une copie
-  minimale dans `localStorage` (`offline:shopping:v1`, effacée à la déconnexion).
-  `<OfflineBanner />` (layout) affiche l'alerte hors ligne et, sur `/courses`, la dernière copie
-  **en lecture seule**. API : `isOffline`, `lists`, `hasSnapshot`, `savedAt`, `quantityOf`.
-- Vérifier : `NITRO_PRESET=node-server npm run build -- --dotenv .env.local` puis
-  `node --env-file=.env.local .output/server/index.mjs` (DevTools → Application → Manifest /
-  Service workers ; installabilité sans erreur).
+- `@sentry/nuxt`, dernier module de `nuxt.config.ts`. Initialisation dans
+  `sentry.client.config.ts` et `sentry.server.config.ts`, **seulement si un DSN est
+  défini** (`NUXT_PUBLIC_SENTRY_DSN`, repli `SENTRY_DSN`). Sans DSN : aucune requête.
+- Projet Sentry : organisation `nina-fy`, projet `recettes-des-boultons`, région UE.
+  `NUXT_PUBLIC_SENTRY_DSN` est défini dans Vercel (Production + Preview).
+- `environment` = `VERCEL_ENV` (sinon `development`) ; traces à 10 % en production, 0
+  ailleurs ; pas de Session Replay.
+- Aucune donnée personnelle : ni utilisateur, ni cookies, ni en-têtes, ni corps, ni
+  paramètres d'URL (le `?code=` OAuth), ni variables locales.
+- Serveur : le hook Nitro `error` du module capture les erreurs ≥ 500 ; les 4xx sont
+  ignorées.
+- Sourcemaps : envoyées puis retirées du build **uniquement si `SENTRY_AUTH_TOKEN`** est
+  défini (avec `SENTRY_ORG=nina-fy`, `SENTRY_PROJECT=recettes-des-boultons`). Sinon
+  `sourcemaps.disable` et build inchangé.
+- Limite : `handleApiError` et `throwSupabaseError` (`server/utils/errors.ts`) journalisent
+  l'erreur d'origine puis lèvent un 500 générique sans `cause`. Sentry reçoit donc « Une
+  erreur est survenue… » avec une pile dans `errors.ts`. Pour remonter l'erreur réelle,
+  appeler `Sentry.captureException(error, { tags: { api: context } })` avant le `throw` et
+  passer `cause: error` à `createError`.
 
-### Tests de bout en bout (Playwright)
+## 13. PWA et hors ligne
+
+- Manifeste « Recettes des Boultons » (`short_name` Boultons), icônes `public/pwa-192x192.png`,
+  `pwa-512x512.png`, `maskable-icon-512x512.png` (générées par `npm run pwa:icons`).
+- Service worker Workbox (`registerType: 'autoUpdate'`, désactivé en `nuxt dev`) : précache
+  du JS/CSS et des icônes ; pages HTML en `NetworkFirst` (cache `pages`, sauf `/confirm`,
+  `/reset-password`, `/api/**`) ; images, icônes et polices à la demande. Aucune requête
+  Supabase ni `/api/**` n'est mise en cache. Le cache `pages` est vidé à la déconnexion
+  (`plugins/pwa-offline.client.ts`).
+- Courses hors ligne : `useOfflineShopping()` copie les listes dans `localStorage`
+  (`offline:shopping:v1`, effacé à la déconnexion). `<OfflineBanner />` signale la perte de
+  réseau et affiche, sur `/courses`, la dernière copie en lecture seule.
+- Tester en local (le service worker n'existe pas en dev) :
+  `NITRO_PRESET=node-server npm run build -- --dotenv .env.local`, puis
+  `node --env-file=.env.local .output/server/index.mjs`.
+
+## 14. Tests et CI
+
+### 14.1 Vitest
+
+- `npm test` : `test/**/*.{test,spec}.ts`, environnement `happy-dom` (ajouter
+  `// @vitest-environment nuxt` pour un test qui a besoin de l'app).
+- `test/unit/` : schémas Zod, mise à l'échelle, utilitaires courses et semaines, i18n,
+  erreurs, IA (mock, erreurs, prix), courses hors ligne.
+- `test/integration/*.local.test.ts` : contre la base locale (`.env.local`) ; sautés si
+  elle n'est pas joignable. `translate-recipe.local.test.ts` demande aussi un serveur Nuxt
+  avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`).
+- `npm run test:coverage` : rapport dans `coverage/`, sans seuil bloquant.
+
+### 14.2 Playwright
 
 ```bash
-npm run test:e2e        # chromium desktop + Pixel 7 contre la base LOCALE (.env.local)
-npm run test:e2e:ui     # mode interactif
-E2E_SERVER=preview npm run test:e2e   # sur le build (après le build ci-dessus) : + tests du service worker
-npm run test:coverage   # couverture Vitest (rapport coverage/, aucun seuil bloquant)
+npm run test:e2e                       # chromium desktop + Pixel 7, base LOCALE
+npm run test:e2e:ui                    # mode interactif
+E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service worker)
 ```
 
-- `playwright.config.ts` : serveur `nuxt dev --dotenv .env.local --port 3042` (réutilisé s'il
-  tourne) ou, en CI / `E2E_SERVER=preview`, `node .output/server/index.mjs` ; `E2E_BASE_URL`
-  pour viser un serveur existant. Exécution en série (`workers: 1`) : base partagée.
-- Refus si `SUPABASE_URL` n'est pas locale. Toutes les données créées sont préfixées `E2E_` et
-  supprimées (projet `cleanup`, plus `afterEach`) ; les sessions de `auth.setup.ts` sont dans
-  `test-results/.auth/` (gitignoré), rapports dans `test-results/report`.
-- Parcours (`e2e/`) : recherche sans accent → fiche ; catégorie + pagination ; favori ;
-  « Ajouter aux courses » (liste `E2E_` dédiée : la base fusionne les doublons) ; repas
-  personnalisé au planning ; bouton « Modifier » admin / absent pour un user ; `/en` sans clé
-  manquante ; courses hors ligne. Ils passent sur le snapshot local **et** sur `seed_test.sql`
-  (les recettes manquantes pour la pagination sont créées par `data.setup.ts`).
-- CI : job `e2e` de `.github/workflows/ci.yml` — `supabase start` (services inutiles exclus),
-  `scripts/ci-seed.sh` (`setup.sh --seed-test` + `test_accounts.sql`), `scripts/ci-env-local.sh`
-  (`.env.local` depuis `supabase status -o env`), build Node, `npm run test:e2e`, rapport
-  Playwright en artefact en cas d'échec.
+- Serveur : `nuxt dev --dotenv .env.local --port 3042` (réutilisé s'il tourne) ou, en CI et
+  avec `E2E_SERVER=preview`, `node .output/server/index.mjs`. `E2E_BASE_URL` vise un serveur
+  existant, `E2E_PORT` change le port. Exécution en série.
+- Refus si `SUPABASE_URL` n'est pas locale. Les données créées sont préfixées `E2E_` et
+  supprimées. Sessions dans `test-results/.auth/`, rapport dans `test-results/report`.
+- Parcours : recherche sans accent, catégorie et pagination, favori, ajout aux courses,
+  repas libre au planning, bouton « Modifier » selon le rôle, `/en` sans clé manquante,
+  courses hors ligne.
+
+### 14.3 CI (`.github/workflows/ci.yml`)
+
+- Job `ci` : `npm ci`, lint, typecheck, test, build (variables Supabase factices).
+- Job `e2e` (après `ci`) : `supabase start` sans les services inutiles,
+  `scripts/ci-seed.sh`, `scripts/ci-env-local.sh` (écrit `.env.local` avec `AI_PROVIDER=mock`),
+  build Node, `npm run test:e2e`, rapport Playwright en artefact en cas d'échec.
+
+### 14.4 Tests SQL
+
+- `npm run db:local:test` : base vide, `seed_test.sql`, 0003 → 0012, rejeu, tests
+  `test_0003` → `test_0010`, puis 0013 → 0015, rejeu, tests `test_0013` → `test_0015`.
+  Il vide la base `postgres` : relancer `npm run db:local:reset` ensuite.
+- `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` : même suite sur une base séparée
+  `ci_test` de la stack ; la base `postgres` et ses données restent intactes (pg_dump 17
+  requis).
+- `supabase/tests/run_local.sh` : variante sans Docker, sur un Postgres 17 temporaire.
+- Ces tests SQL ne tournent pas en CI.
+
+## 15. Variables d'environnement
+
+Modèle commenté : [env.example](env.example). Production : Vercel → Settings → Environment
+Variables (aucun fichier `.env` n'est déployé).
+
+| Variable | Lue par | Rôle |
+|---|---|---|
+| `SUPABASE_URL` | `nuxt.config.ts` (module Supabase, `image.domains`), e2e | URL du projet |
+| `SUPABASE_ANON_KEY` | `nuxt.config.ts`, e2e | clé publique (anon ou publishable `sb_publishable_…`) |
+| `NUXT_PUBLIC_AUTH_PROVIDERS` | `runtimeConfig.public.authProviders` | boutons OAuth : `google` (défaut), `google,apple`, `none` |
+| `AI_PROVIDER` | `runtimeConfig.aiProvider`, `getAiConfig()` | `openai` (défaut), `anthropic`, `google`, `mistral`, `mock` |
+| `AI_MODEL` | idem | modèle ; vide = défaut du fournisseur |
+| `AI_DAILY_QUOTA` | idem | appels par personne et par jour (défaut 50, `0` = coupé) |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY` | idem | clé du fournisseur choisi |
+| `NUXT_PUBLIC_SENTRY_DSN` (repli `SENTRY_DSN`) | `nuxt.config.ts`, `sentry.*.config.ts` | DSN Sentry ; vide = Sentry inactif |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | `nuxt.config.ts` (build) | envoi des sourcemaps (optionnel) |
+| `VERCEL`, `VERCEL_ENV` | `nuxt.config.ts`, Sentry | fournies par Vercel, ne pas définir |
+| `NITRO_PRESET` | Nitro | `node-server` pour un build servi par Node (e2e, PWA) |
+| `E2E_SERVER`, `E2E_BASE_URL`, `E2E_PORT`, `CI` | `playwright.config.ts` | tests e2e |
+| `APP_URL`, `LOCAL_DB_URL` | tests d'intégration | serveur Nuxt et base locale |
+| `SUPABASE_DB_URL`, `SUPABASE_TEST_DATABASE`, `SUPABASE_TEST_DB_URL`, `SUPABASE_CLI`, `PGBIN`, `PGPORT_TEST` | scripts `supabase/local/`, `supabase/tests/`, `scripts/` | outillage de la base locale |
+
+- Le module `@nuxtjs/supabase` attend `SUPABASE_URL` / `SUPABASE_KEY` : `nuxt.config.ts`
+  mappe `SUPABASE_ANON_KEY` pour garder le nom déjà utilisé sur Vercel.
+  `NUXT_PUBLIC_SUPABASE_URL` / `NUXT_PUBLIC_SUPABASE_KEY` fonctionnent aussi à l'exécution.
+- Les variables IA peuvent aussi s'écrire `NUXT_AI_PROVIDER`, `NUXT_OPENAI_API_KEY`… (surcharge
+  de `runtimeConfig`).
+- La clé `service_role` (ou `sb_secret_…`) n'est pas utilisée et ne doit jamais être exposée.
+- `API_BASE` et `NODE_ENV` ne sont plus lues par le code.
+
+## 16. Déploiement
+
+- Vercel construit chaque push (`nuxt build`, preset `vercel`, Node 22.x) ; `main` part en
+  production. Fonctions `server/api/**` : `maxDuration` 30 s.
+- Les migrations SQL ne sont pas appliquées par le déploiement. Mise en production de
+  0003 → 0015 : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md) ; détail par migration :
+  [supabase/MIGRATION_NOTES.md](supabase/MIGRATION_NOTES.md).
+- Nouveau projet Supabase : [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+- Notes de version pour la famille : `RELEASE_NOTES.md`.
+
+## 17. À savoir
+
+- **Messages d'erreur serveur en français** : les 4xx de `server/api` (Zod, métier, SQL)
+  sont rédigés en français et affichés tels quels, y compris en anglais.
+- **Nombres formatés en `fr-FR`** : `shared/utils/recipes.ts` (`toLocaleString('fr-FR')`)
+  affiche « 1,5 » aussi dans l'interface anglaise.
+- **`recipes.image` inutilisée** : la colonne existe, `RecipeInput` l'accepte et
+  `RecipeDetail` la renvoie, mais l'interface ne la lit ni ne l'écrit plus (les photos
+  passent par `photo_path`).
+- **Couverture de tests faible sur les stores et les endpoints** : ils ne sont couverts que
+  par les tests e2e et les deux tests d'intégration.
+- **`AuthContext.supabase` non typé** (`server/utils/auth.ts`).
+- **Promouvoir un admin** depuis le SQL Editor déclenche `prevent_role_change` (pas de JWT).
+  Dans une transaction :
+  `select set_config('request.jwt.claims', '{"user_role":"admin"}', true); update public.profiles set role = 'admin' where email = '…';`
+  L'utilisateur doit se reconnecter pour que le claim suive.
+- **RPC introuvable (404) juste après une migration** : `notify pgrst, 'reload schema';`.
+- **`max_rows = 1000`** (PostgREST) : une requête qui renverrait plus de 1 000 lignes est
+  tronquée sans erreur. Paginer ou filtrer.
+- **Prévisualisation dans Claude Code** : `.claude/launch.json`, configuration
+  `preview-local` (port 3007, base locale). La configuration `preview` utilise `npm run dev`.

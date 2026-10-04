@@ -1,47 +1,97 @@
-# Durcissement de sécurité — procédure
+# Sécurité — état et actions restantes
 
-Corrige les 3 points critiques de l'audit : (1) endpoints serveur sans auth, (2) RLS ouvert en écriture publique, (3) secrets exposés.
+Mis à jour le 2026-10-04 (branche `modernisation`). Point de départ : l'audit qui relevait
+(1) des endpoints serveur sans authentification, (2) un RLS ouvert en écriture publique,
+(3) des secrets exposés dans le dépôt.
 
-## Ce qui a été modifié dans le code
+## 1. État actuel
 
-- **`server/utils/auth.ts`** (nouveau) — `requireUser` / `requireAdmin` : valident le token Supabase reçu via `Authorization: Bearer`, créent un client Supabase scopé sur ce token (le RLS s'applique avec `auth.uid()`), et dérivent l'identité du token (plus aucun `userId` de confiance venant du client).
-- **24 endpoints `server/api/`** — protégés : contenu recettes = `requireAdmin`, données personnelles = `requireUser`. Les 3 GET `recipes*` restent publics (consultation sans compte).
-- **`composables/useApi.ts`** (nouveau) + **4 stores** — `apiFetch` injecte automatiquement le token dans tous les appels API.
-- **`supabase/migrations/0001_harden_rls.sql`** (nouveau, **non appliqué**) — durcissement RLS.
-- **`credentials.json`** — retiré du suivi git + ajouté au `.gitignore`.
+### Base de données
 
-## Ordre de déploiement (IMPORTANT)
+- **RLS sur toutes les tables**, posé par les migrations `0001` → `0015` :
+  - `0001` : lecture publique des recettes, écriture réservée aux admins ; données
+    personnelles (favoris, planning, notes, listes, articles) réservées à leur propriétaire ;
+    trigger `prevent_role_change` contre l'auto-promotion.
+  - `0002` : suppression des 4 RPC favoris en `SECURITY DEFINER` (elles prenaient un
+    `user_id` en paramètre) et de 11 fonctions inutilisées.
+  - `0009` : `public.is_admin()` remplacée par **`private.is_admin()`** (schéma non exposé
+    par l'API), qui lit le claim JWT `user_role` et retombe sur `profiles.role` sans claim.
+    Les 14 politiques concernées sont recréées à l'identique sur la nouvelle fonction.
+  - `0010` : bucket `recipe-photos` en lecture publique, écriture admin.
+  - `0012` : `ai_usage` lisible par son propriétaire (ou un admin), insertion de ses propres
+    lignes seulement.
+  - Tables de sauvegarde (`*_backup_*`, `*_orphans_*`) : RLS sans politique, droits révoqués.
+- Les nouvelles fonctions (`save_recipe`, `merge_shopping_item`, `search_recipes`…) sont en
+  `SECURITY INVOKER` : le RLS s'applique. `search_path` figé partout.
+- En production, `0001` et `0002` sont appliquées ; `0003` → `0015` le seront pendant la
+  bascule ([supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md)).
 
-La migration RLS s'applique sur la base partagée avec le site live. Tant que l'ancien code tourne en prod, l'appliquer **casse** le site. Donc :
+### Serveur
 
-1. **Vérifier en local** : `npm run dev`, se connecter en admin, tester ajout/modif/suppression d'une recette + courses/planning/favoris. (Le build de prod passe déjà : `npm run build` ✅.)
-2. **Basculer la clé** : mettre la clé publishable (`sb_publishable_…`) comme valeur de `SUPABASE_ANON_KEY` dans Vercel **et** `.env`. (Compatible ancien et nouveau code, aucune coupure.)
-3. **Déployer** le nouveau code : commit + `git push origin main` (Vercel redéploie automatiquement).
-4. **Vérifier la prod** avec le nouveau code déployé.
-5. **Appliquer la migration RLS** `supabase/migrations/0001_harden_rls.sql` (via le SQL Editor du dashboard Supabase, ou je peux l'appliquer via l'outil MCP une fois que tu confirmes que le déploiement est en ligne).
-6. **Re-tester la prod** : admin + un compte utilisateur normal.
-7. **Désactiver les clés legacy** (Supabase → Settings → API → « Disable JWT-based API keys ») → neutralise la clé `service_role` exposée.
-8. Relancer l'advisor de sécurité Supabase — les 19 « RLS Policy Always True » doivent disparaître.
+- Tous les endpoints d'écriture appellent `requireUser` ou `requireAdmin`
+  (`server/utils/auth.ts`). L'identité vient du token validé (cookie de session ou
+  `Authorization: Bearer`), jamais d'un `userId` fourni par le client.
+- Il n'y a plus d'endpoint de lecture : les lectures passent par le client Supabase sous RLS.
+- **Validation Zod partout** : corps, query et paramètres de route (`server/utils/validate.ts`,
+  schémas `shared/schemas/`). Entrée invalide → 400.
+- **Erreurs masquées** : `handleApiError` et `throwSupabaseError` (`server/utils/errors.ts`)
+  ne renvoient que des messages prévus ; toute autre erreur devient un 500 générique, le
+  détail reste dans les journaux serveur.
+- **Quota IA** : `AI_DAILY_QUOTA` appels par personne et par jour (défaut 50), contrôlé par
+  `check_ai_quota` et journalisé dans `ai_usage`. Le traducteur reste réservé aux admins.
+- La clé `service_role` / `sb_secret_…` n'est pas utilisée par l'application.
 
-## Checklist de rotation des secrets (à faire absolument)
+### Client et observabilité
 
-Ces secrets ont été exposés (dans `credentials.json` et `env.example` suivis par git, et/ou en clair dans le doc Obsidian). **Les considérer comme compromis** et les régénérer :
+- La garde de route admin (`app/middleware/auth.ts`) ne sert qu'à l'affichage.
+- **Sentry sans données personnelles** : ni utilisateur, ni cookies, ni en-têtes, ni corps,
+  ni paramètres d'URL, ni variables locales ; pas de Session Replay. Inactif sans DSN.
+- Le service worker ne met en cache ni Supabase ni `/api/**` ; le cache des pages et la copie
+  hors ligne des courses sont effacés à la déconnexion.
 
-- [x] 🔴 **Neutraliser la clé `service_role` legacy** — exposée dans `env.example` (tracké/poussé sur GitHub), elle **contourne tout le RLS**. Non utilisée par le code. Nouvelles clés Supabase déjà créées ✅. Procédure (sans « Roll JWT secret », donc **sans déconnecter les utilisateurs**) :
-   1. Copier la **clé publishable** (`sb_publishable_…`) → la mettre comme valeur de `SUPABASE_ANON_KEY` dans `.env` (local) **et** dans Vercel. supabase-js 2.56 l'accepte en remplacement direct de l'anon — **aucun changement de code**.
-   2. [ ] To do : Déployer le nouveau code (cf. ordre ci-dessus) et vérifier que tout marche.
-   3. Supabase → Settings → API → onglet **« Legacy anon, service_role API keys »** → **« Disable JWT-based API keys »**. Ceci invalide définitivement les clés legacy `anon` ET `service_role` (donc celle qui a fuité).
-   - ℹ️ La nouvelle **clé secret** (`sb_secret_…`) n'est **pas utilisée** par l'app (architecture = token utilisateur + RLS). La garder en lieu sûr, ou la supprimer si inutilisée. Ne jamais la mettre côté client.
-- [x] **Clé OpenAI** (`OPENAI_API_KEY`) — révoquer l'ancienne sur platform.openai.com, en créer une nouvelle, la mettre à jour dans les variables d'environnement Vercel + `.env` local.
-- [x] **Secret OAuth Google** (`client_secret` de `credentials.json`) — supprimé2
-- [x] **`JWT_SECRET`** — supprimée
-- [x] **`ADMIN_PASSWORD` / `ADMIN_USERNAME`** — supprimées
-- [x] **Clé `anon` legacy** — disabled
-- [ ] **Mettre à jour le doc Obsidian** — retirer les secrets en clair, mettre des placeholders.
+### Secrets
 
-> ⚠️ Note : retirer `credentials.json` du suivi ne l'efface pas de l'historique git (commit `cbfca2e`). La rotation des secrets ci-dessus est donc indispensable. Si le dépôt GitHub est **public**, c'est d'autant plus urgent — vérifier la visibilité du repo.
+| Secret | État |
+|---|---|
+| `credentials.json` | retiré du suivi Git et ajouté au `.gitignore` ; il reste dans l'historique (commit `cbfca2e`) |
+| Clé OpenAI | révoquée et remplacée |
+| Secret OAuth Google de `credentials.json` | supprimé |
+| `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` | supprimés |
+| Nouvelles clés Supabase (`sb_publishable_…`, `sb_secret_…`) | créées |
+| Clés legacy `anon` / `service_role` (la `service_role` a fuité via `env.example`) | **rotation à finaliser** : désactivation pas encore faite |
 
-## Limites résiduelles connues
+## 2. Actions restantes
 
-- Les 4 fonctions RPC favoris (`add_user_favorite`, etc.) restent exécutables par les utilisateurs authentifiés et prennent un `user_id` en paramètre. Le serveur ne passe que l'identité du token, donc pas d'exposition via l'app ; un durcissement complet (réécrire ces fonctions pour utiliser `auth.uid()` en interne) est recommandé dans une passe ultérieure. Les ~11 fonctions inutilisées sont entièrement neutralisées par la migration.
-- La clé `service_role` reste dans l'historique git tant que les clés legacy ne sont pas désactivées (étape 🔴) — c'est l'action qui la neutralise réellement.
+Dans l'ordre :
+
+1. **Bascule des migrations** `0003` → `0015` selon
+   [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
+2. **Activer le hook JWT après 0009** : Authentication → Hooks → *Customize Access Token
+   (JWT) Claims* → type Postgres, schéma `public`, fonction `custom_access_token_hook`. Le
+   hook n'est proposé qu'une fois 0009 appliquée. En cas de problème, le désactiver : les
+   droits retombent sur `profiles.role`.
+3. **Expiration des OTP e-mail < 1 h** : Authentication → Providers → Email → *Email OTP
+   Expiration* (ex. 1800 s).
+4. **Protection contre les mots de passe divulgués** (HaveIBeenPwned) : Authentication →
+   Providers → Email, ou Settings → Password security.
+5. **Patch Postgres** (`vulnerable_postgres_version`, prod en `17.4.1.074`) : Settings →
+   Infrastructure → Upgrade, après une sauvegarde ; courte indisponibilité.
+6. **Désactiver les clés legacy** : vérifier d'abord que `SUPABASE_ANON_KEY` vaut la clé
+   publishable (`sb_publishable_…`) dans Vercel et dans `.env.local`, puis Settings → API
+   Keys → *Disable JWT-based API keys*. Cela invalide la `service_role` qui a fuité. Ne pas
+   utiliser « Roll JWT secret » (déconnecterait tout le monde).
+7. **Relancer le Security Advisor** (dashboard ou outil MCP `get_advisors`) : l'alerte sur
+   `is_admin` doit avoir disparu. Les tables `*_20261003` signalées « RLS sans politique »
+   sont voulues jusqu'à 0014.
+8. Retirer les secrets en clair de la note Obsidian du projet.
+9. Vérifier la visibilité du dépôt GitHub : s'il est public, l'étape 6 est urgente.
+
+## 3. Limites connues
+
+- Le contrôle admin côté client et le middleware ne protègent rien : seuls le serveur et le
+  RLS font foi (c'est voulu).
+- Avant activation du hook, le rôle admin est lu dans `profiles.role` à chaque contrôle.
+  Après activation, un changement de rôle ne prend effet qu'à la reconnexion.
+- Le quota IA laisse passer l'appel si `check_ai_quota` est indisponible (garde-fou de coût,
+  pas de sécurité).
+- Les erreurs 500 arrivent dans Sentry sous un message générique (voir DEVELOPER.md § 12).

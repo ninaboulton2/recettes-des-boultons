@@ -1,7 +1,13 @@
 # Bascule en production — pas à pas
 
-Pour : **Nina**, dans le Dashboard Supabase (projet `recettes-boultons`,
-`tzlkabxcmmbwhpyvmato`) → **SQL Editor**, et dans Vercel.
+Pour : **Nina** et **Claude**, sur le projet Supabase `recettes-boultons`
+(`tzlkabxcmmbwhpyvmato`) et dans Vercel.
+
+**Qui applique les migrations** (décision de Nina) : Claude, avec l'outil MCP Supabase
+`apply_migration` (un appel par fichier, `name` = nom du fichier sans extension), puis les
+requêtes de contrôle avec `execute_sql`. Le **SQL Editor** du dashboard reste le plan B,
+suivant la procédure ci-dessous. Les réglages du dashboard (Auth, Vercel) restent faits par
+Nina.
 Rédigé le 2026-10-03. Comptes de la prod relevés le **2026-10-03 à 21 h 43 (heure de Paris)**,
 en lecture seule.
 
@@ -10,6 +16,9 @@ fin du déploiement Vercel et l'exécution de 0005, étapes 3 → 4). Ensuite, d
 étapes différées : 0013 quelques jours plus tard, 0014 une semaine après la bascule.
 
 ## Avant de commencer : comment exécuter un fichier
+
+Voie normale : Claude applique le fichier avec `apply_migration` et lit le résultat. Plan B,
+à la main :
 
 * SQL Editor → **New query** → ouvrir le fichier sur ton Mac (dans le dépôt, branche
   `modernisation`), **tout** copier, coller, **Run**. **Un fichier = un Run.**
@@ -58,6 +67,15 @@ fin du déploiement Vercel et l'exécution de 0005, étapes 3 → 4). Ensuite, d
    ```
    Garder ces deux fichiers au moins un mois (hors du dépôt Git : ce sont des données de
    famille).
+4. **Option retenue par Nina, en plus ou à la place du `pg_dump`** : export JSON des tables
+   de l'application par Claude, **en lecture seule**, via l'outil MCP `execute_sql`
+   (requêtes `select` uniquement, par exemple
+   `select json_agg(t) from public.recipes t;`, une requête par table : `profiles`,
+   `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `favorites`,
+   `planning`, `planning_notes`, `shopping_lists`, `shopping_items`). Les fichiers JSON sont
+   enregistrés sur le Mac, hors du dépôt Git. Limite : ce n'est pas une sauvegarde
+   restaurable par `pg_restore` (ni schéma, ni comptes `auth.users`, ni fichiers Storage) ;
+   une restauration se ferait par des `insert` préparés à partir du JSON.
 
 ### 0.2 Photographie de départ (SQL Editor)
 
@@ -116,7 +134,7 @@ quelle, **« avec correctif »** à la prod après le correctif Carrot cake (= l
 
 Vercel → projet → **Settings** :
 
-* **General → Node.js Version : 22.x** (le nouveau code exige Node ≥ 22).
+* **General → Node.js Version : 22.x** — ✅ déjà réglé.
 * **Environment Variables**, environnement **Production** :
 
   | Variable | Valeur | Statut |
@@ -128,7 +146,8 @@ Vercel → projet → **Settings** :
   | `AI_MODEL` | vide → `gpt-4.1-mini` | optionnelle |
   | `AI_DAILY_QUOTA` | `50` (0 = traducteur coupé) | optionnelle |
   | `NUXT_PUBLIC_AUTH_PROVIDERS` | `google` (défaut) ; `none` pour masquer le bouton Google si l'étape suivante n'est pas faite | optionnelle |
-  | `NUXT_PUBLIC_SENTRY_DSN` | DSN du projet Sentry | optionnelle (suivi des erreurs) |
+  | `NUXT_PUBLIC_SENTRY_DSN` | DSN du projet Sentry | ✅ déjà ajoutée (Production + Preview) |
+  | `API_BASE`, `NODE_ENV` | — | plus lues par le code : peuvent être supprimées après la bascule |
 
 ### 0.5 Supabase Auth (avant la fusion)
 
@@ -136,11 +155,12 @@ Vercel → projet → **Settings** :
   *Redirect URLs* : ajouter `https://recettes-des-boultons.vercel.app/confirm` et
   `https://recettes-des-boultons.vercel.app/en/confirm` (et
   `http://localhost:3000/confirm` pour le développement si besoin).
-* **Connexion Google** : dans Google Cloud Console → APIs & Services → Credentials → *Create
-  OAuth client ID* (type « Web application »), *Authorized redirect URI* =
-  `https://tzlkabxcmmbwhpyvmato.supabase.co/auth/v1/callback` ; puis Supabase →
-  **Authentication → Sign In / Providers → Google** : activer, coller *Client ID* et
-  *Client Secret*, Save. (Si ce n'est pas prêt le jour J : `NUXT_PUBLIC_AUTH_PROVIDERS=none`.)
+* **Connexion Google** — ✅ configurée par Nina : client OAuth « Web application » créé dans
+  Google Cloud Console, *Authorized redirect URI* =
+  `https://tzlkabxcmmbwhpyvmato.supabase.co/auth/v1/callback`, fournisseur Google activé
+  dans Supabase (**Authentication → Sign In / Providers → Google**, *Client ID* et
+  *Client Secret*). Le jour J, vérifier seulement la connexion (étape 5.6). En cas de
+  problème : `NUXT_PUBLIC_AUTH_PROVIDERS=none` masque le bouton.
 
 ### 0.6 Le jour J, juste avant
 
@@ -291,6 +311,7 @@ En cas de problème bloquant → **Retour arrière** (fin du document).
 
 1. **Hook JWT** : Authentication → **Hooks** → *Customize Access Token (JWT) Claims hook* →
    type **Postgres** → schéma `public` → fonction `custom_access_token_hook` → **Enable**.
+   La fonction **n'apparaît dans la liste qu'après l'application de 0009** (étape 2).
    Se déconnecter / reconnecter en admin : le bouton « Modifier » est toujours là. (Problème ?
    Désactiver le hook : les droits retombent automatiquement sur `profiles.role`.)
 2. **Authentication → Providers → Email** : *Email OTP Expiration* **< 3600** secondes (ex. 1800).
