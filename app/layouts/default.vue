@@ -68,6 +68,9 @@ const route = useRoute()
 const localePath = useLocalePath()
 
 const authStore = useAuthStore()
+// Profil chargé aussi pendant le rendu serveur : le nom affiché (menu, tiroir mobile)
+// est alors identique côté serveur et navigateur (plus d'écart d'hydratation).
+onServerPrefetch(() => authStore.checkAuth())
 const favoritesStore = useFavoritesStore()
 const planningStore = usePlanningStore()
 const shoppingStore = useShoppingStore()
