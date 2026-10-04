@@ -589,11 +589,16 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
 - Sourcemaps : envoyées puis retirées du build **uniquement si `SENTRY_AUTH_TOKEN`** est
   défini (avec `SENTRY_ORG=nina-fy`, `SENTRY_PROJECT=recettes-des-boultons`). Sinon
   `sourcemaps.disable` et build inchangé.
-- Limite : `handleApiError` et `throwSupabaseError` (`server/utils/errors.ts`) journalisent
-  l'erreur d'origine puis lèvent un 500 générique sans `cause`. Sentry reçoit donc « Une
-  erreur est survenue… » avec une pile dans `errors.ts`. Pour remonter l'erreur réelle,
-  appeler `Sentry.captureException(error, { tags: { api: context } })` avant le `throw` et
-  passer `cause: error` à `createError`.
+- Erreurs serveur : dans `server/utils/errors.ts`, les branches 500 de `handleApiError` et
+  `throwSupabaseError` appellent `Sentry.captureException(error, { tags: { api: context } })`
+  puis lèvent le 500 générique avec `cause: error` ; un 500 déjà produit n'est pas recapturé
+  (pas de doublon). Sans DSN, `captureException` ne fait rien.
+- En local, un `.env.local` contenant `NUXT_PUBLIC_SENTRY_DSN` envoie les erreurs avec
+  `environment=development` ; laisser la variable vide pour ne rien envoyer.
+- Tester l'envoi côté navigateur (`$sentry` n'est pas exposé) :
+  `window.__SENTRY__[window.__SENTRY__.version].defaultCurrentScope.captureException(new Error('test'))`.
+- Vie privée : Sentry déduit une localisation de l'adresse IP ; pour l'éviter, activer
+  *Prevent Storing of IP Addresses* dans les réglages du projet Sentry.
 
 ## 13. PWA et hors ligne
 
@@ -658,6 +663,11 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   requis).
 - `supabase/tests/run_local.sh` : variante sans Docker, sur un Postgres 17 temporaire.
 - Ces tests SQL ne tournent pas en CI.
+
+- Nuxt 4.5 refuse deux `nuxt dev` dans le même dossier : si un serveur de dev tourne déjà,
+  lancer `E2E_PORT=<son port> npm run test:e2e`. `nuxt preview` n'accepte pas le build Vercel :
+  pour tester le build de production, `NITRO_PRESET=node-server npm run build -- --dotenv .env.local`
+  puis `PORT=3100 node --env-file=.env.local .output/server/index.mjs`.
 
 ## 15. Variables d'environnement
 
