@@ -35,5 +35,12 @@ test('(g) /en : rendu anglais sans clé manquante', async ({ page }) => {
   await expect(page.getByRole('navigation', { name: /main/i }).or(page.getByRole('navigation', { name: 'Navigation' })).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Recipes' }).first()).toBeVisible()
 
+  // Pagination (libellés accessibles) et recherche en anglais.
+  await gotoApp(page, '/en/recettes')
+  const pagination = page.getByRole('navigation', { name: 'Pagination' })
+  await expect(pagination.getByRole('button', { name: 'Next page', exact: true })).toBeVisible()
+  await expect(pagination.getByRole('button', { name: 'Page 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('searchbox', { name: 'Search', exact: true })).toBeVisible()
+
   expect(missing, 'avertissements vue-i18n').toEqual([])
 })

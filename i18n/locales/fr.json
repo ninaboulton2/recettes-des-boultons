@@ -88,7 +88,12 @@
       "removeTag": "Retirer le tag {tag}"
     },
     "pagination": {
-      "label": "Pagination"
+      "label": "Pagination",
+      "first": "Première page",
+      "previous": "Page précédente",
+      "page": "Page {page}",
+      "next": "Page suivante",
+      "last": "Dernière page"
     },
     "category": {
       "subtitle": "Toutes les recettes de la catégorie « {category} »"
