@@ -200,7 +200,7 @@ Forme JSONB constatée en prod : `ingredients = [{name, unit, amount}]` (`amount
    recettes qui ont déjà des sections (doublons du JSONB jamais affichés).
 4. Les **7 instructions** `section_id IS NULL` (Gaspacho ×4, Confiture d'oranges ×1, Lasagnes
    épinards ×2) sont archivées dans `instructions_orphans_20261003` et **conservées** (suppression
-   non demandée ; elles ne sont lues par aucun code ; à trancher en phase 4).
+   non demandée ; elles ne sont lues par aucun code ; tranché par 0013, § 8).
 
 **Comptes attendus en prod** : avant 181 / 241 / 1 712 (1 060 orph.) / 641 (7 orph.) → après
 **359 sections**, **1 546 ingrédients (0 orphelin)**, **1 545 instructions**, 0 recette sans section,
