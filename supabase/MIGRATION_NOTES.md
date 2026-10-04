@@ -5,14 +5,35 @@
 > décrivent la phase « contract » (0013, 0014) et le nettoyage optionnel (0015).
 
 Projet Supabase `recettes-boultons` (`tzlkabxcmmbwhpyvmato`, Postgres 17, `en_US.UTF-8`).
-Lecture de l'état prod : **2026-10-03**. Aucune de ces migrations n'a été appliquée en
-production : l'application sera faite par un humain après revue (procédure § 4).
+Lecture de l'état prod : **2026-10-03**. Aucune de ces migrations n'est encore appliquée en
+production. Elles le seront par Claude avec l'outil MCP `apply_migration` (décision de
+Nina), le SQL Editor restant le plan B, dans l'ordre de `BASCULE_PROD.md`.
 
-Principe **« expand only »** : aucune colonne/table supprimée, aucun changement de type,
+Les comptes « attendus en prod » des § 2 et 4 ont été relevés sur le snapshot du matin du
+2026-10-03. La prod a perdu 17 ingrédients le soir même (« Carrot cake ») : les comptes à
+jour, avec et sans correctif, sont dans `BASCULE_PROD.md`.
+
+## Sommaire
+
+1. [Fichiers](#1-fichiers)
+2. [Détail par migration (0003 → 0010)](#2-détail-par-migration)
+3. [Signatures (résumé)](#3-signatures-résumé)
+4. [Procédure d'application en production](#4-procédure-dapplication-en-production)
+5. [Actions manuelles dashboard](#5-actions-manuelles-dashboard-hors-sql)
+6. [0011 — `save_recipe` écrit `photo_path`](#6-migration-0011--save_recipe-écrit-photo_path-phase-3b-ficheéditeur)
+7. [0012 — `ai_usage`, `check_ai_quota`](#7-migration-0012--ai_usage-check_ai_quota-traducteur-ia)
+8. [0013 — suppression des colonnes JSONB](#8-migration-0013--contract--suppression-des-colonnes-jsonb-legacy)
+9. [0014 — suppression des sauvegardes de 0005](#9-migration-0014--suppression-des-sauvegardes-de-0005)
+10. [0015 — nettoyage des données (optionnel)](#10-migration-0015-optionnelle--nettoyage-mécanique-des-données)
+11. [Outillage et tests](#11-outillage-et-tests-phase-contract)
+
+Principe **« expand only »** pour 0003 → 0012 : aucune colonne/table supprimée, aucun changement de type,
 politiques RLS existantes conservées (0009 les recrée à l'identique en changeant uniquement la
 fonction appelée). L'ancien code applicatif continue de fonctionner pendant et après
 l'application. Deux exceptions explicitement autorisées : suppression des 1 060 ingrédients
 orphelins (0005, archivés avant) et suppression de `public.is_admin()` (0009, remplacée).
+0013 et 0014 forment ensuite la phase « contract » (§ 8 et 9) : elles suppriment les colonnes
+JSONB et les sauvegardes, et l'ancien code ne fonctionne plus après 0013.
 
 Chaque migration est idempotente (`if not exists`, `create or replace`, `on conflict`),
 encapsulée dans `begin; … commit;`, avec un en-tête quoi / pourquoi / réversibilité / comptes
@@ -48,7 +69,8 @@ correspond pas.
 
 ### Comment les migrations ont été testées
 
-Docker n'étant pas disponible, la CLI Supabase locale n'a pas pu être utilisée. À la place :
+À l'origine (0003 → 0010), Docker n'était pas disponible et la CLI Supabase locale n'a pas
+pu être utilisée. Depuis, la stack locale existe (`supabase/local/`, § 11). Méthode d'origine :
 PostgreSQL 17.11 Homebrew (`/opt/homebrew/opt/postgresql@17`), cluster jetable initialisé en
 `en_US.UTF-8` (comme la prod), schéma `auth`/`storage`/rôles émulés (`tests/00_supabase_shim.sql`,
 fonctions `auth.uid()/jwt()/role()` copiées de la prod), schéma public reconstruit depuis
@@ -184,7 +206,8 @@ Forme JSONB constatée en prod : `ingredients = [{name, unit, amount}]` (`amount
 **359 sections**, **1 546 ingrédients (0 orphelin)**, **1 545 instructions**, 0 recette sans section,
 1 060 lignes dans `recipe_ingredients_orphans_20261003`, 7 dans `instructions_orphans_20261003`.
 
-Les colonnes JSONB **ne sont pas supprimées** (phase 4) ; le front continue de les lire en repli.
+Les colonnes JSONB ne sont pas supprimées par 0005 : c'est 0013 qui le fait (§ 8). Le front
+ne les lit plus.
 
 Restauration : `truncate` + `insert … select from *_backup_20261003` dans l'ordre recipes,
 recipe_sections, recipe_ingredients, instructions (ou suppression ciblée des sections
@@ -333,15 +356,18 @@ const { data: { publicUrl } } = supabase.storage.from('recipe-photos').getPublic
 | `public.immutable_unaccent(text) → text` | invoker, immutable | anon, authenticated | utilitaire |
 | `private.is_admin() → boolean` | **definer**, stable | anon, authenticated (hors API) | politiques RLS |
 | `public.custom_access_token_hook(jsonb) → jsonb` | invoker, stable | supabase_auth_admin | hook GoTrue |
+| `public.check_ai_quota(integer) → boolean` (0012) | invoker, stable | authenticated, service_role | quota du traducteur |
 | `public.sync_unit_code()`, `public.sync_amount_num()` | trigger | — | synchro ancien code |
 
 Toutes les fonctions ont un `search_path` figé (advisor « Function Search Path Mutable » OK).
+`save_recipe` est recréée par 0011 (`photo_path`) puis 0013 (sans JSONB) ; `search_recipes`
+par 0010 (`photo_path`) puis 0013 (sans JSONB). Les signatures ne changent pas.
 
 ---
 
 ## 4. Procédure d'application en production
 
-**Pré-requis** : branche `feat/db-foundation` revue ; sauvegarde Supabase (Database → Backups,
+**Pré-requis** : branche `modernisation` revue ; sauvegarde Supabase (Database → Backups,
 ou `pg_dump` via le pooler) ; fenêtre calme (quelques secondes de verrou sur `recipes` pour la
 colonne générée en 0008).
 
@@ -351,10 +377,11 @@ l'ancien code), fusion et déploiement, **puis 0005** immédiatement, et plus ta
 0010 et 0012 `private.is_admin()` (0009), 0011 `photo_path` (0010) ; 0005 ne dépend d'aucune de
 0006 → 0012 et passe aussi bien après elles (rejoué ainsi sur une copie conforme à la prod).
 
-**Outil** : au choix
-* MCP `apply_migration(project_id, name, query)` avec le contenu du fichier (un appel par fichier,
-  `name` = nom du fichier sans extension, pour l'historique `supabase_migrations.schema_migrations`) ;
-* ou Dashboard → SQL Editor, coller le fichier, Run. Les fichiers contiennent déjà
+**Outil** (décision de Nina) :
+* par défaut, Claude avec MCP `apply_migration(project_id, name, query)` et le contenu du fichier
+  (un appel par fichier, `name` = nom du fichier sans extension, pour l'historique
+  `supabase_migrations.schema_migrations`) ;
+* plan B : Dashboard → SQL Editor, coller le fichier, Run. Les fichiers contiennent déjà
   `begin; … commit;` : si une assertion échoue, **rien** n'est appliqué pour ce fichier.
 
 **Vérifications après chaque étape** (lire les `NOTICE` du résultat, puis) :
@@ -392,7 +419,7 @@ sur `is_admin` doit avoir disparu. Si un `rpc()` renvoie 404 juste après : `not
 (aucune donnée existante touchée). 0005 → restauration depuis `*_backup_20261003`. 0009 →
 recréer `public.is_admin()` (corps de 0001) et rejouer la boucle de politiques dans l'autre sens.
 Après une semaine d'exploitation sans incident, les tables `*_backup_20261003` et
-`*_orphans_20261003` pourront être supprimées (phase 4).
+`*_orphans_20261003` sont supprimées par 0014 (§ 9).
 
 **Risques identifiés**
 * 0005 est la seule migration destructrice (orphelins) : le garde-fou arrête tout si un orphelin
@@ -406,11 +433,8 @@ Après une semaine d'exploitation sans incident, les tables `*_backup_20261003` 
 * 0010 : si `create policy … on storage.objects` échoue avec « must be owner of table objects »
   depuis `apply_migration`, créer les 4 politiques via Dashboard → Storage → Policies
   (mêmes expressions) et rejouer le reste du fichier.
-* L'éditeur actuel (`components/RecipeEditor.vue`, `handleSubmit`) **n'envoie plus** `ingredients`/
-  `instructions` JSONB : les recettes modifiées via l'ancien éditeur après 0005 auront un JSONB
-  périmé (déjà le cas aujourd'hui pour 20 recettes). Résolu dès que le front passe par `save_recipe`.
-  À noter aussi : `recipes.ingredients`/`instructions` sont `NOT NULL` sans défaut ; `save_recipe`
-  les écrit toujours.
+* JSONB périmé : résolu. Le nouvel éditeur passe par `save_recipe`, et 0013 supprime les
+  colonnes `recipes.ingredients` / `instructions`.
 
 **Régénération des types (APRÈS application)** :
 `npx supabase gen types typescript --project-id tzlkabxcmmbwhpyvmato --schema public > shared/types/database.ts`
@@ -421,8 +445,9 @@ et `*_orphans_20261003` y apparaîtront (RLS sans politique : inaccessibles) ; i
 
 ## 5. Actions manuelles dashboard (hors SQL)
 
-1. **Activer le hook JWT** : Authentication → Hooks → « Customize Access Token (JWT) Claims hook »
-   → type Postgres → schéma `public`, fonction `custom_access_token_hook` → Enable hook. Vérifier
+1. **Activer le hook JWT** (la fonction n'apparaît qu'après 0009) : Authentication → Hooks →
+   « Customize Access Token (JWT) Claims hook » → type Postgres → schéma `public`, fonction
+   `custom_access_token_hook` → Enable hook. Vérifier
    ensuite en décodant un nouveau token (`user_role` présent). En cas de problème, désactiver le
    hook : `private.is_admin()` retombe automatiquement sur `profiles.role`.
 2. **OTP** : Authentication → Providers → Email → « Email OTP Expiration » < 3600 s (advisor
@@ -458,8 +483,7 @@ et `*_orphans_20261003` y apparaîtront (RLS sans politique : inaccessibles) ; i
 * **Appliquée en local** le 2026-10-03 (`psql -f`, rejouée une seconde fois : idempotente). Test
   effectué en tant qu'admin (`set local role authenticated` + claims `user_role=admin`) :
   `photo_path` écrit à la création, remis à `NULL` quand la clé est absente, `delete_recipe` OK.
-  **Pas appliquée en prod** : à faire après 0003 → 0010 (procédure § 4), simplement en exécutant
-  le fichier dans le SQL Editor.
+  **Pas appliquée en prod** : à faire après 0010, dans l'ordre de `BASCULE_PROD.md`.
 * **Vérification prod** :
   ```sql
   select position('photo_path' in pg_get_functiondef('public.save_recipe(jsonb)'::regprocedure)) > 0; -- true
@@ -496,11 +520,9 @@ fonction présente) ; `check_ai_quota(1)` → `false` après un appel, `true` po
 utilisateur ; un utilisateur simple ne voit pas les lignes de l'admin
 (`test/integration/translate-recipe.local.test.ts`).
 
-**À faire en prod (procédure § 4)** : appliquer 0012 après 0009 ; puis **régénérer
-`shared/types/database.ts`** (la table `ai_usage` et la fonction `check_ai_quota` y
-apparaîtront ; `server/utils/ai/usage.ts` pourra alors utiliser le client typé). Ajouter 0012 à
-la liste de `supabase/local/setup.sh` (fichier non modifié ici) pour les prochaines
-réinitialisations locales.
+**À faire en prod (procédure § 4)** : appliquer 0012 après 0009. `ai_usage` et
+`check_ai_quota` figurent déjà dans `shared/types/database.ts` (régénéré sur la base locale) ;
+`supabase/local/setup.sh` applique toutes les migrations ≥ 0003, 0012 comprise.
 
 ## 8. Migration 0013 — contract : suppression des colonnes JSONB legacy
 
@@ -519,9 +541,8 @@ Fichier : `migrations/0013_contract_jsonb.sql` (+ `rollback/0013_contract_jsonb_
   `save_recipe`). `search_recipes` renvoyait les deux colonnes, mais `toRecipeSummary` les
   ignore. Commentaires périmés à corriger (4A) : `server/api/add-recipe.post.ts` l. 8 et
   `server/api/update-recipe.put.ts` l. 8 (« JSONB legacy recalculé »).
-* Tests : `test/integration/save-recipe.local.test.ts` (l. 103-127) lit
-  `recipes.ingredients, instructions` et vérifie le recalcul du JSONB → **à adapter** (plus
-  de JSONB après 0013 : vérifier les sections à la place).
+* Tests : `test/integration/save-recipe.local.test.ts` lisait le JSONB ; il a été adapté et
+  vérifie désormais que les colonnes n'existent plus.
 * SQL : seules `save_recipe` (0006/0011 : recalcul et écriture du JSONB, insert avec
   `'[]'::jsonb`) et `search_recipes` (0008/0010 : type de retour) les mentionnent. Aucune vue,
   aucun trigger, aucune politique, aucun index (vérifié sur `pg_proc.prosrc`, `pg_depend`,
@@ -571,8 +592,7 @@ ingrédients 1 529 (1 546 dans le snapshot, voir « Carrot cake » dans `BASCULE
 après une sauvegarde `pg_dump` de la base) ; NOTICE conformes (7 orphelines : 5 doublons, 2
 versions remplacées ; 0015 : 2/5/3/14/4+3/1) ; `local/verify.sql` : 25 contrôles OK ; 0014 non
 appliquée sur cette base (elle le sera au prochain `db:local:reset`).
-`test/integration/save-recipe.local.test.ts` échoue désormais sur 1 cas sur 6 (lecture du
-JSONB, attendu) : à adapter par l'équipe app.
+`test/integration/save-recipe.local.test.ts` a été adapté depuis (absence des colonnes JSONB).
 
 **Types** : `shared/types/database.ts` régénéré après 0013 (+ 0015) sur la base locale :
 `recipes.Row/Insert/Update` sans `ingredients`/`instructions`, `search_recipes.Returns` idem,
