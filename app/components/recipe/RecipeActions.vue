@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { Recipe } from '#shared/types'
 import { sectionsWithIngredients, sectionsWithInstructions } from '#shared/utils/recipes'
 
@@ -119,10 +119,8 @@ const hasIngredients = computed(() => sectionsWithIngredients(props.recipe.secti
 const hasSteps = computed(() => sectionsWithInstructions(props.recipe.sections).length > 0)
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
 
-// Les favoris sont chargés à la demande, une seule fois par utilisateur.
-watch(() => authStore.isAuthenticated, (authenticated) => {
-  if (authenticated) void favoritesStore.ensureLoaded()
-}, { immediate: true })
+// Favoris chargés une seule fois par utilisateur (attendus en SSR).
+useFavoritesLoader()
 
 const toggleFavorite = async () => {
   if (favoriteBusy.value) return

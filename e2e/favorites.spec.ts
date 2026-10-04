@@ -41,12 +41,14 @@ test('(c) user@local.test : favori ajouté puis retiré', async ({ page }) => {
   const favoriteLink = page.getByRole('main').getByRole('link', { name: recipe.title, exact: true })
   await expect(favoriteLink).toBeVisible()
 
-  // Retour à la fiche par navigation client (depuis /favoris). NB : un
-  // rechargement complet de la fiche peut afficher « Ajouter aux favoris » à
-  // tort (store favoris sérialisé en SSR avec isLoading=true : voir le
-  // rapport), d'où ce chemin.
-  await favoriteLink.click()
-  await expect(main.getByRole('heading', { level: 1 })).toHaveText(recipe.title)
+  // Rechargements complets de la fiche : l'état favori est rendu côté serveur
+  // et conservé à l'hydratation (régression : « Ajouter aux favoris » affiché
+  // à tort ~1 fois sur 3 quand le payload SSR portait isLoading=true).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await gotoApp(page, `/recettes/${recipe.id}`)
+    await expect(main.getByRole('heading', { level: 1 })).toHaveText(recipe.title)
+    await expect(main.getByRole('button', { name: 'Retirer des favoris' })).toBeVisible()
+  }
   await main.getByRole('button', { name: 'Retirer des favoris' }).click()
   await expect(main.getByRole('button', { name: 'Ajouter aux favoris' })).toBeVisible()
 

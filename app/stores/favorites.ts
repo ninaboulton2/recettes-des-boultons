@@ -15,11 +15,20 @@ interface FavoritesState {
 }
 
 /**
+ * Chargement en cours, par instance de store (donc par requête SSR / par app
+ * client). Volontairement HORS de l'état : l'état Pinia est sérialisé dans le
+ * payload SSR, et un `isLoading: true` hydraté bloquait le chargement côté
+ * client (« Ajouter aux favoris » affiché sur une recette favorite).
+ */
+const inflightLoads = new WeakMap<object, Promise<Favorite[]>>()
+
+/**
  * Favoris de l'utilisateur connecté.
  *
  * Lecture directe sous RLS (`favorites` + `recipes` par `in('id', …)`), rendue
- * côté serveur par la page `favoris` via `useAsyncData`. Les écritures passent
- * encore par `/api/favorites` (POST / DELETE).
+ * côté serveur par la page `favoris` via `useAsyncData` et par les composants
+ * (fiche, cartes) via `useFavoritesLoader()`. Les écritures passent encore par
+ * `/api/favorites` (POST / DELETE).
  */
 export const useFavoritesStore = defineStore('favorites', {
   state: (): FavoritesState => ({
@@ -41,6 +50,17 @@ export const useFavoritesStore = defineStore('favorites', {
      * connecté. Lève l'erreur Supabase pour que `useAsyncData` la remonte.
      */
     async loadFavorites(): Promise<Favorite[]> {
+      const pending = this.fetchFavorites()
+      inflightLoads.set(this, pending)
+      try {
+        return await pending
+      } finally {
+        if (inflightLoads.get(this) === pending) inflightLoads.delete(this)
+      }
+    },
+
+    /** Requêtes de `loadFavorites` (sans déduplication). */
+    async fetchFavorites(): Promise<Favorite[]> {
       this.isLoading = true
       this.error = null
 
@@ -100,11 +120,20 @@ export const useFavoritesStore = defineStore('favorites', {
       return this.loadFavorites()
     },
 
-    /** Charge les favoris une seule fois par utilisateur (ex. cœurs des cartes). */
+    /**
+     * Charge les favoris une seule fois par utilisateur (fiche, cartes).
+     * Un chargement déjà en cours est attendu plutôt que dupliqué ; l'état
+     * `isLoading` (sérialisé en SSR) n'est PAS utilisé comme verrou.
+     */
     async ensureLoaded(): Promise<void> {
       const authStore = useAuthStore()
       const userId = authStore.currentUser?.id ?? null
-      if (this.isLoading || this.loadedForUserId === userId) return
+      if (this.loadedForUserId === userId) return
+      const pending = inflightLoads.get(this)
+      if (pending) {
+        await pending.catch(() => undefined)
+        if (this.loadedForUserId === userId) return
+      }
       try {
         await this.loadFavorites()
       } catch {

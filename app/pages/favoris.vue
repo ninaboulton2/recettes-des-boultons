@@ -51,8 +51,13 @@ const favoritesStore = useFavoritesStore()
 
 const showLoginModal = ref(false)
 
-// Favoris : lecture directe sous RLS (store), rendue côté serveur
-const { status, error, refresh } = await useAsyncData('favorites', () => favoritesStore.refresh())
+// Favoris : lecture directe sous RLS (store), rendue côté serveur. Clé propre
+// à l'utilisateur : un changement de compte (connexion / déconnexion)
+// relance le chargement, sans réutiliser les données d'un autre compte.
+const { status, error, refresh } = await useAsyncData(
+  () => `favorites:${authStore.currentUser?.id ?? 'anonymous'}`,
+  () => favoritesStore.refresh()
+)
 
 // Favoris dont la recette existe encore, triés par titre
 const favoritesWithRecipes = computed(() =>
@@ -60,9 +65,6 @@ const favoritesWithRecipes = computed(() =>
     .filter((favorite): favorite is FavoriteWithRecipe => favorite.recipe !== null)
     .sort((a, b) => a.recipe.title.localeCompare(b.recipe.title, 'fr', { sensitivity: 'base' }))
 )
-
-// Recharger à la connexion / déconnexion
-watch(() => authStore.isAuthenticated, () => { void refresh() })
 
 useHead({
   title: () => t('favorites.title'),
