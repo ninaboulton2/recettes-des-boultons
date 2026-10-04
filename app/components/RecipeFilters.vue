@@ -1,16 +1,24 @@
 <template>
   <div class="space-y-4 rounded-xl border border-default bg-muted/40 p-4">
     <div class="grid gap-3 md:grid-cols-3">
-      <UFormField :label="$t('recipes.search.label')" class="md:col-span-1">
+      <!--
+        Libellé et champ reliés par un id FIXE : avec UFormField, l'id vient de
+        useId() et différait entre SSR et client dans le build de production
+        (label for="v-0-8-0", input id="v-0-0-1") ; le nom accessible du champ
+        retombait alors sur le placeholder. Même rendu que UFormField (md).
+      -->
+      <div class="text-sm md:col-span-1">
+        <label :for="SEARCH_INPUT_ID" class="block font-medium text-default">{{ $t('recipes.search.label') }}</label>
         <UInput
+          :id="SEARCH_INPUT_ID"
           :model-value="query"
           type="search"
           icon="i-lucide-search"
           :placeholder="$t('recipes.search.placeholder')"
-          class="w-full"
+          class="mt-1 w-full"
           @update:model-value="emit('update:query', String($event ?? ''))"
         />
-      </UFormField>
+      </div>
 
       <UFormField :label="$t('recipes.filters.category.label')">
         <USelectMenu
@@ -78,6 +86,9 @@
  * Barre de filtres des listes de recettes : recherche, catégorie (ou
  * catégorie verrouillée sur la page de catégorie), tags.
  */
+
+/** Id du champ de recherche (une seule barre de filtres par page). */
+const SEARCH_INPUT_ID = 'recipe-search'
 const props = defineProps<{
   query: string
   category: string | null
