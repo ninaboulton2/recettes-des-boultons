@@ -189,7 +189,7 @@ Forme JSONB constatée en prod : `ingredients = [{name, unit, amount}]` (`amount
    politique, droits révoqués → invisibles via l'API).
 2. Pour les **118** recettes sans aucune section : une section `name='Recette'`, `type='mixed'`,
    `order_index=0` + ingrédients et instructions depuis le JSONB. Choix du nom : le front
-   (`pages/recettes/[id].vue`, `components/RecipeSections.vue`) affiche toujours `section.name`
+   (`pages/recettes/[id].vue`, `components/RecipeSections.vue`, front de l'époque) affiche toujours `section.name`
    en `<h3>`, y compris pour une section unique → un nom neutre plutôt qu'un titre vide.
    Règles : `amount` nombre → texte court (`225`, `0.5`), `0` → `NULL` (comme les 4 orphelins
    existants), `unit ''` → `NULL`, `amount_num`/`unit_code` dérivés, `optional` repris.

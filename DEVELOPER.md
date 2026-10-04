@@ -679,7 +679,7 @@ Variables (aucun fichier `.env` n'est déployé).
 | `NITRO_PRESET` | Nitro | `node-server` pour un build servi par Node (e2e, PWA) |
 | `E2E_SERVER`, `E2E_BASE_URL`, `E2E_PORT`, `CI` | `playwright.config.ts` | tests e2e |
 | `APP_URL`, `LOCAL_DB_URL` | tests d'intégration | serveur Nuxt et base locale |
-| `SUPABASE_DB_URL`, `SUPABASE_TEST_DATABASE`, `SUPABASE_CLI` | scripts `supabase/local/`, `scripts/` | outillage de la base locale |
+| `SUPABASE_DB_URL`, `SUPABASE_TEST_DATABASE`, `SUPABASE_TEST_DB_URL`, `SUPABASE_CLI`, `PGBIN`, `PGPORT_TEST` | scripts `supabase/local/`, `supabase/tests/`, `scripts/` | outillage de la base locale |
 
 - Le module `@nuxtjs/supabase` attend `SUPABASE_URL` / `SUPABASE_KEY` : `nuxt.config.ts`
   mappe `SUPABASE_ANON_KEY` pour garder le nom déjà utilisé sur Vercel.
