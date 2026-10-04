@@ -1,11 +1,10 @@
 <!--
 Note pour Nina (invisible une fois le Markdown affiché ; à retirer avant d'envoyer le message à la famille) :
 - Tout ce qui est listé dans « Les nouveautés » a été vérifié dans le code de la branche
-  `modernisation` au 2026-10-03, SAUF « installer le site sur le téléphone » et « liste de
-  courses hors ligne » : ces deux points sont livrés en parallèle (PWA, agent 4B) et
-  n'étaient pas encore dans `modernisation` quand ce texte a été écrit. Ils sont au
-  conditionnel dans « Bientôt » : à déplacer dans « Les nouveautés » (au présent) une fois
-  la PWA fusionnée et testée sur un iPhone et un Android, à supprimer sinon.
+  `modernisation` au 2026-10-03, y compris « installer le site sur le téléphone » et « liste de courses hors ligne »
+  (PWA fusionnée le 2026-10-04). Ces deux points sont encore au conditionnel dans
+  « Bientôt » : à déplacer dans « Les nouveautés » (au présent) après un essai sur un
+  iPhone et un Android.
 - La connexion Google suppose le fournisseur Google activé dans Supabase
   (supabase/BASCULE_PROD.md, étape 6).
 - Le traducteur reste réservé aux admins (50 traductions par jour et par personne).

@@ -4,7 +4,7 @@
 # ============================================================================
 #  Démarre Docker Desktop si nécessaire (macOS), la stack Supabase locale
 #  (Postgres, Auth, PostgREST, Storage, Studio) puis amorce la base
-#  (schéma prod + snapshot + migrations 0003 → 0010 + comptes de test).
+#  (schéma prod + snapshot + migrations 0003 → 0015 + comptes de test).
 #  Les options sont transmises à setup.sh (--seed-test, --no-verify).
 # ============================================================================
 set -euo pipefail

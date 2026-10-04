@@ -4,14 +4,13 @@
     {
       "name": "preview",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3007"],
-      "port": 3007,
-      "autoPort": false
-    },
-    {
-      "name": "preview-local",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:local", "--", "--port", "3007"],
+      "runtimeArgs": [
+        "run",
+        "dev:local",
+        "--",
+        "--port",
+        "3007"
+      ],
       "port": 3007,
       "autoPort": false
     }

@@ -152,9 +152,12 @@ Vercel → projet → **Settings** :
 ### 0.5 Supabase Auth (avant la fusion)
 
 * **Authentication → URL Configuration** : *Site URL* = `https://recettes-des-boultons.vercel.app` ;
-  *Redirect URLs* : ajouter `https://recettes-des-boultons.vercel.app/confirm` et
-  `https://recettes-des-boultons.vercel.app/en/confirm` (et
-  `http://localhost:3000/confirm` pour le développement si besoin).
+  *Redirect URLs* : ajouter ces quatre adresses (retour OAuth et lien « mot de passe oublié ») :
+  `https://recettes-des-boultons.vercel.app/confirm`,
+  `https://recettes-des-boultons.vercel.app/en/confirm`,
+  `https://recettes-des-boultons.vercel.app/reset-password`,
+  `https://recettes-des-boultons.vercel.app/en/reset-password`.
+  (Le développement local n'utilise pas ce projet : sa configuration est dans `supabase/config.toml`.)
 * **Connexion Google** — ✅ configurée par Nina : client OAuth « Web application » créé dans
   Google Cloud Console, *Authorized redirect URI* =
   `https://tzlkabxcmmbwhpyvmato.supabase.co/auth/v1/callback`, fournisseur Google activé
