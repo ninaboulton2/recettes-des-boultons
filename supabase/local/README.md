@@ -75,7 +75,9 @@ Comptes (mot de passe **`password123`**, e-mails confirmés) :
 | `admin2@local.test`, `user2@…`, `user3@…` | admin / user | autres comptes prod |
 
 Sans snapshot, `test_accounts.sql` crée quand même `admin@local.test` et `user@local.test`
-(uuid fixes `a0000000-0000-4000-8000-00000000000{1,2}`).
+(uuid fixes `a0000000-0000-4000-8000-00000000000{1,2}`), mais la base n'a aucune recette.
+Pour des recettes jetables avec ces deux comptes : `npx supabase db reset` (si la base est
+déjà amorcée) puis `bash scripts/ci-seed.sh` (`seed_test.sql` + `test_accounts.sql`).
 
 Le hook JWT est **activé** (`[auth.hook.custom_access_token]` → `public.custom_access_token_hook`) :
 les tokens émis en local portent le claim `user_role` (`admin` / `user`), exactement ce que
@@ -84,14 +86,18 @@ les tokens émis en local portent le claim `user_role` (`admin` / `user`), exact
 ## Basculer l'app entre prod et local
 
 Le module `@nuxtjs/supabase` lit `SUPABASE_URL` / `SUPABASE_KEY` ; `nuxt.config.ts` mappe
-`SUPABASE_ANON_KEY`. Deux fichiers d'environnement coexistent :
+`SUPABASE_ANON_KEY`.
 
-* `.env` → prod (comme avant) : `npm run dev` ;
 * `.env.local` → base locale : `npm run dev:local` (option `--dotenv` de `nuxt dev`, qui
-  remplace `.env` ; rien d'autre à changer).
+  remplace `.env`). C'est le mode de travail normal.
+* `.env` → lu par `npm run dev`. **Ne jamais y mettre la prod** : toutes les écritures
+  partiraient sur la base de la famille.
+
+Ajouts utiles à `.env.local` : `AI_PROVIDER=mock` (traducteur sans appel payant) et
+`NUXT_PUBLIC_AUTH_PROVIDERS=none` (Google n'est pas configuré dans `config.toml`).
 
 Pour le navigateur intégré Claude Code : configuration `preview-local` de `.claude/launch.json`
-(port 3007).
+(port 3007, base locale). La configuration `preview` lance `npm run dev` (`.env`).
 
 ## Snapshot des données
 
@@ -100,7 +106,9 @@ Régénération : `export_snapshot.md` (requêtes `SELECT` uniquement, aucun e-m
 
 ## Limites
 
-* **Pas d'OpenAI** : `OPENAI_API_KEY` vide, la page `/traducteur` échoue proprement.
+* **Pas d'IA réelle** : avec `AI_PROVIDER=mock`, le traducteur renvoie une recette fixe ;
+  sans cette ligne, `OPENAI_API_KEY` est vide et `/traducteur` renvoie une erreur de
+  configuration.
 * **Pas d'envoi d'e-mail** : tout arrive dans Mailpit (http://127.0.0.1:54324) ;
   `enable_confirmations = false` → inscription sans confirmation.
 * Les photos uploadées dans le bucket `recipe-photos` restent dans le volume Docker local.
@@ -112,12 +120,5 @@ Régénération : `export_snapshot.md` (requêtes `SELECT` uniquement, aucun e-m
 * Le moteur Storage réel protège ses tables (`storage.protect_delete` : pas de `DELETE` SQL
   direct) ; passer par l'API Storage ou, en SQL de test, `set_config('storage.allow_delete_query','true',true)`.
 * PostgREST local : `max_rows = 1000` (`config.toml`), comme la valeur par défaut d'un projet
-  hébergé — à garder pour reproduire le comportement prod (voir « Points d'attention »).
-
-## Points d'attention (régressions observées de l'app actuelle face à 0003 → 0010)
-
-Voir la section « Base de dev locale » de `DEVELOPER.md` : après 0005, `recipe_ingredients`
-compte 1 546 lignes et `instructions` 1 545 ; `server/api/recipes.get.ts` les charge d'un
-seul `select` chacune, que PostgREST tronque à 1 000 lignes → ingrédients / étapes manquants
-sur une partie des recettes. À corriger côté app avant d'appliquer 0005 en prod
-(pagination `.range()`, ou requête par recette).
+  hébergé — à garder pour reproduire le comportement prod (une requête de plus de 1 000
+  lignes est tronquée sans erreur).
