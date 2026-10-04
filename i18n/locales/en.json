@@ -278,6 +278,7 @@
       "title": "Add to a shopping list",
       "description": "Choose the list and the ingredient sections to add.",
       "list": "List",
+      "listsLoading": "Loading lists…",
       "noLists": "You don’t have a shopping list yet.",
       "newListName": "New list name",
       "createList": "Create list",
