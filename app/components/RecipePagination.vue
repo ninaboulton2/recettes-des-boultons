@@ -25,6 +25,7 @@
       </template>
       <template #item="{ item, page: current }">
         <UButton
+          v-if="item.type === 'page'"
           :color="current === item.value ? 'primary' : 'neutral'"
           :variant="current === item.value ? 'solid' : 'outline'"
           :size="layout.size"
