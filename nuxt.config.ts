@@ -1,3 +1,10 @@
+import { getEdition, localize } from './shared/editions'
+
+// Édition lue au BUILD pour ce qui est figé dans le bundle (titre par défaut,
+// manifeste PWA). Le reste suit `runtimeConfig.public.edition` à l'exécution
+// (même variable NUXT_PUBLIC_EDITION) : voir DEVELOPER.md § Éditions.
+const buildEdition = getEdition(process.env.NUXT_PUBLIC_EDITION)
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -50,14 +57,12 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Recettes des Boultons',
+      // Titre, description, `theme-color` et `data-edition` : posés selon
+      // l'édition par app.vue et plugins/edition.ts.
+      title: localize(buildEdition.brand.name, 'fr'),
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'description', content: 'Retrouvez ici toutes les recettes préférées des Boultons !' },
-        // Couleur de la barre du navigateur : accent terracotta (clair) / fond stone (sombre)
-        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#c2603e' },
-        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#1c1917' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -124,6 +129,10 @@ export default defineNuxtConfig({
       // Fournisseurs OAuth affichés dans la modale d'authentification
       // (liste séparée par des virgules ; NUXT_PUBLIC_AUTH_PROVIDERS=google,apple).
       authProviders: 'google',
+      // Édition du site : `boultons` (défaut, identité d'origine) ou `generic`
+      // (base de la v2). Surchargeable à l'exécution par NUXT_PUBLIC_EDITION ;
+      // valeur inconnue = `boultons` (shared/editions/index.ts).
+      edition: process.env.NUXT_PUBLIC_EDITION || 'boultons',
       // --- Sentry (sentry.client.config.ts) ---
       // DSN vide = SDK inactif. Surchargeable à l'exécution par
       // NUXT_PUBLIC_SENTRY_DSN ; SENTRY_DSN est lu au build en repli.
@@ -159,16 +168,17 @@ export default defineNuxtConfig({
   // --- PWA (@vite-pwa/nuxt) : installable + courses hors ligne ---
   pwa: {
     registerType: 'autoUpdate',
+    // Manifeste figé au build : nom et couleurs de l'édition de BUILD.
     manifest: {
-      name: 'Recettes des Boultons',
-      short_name: 'Boultons',
-      description: 'Retrouvez ici toutes les recettes préférées des Boultons !',
+      name: localize(buildEdition.brand.name, 'fr'),
+      short_name: buildEdition.brand.shortName,
+      description: localize(buildEdition.brand.tagline, 'fr'),
       lang: 'fr',
       start_url: '/',
       scope: '/',
       display: 'standalone',
-      theme_color: '#c2603e',
-      background_color: '#fafaf9',
+      theme_color: buildEdition.theme.themeColor.light,
+      background_color: buildEdition.theme.backgroundColor,
       // Icônes générées par `npm run pwa:icons` (scripts/generate-pwa-icons.mjs).
       icons: [
         { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },

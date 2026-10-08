@@ -1,12 +1,4 @@
 {
-  "meta": {
-    "title": "Recettes des Boultons",
-    "description": "Find here all the favorite recipes of the Boultons!",
-    "home": {
-      "title": "Home - Recettes des Boultons",
-      "description": "Discover the favorite recipes of the Boulton family. Soups, dishes, desserts and more!"
-    }
-  },
   "navigation": {
     "home": "Home",
     "recipes": "Recipes",
@@ -111,13 +103,13 @@
     }
   },
   "home": {
-    "title": "Recettes des Boultons",
-    "subtitle": "Find here all the favorite recipes of the Boultons!",
     "viewRecipes": "Explore recipes",
     "addRecipe": "Add a recipe",
     "categories": {
       "title": "Explore by category",
-      "subtitle": "Soups, mains, desserts… quickly find what you're craving."
+      "subtitle": "Soups, mains, desserts… quickly find what you're craving.",
+      "titleBoultons": "Explore recipes by category",
+      "imageAlt": "Illustration: {name}"
     },
     "features": {
       "title": "Features",
@@ -245,6 +237,7 @@
     "scaledNote": "Quantities adjusted for {count} servings (original recipe: {base}).",
     "photoAlt": "Photo: {title}",
     "noPhoto": "No photo yet",
+    "categoryIllustrationAlt": "Illustration for the “{category}” category",
     "ingredients": {
       "title": "Ingredients",
       "optional": "optional",
@@ -692,7 +685,7 @@
     }
   },
   "footer": {
-    "copyright": "© {year} Recettes des Boultons. All rights reserved."
+    "copyright": "© {year} {site}. All rights reserved."
   },
   "errors": {
     "generic": "Something went wrong, please try again later.",
