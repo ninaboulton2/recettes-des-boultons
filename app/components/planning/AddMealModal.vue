@@ -61,6 +61,17 @@
                     loading="lazy"
                     class="size-full object-cover"
                   />
+                  <NuxtImg
+                    v-else-if="categoryImageSrc(recipe.category)"
+                    :src="categoryImageSrc(recipe.category)"
+                    alt=""
+                    :width="40"
+                    :height="40"
+                    densities="x1 x2"
+                    format="webp"
+                    loading="lazy"
+                    class="size-full bg-white object-contain p-0.5"
+                  />
                   <UIcon v-else :name="categoryIcon(recipe.category)" class="size-5 text-dimmed" aria-hidden="true" />
                 </span>
                 <span class="min-w-0 flex-1">
@@ -128,7 +139,12 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
-const { categoryName, categoryIcon } = useCategories()
+const { categoryName, categoryIcon, categoryVisual } = useCategories()
+/** Illustration de catégorie (édition qui en fournit) ; vide sinon. */
+const categoryImageSrc = (category: string) => {
+  const visual = categoryVisual(category)
+  return visual.type === 'image' ? visual.src : undefined
+}
 const { publicUrl } = useRecipePhoto()
 
 const tab = ref<'recipe' | 'custom'>('recipe')

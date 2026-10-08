@@ -1,12 +1,4 @@
 {
-  "meta": {
-    "title": "Recettes des Boultons",
-    "description": "Retrouvez ici toutes les recettes préférées des Boultons !",
-    "home": {
-      "title": "Accueil - Recettes des Boultons",
-      "description": "Découvrez les recettes préférées de la famille Boultons. Soupes, plats, desserts et plus encore !"
-    }
-  },
   "navigation": {
     "home": "Accueil",
     "recipes": "Recettes",
@@ -111,13 +103,13 @@
     }
   },
   "home": {
-    "title": "Recettes des Boultons",
-    "subtitle": "Retrouvez ici toutes les recettes préférées des Boultons !",
     "viewRecipes": "Explorer les recettes",
     "addRecipe": "Ajouter une recette",
     "categories": {
       "title": "Explorer par catégorie",
-      "subtitle": "Soupes, plats, desserts… trouvez rapidement ce qui vous fait envie."
+      "subtitle": "Soupes, plats, desserts… trouvez rapidement ce qui vous fait envie.",
+      "titleBoultons": "Explorer les recettes par catégories",
+      "imageAlt": "Illustration : {name}"
     },
     "features": {
       "title": "Fonctionnalités",
@@ -245,6 +237,7 @@
     "scaledNote": "Quantités ajustées pour {count} portions (recette d’origine : {base}).",
     "photoAlt": "Photo : {title}",
     "noPhoto": "Pas encore de photo",
+    "categoryIllustrationAlt": "Illustration de la catégorie « {category} »",
     "ingredients": {
       "title": "Ingrédients",
       "optional": "optionnel",
@@ -672,7 +665,7 @@
     }
   },
   "footer": {
-    "copyright": "© {year} Recettes des Boultons. Tous droits réservés."
+    "copyright": "© {year} {site}. Tous droits réservés."
   },
   "auth": {
     "login": {

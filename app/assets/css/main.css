@@ -8,44 +8,44 @@
  *   (bg-default / bg-muted / bg-elevated / bg-accented, text-default /
  *   text-highlighted / text-muted / text-dimmed, border-default,
  *   text-primary / bg-primary…). Aucun hex ni `gray-*` dans les composants.
- * - Palette : neutre chaud `stone` (app.config.ts → ui.colors.neutral) et un
- *   accent terracotta `primary` (ci-dessous), lisible en clair et en sombre.
+ * - Palette : selon l'ÉDITION (shared/editions/*.ts), injectée dans le
+ *   <head> par plugins/edition.ts sous `:root[data-edition=…]` :
+ *   `--color-primary-50…950`, neutre (`--ui-color-neutral-*`) et nuance AA
+ *   de `--ui-primary` en clair et en sombre. Boultons : bleu-vert + `slate` ;
+ *   générique : terracotta + `stone`. Nuances brutes : `--ui-color-primary-*`.
  * - Typographie : `font-sans` Inter (interface), `font-serif` Fraunces
  *   (titres de pages et de recettes), `font-lobster` réservé au logo.
  * - Surfaces et bordures fines plutôt qu'ombres ; `rounded-lg` par défaut,
  *   `rounded-xl` pour les cartes.
  */
-/* `static` : toutes les nuances sont émises même sans utilitaire qui les
-   référence (Nuxt UI lit `--color-primary-400` via `var()` en mode sombre). */
 @theme static {
-  /* Terracotta : 500 ≈ #c2603e. 600 sert de `--ui-primary` en clair
-     (blanc sur 600 : contraste 5,5:1), 400 en sombre (texte foncé : 6:1). */
-  --color-primary-50: #fcf5f0;
-  --color-primary-100: #f8e7dc;
-  --color-primary-200: #f0ccb8;
-  --color-primary-300: #e6a98b;
-  --color-primary-400: #e07f5e;
-  --color-primary-500: #c2603e;
-  --color-primary-600: #a84f31;
-  --color-primary-700: #8c3f28;
-  --color-primary-800: #733524;
-  --color-primary-900: #5e2e20;
-  --color-primary-950: #331610;
-
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Fraunces', ui-serif, Georgia, serif;
   --font-lobster: 'Lobster', cursive;
 }
 
 :root {
-  /* Accent un cran plus foncé que la nuance 500 pour garantir AA sur fond clair. */
-  --ui-primary: var(--ui-color-primary-600);
   /* `rounded-lg` = 0.5rem, `rounded-xl` = 0.75rem (Nuxt UI multiplie ce rayon). */
   --ui-radius: 0.25rem;
 }
 
-.dark {
-  --ui-primary: var(--ui-color-primary-400);
+/* Héros de l'accueil Boultons (HomeBoultons.vue) : diagonale couleur / fond
+   d'origine. Le blanc d'origine devient le fond courant (sombre en mode
+   sombre). Couleur : primary-700 (blanc dessus 4,0:1, titres en grand
+   corps) ; 800 en sombre (6,0:1). Angle plus vertical sur mobile pour que
+   tout le texte reste sur la partie colorée. */
+@utility diagonal-bg {
+  --diagonal-color: var(--ui-color-primary-700);
+  --diagonal-angle: 160deg;
+  background: linear-gradient(var(--diagonal-angle), var(--diagonal-color) 60%, var(--ui-bg) 60%);
+
+  @variant lg {
+    --diagonal-angle: 120deg;
+  }
+
+  @variant dark {
+    --diagonal-color: var(--ui-color-primary-800);
+  }
 }
 
 @layer base {

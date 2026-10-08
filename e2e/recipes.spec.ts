@@ -10,7 +10,16 @@ async function recipeCount(page: import('@playwright/test').Page): Promise<numbe
 
 test('(a) accueil → liste → recherche sans accent → fiche avec ingrédients', async ({ page }) => {
   await gotoApp(page, '/')
-  await page.getByRole('main').getByRole('link', { name: 'Explorer les recettes' }).click()
+  const hero = page.getByTestId('home-hero')
+  if (await hero.count() > 0) {
+    // Accueil de l'édition Boultons : le bouton du héros fait défiler jusqu'aux
+    // catégories ; la liste complète s'ouvre par la navigation.
+    await hero.getByRole('button', { name: 'Explorer les recettes' }).click()
+    await expect(page.locator('#categories')).toBeInViewport()
+    await page.getByRole('link', { name: 'Recettes', exact: true }).filter({ visible: true }).first().click()
+  } else {
+    await page.getByRole('main').getByRole('link', { name: 'Explorer les recettes' }).click()
+  }
   await expect(page).toHaveURL(/\/recettes$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Toutes nos recettes' })).toBeVisible()
 

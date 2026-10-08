@@ -3,8 +3,14 @@
     <header class="sticky top-0 z-40 border-b border-default bg-default/90 backdrop-blur">
       <UContainer class="flex h-14 items-center justify-between gap-3 md:h-16">
         <NuxtLink :to="localePath('/')" class="flex min-w-0 items-center gap-2 rounded-lg" :aria-label="$t('navigation.home')">
-          <NuxtImg src="/images/logo.png" alt="" :height="36" densities="x1 x2" format="webp" class="h-8 w-auto shrink-0 md:h-9" />
-          <span class="truncate font-lobster text-xl text-primary md:text-2xl">{{ $t('meta.title') }}</span>
+          <NuxtImg :src="brand.logo" alt="" :height="36" densities="x1 x2" format="webp" class="h-8 w-auto shrink-0 md:h-9" />
+          <!-- Couleur du nom : celle de l'édition (--site-name-color), sinon `primary`. -->
+          <span
+            class="truncate font-lobster text-xl md:text-2xl"
+            :class="brand.nameColor ? 'text-(color:--site-name-color) dark:text-(color:--site-name-color-dark)' : 'text-primary'"
+            :style="brand.nameColor ? { '--site-name-color': brand.nameColor.light, '--site-name-color-dark': brand.nameColor.dark } : undefined"
+            data-testid="site-name"
+          >{{ siteName }}</span>
         </NuxtLink>
 
         <nav class="hidden items-center gap-1 md:flex" :aria-label="$t('ui.nav.main')">
@@ -31,7 +37,9 @@
       </UContainer>
     </header>
 
-    <main class="w-full min-w-0 flex-1 pb-20 md:pb-0">
+    <!-- `overflow-x-clip` : sections pleine largeur (héros de l'accueil Boultons)
+         sans défilement horizontal dû à la barre de défilement. -->
+    <main class="w-full min-w-0 flex-1 overflow-x-clip pb-20 md:pb-0">
       <UContainer class="py-6 md:py-8">
         <OfflineBanner />
         <slot />
@@ -40,8 +48,8 @@
 
     <footer class="mt-auto hidden border-t border-default md:block">
       <UContainer class="flex flex-col items-center justify-between gap-2 py-6 text-sm text-muted sm:flex-row">
-        <p>{{ $t('footer.copyright', { year: new Date().getFullYear() }) }}</p>
-        <p class="font-lobster text-base text-muted">{{ $t('meta.title') }}</p>
+        <p>{{ $t('footer.copyright', { year: new Date().getFullYear(), site: siteName }) }}</p>
+        <p class="font-lobster text-base text-muted">{{ siteName }}</p>
       </UContainer>
     </footer>
 
@@ -65,6 +73,7 @@
 <script setup lang="ts">
 const { t } = useI18n()
 const route = useRoute()
+const { config: { brand }, siteName } = useEdition()
 const localePath = useLocalePath()
 
 const authStore = useAuthStore()

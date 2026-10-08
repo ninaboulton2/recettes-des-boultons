@@ -56,7 +56,7 @@
       </section>
 
       <p class="hidden text-center text-xs text-muted print:block">
-        {{ $t('meta.title') }}
+        {{ siteName }}
       </p>
     </article>
 
@@ -111,6 +111,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const { t } = useI18n()
+const { siteName } = useEdition()
 const localePath = useLocalePath()
 const notesId = useId()
 
