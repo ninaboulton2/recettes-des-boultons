@@ -18,15 +18,16 @@ listes de courses, favoris, traducteur IA. Pour une présentation rapide, voir
 6. [Lecture des données](#6-lecture-des-données)
 7. [Écriture : endpoints API](#7-écriture--endpoints-api)
 8. [Design](#8-design)
-9. [Fiche recette, éditeur et photos](#9-fiche-recette-éditeur-et-photos)
-10. [Planning et listes de courses](#10-planning-et-listes-de-courses)
-11. [Traducteur IA](#11-traducteur-ia)
-12. [Observabilité (Sentry)](#12-observabilité-sentry)
-13. [PWA et hors ligne](#13-pwa-et-hors-ligne)
-14. [Tests et CI](#14-tests-et-ci)
-15. [Variables d'environnement](#15-variables-denvironnement)
-16. [Déploiement](#16-déploiement)
-17. [À savoir](#17-à-savoir)
+9. [Éditions (Boultons / générique)](#9-éditions-boultons--générique)
+10. [Fiche recette, éditeur et photos](#10-fiche-recette-éditeur-et-photos)
+11. [Planning et listes de courses](#11-planning-et-listes-de-courses)
+12. [Traducteur IA](#12-traducteur-ia)
+13. [Observabilité (Sentry)](#13-observabilité-sentry)
+14. [PWA et hors ligne](#14-pwa-et-hors-ligne)
+15. [Tests et CI](#15-tests-et-ci)
+16. [Variables d'environnement](#16-variables-denvironnement)
+17. [Déploiement](#17-déploiement)
+18. [À savoir](#18-à-savoir)
 
 ---
 
@@ -56,25 +57,27 @@ Versions installées (`package-lock.json`).
 recettes-des-boultons/
 ├── app/                      # srcDir Nuxt 4 (alias ~/ et @/)
 │   ├── app.vue, app.config.ts, error.vue
-│   ├── assets/css/main.css   # Tailwind 4 + Nuxt UI, @theme (palette, polices), impression
-│   ├── components/           # composants partagés (RecipeCard, AuthModal, OfflineBanner…)
+│   ├── assets/css/main.css   # Tailwind 4 + Nuxt UI, @theme (polices), diagonal-bg, impression
+│   ├── components/           # composants partagés (RecipeCard, RecipeGrid, AuthModal, OfflineBanner…)
+│   │   ├── home/             # accueils par édition : HomeBoultons, HomeGeneric (voir § 9)
 │   │   ├── recipe/           # fiche recette (préfixe Recipe* : RecipeHero, RecipeCookingMode…)
 │   │   ├── editor/           # éditeur de recette (RecipeEditorForm, SectionEditor…)
 │   │   ├── planning/         # planning (WeekNavigator, DayColumn, MealSlot, MealCard…)
 │   │   ├── shopping/         # courses (ListTabs, AddItemForm, ItemList, ItemRow, UnitSelect)
 │   │   └── translator/       # aperçu du traducteur (RecipePreview)
-│   ├── composables/          # useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
+│   ├── composables/          # useEdition, useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
 │   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
 │   ├── middleware/auth.ts    # garde d'affichage des pages admin
 │   ├── pages/                # recettes, planning, courses, favoris, traducteur, confirm, reset-password
-│   ├── plugins/              # toast.client.ts, pwa-offline.client.ts
+│   ├── plugins/              # edition.ts (thème de l'édition), toast.client.ts, pwa-offline.client.ts
 │   ├── stores/               # Pinia : auth, recipes, favorites, planning, shopping
-│   └── utils/week.ts         # semaines du planning
+│   └── utils/                # week.ts (semaines du planning), homeFeatures.ts
 ├── shared/                   # code commun client/serveur (alias #shared)
+│   ├── editions/             # configuration des éditions : types, boultons, generic, theme (voir § 9)
 │   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, units, common
 │   ├── types/index.ts        # modèle de lecture (RecipeSummary, Recipe, ShoppingList…)
 │   ├── types/database.ts     # types Supabase GÉNÉRÉS (ne pas éditer)
-│   └── utils/                # recipes.ts (mapping, quantités), shopping.ts (rayons), text.ts
+│   └── utils/                # recipes.ts (mapping, quantités), shopping.ts (rayons), text.ts, color.ts (contraste)
 ├── server/
 │   ├── api/                  # endpoints d'écriture (voir § 7)
 │   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
@@ -93,7 +96,7 @@ recettes-des-boultons/
 ├── test/                     # tests Vitest : unit/, integration/ (base locale)
 ├── scripts/                  # ci-seed.sh, ci-env-local.sh, generate-pwa-icons.mjs
 ├── docs/                     # IA_MODELES.md, QUALITE_DONNEES.md
-├── public/                   # favicons, icônes PWA, images/logo.png, images/google.svg
+├── public/                   # favicons, icônes PWA, images/ (logo.png, boultons.png, categories/*.png, google.svg)
 ├── nuxt.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.mjs
 ├── sentry.client.config.ts, sentry.server.config.ts
 └── .github/workflows/ci.yml
@@ -145,7 +148,7 @@ Détails : [supabase/local/README.md](supabase/local/README.md).
   tests d'intégration.
 - `.env` (gitignoré) : lu par `npm run dev` et `npm run build`. **Ne pas le faire pointer sur
   la prod.** La configuration de production vit uniquement dans Vercel.
-- Liste complète des variables : § 15 et [env.example](env.example).
+- Liste complète des variables : § 16 et [env.example](env.example).
 
 Ajouts conseillés dans `.env.local` : `AI_PROVIDER=mock` (traducteur sans appel payant) et
 `NUXT_PUBLIC_AUTH_PROVIDERS=none` (Google n'est pas configuré dans la stack locale, voir
@@ -167,7 +170,7 @@ Ajouts conseillés dans `.env.local` : `AI_PROVIDER=mock` (traducteur sans appel
 | `npm run db:local:reset` | `supabase db reset` puis amorçage complet |
 | `npm run db:local:down` | arrête les conteneurs (données conservées) |
 | `npm run db:local:status` | URL et clés locales |
-| `npm run db:local:test` | rejoue les migrations et les tests SQL (voir § 14.4) |
+| `npm run db:local:test` | rejoue les migrations et les tests SQL (voir § 15.4) |
 | `npm run db:local:snapshot` | régénère `supabase/local/snapshot/*.sql` depuis `snapshot/raw/*.json` |
 
 ### 3.4 Données locales : snapshot ou données de test
@@ -242,7 +245,7 @@ ai_usage            id, user_id, created_at, provider, model, feature, input_tok
 - Toutes les recettes sont décrites par leurs sections. Les colonnes JSONB
   `recipes.ingredients` / `instructions` ont été supprimées par 0013.
 - `amount_num` et `unit_code` sont dérivés par trigger de `amount` et `unit` (0003, 0004).
-- `recipes.image` n'est plus utilisée (voir § 17).
+- `recipes.image` n'est plus utilisée (voir § 18).
 - Le trigger `handle_new_user` crée le profil à l'inscription ; `prevent_role_change`
   empêche un non-admin de changer son `role`.
 - Tables temporaires : `*_backup_20261003` et `*_orphans_20261003` (créées par 0005,
@@ -447,17 +450,26 @@ sont ignorées. `toSaveRecipePayload` le convertit en payload snake_case pour `s
 
 ## 8. Design
 
-Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
+Tokens dans `app/assets/css/main.css` (`@theme static` : polices), `app/app.config.ts` et,
+pour tout ce qui change d'une édition à l'autre (couleurs, nom, images), dans la
+configuration d'édition `shared/editions/*.ts` (voir § 9).
 
 - **Couleurs** : uniquement les utilitaires sémantiques de Nuxt UI (`bg-default`,
   `bg-muted`, `bg-elevated`, `text-highlighted`, `text-muted`, `border-default`,
   `text-primary`, `text-error`…). Aucun hex ni `gray-*` dans les composants : le mode sombre
-  suit seul. Exceptions : le logo Google (`public/images/google.svg`) et la feuille
-  d'impression dans `main.css`.
-- **Palette** : neutre `stone` + accent terracotta `primary` (500 = `#c2603e`).
-  `--ui-primary` vaut la nuance 600 en clair, 400 en sombre (contraste AA).
+  suit seul. Exceptions : le logo Google (`public/images/google.svg`), la feuille
+  d'impression dans `main.css`, et le fond `bg-white` des cadres d'illustrations
+  (PNG transparents dessinés pour un fond blanc, clairs dans les deux modes).
+- **Palette** : définie par l'édition et injectée par `plugins/edition.ts` (pas dans
+  `main.css`). Boultons : bleu-vert d'origine (500 = `#64b9c3`) + neutre `slate`,
+  `--ui-primary` = 800 en clair, 400 en sombre. Générique : terracotta (500 = `#c2603e`)
+  + neutre `stone`, `--ui-primary` = 600 en clair, 400 en sombre. Contrastes AA vérifiés
+  par `test/unit/editions.test.ts`. Nuances brutes : `var(--ui-color-primary-700)` ou
+  `bg-(--ui-color-primary-700)` (les utilitaires `bg-primary-700` n'existent pas : la
+  palette n'est plus dans `@theme`).
 - **Typographie** : Inter (`font-sans`, interface), Fraunces (`font-serif`, titres de pages
-  et de recettes), Lobster (`font-lobster`, logo uniquement), servies par `@nuxt/fonts`.
+  et de recettes), Lobster (`font-lobster`, logo et titre du héros Boultons), servies par
+  `@nuxt/fonts`.
 - **Surfaces** : bordures fines plutôt qu'ombres ; `rounded-lg`, `rounded-xl` pour cartes
   et modales.
 - **Composants** : Nuxt UI (`UButton`, `UModal`, `UForm` + Zod, `USelectMenu`…), icônes
@@ -466,21 +478,103 @@ Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
   API `$toast.success(title, message?)`.
 - **Layout** : header compact (navigation, mode sombre, langue, menu utilisateur) ; sur
   mobile, barre d'onglets en bas (Recettes, Planning, Courses, Favoris, Moi) ; `<main>` en
-  `w-full min-w-0` (aucun défilement horizontal à 375 px).
+  `w-full min-w-0 overflow-x-clip` (aucun défilement horizontal à 375 px, même avec le
+  héros pleine largeur `mx-[calc(50%-50vw)]`).
 - **Accessibilité** : focus visible, navigation au clavier, `aria-current="page"`,
   `prefers-reduced-motion` respecté.
 - **i18n** : stratégie `prefix_except_default` (FR sans préfixe, EN sous `/en`). Aucun texte
   visible en dur ; liens via `localePath()`. `test/unit/i18n.test.ts` vérifie la parité des
   clés fr/en, l'absence de valeur vide, les paramètres `{…}` et l'existence des clés
   utilisées dans `app/`.
-- **Catégories** : `useCategories()` fournit libellés et icônes ; l'icône sert de repli
-  quand une recette n'a pas de photo.
+- **Catégories** : `useCategories()` fournit libellés, icône Lucide et `visual` (illustration
+  PNG si l'édition en fournit, sinon icône) ; `categoryVisual(id)` sert de repli quand une
+  recette n'a pas de photo (carte, fiche, modale du planning). La photo reste prioritaire.
+- **Cartes recette** (`RecipeCard` dans `RecipeGrid`) : `h-full flex flex-col`, titre et
+  description sur 2 lignes (`line-clamp-2`), tags puis pied de carte poussé en bas
+  (`mt-auto`) : dans une rangée, toutes les cartes ont la hauteur de la plus haute et leurs
+  pieds sont alignés ; d'une rangée à l'autre, la hauteur suit le contenu réel. Zone
+  visuelle décidée pour toute la grille par `RecipeGrid` selon
+  `edition.recipeCards.visual` : `fixed` (Boultons) = toujours `aspect-[4/3]` ;
+  `adaptive` (générique) = `aspect-[4/3]` si au moins une recette de la grille (la page) a
+  une photo, sinon zone basse `h-20 md:h-24` avec icône `size-8` pour toutes les cartes.
+  Même logique pour les vignettes de `CategoryGrid` : illustration = cadre `aspect-[4/3]`,
+  icône seule = zone basse.
 - **Création de recette** (admin, `/recettes`) : menu « Nouvelle recette » → « Saisir une
   recette » (éditeur) ou « Importer avec l'IA » (`/traducteur`).
 
-## 9. Fiche recette, éditeur et photos
+## 9. Éditions (Boultons / générique)
 
-### 9.1 Fiche (`app/pages/recettes/[id].vue`)
+Le même code sert deux « éditions » du site :
+
+| | `boultons` (défaut) | `generic` |
+|---|---|---|
+| Rôle | identité d'origine de « Recettes des Boultons » | design modernisé, base de la v2 multi-comptes |
+| Nom | Recettes des Boultons (Lobster `#7b88bd`) | Carnet de recettes / Recipe Book (Lobster `primary`) |
+| Couleurs | bleu-vert d'origine + `slate` | terracotta + `stone` |
+| Accueil | `HomeBoultons` : héros diagonal pleine largeur (72vh), `boultons.png`, bouton qui défile vers les catégories, grille d'illustrations 3 × 3, fonctionnalités | `HomeGeneric` : héros typographique, catégories en icônes |
+| Sans photo | illustration de la catégorie (cadre blanc) | icône Lucide |
+| Cartes | zone visuelle toujours `aspect-[4/3]` | zone basse si aucune photo dans la grille (§ 8) |
+
+**Choisir l'édition** : `NUXT_PUBLIC_EDITION=boultons|generic` → `runtimeConfig.public.edition`
+(défaut `boultons` ; valeur inconnue = `boultons`). La variable est lue à l'exécution pour
+tout le rendu (pas besoin de rebuild), sauf le manifeste PWA et le `<title>` par défaut de
+`nuxt.config.ts`, figés avec l'édition présente **au build** (même variable). En local :
+
+```bash
+npm run dev:local                                                        # Boultons
+NUXT_PUBLIC_EDITION=generic npx nuxt dev --dotenv .env.local --port 3002 # générique
+```
+
+(Deux `nuxt dev` dans le même dossier partagent `.nuxt/` : les lancer l'un après l'autre.)
+
+**Où vit la configuration** : `shared/editions/` — `types.ts` (`EditionConfig`), une
+configuration par fichier (`boultons.ts`, `generic.ts`), `index.ts` (registre `EDITIONS`,
+`DEFAULT_EDITION`, `getEdition()`, `resolveEditionId()`, `localize()`), `theme.ts`
+(`editionThemeCss()`). Une configuration contient : marque (nom, nom court, accroche,
+description de l'accueil en fr/en, logo, couleur du nom), thème (palette `primary`
+50 → 950 en hex, neutre Tailwind, nuances de `--ui-primary` en clair/sombre,
+`theme-color`, fond du manifeste), accueil (variante, illustration du héros),
+illustrations par catégorie (ou `null`), règle des cartes. Les composants ne testent pas
+l'identifiant : ils lisent `useEdition().config`.
+
+**`useEdition()`** (`app/composables/useEdition.ts`) : `edition`, `isBoultons`,
+`isGeneric`, `config`, `siteName` et `tagline` (calculés dans la langue courante),
+`text(localizedText)`. Utilisable dans un composant comme dans un plugin.
+
+**Thème sans flash** : `plugins/edition.ts` ajoute au `<head>`, dès le rendu serveur,
+`<html data-edition="…">`, une feuille `<style id="edition-theme">` et les deux
+`<meta name="theme-color">`. La feuille (générée par `editionThemeCss()`) déclare sous
+`:root[data-edition="…"]` (spécificité 0-2-0, hors `@layer`) : `--color-primary-50…950`
+(lues par Nuxt UI via `--ui-color-primary-*`), `--ui-color-neutral-*` (remplace le neutre
+`stone` d'`app.config.ts`, déclaré par Nuxt UI dans `@layer theme`) et `--ui-primary`
+(+ variante `.dark`). Le mode sombre (classe `dark` posée par color-mode avant le premier
+rendu) et l'édition sont donc tous deux dans le HTML initial.
+
+**Textes de marque** : le nom du site, l'accroche et les descriptions viennent de la
+configuration (pas d'i18n) : en v2 ils seront fournis par le groupe. Les libellés d'interface
+restent dans `i18n/locales/*.json` (ex. `footer.copyright` reçoit `{site}`).
+
+**Images** : `public/images/categories/*.png` (illustrations d'origine, renommées),
+`public/images/boultons.png` (héros), toutes servies par `NuxtImg` (WebP, tailles
+`width`/`densities` adaptées). Le favicon et les icônes PWA restent ceux de la version
+modernisée (toque terracotta) dans les deux éditions.
+
+**Ajouter une édition** : 1) ajouter l'identifiant à `EDITION_IDS` (`types.ts`) ; 2) créer
+`shared/editions/<id>.ts` (`EditionConfig` complète : TypeScript signale tout oubli) ;
+3) l'enregistrer dans `EDITIONS` (`index.ts`) ; 4) déposer ses images dans `public/` ;
+5) si elle a un accueil propre, ajouter la variante à `EditionHome['variant']`, le
+composant `components/home/Home<Variante>.vue` et le choix dans `pages/index.vue` ;
+6) `npm test` vérifie textes fr/en, palette, présence des images et contrastes AA.
+
+**Vers la v2** : la forme d'`EditionConfig` est celle d'une configuration de groupe/foyer.
+Restera à la charger par requête (groupe de l'utilisateur ou domaine) au lieu de
+`runtimeConfig`, à stocker palette/nom/images en base et Storage, à valider une palette
+fournie avec `contrastRatio()` (`shared/utils/color.ts`) avant de l'accepter, et à générer
+manifeste et icônes PWA par groupe.
+
+## 10. Fiche recette, éditeur et photos
+
+### 10.1 Fiche (`app/pages/recettes/[id].vue`)
 
 | Composant | Rôle |
 |---|---|
@@ -498,7 +592,7 @@ Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
   `navigator.wakeLock` (silencieux si refusé ou non supporté).
 - Impression : `@media print` de `main.css`, limitée à la fiche (`body:has(#recipe-sheet)`).
 
-### 9.2 Éditeur (`RecipeEditor.vue` → `components/editor/`)
+### 10.2 Éditeur (`RecipeEditor.vue` → `components/editor/`)
 
 - `RecipeEditor` : façade (`show`, `recipe`, émet `close` / `save`) qui ouvre une `UModal`
   avec `RecipeEditorForm`.
@@ -511,7 +605,7 @@ Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
   libre ; la base dérive `unit_code`.
 - `PhotoField` : aperçu, remplacer, retirer.
 
-### 9.3 Photos (`useRecipePhoto`, bucket `recipe-photos`)
+### 10.3 Photos (`useRecipePhoto`, bucket `recipe-photos`)
 
 - Redimensionnement dans le navigateur (canvas, plus grand côté 1600 px, WebP qualité 0,82,
   repli JPEG) : le plan Supabase gratuit n'a pas de transformation d'images.
@@ -526,7 +620,7 @@ Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
   provider `supabase` de `@nuxt/image` n'est pas utilisé. `RecipeHero` charge l'image en
   priorité (LCP) ; cartes et planning en différé.
 
-## 10. Planning et listes de courses
+## 11. Planning et listes de courses
 
 | Couche | Planning | Courses |
 |---|---|---|
@@ -544,7 +638,7 @@ Tokens dans `app/assets/css/main.css` (`@theme static`) et `app/app.config.ts`.
 - Courses : rayons par mots-clés (table statique), mode « magasin » (zones tactiles
   agrandies).
 
-## 11. Traducteur IA
+## 12. Traducteur IA
 
 Page `/traducteur` (admins) : texte collé → recette structurée → aperçu → ajout par
 `POST /api/add-recipe`. Comparatif des modèles et coûts :
@@ -573,7 +667,7 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
 - Ouvrir à tous : remplacer `requireAdmin` par `requireUser` dans
   `translate-recipe.post.ts` et retirer `requiresAdmin` de la page.
 
-## 12. Observabilité (Sentry)
+## 13. Observabilité (Sentry)
 
 - `@sentry/nuxt`, dernier module de `nuxt.config.ts`. Initialisation dans
   `sentry.client.config.ts` et `sentry.server.config.ts`, **seulement si un DSN est
@@ -600,9 +694,10 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
 - Vie privée : Sentry déduit une localisation de l'adresse IP ; pour l'éviter, activer
   *Prevent Storing of IP Addresses* dans les réglages du projet Sentry.
 
-## 13. PWA et hors ligne
+## 14. PWA et hors ligne
 
-- Manifeste « Recettes des Boultons » (`short_name` Boultons), icônes `public/pwa-192x192.png`,
+- Manifeste au nom de l'édition de build (Boultons : « Recettes des Boultons », `short_name`
+  Boultons ; voir § 9), icônes `public/pwa-192x192.png`,
   `pwa-512x512.png`, `maskable-icon-512x512.png` (générées par `npm run pwa:icons`).
 - Service worker Workbox (`registerType: 'autoUpdate'`, désactivé en `nuxt dev`) : précache
   du JS/CSS et des icônes ; pages HTML en `NetworkFirst` (cache `pages`, sauf `/confirm`,
@@ -616,20 +711,21 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
   `NITRO_PRESET=node-server npm run build -- --dotenv .env.local`, puis
   `node --env-file=.env.local .output/server/index.mjs`.
 
-## 14. Tests et CI
+## 15. Tests et CI
 
-### 14.1 Vitest
+### 15.1 Vitest
 
 - `npm test` : `test/**/*.{test,spec}.ts`, environnement `happy-dom` (ajouter
   `// @vitest-environment nuxt` pour un test qui a besoin de l'app).
 - `test/unit/` : schémas Zod, mise à l'échelle, utilitaires courses et semaines, i18n,
-  erreurs, IA (mock, erreurs, prix), courses hors ligne.
+  erreurs, IA (mock, erreurs, prix), courses hors ligne, éditions (`editions.test.ts` :
+  configurations, images, contrastes AA ; `useEdition.test.ts`).
 - `test/integration/*.local.test.ts` : contre la base locale (`.env.local`) ; sautés si
   elle n'est pas joignable. `translate-recipe.local.test.ts` demande aussi un serveur Nuxt
   avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`).
 - `npm run test:coverage` : rapport dans `coverage/`, sans seuil bloquant.
 
-### 14.2 Playwright
+### 15.2 Playwright
 
 ```bash
 npm run test:e2e                       # chromium desktop + Pixel 7, base LOCALE
@@ -644,16 +740,19 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   supprimées. Sessions dans `test-results/.auth/`, rapport dans `test-results/report`.
 - Parcours : recherche sans accent, catégorie et pagination, favori, ajout aux courses,
   repas libre au planning, bouton « Modifier » selon le rôle, `/en` sans clé manquante,
-  courses hors ligne.
+  courses hors ligne, édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
+  cartes de même hauteur). Les tests suivent `NUXT_PUBLIC_EDITION` (défaut `boultons`,
+  comme la CI) ; pour l'édition générique, lancer serveur ET tests avec
+  `NUXT_PUBLIC_EDITION=generic`.
 
-### 14.3 CI (`.github/workflows/ci.yml`)
+### 15.3 CI (`.github/workflows/ci.yml`)
 
 - Job `ci` : `npm ci`, lint, typecheck, test, build (variables Supabase factices).
 - Job `e2e` (après `ci`) : `supabase start` sans les services inutiles,
   `scripts/ci-seed.sh`, `scripts/ci-env-local.sh` (écrit `.env.local` avec `AI_PROVIDER=mock`),
   build Node, `npm run test:e2e`, rapport Playwright en artefact en cas d'échec.
 
-### 14.4 Tests SQL
+### 15.4 Tests SQL
 
 - `npm run db:local:test` : base vide, `seed_test.sql`, 0003 → 0012, rejeu, tests
   `test_0003` → `test_0010`, puis 0013 → 0015, rejeu, tests `test_0013` → `test_0015`.
@@ -669,7 +768,7 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   pour tester le build de production, `NITRO_PRESET=node-server npm run build -- --dotenv .env.local`
   puis `PORT=3100 node --env-file=.env.local .output/server/index.mjs`.
 
-## 15. Variables d'environnement
+## 16. Variables d'environnement
 
 Modèle commenté : [env.example](env.example). Production : Vercel → Settings → Environment
 Variables (aucun fichier `.env` n'est déployé).
@@ -679,6 +778,7 @@ Variables (aucun fichier `.env` n'est déployé).
 | `SUPABASE_URL` | `nuxt.config.ts` (module Supabase, `image.domains`), e2e | URL du projet |
 | `SUPABASE_ANON_KEY` | `nuxt.config.ts`, e2e | clé publique (anon ou publishable `sb_publishable_…`) |
 | `NUXT_PUBLIC_AUTH_PROVIDERS` | `runtimeConfig.public.authProviders` | boutons OAuth : `google` (défaut), `google,apple`, `none` |
+| `NUXT_PUBLIC_EDITION` | `runtimeConfig.public.edition` (+ manifeste PWA au build) | édition du site : `boultons` (défaut) ou `generic` (§ 9) |
 | `AI_PROVIDER` | `runtimeConfig.aiProvider`, `getAiConfig()` | `openai` (défaut), `anthropic`, `google`, `mistral`, `mock` |
 | `AI_MODEL` | idem | modèle ; vide = défaut du fournisseur |
 | `AI_DAILY_QUOTA` | idem | appels par personne et par jour (défaut 50, `0` = coupé) |
@@ -699,7 +799,7 @@ Variables (aucun fichier `.env` n'est déployé).
 - La clé `service_role` (ou `sb_secret_…`) n'est pas utilisée et ne doit jamais être exposée.
 - `API_BASE` et `NODE_ENV` ne sont plus lues par le code.
 
-## 16. Déploiement
+## 17. Déploiement
 
 - Vercel construit chaque push (`nuxt build`, preset `vercel`, Node 22.x) ; `main` part en
   production. Fonctions `server/api/**` : `maxDuration` 30 s.
@@ -709,7 +809,7 @@ Variables (aucun fichier `.env` n'est déployé).
 - Nouveau projet Supabase : [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 - Notes de version pour la famille : `RELEASE_NOTES.md`.
 
-## 17. À savoir
+## 18. À savoir
 
 - **Messages d'erreur serveur en français** : les 4xx de `server/api` (Zod, métier, SQL)
   sont rédigés en français et affichés tels quels, y compris en anglais.

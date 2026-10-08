@@ -25,6 +25,8 @@ Site : https://recettes-des-boultons.vercel.app
   recette structurée, relue avant l'ajout.
 - **Connexion** par e-mail et mot de passe, ou avec Google.
 - **Français et anglais**, **mode sombre**, **installable** sur téléphone (PWA).
+- **Deux éditions** : « Recettes des Boultons » (identité d'origine, par défaut) ou
+  générique (`NUXT_PUBLIC_EDITION=generic`, base de la future version multi-comptes).
 
 ## Stack
 

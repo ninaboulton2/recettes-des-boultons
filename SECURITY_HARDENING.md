@@ -94,4 +94,4 @@ Dans l'ordre :
   Après activation, un changement de rôle ne prend effet qu'à la reconnexion.
 - Le quota IA laisse passer l'appel si `check_ai_quota` est indisponible (garde-fou de coût,
   pas de sécurité).
-- Les erreurs 500 arrivent dans Sentry sous un message générique (voir DEVELOPER.md § 12).
+- Les erreurs 500 arrivent dans Sentry sous un message générique (voir DEVELOPER.md § 13).
