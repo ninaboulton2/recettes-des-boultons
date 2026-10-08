@@ -33,16 +33,12 @@
     />
 
     <template v-else-if="recipes.length > 0">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
-        <RecipeCard
-          v-for="recipe in recipes"
-          :key="recipe.id"
-          :recipe="recipe"
-          :show-admin-actions="authStore.isAdmin"
-          @edit="editRecipe"
-          @delete="confirmDeleteRecipe"
-        />
-      </div>
+      <RecipeGrid
+        :recipes="recipes"
+        :show-admin-actions="authStore.isAdmin"
+        @edit="editRecipe"
+        @delete="confirmDeleteRecipe"
+      />
 
       <RecipePagination v-if="totalPages > 1" v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
     </template>

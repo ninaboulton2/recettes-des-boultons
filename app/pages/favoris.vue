@@ -21,14 +21,11 @@
         :retry-text="$t('recipes.loadError.retry')"
       />
 
-      <div v-else-if="favoritesWithRecipes.length > 0" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
-        <RecipeCard
-          v-for="favorite in favoritesWithRecipes"
-          :key="favorite.id"
-          :recipe="favorite.recipe"
-          :show-admin-actions="authStore.isAdmin"
-        />
-      </div>
+      <RecipeGrid
+        v-else-if="favoritesWithRecipes.length > 0"
+        :recipes="favoriteRecipes"
+        :show-admin-actions="authStore.isAdmin"
+      />
 
       <EmptyState v-else icon="i-lucide-heart" :title="$t('favorites.empty.title')" :message="$t('favorites.empty.description')">
         <template #action>
@@ -65,6 +62,7 @@ const favoritesWithRecipes = computed(() =>
     .filter((favorite): favorite is FavoriteWithRecipe => favorite.recipe !== null)
     .sort((a, b) => a.recipe.title.localeCompare(b.recipe.title, 'fr', { sensitivity: 'base' }))
 )
+const favoriteRecipes = computed(() => favoritesWithRecipes.value.map(favorite => favorite.recipe))
 
 useHead({
   title: () => t('favorites.title'),

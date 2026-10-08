@@ -2,9 +2,14 @@
   <article
     class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-default bg-default transition-colors hover:border-accented focus-within:border-accented"
   >
-    <!-- Visuel : photo (bucket Storage `recipe-photos`, optimisée par @nuxt/image)
-         ou icône de catégorie -->
-    <div class="relative aspect-[4/3] overflow-hidden bg-muted">
+    <!-- Visuel : photo (bucket Storage `recipe-photos`, optimisée par @nuxt/image),
+         sinon repli de l'édition : illustration de catégorie (cadre blanc
+         arrondi) ou icône Lucide. Hauteur : voir la prop `compactVisual`. -->
+    <div
+      class="relative overflow-hidden bg-muted"
+      :class="compactVisual ? 'h-20 md:h-24' : 'aspect-[4/3]'"
+      data-recipe-visual
+    >
       <NuxtImg
         v-if="photoUrl"
         :src="photoUrl"
@@ -18,11 +23,28 @@
         decoding="async"
         class="size-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
       />
+      <div v-else-if="fallback.type === 'image'" class="size-full p-3">
+        <!-- Illustration transparente dessinée pour un fond blanc : cadre clair
+             dans les deux modes (comme la carte d'origine). -->
+        <div class="flex size-full items-center justify-center overflow-hidden rounded-lg bg-white p-2">
+          <NuxtImg
+            :src="fallback.src"
+            alt=""
+            :width="240"
+            :height="240"
+            densities="x1 x2"
+            format="webp"
+            loading="lazy"
+            decoding="async"
+            class="size-full object-contain transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
+          />
+        </div>
+      </div>
       <div v-else class="flex size-full items-center justify-center">
-        <UIcon :name="categoryIcon(recipe.category)" class="size-10 text-dimmed" aria-hidden="true" />
+        <UIcon :name="fallback.name" class="text-dimmed" :class="compactVisual ? 'size-8' : 'size-10'" aria-hidden="true" />
       </div>
 
-      <div class="absolute right-2 top-2 z-10 flex flex-col gap-1">
+      <div class="absolute right-2 top-2 z-10 flex gap-1" :class="compactVisual ? 'flex-row' : 'flex-col'">
         <UButton
           icon="i-lucide-heart"
           :color="isFavorite ? 'error' : 'neutral'"
@@ -42,7 +64,7 @@
     </div>
 
     <div class="flex flex-1 flex-col gap-2 p-4">
-      <h3 class="font-serif text-lg font-semibold leading-snug text-highlighted">
+      <h3 class="line-clamp-2 font-serif text-lg font-semibold leading-snug text-highlighted" :title="recipe.title">
         <NuxtLink
           :to="localePath(`/recettes/${recipe.id}`)"
           class="after:absolute after:inset-0 after:rounded-xl focus:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
@@ -55,6 +77,12 @@
         {{ recipe.description }}
       </p>
 
+      <div v-if="recipe.tags.length > 0" class="flex flex-wrap gap-1">
+        <UBadge v-for="tag in visibleTags" :key="tag" color="neutral" variant="subtle" size="sm" :label="tag" />
+        <UBadge v-if="hiddenTagCount > 0" color="neutral" variant="outline" size="sm" :label="`+${hiddenTagCount}`" />
+      </div>
+
+      <!-- Pied de carte poussé en bas : aligné d'une carte à l'autre dans une rangée. -->
       <div class="mt-auto flex items-center justify-between gap-2 pt-1">
         <div class="flex items-center gap-3 text-xs text-muted">
           <span v-if="duration !== null" class="inline-flex items-center gap-1">
@@ -73,10 +101,6 @@
         </div>
       </div>
 
-      <div v-if="recipe.tags.length > 0" class="flex flex-wrap gap-1">
-        <UBadge v-for="tag in visibleTags" :key="tag" color="neutral" variant="subtle" size="sm" :label="tag" />
-        <UBadge v-if="hiddenTagCount > 0" color="neutral" variant="outline" size="sm" :label="`+${hiddenTagCount}`" />
-      </div>
     </div>
 
     <RecipeAddToListModal v-model:open="showShoppingModal" :recipe="recipe" />
@@ -95,8 +119,14 @@ const props = withDefaults(defineProps<{
   /** Résumé (liste) ou recette complète (fiche). */
   recipe: RecipeSummary | Recipe
   showAdminActions?: boolean
+  /**
+   * Zone visuelle basse (icône seule) au lieu de `aspect-[4/3]`. Décidée pour
+   * toute une grille par <RecipeGrid> (même hauteur pour toutes les cartes).
+   */
+  compactVisual?: boolean
 }>(), {
-  showAdminActions: false
+  showAdminActions: false,
+  compactVisual: false
 })
 
 const emit = defineEmits<{
@@ -109,7 +139,7 @@ const localePath = useLocalePath()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 const { $toast } = useNuxtApp()
-const { categoryIcon } = useCategories()
+const { categoryVisual } = useCategories()
 const { publicUrl } = useRecipePhoto()
 
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
@@ -121,6 +151,8 @@ const hiddenTagCount = computed(() => Math.max(0, props.recipe.tags.length - MAX
 
 /** URL publique de la photo dans le bucket Storage `recipe-photos`. */
 const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
+/** Repli sans photo : illustration ou icône de la catégorie selon l'édition. */
+const fallback = computed(() => categoryVisual(props.recipe.category))
 
 const showPlanningModal = ref(false)
 const showShoppingModal = ref(false)

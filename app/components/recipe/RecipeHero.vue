@@ -20,6 +20,20 @@
         :preload="{ fetchPriority: 'high' }"
         class="h-full w-full object-cover"
       />
+      <!-- Sans photo : illustration de la catégorie (édition qui en fournit), cadre blanc. -->
+      <div v-else-if="fallback.type === 'image'" class="flex h-full w-full items-center justify-center p-3 print:hidden">
+        <div class="aspect-square h-full rounded-lg bg-white p-2">
+          <NuxtImg
+            :src="fallback.src"
+            :alt="$t('recipeDetail.categoryIllustrationAlt', { category: categoryLabel })"
+            :width="160"
+            :height="160"
+            densities="x1 x2"
+            format="webp"
+            class="size-full object-contain"
+          />
+        </div>
+      </div>
       <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 text-muted print:hidden">
         <UIcon name="i-lucide-chef-hat" class="size-14" aria-hidden="true" />
         <span class="text-xs">{{ $t('recipeDetail.noPhoto') }}</span>
@@ -111,6 +125,8 @@ const { t, te } = useI18n()
 const { publicUrl } = useRecipePhoto()
 
 const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
+const { categoryVisual } = useCategories()
+const fallback = computed(() => categoryVisual(props.recipe.category))
 const total = computed(() => totalTime(props.recipe))
 const categoryLabel = computed(() => {
   const key = categoryI18nKey(props.recipe.category)
