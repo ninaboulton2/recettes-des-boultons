@@ -14,8 +14,8 @@ export default defineNuxtPlugin(() => {
     htmlAttrs: { 'data-edition': config.id },
     style: [{ id: 'edition-theme', innerHTML: editionThemeCss(config), tagPriority: 'critical' }],
     meta: [
-      { key: 'theme-color-light', name: 'theme-color', media: '(prefers-color-scheme: light)', content: config.theme.themeColor.light },
-      { key: 'theme-color-dark', name: 'theme-color', media: '(prefers-color-scheme: dark)', content: config.theme.themeColor.dark }
+      { name: 'theme-color', media: '(prefers-color-scheme: light)', content: config.theme.themeColor.light },
+      { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: config.theme.themeColor.dark }
     ]
   })
 })
