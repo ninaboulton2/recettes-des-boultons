@@ -1,4 +1,17 @@
+import { createRequire } from 'node:module'
 import { getEdition, localize } from './shared/editions'
+
+// Modules d'outillage (devDependencies) chargés seulement s'ils sont installés :
+// un build de production avec NODE_ENV=production (npm sans devDependencies,
+// cas de l'environnement Production sur Vercel) ne doit pas échouer à cause d'eux.
+const isInstalled = (name: string): boolean => {
+  try {
+    createRequire(import.meta.url).resolve(name)
+    return true
+  } catch {
+    return false
+  }
+}
 
 // Édition lue au BUILD pour ce qui est figé dans le bundle (titre par défaut,
 // manifeste PWA). Le reste suit `runtimeConfig.public.edition` à l'exécution
@@ -23,7 +36,8 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxtjs/i18n',
     '@nuxtjs/supabase',
-    '@nuxt/eslint',
+    // Lint uniquement (devDependency) : absent des builds de production.
+    ...(isInstalled('@nuxt/eslint') ? ['@nuxt/eslint'] : []),
     '@vite-pwa/nuxt',
     // En dernier (recommandation Sentry) : instrumente l'app déjà configurée.
     '@sentry/nuxt/module'
