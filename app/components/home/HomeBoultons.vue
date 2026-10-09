@@ -62,7 +62,7 @@
     </section>
 
     <!-- Catégories (illustrations) -->
-    <section id="categories" class="scroll-mt-20 py-12 md:scroll-mt-24 md:py-16" aria-labelledby="categories-title">
+    <section id="categories" class="scroll-mt-[calc(3.5rem+1px)] py-12 md:scroll-mt-[calc(4rem+1px)] md:py-16" aria-labelledby="categories-title">
       <div class="mb-8 text-center md:mb-12">
         <h2 id="categories-title" class="mb-3 font-serif text-3xl font-semibold text-highlighted md:text-4xl">
           {{ $t('home.categories.titleBoultons') }}

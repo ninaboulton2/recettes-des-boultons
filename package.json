@@ -26,7 +26,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs",
+    "icons:boultons": "node scripts/generate-edition-icons.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.71",

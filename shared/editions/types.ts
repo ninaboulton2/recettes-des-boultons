@@ -76,6 +76,13 @@ export interface EditionIcons {
   png48: string | null
   /** PNG 180 × 180 sur fond opaque (raccourci iOS). */
   appleTouch: string
+  /** Icônes du manifeste PWA (écran d'accueil Android), figées au build. */
+  pwa: {
+    any192: string
+    any512: string
+    /** 512 × 512, fond plein cadre, motif dans le cercle de sécurité (80 %). */
+    maskable512: string
+  }
 }
 
 export interface EditionHome {

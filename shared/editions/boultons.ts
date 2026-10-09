@@ -22,12 +22,17 @@ export const boultonsEdition: EditionConfig = {
     // Couleur d'origine du nom (rgb(123, 136, 189)) : 5,2:1 sur le fond
     // sombre slate-900, gardée telle quelle dans les deux modes.
     nameColor: { light: '#7b88bd', dark: '#7b88bd' },
-    // Cocotte d'origine (générée depuis /images/logo.png).
+    // Cocotte d'origine (scripts/generate-edition-icons.mjs, depuis /images/logo.png).
     icons: {
       svg: null,
       png32: '/editions/boultons/favicon-32.png',
       png48: '/editions/boultons/favicon-48.png',
-      appleTouch: '/editions/boultons/apple-touch-icon.png'
+      appleTouch: '/editions/boultons/apple-touch-icon.png',
+      pwa: {
+        any192: '/editions/boultons/pwa-192x192.png',
+        any512: '/editions/boultons/pwa-512x512.png',
+        maskable512: '/editions/boultons/maskable-icon-512x512.png'
+      }
     }
   },
   theme: {

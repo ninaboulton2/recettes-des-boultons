@@ -24,7 +24,12 @@ export const genericEdition: EditionConfig = {
       svg: '/favicon.svg',
       png32: '/favicon-32.png',
       png48: null,
-      appleTouch: '/apple-touch-icon.png'
+      appleTouch: '/apple-touch-icon.png',
+      pwa: {
+        any192: '/pwa-192x192.png',
+        any512: '/pwa-512x512.png',
+        maskable512: '/maskable-icon-512x512.png'
+      }
     }
   },
   theme: {

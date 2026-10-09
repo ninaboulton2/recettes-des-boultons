@@ -177,11 +177,12 @@ export default defineNuxtConfig({
       display: 'standalone',
       theme_color: buildEdition.theme.themeColor.light,
       background_color: buildEdition.theme.backgroundColor,
-      // Icônes générées par `npm run pwa:icons` (scripts/generate-pwa-icons.mjs).
+      // Icônes de l'édition de BUILD (`brand.icons.pwa`) : toque générée par
+      // `npm run pwa:icons`, cocotte Boultons par `npm run icons:boultons`.
       icons: [
-        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-        { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        { src: buildEdition.brand.icons.pwa.any192, sizes: '192x192', type: 'image/png' },
+        { src: buildEdition.brand.icons.pwa.any512, sizes: '512x512', type: 'image/png' },
+        { src: buildEdition.brand.icons.pwa.maskable512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ]
     },
     workbox: {
@@ -191,7 +192,7 @@ export default defineNuxtConfig({
       navigateFallback: null,
       // App shell : JS/CSS de Nuxt, icônes, manifeste. Les images de
       // catégories et les polices sont mises en cache à la demande.
-      globPatterns: ['_nuxt/**/*.{js,css}', '*.{svg,png,ico,webmanifest}'],
+      globPatterns: ['_nuxt/**/*.{js,css}', '*.{svg,png,ico,webmanifest}', 'editions/**/*.png'],
       cleanupOutdatedCaches: true,
       runtimeCaching: [
         {

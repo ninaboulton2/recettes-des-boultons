@@ -561,7 +561,9 @@ restent dans `i18n/locales/*.json` (ex. `footer.copyright` reçoit `{site}`).
 **Icônes de l'onglet** : `brand.icons` (SVG facultatif, PNG 32 et 48, raccourci iOS 180)
 posées par `plugins/edition.ts`. Boultons : cocotte d'origine générée depuis
 `public/images/logo.png` dans `public/editions/boultons/` ; générique : toque terracotta.
-Les icônes du manifeste PWA (écran d'accueil Android) restent la toque dans les deux éditions.
+Les icônes du manifeste PWA (écran d'accueil Android : `brand.icons.pwa`, dont une version
+« maskable ») suivent l'édition de **build**. Régénérer les icônes Boultons après un changement
+de logo : `npm run icons:boultons` (`scripts/generate-edition-icons.mjs`).
 
 **Ajouter une édition** : 1) ajouter l'identifiant à `EDITION_IDS` (`types.ts`) ; 2) créer
 `shared/editions/<id>.ts` (`EditionConfig` complète : TypeScript signale tout oubli) ;
