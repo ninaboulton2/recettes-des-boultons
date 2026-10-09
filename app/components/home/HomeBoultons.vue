@@ -1,14 +1,15 @@
 <template>
   <div>
-    <!-- Héros d'origine : diagonale bleu-vert / fond, pleine largeur, 72vh.
+    <!-- Héros d'origine : diagonale bleu-vert / fond, pleine largeur, toute la
+         hauteur visible sous l'en-tête (h-14 / md:h-16), avec une invitation à défiler.
          `mx-[calc(50%-50vw)]` sort du conteneur du layout (le <main> coupe
          le débord horizontal) ; marge haute négative = collé à l'en-tête. -->
     <section
-      class="diagonal-bg relative mx-[calc(50%-50vw)] -mt-6 overflow-hidden md:-mt-8"
+      class="diagonal-bg relative mx-[calc(50%-50vw)] -mt-6 flex min-h-[calc(100svh-3.5rem-1px)] flex-col overflow-clip md:-mt-8 md:min-h-[calc(100svh-4rem-1px)]"
       aria-labelledby="hero-title"
       data-testid="home-hero"
     >
-      <UContainer class="flex min-h-[72vh] flex-col items-center justify-between gap-10 py-10 lg:flex-row lg:gap-16 lg:py-16">
+      <UContainer class="flex flex-1 flex-col items-center justify-center gap-8 pt-8 pb-24 sm:gap-10 sm:pt-10 lg:flex-row lg:justify-between lg:gap-16 lg:py-16">
         <!-- Texte à gauche -->
         <div class="flex w-full flex-1 flex-col items-start">
           <h1 id="hero-title" class="mb-6 font-lobster text-5xl leading-tight text-white drop-shadow-lg md:text-6xl">
@@ -29,7 +30,7 @@
         <!-- Illustration à droite : carte claire dans les deux modes (PNG
              transparent dessiné pour un fond blanc). -->
         <div v-if="heroImage" class="flex w-full flex-1 items-center justify-center lg:w-auto">
-          <div class="w-full max-w-[500px] rounded-3xl bg-white p-6 shadow-2xl sm:p-8 md:p-12">
+          <div class="w-full max-w-[240px] rounded-3xl bg-white p-4 shadow-2xl sm:max-w-[500px] sm:p-8 md:p-12">
             <NuxtImg
               :src="heroImage.src"
               :alt="text(heroImage.alt)"
@@ -44,6 +45,20 @@
           </div>
         </div>
       </UContainer>
+
+      <!-- Invitation à défiler : pastille claire lisible sur les deux parties du
+           dégradé ; rebond désactivé si l'utilisateur limite les animations.
+           `sticky` : reste au bas de l'écran même si le contenu du bandeau
+           dépasse (petits téléphones) ; sinon posée dans la marge basse. -->
+      <button
+        type="button"
+        class="sticky bottom-5 z-10 mx-auto -mt-[4.25rem] mb-5 flex size-12 shrink-0 items-center justify-center rounded-full bg-white text-(--ui-color-primary-800) shadow-lg ring-1 ring-black/5 transition-colors hover:bg-(--ui-color-primary-50) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:animate-bounce md:bottom-8 md:-mt-[5rem] md:mb-8"
+        :aria-label="$t('home.scrollToCategories')"
+        data-testid="hero-scroll"
+        @click="scrollToCategories"
+      >
+        <UIcon name="i-lucide-chevron-down" class="size-6" aria-hidden="true" />
+      </button>
     </section>
 
     <!-- Catégories (illustrations) -->

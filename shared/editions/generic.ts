@@ -18,7 +18,14 @@ export const genericEdition: EditionConfig = {
       en: 'Your recipes, shopping lists and meal planning, in one place.'
     },
     logo: '/images/logo.png',
-    nameColor: null
+    nameColor: null,
+    // Toque terracotta (scripts/generate-pwa-icons.mjs).
+    icons: {
+      svg: '/favicon.svg',
+      png32: '/favicon-32.png',
+      png48: null,
+      appleTouch: '/apple-touch-icon.png'
+    }
   },
   theme: {
     // Terracotta : 500 ≈ #c2603e.

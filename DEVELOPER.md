@@ -511,7 +511,7 @@ Le même code sert deux « éditions » du site :
 | Rôle | identité d'origine de « Recettes des Boultons » | design modernisé, base de la v2 multi-comptes |
 | Nom | Recettes des Boultons (Lobster `#7b88bd`) | Carnet de recettes / Recipe Book (Lobster `primary`) |
 | Couleurs | bleu-vert d'origine + `slate` | terracotta + `stone` |
-| Accueil | `HomeBoultons` : héros diagonal pleine largeur (72vh), `boultons.png`, bouton qui défile vers les catégories, grille d'illustrations 3 × 3, fonctionnalités | `HomeGeneric` : héros typographique, catégories en icônes |
+| Accueil | `HomeBoultons` : héros diagonal pleine largeur sur toute la hauteur visible sous l'en-tête (`100svh`), `boultons.png`, bouton et pastille animée (`animate-bounce`, collante sur petits écrans, coupée si mouvements réduits) qui défilent vers les catégories, grille d'illustrations 3 × 3, fonctionnalités | `HomeGeneric` : héros typographique, catégories en icônes |
 | Sans photo | illustration de la catégorie (cadre blanc) | icône Lucide |
 | Cartes | zone visuelle toujours `aspect-[4/3]` | zone basse si aucune photo dans la grille (§ 8) |
 
@@ -556,8 +556,12 @@ restent dans `i18n/locales/*.json` (ex. `footer.copyright` reçoit `{site}`).
 
 **Images** : `public/images/categories/*.png` (illustrations d'origine, renommées),
 `public/images/boultons.png` (héros), toutes servies par `NuxtImg` (WebP, tailles
-`width`/`densities` adaptées). Le favicon et les icônes PWA restent ceux de la version
-modernisée (toque terracotta) dans les deux éditions.
+`width`/`densities` adaptées).
+
+**Icônes de l'onglet** : `brand.icons` (SVG facultatif, PNG 32 et 48, raccourci iOS 180)
+posées par `plugins/edition.ts`. Boultons : cocotte d'origine générée depuis
+`public/images/logo.png` dans `public/editions/boultons/` ; générique : toque terracotta.
+Les icônes du manifeste PWA (écran d'accueil Android) restent la toque dans les deux éditions.
 
 **Ajouter une édition** : 1) ajouter l'identifiant à `EDITION_IDS` (`types.ts`) ; 2) créer
 `shared/editions/<id>.ts` (`EditionConfig` complète : TypeScript signale tout oubli) ;

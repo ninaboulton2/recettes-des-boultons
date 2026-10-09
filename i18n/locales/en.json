@@ -130,7 +130,8 @@
         "title": "AI Translator",
         "description": "Convert and automatically add your recipes from Google Drive"
       }
-    }
+    },
+    "scrollToCategories": "Scroll to categories"
   },
   "categories": {
     "soupes": {

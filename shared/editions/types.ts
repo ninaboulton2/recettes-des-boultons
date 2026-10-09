@@ -63,6 +63,19 @@ export interface EditionBrand {
    * mais il doit rester lisible en sombre.)
    */
   nameColor: { light: string, dark: string } | null
+  /** Icônes de l'onglet et de l'écran d'accueil iOS (chemins dans `public/`). */
+  icons: EditionIcons
+}
+
+export interface EditionIcons {
+  /** Icône vectorielle (prioritaire pour les navigateurs qui la gèrent). */
+  svg: string | null
+  /** PNG 32 × 32 (onglet). */
+  png32: string
+  /** PNG 48 × 48 (onglet haute densité, Windows) ; facultatif. */
+  png48: string | null
+  /** PNG 180 × 180 sur fond opaque (raccourci iOS). */
+  appleTouch: string
 }
 
 export interface EditionHome {
