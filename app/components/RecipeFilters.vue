@@ -106,15 +106,27 @@ const emit = defineEmits<{
   'clear': []
 }>()
 
+const { t } = useI18n()
 const { categories } = useCategories()
 
-interface CategoryItem { label: string, value: string, icon: string }
+interface CategoryItem { label: string, value: string | null, icon: string }
 
-const categoryItems = computed<CategoryItem[]>(() =>
-  categories.value.map(category => ({ label: category.name, value: category.id, icon: category.icon }))
+// Première entrée « Toutes les catégories » (value null) : permet de retirer le
+// filtre depuis la liste elle-même, et s'affiche quand aucune catégorie n'est choisie.
+const allCategoriesItem = computed<CategoryItem>(() => ({
+  label: t('recipes.filters.category.all'),
+  value: null,
+  icon: 'i-lucide-layout-grid'
+}))
+
+const categoryItems = computed<CategoryItem[]>(() => [
+  allCategoriesItem.value,
+  ...categories.value.map(category => ({ label: category.name, value: category.id, icon: category.icon }))
+])
+
+const categoryItem = computed(() =>
+  categoryItems.value.find(item => item.value === (props.category ?? null)) ?? allCategoriesItem.value
 )
-
-const categoryItem = computed(() => categoryItems.value.find(item => item.value === props.category))
 
 const hasFilters = computed(() =>
   props.query.trim() !== '' || props.tags.length > 0 || (!props.lockedCategory && !!props.category)
