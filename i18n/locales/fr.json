@@ -618,7 +618,7 @@
   },
   "translator": {
     "title": "Ajouter une recette par IA",
-    "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français) : l'IA la structure en sections, ingrédients et étapes. Vous vérifiez l'aperçu avant de l'ajouter.",
+    "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français), importez un fichier ou une photo, ou dictez-la : l'IA la structure en sections, ingrédients et étapes. Vous vérifiez l'aperçu avant de l'ajouter.",
     "back": "Retour",
     "form": {
       "language": "Langue de la recette structurée",
@@ -663,6 +663,47 @@
     "errors": {
       "unavailable": "Service de traduction indisponible pour le moment. Réessayez plus tard.",
       "timeout": "Le fournisseur IA n'a pas répondu à temps. Réessayez, ou collez une recette plus courte."
+    },
+    "files": {
+      "title": "Fichier (PDF, photo ou texte)",
+      "label": "Déposez un fichier ici ou cliquez pour le choisir",
+      "description": "PDF, photo (JPG, PNG, WebP) ou texte (.txt, .md), {max} Mo maximum. Sur téléphone, vous pouvez prendre la page en photo.",
+      "textIgnored": "Les fichiers ci-dessus seront analysés à la place du texte saisi. Retirez-les pour utiliser le texte.",
+      "added": "{n} fichier(s) ajouté(s).",
+      "removed": "Fichier retiré.",
+      "errors": {
+        "unsupported": "Format non pris en charge : {name}. Formats acceptés : PDF, photo (JPG, PNG, WebP) et texte (.txt, .md).",
+        "empty": "Le fichier {name} est vide.",
+        "tooBig": "Le fichier {name} dépasse {max} Mo.",
+        "tooMany": "Quatre fichiers au maximum (photos ou PDF) par recette : les suivants ont été ignorés.",
+        "uploadTooBig": "Les fichiers dépassent {max} Mo au total. Choisissez un PDF plus léger ou moins de photos.",
+        "readFailed": "Impossible de lire le fichier {name}.",
+        "imageFailed": "Impossible de lire l'image {name} (format JPG, PNG ou WebP recommandé).",
+        "textTooLong": "Le texte dépasse {max} caractères : raccourcissez-le avant de lancer l'analyse."
+      }
+    },
+    "audio": {
+      "title": "Ou dictez la recette",
+      "start": "Dicter la recette",
+      "stop": "Arrêter",
+      "cancel": "Annuler",
+      "timer": "Durée de l'enregistrement",
+      "hint": "{minutes} minutes maximum. Le texte transcrit s'ajoute à la zone ci-dessous pour relecture.",
+      "transcribing": "Transcription en cours…",
+      "done": "Transcription ajoutée au texte de la recette. Relisez-la avant de structurer.",
+      "announce": {
+        "started": "Enregistrement en cours.",
+        "stopped": "Enregistrement terminé.",
+        "limit": "Durée maximale atteinte, enregistrement terminé."
+      },
+      "errors": {
+        "unsupported": "L'enregistrement audio n'est pas disponible dans ce navigateur (ou la page n'est pas en HTTPS). Vous pouvez coller ou saisir le texte à la place.",
+        "denied": "Accès au micro refusé. Autorisez le micro pour ce site dans les réglages du navigateur, puis réessayez.",
+        "noDevice": "Aucun micro détecté. Branchez un micro ou saisissez le texte à la place.",
+        "failed": "L'enregistrement a échoué. Réessayez.",
+        "tooShort": "Enregistrement trop court. Appuyez sur « Dicter la recette », parlez, puis sur « Arrêter ».",
+        "empty": "Aucune parole détectée dans l'enregistrement. Réessayez plus près du micro."
+      }
     }
   },
   "footer": {

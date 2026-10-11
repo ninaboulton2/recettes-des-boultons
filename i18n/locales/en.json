@@ -697,7 +697,7 @@
   },
   "translator": {
     "title": "Add a recipe with AI",
-    "subtitle": "Paste the raw text of a recipe (website, document, message — in English or French): the AI structures it into sections, ingredients and steps. You review the preview before adding it.",
+    "subtitle": "Paste the raw text of a recipe (website, document, message — in English or French), import a file or a photo, or dictate it: AI structures it into sections, ingredients and steps. You review the preview before adding it.",
     "back": "Back",
     "form": {
       "language": "Language of the structured recipe",
@@ -742,6 +742,47 @@
     "errors": {
       "unavailable": "The translation service is unavailable right now. Please try again later.",
       "timeout": "The AI provider did not answer in time. Try again, or paste a shorter recipe."
+    },
+    "files": {
+      "title": "File (PDF, photo or text)",
+      "label": "Drop a file here or click to choose one",
+      "description": "PDF, photo (JPG, PNG, WebP) or text (.txt, .md), {max} MB maximum. On a phone, you can take a photo of the page.",
+      "textIgnored": "The files above will be analysed instead of the text you typed. Remove them to use the text.",
+      "added": "{n} file(s) added.",
+      "removed": "File removed.",
+      "errors": {
+        "unsupported": "Unsupported format: {name}. Accepted formats: PDF, photo (JPG, PNG, WebP) and text (.txt, .md).",
+        "empty": "The file {name} is empty.",
+        "tooBig": "The file {name} is larger than {max} MB.",
+        "tooMany": "At most four files (photos or PDF) per recipe: the extra ones were ignored.",
+        "uploadTooBig": "The files exceed {max} MB in total. Choose a lighter PDF or fewer photos.",
+        "readFailed": "Could not read the file {name}.",
+        "imageFailed": "Could not read the image {name} (JPG, PNG or WebP recommended).",
+        "textTooLong": "The text is longer than {max} characters: shorten it before starting the analysis."
+      }
+    },
+    "audio": {
+      "title": "Or dictate the recipe",
+      "start": "Dictate the recipe",
+      "stop": "Stop",
+      "cancel": "Cancel",
+      "timer": "Recording time",
+      "hint": "{minutes} minutes maximum. The transcript is added to the text box below so you can review it.",
+      "transcribing": "Transcribing…",
+      "done": "Transcript added to the recipe text. Review it before structuring.",
+      "announce": {
+        "started": "Recording.",
+        "stopped": "Recording finished.",
+        "limit": "Maximum length reached, recording finished."
+      },
+      "errors": {
+        "unsupported": "Audio recording is not available in this browser (or the page is not served over HTTPS). You can paste or type the text instead.",
+        "denied": "Microphone access denied. Allow the microphone for this site in your browser settings, then try again.",
+        "noDevice": "No microphone found. Plug one in or type the text instead.",
+        "failed": "Recording failed. Please try again.",
+        "tooShort": "Recording too short. Press \"Dictate the recipe\", speak, then press \"Stop\".",
+        "empty": "No speech detected in the recording. Try again closer to the microphone."
+      }
     }
   },
   "pwa": {

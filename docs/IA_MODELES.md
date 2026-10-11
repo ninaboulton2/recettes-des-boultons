@@ -68,7 +68,7 @@ sortie structurée `json_schema`, et Small 4 est **le moins cher du tableau apr�
 « hybride » (raisonnement optionnel) : vérifier la latence et la fidélité des sous-sections sur
 quelques recettes.
 
-## Transcription audio (phase 5)
+## Transcription audio et photos (phase 5)
 
 | Modèle | Prix | Pour une recette dictée de 3 min | 200 / mois |
 |---|---|---|---|
@@ -78,8 +78,11 @@ quelques recettes.
 
 La transcription coûte ~5× plus que la structuration texte mais reste marginale. Une image
 (photo de recette, ~1 000–1 500 tokens en entrée avec gpt-4.1-mini) ajoute ≈ 0,0006 $.
-Voir `server/utils/ai/media.ts` pour le branchement (`experimental_transcribe`, images dans
-`generateObject`).
+**Branché** (phase 5) : `POST /api/transcribe-recipe` (`experimental_transcribe`, modèle
+`AI_TRANSCRIBE_MODEL`, journalisé dans `ai_usage` avec `feature = 'transcribe'` et le coût à la
+minute d'audio) et `POST /api/extract-recipe` (photo ou PDF dans `generateObject`, même schéma que
+le texte). Voir `server/utils/ai/media.ts`. Limites : 4 fichiers, 4 Mo par requête (plafond de
+Vercel, photos réduites dans le navigateur), dictée de 5 minutes au plus (≈ 0,015 $).
 
 ## Mise en œuvre dans l'application
 

@@ -8,9 +8,37 @@
             v-model="targetLanguage"
             orientation="horizontal"
             :items="languageItems"
-            :disabled="isTranslating"
+            :disabled="isBusy"
           />
         </UFormField>
+
+        <!-- Entrées alternatives au collage : fichier (PDF, photo, texte) ou dictée -->
+        <UFormField :label="$t('translator.files.title')" name="files">
+          <TranslatorFileDrop
+            v-model:files="pendingFiles"
+            :disabled="isBusy"
+            @add="addFiles"
+          />
+          <p v-if="hasFiles" class="mt-2 text-sm text-muted">{{ $t('translator.files.textIgnored') }}</p>
+        </UFormField>
+
+        <div role="group" aria-labelledby="translator-audio-title" class="space-y-2">
+          <p id="translator-audio-title" class="text-sm font-medium text-highlighted">{{ $t('translator.audio.title') }}</p>
+          <TranslatorAudioRecorder
+            :disabled="isBusy"
+            :transcribing="isTranscribing"
+            @recorded="transcribe"
+          />
+        </div>
+
+        <UAlert
+          v-if="mediaError"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-circle-alert"
+          :description="mediaError"
+        />
+        <p class="sr-only" role="status" aria-live="polite">{{ mediaStatus }}</p>
 
         <UFormField
           :label="$t('translator.form.text')"
@@ -25,7 +53,7 @@
             autoresize
             :maxrows="30"
             :placeholder="$t('translator.form.placeholder')"
-            :disabled="isTranslating"
+            :disabled="isBusy"
           />
         </UFormField>
 
@@ -134,6 +162,12 @@ const {
   targetLanguage,
   isTranslating,
   isAdding,
+  isBusy,
+  isTranscribing,
+  pendingFiles,
+  hasFiles,
+  mediaError,
+  mediaStatus,
   preview,
   usage,
   added,
@@ -142,6 +176,8 @@ const {
   textLength,
   canTranslate,
   translate,
+  addFiles,
+  transcribe,
   addToRecipes,
   editText,
   reset

@@ -64,17 +64,17 @@ recettes-des-boultons/
 │   │   ├── editor/           # éditeur de recette (RecipeEditorForm, SectionEditor…)
 │   │   ├── planning/         # planning (WeekNavigator, DayColumn, MealSlot, MealCard…)
 │   │   ├── shopping/         # courses (ListTabs, AddItemForm, ItemList, ItemRow, UnitSelect)
-│   │   └── translator/       # aperçu du traducteur (RecipePreview)
+│   │   └── translator/       # traducteur : RecipePreview, FileDrop (dépôt de fichiers), AudioRecorder (dictée)
 │   ├── composables/          # useEdition, useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
 │   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
 │   ├── middleware/auth.ts    # garde d'affichage des pages admin
 │   ├── pages/                # recettes, planning, courses, favoris, traducteur, confirm, reset-password
 │   ├── plugins/              # edition.ts (thème de l'édition), toast.client.ts, pwa-offline.client.ts
 │   ├── stores/               # Pinia : auth, recipes, favorites, planning, shopping
-│   └── utils/                # week.ts (semaines du planning), homeFeatures.ts
+│   └── utils/                # week.ts (semaines du planning), homeFeatures.ts, image.ts (photos allégées avant envoi)
 ├── shared/                   # code commun client/serveur (alias #shared)
 │   ├── editions/             # configuration des éditions : types, boultons, generic, theme (voir § 9)
-│   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, units, common
+│   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, media, units, common
 │   ├── types/index.ts        # modèle de lecture (RecipeSummary, Recipe, ShoppingList…)
 │   ├── types/database.ts     # types Supabase GÉNÉRÉS (ne pas éditer)
 │   └── utils/                # recipes.ts (mapping, quantités), shopping.ts (rayons), text.ts, color.ts (contraste)
@@ -411,6 +411,8 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 | `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`), remplacement complet | vérification d'existence (404), `save_recipe` | `{ success, recipe, message }` |
 | `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `delete_recipe` | `{ success, deletedRecipeId, message }` |
 | `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage }` ; rien n'est enregistré |
+| `POST /api/extract-recipe` | 🔑 | `multipart/form-data` : `files` (1–4 JPEG/PNG/WebP/PDF, 4 Mo au total), `targetLanguage?` (`extractRecipeFilesSchema`) | idem, `feature = 'extract'` | même réponse que `translate-recipe` ; 422 si aucune recette lisible |
+| `POST /api/transcribe-recipe` | 🔑 | `multipart/form-data` : `audio` (WebM/MP4/Ogg/WAV/MP3, 4 Mo, 5 min), `durationSeconds?` (`transcribeAudioSchema`) | idem, `feature = 'transcribe'` | `{ success, text, usage: { provider, model, audioSeconds, estimatedCostUsd, durationMs } }` |
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (404 recette, 409 doublon) | `{ success, favorite, message }` |
 | `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404) | `{ success, message }` |
 | `POST /api/planning` | 👤 | `{ dateString, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert (404 recette) | `{ success, meal, message }` |
@@ -646,8 +648,8 @@ manifeste et icônes PWA par groupe.
 
 ## 12. Traducteur IA
 
-Page `/traducteur` (admins) : texte collé → recette structurée → aperçu → ajout par
-`POST /api/add-recipe`. Comparatif des modèles et coûts :
+Page `/traducteur` (admins) : texte collé, fichier (PDF, photo, texte) ou dictée → recette
+structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des modèles et coûts :
 [docs/IA_MODELES.md](docs/IA_MODELES.md).
 
 | Fichier | Rôle |
@@ -659,9 +661,13 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
 | `server/utils/ai/errors.ts` | erreurs du fournisseur → 401, 402, 422, 502, 504, messages sans détail technique |
 | `server/utils/ai/usage.ts` | quota (`check_ai_quota`, 429) et journal `ai_usage` |
 | `server/utils/ai/pricing.ts` | grille de prix datée, coût estimé |
-| `server/utils/ai/mock.ts` | fournisseur `mock` : recette fixe, aucun appel réseau |
-| `server/utils/ai/media.ts` | préparation de la transcription audio et des images (non branchée) |
+| `server/utils/ai/mock.ts` | fournisseur `mock` : recette fixe, dictée fixe, aucun appel réseau |
+| `server/utils/ai/media.ts` | `transcribeAudio` (dictée) et `extractRecipeFromFiles` (photo / PDF) |
+| `server/utils/ai/upload.ts` | lecture des envois multipart (413 sur `Content-Length`) |
+| `server/utils/ai/recipe-response.ts` | `AiRecipe` → `RecipeInput` et réponse commune aux endpoints |
+| `shared/schemas/media.ts` | limites, classement des fichiers, lecture de l'en-tête des octets, schémas Zod des envois |
 | `app/composables/useTranslator.ts`, `RecipeTranslator.vue`, `translator/RecipePreview.vue` | interface |
+| `app/composables/useAudioRecorder.ts`, `translator/AudioRecorder.vue`, `translator/FileDrop.vue`, `app/utils/image.ts` | dictaphone, dépôt de fichiers, réduction des photos |
 
 - Fournisseur : `AI_PROVIDER` = `openai` (défaut, `gpt-4.1-mini`), `anthropic`, `google`,
   `mistral` ou `mock`. Changer de fournisseur = changer la variable et la clé, sans code.
@@ -670,8 +676,43 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
   est un garde-fou, la barrière reste `requireAdmin`).
 - Sorties structurées strictes : pas de champ optionnel ni de longueur dans `aiRecipeSchema` ;
   le résultat converti est revalidé par `recipeInputSchema`.
-- Ouvrir à tous : remplacer `requireAdmin` par `requireUser` dans
-  `translate-recipe.post.ts` et retirer `requiresAdmin` de la page.
+- Ouvrir à tous : remplacer `requireAdmin` par `requireUser` dans les trois endpoints
+  (`translate-recipe`, `extract-recipe`, `transcribe-recipe`) et retirer `requiresAdmin` de la page.
+
+### Fichiers et dictée (phase 5)
+
+- **Fichier** (`FileDrop.vue`, glisser-déposer ou sélecteur ; `accept="image/*"` fait proposer
+  l'appareil photo sur mobile). `useTranslator().addFiles` trie : un `.txt` / `.md` est lu dans
+  le navigateur et ajouté à la zone de texte (aucun appel serveur) ; une photo ou un PDF est
+  retenu (4 au plus) et `translate()` appelle alors `POST /api/extract-recipe` à la place du
+  texte. Les types non pris en charge sont refusés avec un message.
+- **Limites** (`shared/schemas/media.ts`, contrôlées côté client et côté serveur) : 10 Mo par
+  fichier source ; **4 Mo par requête** (Vercel refuse tout corps de plus de 4,5 Mo avant la
+  fonction) ; 4 fichiers ; dictée 5 min et 4 Mo. Les photos sont donc redessinées dans le
+  navigateur (JPEG, 2 000 px, ≈ 900 Ko) avant l'envoi ; un PDF de plus de 4 Mo est refusé
+  (« choisissez un PDF plus léger »). Le serveur reconnaît le format à l'en-tête des octets
+  (jamais au type annoncé) : JPEG, PNG, WebP, PDF ; WebM, MP4/M4A, Ogg, WAV, MP3.
+- **Dictée** (`AudioRecorder.vue`, `useAudioRecorder.ts`) : MediaRecorder, `audio/webm` (Chrome,
+  Android) ou `audio/mp4` (Safari, iOS), 32 kbit/s, arrêt automatique à 5 min, micro relâché
+  à l'arrêt. L'audio part à `POST /api/transcribe-recipe` ; le texte s'ajoute à la zone de
+  saisie pour relecture, puis « Structurer la recette » suit le parcours habituel. Erreurs
+  traduites : micro refusé, absent, navigateur non compatible (ou page hors HTTPS).
+- **Modèles** : photo / PDF → `AI_MODEL` (défaut `gpt-4.1-mini`, images et PDF natifs ; PDF aussi
+  chez Anthropic et Google). Dictée → `AI_TRANSCRIBE_MODEL` (défaut `gpt-4o-mini-transcribe`,
+  OpenAI uniquement : `AI_PROVIDER=openai` et `OPENAI_API_KEY` requis, sinon 401 « service IA non
+  configuré »). Aucun nouveau paramètre à définir sur Vercel pour les valeurs par défaut.
+- **Quota et coûts** : les trois endpoints partagent `check_ai_quota` (un appel = une unité) et
+  écrivent dans `ai_usage` (`feature` = `translate`, `extract`, `transcribe`). Photo / PDF : coût
+  aux tokens (≈ 1 000–1 500 tokens par image, soit ≈ 0,001 $ avec gpt-4.1-mini). Dictée : coût
+  à la minute d'audio (`TRANSCRIPTION_PRICING_PER_MINUTE`, 0,003 $/min ; durée donnée par le
+  fournisseur, sinon par le navigateur). Aucune migration : `ai_usage.feature` est un texte libre.
+- **Mock** (`AI_PROVIDER=mock`) : une photo ou un PDF renvoie toujours la recette « Cookies aux
+  pépites de chocolat » ; la dictée renvoie toujours `MOCK_TRANSCRIPT` (une recette dictée en
+  français), le modèle de transcription journalisé est `mock-transcribe`. Aucun appel réseau.
+- Tests : `test/unit/schemas/media.test.ts`, `test/unit/ai/media.test.ts`, `audioRecorder.test.ts`,
+  `image.test.ts` ; `test/integration/media-recipe.local.test.ts` (serveur mock) ;
+  `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio).
+  Les tests e2e et d'intégration consomment le quota du jour : `AI_DAILY_QUOTA=1000` en local.
 
 ## 13. Observabilité (Sentry)
 
@@ -724,10 +765,10 @@ Page `/traducteur` (admins) : texte collé → recette structurée → aperçu �
 - `npm test` : `test/**/*.{test,spec}.ts`, environnement `happy-dom` (ajouter
   `// @vitest-environment nuxt` pour un test qui a besoin de l'app).
 - `test/unit/` : schémas Zod, mise à l'échelle, utilitaires courses et semaines, i18n,
-  erreurs, IA (mock, erreurs, prix), courses hors ligne, éditions (`editions.test.ts` :
+  erreurs, IA (mock, erreurs, prix, médias : photo / dictée), courses hors ligne, éditions (`editions.test.ts` :
   configurations, images, contrastes AA ; `useEdition.test.ts`).
 - `test/integration/*.local.test.ts` : contre la base locale (`.env.local`) ; sautés si
-  elle n'est pas joignable. `translate-recipe.local.test.ts` demande aussi un serveur Nuxt
+  elle n'est pas joignable. `translate-recipe.local.test.ts` et `media-recipe.local.test.ts` demandent aussi un serveur Nuxt
   avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`).
 - `npm run test:coverage` : rapport dans `coverage/`, sans seuil bloquant.
 
@@ -746,7 +787,7 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   supprimées. Sessions dans `test-results/.auth/`, rapport dans `test-results/report`.
 - Parcours : recherche sans accent, catégorie et pagination, favori, ajout aux courses,
   repas libre au planning, bouton « Modifier » selon le rôle, `/en` sans clé manquante,
-  courses hors ligne, édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
+  courses hors ligne, traducteur (`translator-media.spec.ts` : fichier texte, photo, PDF, dictée), édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
   cartes de même hauteur). Les tests suivent `NUXT_PUBLIC_EDITION` (défaut `boultons`,
   comme la CI) ; pour l'édition générique, lancer serveur ET tests avec
   `NUXT_PUBLIC_EDITION=generic`.
@@ -787,6 +828,7 @@ Variables (aucun fichier `.env` n'est déployé).
 | `NUXT_PUBLIC_EDITION` | `runtimeConfig.public.edition` (+ manifeste PWA au build) | édition du site : `boultons` (défaut) ou `generic` (§ 9) |
 | `AI_PROVIDER` | `runtimeConfig.aiProvider`, `getAiConfig()` | `openai` (défaut), `anthropic`, `google`, `mistral`, `mock` |
 | `AI_MODEL` | idem | modèle ; vide = défaut du fournisseur |
+| `AI_TRANSCRIBE_MODEL` | idem | modèle de transcription de la dictée (défaut `gpt-4o-mini-transcribe`, OpenAI) |
 | `AI_DAILY_QUOTA` | idem | appels par personne et par jour (défaut 50, `0` = coupé) |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY` | idem | clé du fournisseur choisi |
 | `NUXT_PUBLIC_SENTRY_DSN` (repli `SENTRY_DSN`) | `nuxt.config.ts`, `sentry.*.config.ts` | DSN Sentry ; vide = Sentry inactif |
