@@ -146,6 +146,16 @@ export default defineNuxtConfig({
       // (base de la v2). Surchargeable à l'exécution par NUXT_PUBLIC_EDITION ;
       // valeur inconnue = `boultons` (shared/editions/index.ts).
       edition: process.env.NUXT_PUBLIC_EDITION || 'boultons',
+      // --- Import depuis Google Drive (composables/useGoogleDrivePicker.ts) ---
+      // Trois valeurs publiques (aucun secret) ; l'une d'elles vide = bouton
+      // masqué. Surchargeables à l'exécution par NUXT_PUBLIC_GOOGLE_CLIENT_ID,
+      // NUXT_PUBLIC_GOOGLE_API_KEY et NUXT_PUBLIC_GOOGLE_APP_ID
+      // (numéro du projet Google Cloud). Voir docs/GOOGLE_DRIVE_SETUP.md.
+      google: {
+        clientId: '',
+        apiKey: '',
+        appId: ''
+      },
       // --- Sentry (sentry.client.config.ts) ---
       // DSN vide = SDK inactif. Surchargeable à l'exécution par
       // NUXT_PUBLIC_SENTRY_DSN ; SENTRY_DSN est lu au build en repli.

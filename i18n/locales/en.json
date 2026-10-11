@@ -761,6 +761,25 @@
         "textTooLong": "The text is longer than {max} characters: shorten it before starting the analysis."
       }
     },
+    "drive": {
+      "button": "Import from Google Drive",
+      "loading": "Opening Google Drive…",
+      "hint": "PDF, photo, text or Google Docs. Only the file you choose is read.",
+      "opening": "Opening Google Drive.",
+      "imported": "File {name} imported from Google Drive.",
+      "errors": {
+        "notConfigured": "Google Drive import is not configured.",
+        "scriptFailed": "Could not load Google. Check your connection (or your ad blocker) and try again.",
+        "popupBlocked": "Your browser blocked the Google sign-in window. Allow pop-ups for this site, then try again.",
+        "accessDenied": "Access to Google Drive was refused. Allow access to this file to import it, or try again.",
+        "pickerFailed": "The Google Drive picker could not open. Try again.",
+        "unsupported": "Unsupported format from Google Drive: {name}. Choose a PDF, a photo, a text file or a Google Docs document.",
+        "tooBig": "The file {name} is too large ({max} MB maximum).",
+        "empty": "The file {name} is empty.",
+        "network": "Could not reach Google Drive, check your network and try again.",
+        "failed": "The Google Drive import failed. Try again."
+      }
+    },
     "audio": {
       "title": "Or dictate the recipe",
       "start": "Dictate the recipe",

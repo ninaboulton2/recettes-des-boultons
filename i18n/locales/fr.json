@@ -682,6 +682,25 @@
         "textTooLong": "Le texte dépasse {max} caractères : raccourcissez-le avant de lancer l'analyse."
       }
     },
+    "drive": {
+      "button": "Importer depuis Google Drive",
+      "loading": "Ouverture de Google Drive…",
+      "hint": "PDF, photo, texte ou Google Docs. Seul le fichier que vous choisissez est lu.",
+      "opening": "Ouverture de Google Drive.",
+      "imported": "Fichier {name} importé depuis Google Drive.",
+      "errors": {
+        "notConfigured": "L'import depuis Google Drive n'est pas configuré.",
+        "scriptFailed": "Impossible de charger Google. Vérifiez votre connexion (ou votre bloqueur de publicités) puis réessayez.",
+        "popupBlocked": "Le navigateur a bloqué la fenêtre de connexion Google. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
+        "accessDenied": "Accès à Google Drive refusé. Autorisez l'accès à ce fichier pour l'importer, ou réessayez.",
+        "pickerFailed": "Le sélecteur Google Drive n'a pas pu s'ouvrir. Réessayez.",
+        "unsupported": "Format non pris en charge depuis Google Drive : {name}. Choisissez un PDF, une photo, un fichier texte ou un document Google Docs.",
+        "tooBig": "Le fichier {name} est trop volumineux ({max} Mo maximum).",
+        "empty": "Le fichier {name} est vide.",
+        "network": "Connexion à Google Drive impossible, vérifiez votre réseau puis réessayez.",
+        "failed": "L'import depuis Google Drive a échoué. Réessayez."
+      }
+    },
     "audio": {
       "title": "Ou dictez la recette",
       "start": "Dicter la recette",

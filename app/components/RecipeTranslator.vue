@@ -19,6 +19,13 @@
             :disabled="isBusy"
             @add="addFiles"
           />
+          <!-- Import depuis Google Drive : même flux que le dépôt d'un fichier (masqué sans config) -->
+          <TranslatorDriveButton
+            class="mt-3"
+            :disabled="isBusy"
+            @add="addFiles"
+            @error="setMediaError"
+          />
           <p v-if="hasFiles" class="mt-2 text-sm text-muted">{{ $t('translator.files.textIgnored') }}</p>
         </UFormField>
 
@@ -177,6 +184,7 @@ const {
   canTranslate,
   translate,
   addFiles,
+  setMediaError,
   transcribe,
   addToRecipes,
   editText,

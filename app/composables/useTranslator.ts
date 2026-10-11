@@ -161,6 +161,12 @@ export function useTranslator() {
     mediaError.value = problems.length > 0 ? problems.join(' ') : null
   }
 
+  /** Erreur venue d'une source de fichier extérieure (Google Drive), affichée près de la zone. */
+  function setMediaError(message: string | null): void {
+    mediaError.value = message
+    if (message) mediaStatus.value = ''
+  }
+
   function removeFile(index: number): void {
     pendingFiles.value = pendingFiles.value.filter((_, position) => position !== index)
     mediaStatus.value = t('translator.files.removed')
@@ -280,6 +286,7 @@ export function useTranslator() {
     canTranslate,
     addFiles,
     removeFile,
+    setMediaError,
     transcribe,
     translate,
     addToRecipes,
