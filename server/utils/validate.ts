@@ -70,6 +70,11 @@ function parseOrThrow<T extends ZodTypeAny>(schema: T, value: unknown): z.infer<
   return result.data
 }
 
+/** Valide une valeur déjà lue (ex. champs d'un formulaire multipart) : 400 lisible si invalide. */
+export function validateData<T extends ZodTypeAny>(schema: T, value: unknown): z.infer<T> {
+  return parseOrThrow(schema, value)
+}
+
 /** Lit et valide le corps JSON de la requête (400 lisible si invalide). */
 export async function validateBody<T extends ZodTypeAny>(event: H3Event, schema: T): Promise<z.infer<T>> {
   let body: unknown

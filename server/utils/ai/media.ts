@@ -1,57 +1,100 @@
-import type { TranscriptionModel } from 'ai'
+import { experimental_transcribe as transcribe, generateObject, type LanguageModel, type TranscriptionModel } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
+import { aiRecipeSchema, type AiTargetLanguage } from '#shared/schemas/ai'
+import type { UploadMediaType } from '#shared/schemas/media'
 import { AiConfigError, type AiConfig } from './provider'
+import { createMockTranscriptionModel } from './mock'
+import { buildExtractSystemPrompt, buildExtractUserPrompt } from './prompt'
+import { AI_TIMEOUT_MS, type TranslateResult } from './translate'
 
 /**
- * Phase 5 (préparation, pas d'interface ni d'endpoint pour l'instant) :
- * entrées audio et image pour le traducteur.
+ * Entrées « média » du traducteur (phase 5).
  *
- * 1. TRANSCRIPTION AUDIO — `experimental_transcribe` de l'AI SDK :
+ * 1. DICTÉE — `transcribeAudio` : audio du navigateur (WebM de Chrome, MP4 de
+ *    Safari…) → texte, via `experimental_transcribe` de l'AI SDK. Modèle :
+ *    `AI_TRANSCRIBE_MODEL` (défaut `gpt-4o-mini-transcribe`, 0,003 $/min ;
+ *    `whisper-1` à 0,006 $/min). OpenAI uniquement pour l'instant ; avec
+ *    `AI_PROVIDER=mock`, texte fixe sans appel réseau. Le texte rejoint la zone
+ *    de saisie : l'utilisateur le relit puis lance la structuration normale.
  *
- *    import { experimental_transcribe as transcribe } from 'ai'
- *    const { text } = await transcribe({
- *      model: getTranscriptionModel(getAiConfig(event)),
- *      audio: await readRawBody(event, false),      // Uint8Array / Buffer (mp3, m4a, wav, webm ≤ 25 Mo chez OpenAI)
- *      abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS)
- *    })
- *    → puis `translateRecipeText(model, text, targetLanguage)` comme pour un collage.
- *
- *    Modèles OpenAI : `gpt-4o-mini-transcribe` (0,003 $/min, recommandé) ou
- *    `whisper-1` (0,006 $/min). Variables à prévoir : `AI_TRANSCRIBE_MODEL`.
- *    Journaliser dans `ai_usage` avec `feature = 'transcribe'` (coût au temps
- *    audio : `estimateCostUsd` devra accepter une durée, cf. pricing.ts).
- *    Endpoint à créer : `POST /api/transcribe-recipe` (multipart ou corps
- *    binaire, `requireAdmin`, même quota `check_ai_quota`).
- *
- * 2. EXTRACTION DEPUIS UNE IMAGE / UN PDF — modèle multimodal :
- *    `generateObject` accepte `messages` à la place de `prompt` ; on passe
- *    l'image comme partie de message :
- *
- *    generateObject({
- *      model, schema: aiRecipeSchema, system: buildSystemPrompt(lang),
- *      messages: [{ role: 'user', content: [
- *        { type: 'text', text: 'Voici la photo d\'une recette à structurer.' },
- *        { type: 'image', image: bytes, mediaType: 'image/jpeg' }   // ou { type: 'file', data, mediaType: 'application/pdf' }
- *      ] }]
- *    })
- *
+ * 2. PHOTO / PDF — `extractRecipeFromFiles` : `generateObject` avec des parties
+ *    `file` et le même `aiRecipeSchema` que le texte collé.
  *    `gpt-4.1-mini`, `claude-haiku-4-5`, `gemini-2.5-flash` et
- *    `mistral-small-latest` acceptent les images ; le PDF natif est supporté
- *    par OpenAI, Anthropic et Google. Une image ≈ 1 000 à 1 500 tokens en
- *    entrée (voir docs/IA_MODELES.md). Limiter la taille (5 Mo) et le nombre
- *    (3 pages) côté endpoint.
+ *    `mistral-small-latest` lisent les images ; le PDF natif est supporté par
+ *    OpenAI, Anthropic et Google. Une image coûte ≈ 1 000 à 1 500 tokens en
+ *    entrée (voir docs/IA_MODELES.md).
+ *
+ * Tailles, formats et nombre de fichiers sont validés avant d'arriver ici
+ * (`shared/schemas/media.ts`).
  */
 
-export const DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
+/** Une image ou un PDF prêt à être envoyé au modèle. */
+export interface UploadedRecipeFile {
+  filename: string
+  mediaType: UploadMediaType
+  data: Uint8Array
+}
 
 /**
  * Modèle de transcription (OpenAI uniquement pour l'instant). Pour
- * `AI_PROVIDER` ≠ openai, il faudra une clé OpenAI dédiée ou un autre
- * fournisseur de transcription (Mistral `voxtral-mini-latest`, Google).
+ * `AI_PROVIDER` autre que openai/mock, il faudrait une clé OpenAI dédiée ou un
+ * autre fournisseur de transcription (Mistral `voxtral-mini-latest`, Google).
  */
-export function getTranscriptionModel(config: AiConfig, modelId: string = DEFAULT_TRANSCRIPTION_MODEL): TranscriptionModel {
+export function getTranscriptionModel(config: AiConfig): TranscriptionModel {
+  if (config.provider === 'mock') return createMockTranscriptionModel()
   if (config.provider !== 'openai' || !config.apiKey) {
     throw new AiConfigError('Transcription : fournisseur OpenAI et OPENAI_API_KEY requis')
   }
-  return createOpenAI({ apiKey: config.apiKey }).transcription(modelId)
+  return createOpenAI({ apiKey: config.apiKey }).transcription(config.transcriptionModel)
+}
+
+export interface TranscribeResult {
+  text: string
+  /** Durée réelle renvoyée par le fournisseur, `undefined` s'il ne la donne pas. */
+  durationInSeconds: number | undefined
+}
+
+/** Audio du navigateur → texte (le format est reconnu par le SDK à l'en-tête des octets). */
+export async function transcribeAudio(model: TranscriptionModel, audio: Uint8Array): Promise<TranscribeResult> {
+  const result = await transcribe({
+    model,
+    audio,
+    maxRetries: 1,
+    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS)
+  })
+  return { text: result.text.trim(), durationInSeconds: result.durationInSeconds }
+}
+
+/** Photo(s) ou PDF d'une recette → `AiRecipe` validée par `aiRecipeSchema`. */
+export async function extractRecipeFromFiles(
+  model: LanguageModel,
+  files: UploadedRecipeFile[],
+  targetLanguage: AiTargetLanguage
+): Promise<TranslateResult> {
+  const result = await generateObject({
+    model,
+    schema: aiRecipeSchema,
+    schemaName: 'recette',
+    schemaDescription: 'Recette de cuisine structurée en sections (ingrédients et étapes).',
+    system: buildExtractSystemPrompt(targetLanguage),
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: buildExtractUserPrompt(files.length) },
+        // Images et PDF : partie « file » (la partie « image » est dépréciée dans l'AI SDK 7).
+        ...files.map(file => ({ type: 'file' as const, data: file.data, mediaType: file.mediaType, filename: file.filename }))
+      ]
+    }],
+    maxOutputTokens: 8_000,
+    maxRetries: 1,
+    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS)
+  })
+
+  return {
+    recipe: result.object,
+    usage: {
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens
+    }
+  }
 }

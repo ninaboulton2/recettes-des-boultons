@@ -15,7 +15,7 @@ import { estimateCostUsd } from './pricing'
  */
 
 export const AI_QUOTA_MESSAGE = (max: number) =>
-  `Quota quotidien atteint (${max} traduction${max > 1 ? 's' : ''} par jour et par personne). Réessayez demain.`
+  `Quota quotidien atteint (${max} appel${max > 1 ? 's' : ''} IA par jour et par personne : traduction, photo ou dictée). Réessayez demain.`
 
 export type AiUsageStatus = 'ok' | 'error'
 
@@ -28,6 +28,11 @@ export interface AiUsageEntry {
   outputTokens: number | undefined
   status: AiUsageStatus
   durationMs: number
+  /**
+   * Coût déjà calculé (transcription : facturée à la minute). Absent = estimé
+   * d'après les tokens (`pricing.ts`).
+   */
+  estimatedCostUsd?: number | null
 }
 
 export interface AiUsageLogged {
@@ -57,7 +62,9 @@ export async function assertAiQuota(supabase: SupabaseClient, maxPerDay: number)
 export async function logAiUsage(supabase: SupabaseClient, entry: AiUsageEntry): Promise<AiUsageLogged> {
   const inputTokens = entry.inputTokens ?? 0
   const outputTokens = entry.outputTokens ?? 0
-  const estimatedCostUsd = estimateCostUsd(entry.model, entry.inputTokens, entry.outputTokens)
+  const estimatedCostUsd = entry.estimatedCostUsd !== undefined
+    ? entry.estimatedCostUsd
+    : estimateCostUsd(entry.model, entry.inputTokens, entry.outputTokens)
 
   const { error } = await supabase.from('ai_usage').insert({
     user_id: entry.userId,
@@ -75,4 +82,56 @@ export async function logAiUsage(supabase: SupabaseClient, entry: AiUsageEntry):
   }
 
   return { inputTokens, outputTokens, estimatedCostUsd }
+}
+
+export interface TrackedAiCall {
+  provider: string
+  model: string
+  /** `translate`, `extract` (photo / PDF) ou `transcribe` (dictée). */
+  feature: string
+  userId: string
+}
+
+export interface TrackedAiUsage {
+  inputTokens?: number
+  outputTokens?: number
+  estimatedCostUsd?: number | null
+}
+
+/**
+ * Exécute un appel IA et le journalise dans `ai_usage` : ligne `ok` avec les
+ * consommations tirées du résultat (`usageOf`), ou ligne `error` si l'appel
+ * échoue (l'erreur d'origine est alors relancée telle quelle).
+ */
+export async function trackAiCall<T>(
+  supabase: SupabaseClient,
+  call: TrackedAiCall,
+  run: () => Promise<T>,
+  usageOf: (result: T) => TrackedAiUsage
+): Promise<{ result: T, logged: AiUsageLogged, durationMs: number }> {
+  const startedAt = Date.now()
+  let result: T
+  try {
+    result = await run()
+  } catch (error: unknown) {
+    await logAiUsage(supabase, {
+      ...call,
+      inputTokens: undefined,
+      outputTokens: undefined,
+      status: 'error',
+      durationMs: Date.now() - startedAt
+    })
+    throw error
+  }
+  const durationMs = Date.now() - startedAt
+  const usage = usageOf(result)
+  const logged = await logAiUsage(supabase, {
+    ...call,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    estimatedCostUsd: usage.estimatedCostUsd,
+    status: 'ok',
+    durationMs
+  })
+  return { result, logged, durationMs }
 }

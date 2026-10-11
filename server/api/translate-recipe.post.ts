@@ -1,12 +1,10 @@
 import { defineEventHandler } from 'h3'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { recipeInputSchema } from '#shared/schemas/recipe'
-import { aiRecipeToRecipeInput, translateRecipeBodySchema, type TranslateRecipeResponse } from '#shared/schemas/ai'
-import { isUnitCode, type UnitCode } from '#shared/schemas/units'
+import { translateRecipeBodySchema, type TranslateRecipeResponse } from '#shared/schemas/ai'
 import { getAiConfig, getModel } from '../utils/ai/provider'
 import { translateRecipeText } from '../utils/ai/translate'
 import { throwAiProviderError } from '../utils/ai/errors'
-import { assertAiQuota, logAiUsage } from '../utils/ai/usage'
+import { assertAiQuota, trackAiCall } from '../utils/ai/usage'
+import { buildRecipeResponse } from '../utils/ai/recipe-response'
 
 /**
  * POST /api/translate-recipe — texte brut d'une recette → `RecipeInput`
@@ -20,29 +18,13 @@ import { assertAiQuota, logAiUsage } from '../utils/ai/usage'
  * → appel IA (AI SDK, `generateObject`) → journalisation `ai_usage` (ok ou
  * error) → conversion et validation `recipeInputSchema`.
  *
+ * Variantes : `POST /api/extract-recipe` (photo, PDF) et
+ * `POST /api/transcribe-recipe` (dictée) partagent le quota et le journal.
+ *
  * Réservé aux administrateurs pour l'instant (facturation). Pour l'ouvrir
  * à tous les utilisateurs : remplacer `requireAdmin` par `requireUser` ;
  * le quota par personne et la journalisation sont déjà par utilisateur.
  */
-
-/** Libellés canoniques (`units.abbr`) par code, lus en base (lecture publique). */
-async function loadUnitLabels(supabase: SupabaseClient): Promise<Map<UnitCode, string>> {
-  const labels = new Map<UnitCode, string>()
-  const { data, error } = await supabase.from('units').select('code, abbr')
-  if (error) {
-    console.error('[api] translate-recipe : lecture units', error)
-    return labels
-  }
-  const rows: unknown = data
-  if (!Array.isArray(rows)) return labels
-  for (const row of rows) {
-    if (typeof row !== 'object' || row === null) continue
-    const { code, abbr } = row as { code?: unknown, abbr?: unknown }
-    if (isUnitCode(code) && typeof abbr === 'string' && abbr !== '') labels.set(code, abbr)
-  }
-  return labels
-}
-
 export default defineEventHandler(async (event): Promise<TranslateRecipeResponse> => {
   try {
     const { supabase, user } = await requireAdmin(event)
@@ -52,55 +34,14 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     await assertAiQuota(supabase, config.dailyQuota)
 
     const model = getModel(config)
-    const startedAt = Date.now()
+    const { result, logged, durationMs } = await trackAiCall(
+      supabase,
+      { userId: user.id, provider: config.provider, model: config.model, feature: 'translate' },
+      () => translateRecipeText(model, recipeText, targetLanguage),
+      ({ usage }) => usage
+    )
 
-    let result: Awaited<ReturnType<typeof translateRecipeText>>
-    try {
-      result = await translateRecipeText(model, recipeText, targetLanguage)
-    } catch (error: unknown) {
-      await logAiUsage(supabase, {
-        userId: user.id,
-        provider: config.provider,
-        model: config.model,
-        feature: 'translate',
-        inputTokens: undefined,
-        outputTokens: undefined,
-        status: 'error',
-        durationMs: Date.now() - startedAt
-      })
-      throw error
-    }
-
-    const durationMs = Date.now() - startedAt
-    const logged = await logAiUsage(supabase, {
-      userId: user.id,
-      provider: config.provider,
-      model: config.model,
-      feature: 'translate',
-      inputTokens: result.usage.inputTokens,
-      outputTokens: result.usage.outputTokens,
-      status: 'ok',
-      durationMs
-    })
-
-    const unitLabels = await loadUnitLabels(supabase)
-    const converted = aiRecipeToRecipeInput(result.recipe, code => unitLabels.get(code) ?? code)
-    // Garantit que l'aperçu renvoyé passera tel quel dans POST /api/add-recipe.
-    const recipe = recipeInputSchema.parse(converted)
-
-    return {
-      success: true,
-      recipe,
-      aiRecipe: result.recipe,
-      usage: {
-        provider: config.provider,
-        model: config.model,
-        inputTokens: logged.inputTokens,
-        outputTokens: logged.outputTokens,
-        estimatedCostUsd: logged.estimatedCostUsd,
-        durationMs
-      }
-    }
+    return await buildRecipeResponse(supabase, 'translate-recipe', config, result.recipe, logged, durationMs)
   } catch (error: unknown) {
     throwAiProviderError(error, 'translate-recipe')
     handleApiError(error, 'translate-recipe')

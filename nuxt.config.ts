@@ -132,6 +132,7 @@ export default defineNuxtConfig({
     // sont aussi lus à l'exécution par getAiConfig() (repli process.env).
     aiProvider: process.env.AI_PROVIDER || 'openai',
     aiModel: process.env.AI_MODEL || '',
+    aiTranscribeModel: process.env.AI_TRANSCRIBE_MODEL || '',
     aiDailyQuota: process.env.AI_DAILY_QUOTA || '50',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',

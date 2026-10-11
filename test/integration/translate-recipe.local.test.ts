@@ -105,7 +105,8 @@ describe.skipIf(!appUp)('POST /api/translate-recipe (mock) + ai_usage (base loca
   })
 
   it('renvoie un RecipeInput valide avec unit_code et journalise dans ai_usage', async () => {
-    const { count: before } = await admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', adminId)
+    // Filtré par `feature` : media-recipe.local.test.ts journalise aussi pour ce compte, en parallèle.
+    const { count: before } = await admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', adminId).eq('feature', 'translate')
 
     const response = await post(adminToken, { recipeText: SAMPLE, targetLanguage: 'fr' })
     expect(response.status).toBe(200)
@@ -124,6 +125,7 @@ describe.skipIf(!appUp)('POST /api/translate-recipe (mock) + ai_usage (base loca
     const { count: after, data: rows } = await admin.from('ai_usage')
       .select('provider, model, status, input_tokens, output_tokens, estimated_cost_usd, feature', { count: 'exact' })
       .eq('user_id', adminId)
+      .eq('feature', 'translate')
       .order('created_at', { ascending: false })
       .limit(1)
     expect((after ?? 0) - (before ?? 0)).toBe(1)

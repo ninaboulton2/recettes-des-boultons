@@ -4,7 +4,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createMistral } from '@ai-sdk/mistral'
-import { createMockRecipeModel, MOCK_MODEL_ID } from './mock'
+import { createMockRecipeModel, MOCK_MODEL_ID, MOCK_TRANSCRIPTION_MODEL_ID } from './mock'
 
 /**
  * Sélection du fournisseur / modèle IA depuis la configuration d'exécution.
@@ -12,6 +12,7 @@ import { createMockRecipeModel, MOCK_MODEL_ID } from './mock'
  * Variables (voir env.example, bloc `runtimeConfig` de nuxt.config.ts) :
  *  - `AI_PROVIDER`  : openai | anthropic | google | mistral | mock (défaut : openai)
  *  - `AI_MODEL`     : identifiant du modèle chez le fournisseur (défaut par fournisseur ci-dessous)
+ *  - `AI_TRANSCRIBE_MODEL` : modèle de transcription audio (défaut : gpt-4o-mini-transcribe, OpenAI uniquement)
  *  - `AI_DAILY_QUOTA` : appels max par utilisateur et par jour (défaut : 50)
  *  - clés : `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`
  *
@@ -34,11 +35,16 @@ export const DEFAULT_MODELS: Readonly<Record<AiProvider, string>> = {
   mock: MOCK_MODEL_ID
 }
 
+/** Modèle de transcription par défaut (0,003 $/min, voir docs/IA_MODELES.md). */
+export const DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
+
 export const DEFAULT_DAILY_QUOTA = 50
 
 export interface AiConfig {
   provider: AiProvider
   model: string
+  /** Modèle de transcription audio (dictée) ; ignoré par les fournisseurs autres qu'OpenAI et `mock`. */
+  transcriptionModel: string
   dailyQuota: number
   apiKey: string | null
 }
@@ -71,6 +77,9 @@ export function getAiConfig(event?: H3Event): AiConfig {
   const provider = providerRaw
   const model = asString(config.aiModel) || asString(process.env.AI_MODEL) || DEFAULT_MODELS[provider]
 
+  const transcriptionModel = asString(config.aiTranscribeModel) || asString(process.env.AI_TRANSCRIBE_MODEL)
+    || (provider === 'mock' ? MOCK_TRANSCRIPTION_MODEL_ID : DEFAULT_TRANSCRIPTION_MODEL)
+
   const quotaRaw = Number.parseInt(asString(config.aiDailyQuota) || asString(process.env.AI_DAILY_QUOTA), 10)
   const dailyQuota = Number.isFinite(quotaRaw) && quotaRaw >= 0 ? quotaRaw : DEFAULT_DAILY_QUOTA
 
@@ -83,7 +92,7 @@ export function getAiConfig(event?: H3Event): AiConfig {
   }
   const apiKey = keyByProvider[provider]
 
-  return { provider, model, dailyQuota, apiKey: apiKey || null }
+  return { provider, model, transcriptionModel, dailyQuota, apiKey: apiKey || null }
 }
 
 const PLACEHOLDER_KEYS = new Set(['your_openai_api_key_here', 'your-api-key', 'changeme'])

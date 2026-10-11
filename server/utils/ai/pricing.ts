@@ -61,3 +61,22 @@ export function estimateCostUsd(model: string, inputTokens: number | undefined, 
   const cost = (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000
   return Math.round(cost * 1_000_000) / 1_000_000
 }
+
+/**
+ * Transcription audio : USD par minute d'audio (modèles facturés au temps, pas
+ * aux tokens). Mêmes sources et même date que la grille ci-dessus.
+ */
+export const TRANSCRIPTION_PRICING_PER_MINUTE: Readonly<Record<string, number>> = {
+  'gpt-4o-mini-transcribe': 0.003,
+  'gpt-4o-transcribe': 0.006,
+  'whisper-1': 0.006,
+  // Fournisseur simulé (dev / tests)
+  'mock-transcribe': 0
+}
+
+/** Coût estimé (USD, 6 décimales) de la transcription de `seconds` secondes d'audio, `null` si le modèle est inconnu. */
+export function estimateTranscriptionCostUsd(model: string, seconds: number): number | null {
+  const perMinute = TRANSCRIPTION_PRICING_PER_MINUTE[model] ?? TRANSCRIPTION_PRICING_PER_MINUTE[baseModelId(model)]
+  if (perMinute === undefined || !Number.isFinite(seconds) || seconds < 0) return null
+  return Math.round((seconds / 60) * perMinute * 1_000_000) / 1_000_000
+}

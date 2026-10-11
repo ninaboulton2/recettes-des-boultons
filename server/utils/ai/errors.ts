@@ -22,6 +22,7 @@ export const AI_ERROR_MESSAGES = {
   providerQuota: 'Crédit ou quota du fournisseur IA épuisé. Rechargez le compte du fournisseur puis réessayez.',
   unavailable: 'Service de traduction indisponible pour le moment (fournisseur IA).',
   timeout: 'Le fournisseur IA n\'a pas répondu à temps. Réessayez, ou collez une recette plus courte.',
+  noRecipe: 'Aucune recette lisible n\'a été trouvée dans ce fichier. Essayez une photo plus nette, mieux cadrée, ou collez le texte.',
   unusable: 'La recette n\'a pas pu être structurée. Vérifiez que le texte collé est bien une recette complète et réessayez.'
 } as const
 
