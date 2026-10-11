@@ -909,6 +909,12 @@ Variables (aucun fichier `.env` n'est déployé).
 
 ## 18. À savoir
 
+- **Échap ferme toutes les modales** (`UModal`, `UDrawer`) : ne jamais mettre `:dismissible="false"`,
+  car Nuxt UI bloque alors aussi Échap. Pour interdire seulement le clic extérieur (éditeur de
+  recette, `RecipeEditor.vue`), passer `:content="{ onInteractOutside: e => e.preventDefault() }"`.
+  Dans une modale contenant un menu ouvert (`USelectMenu`…), un premier Échap ferme le menu, un
+  second la modale (comportement natif de Reka UI). Test : `e2e/escape-modals.spec.ts`. Le
+  traducteur est une page, pas une modale.
 - **Messages d'erreur serveur en français** : les 4xx de `server/api` (Zod, métier, SQL)
   sont rédigés en français et affichés tels quels, y compris en anglais.
 - **Nombres formatés en `fr-FR`** : `shared/utils/recipes.ts` (`toLocaleString('fr-FR')`)

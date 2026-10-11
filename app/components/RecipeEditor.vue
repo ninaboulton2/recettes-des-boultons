@@ -3,7 +3,7 @@
     :open="show"
     :title="recipe ? $t('editor.titleEdit') : $t('editor.titleNew')"
     :description="recipe?.title"
-    :dismissible="false"
+    :content="{ onInteractOutside: keepOpenOnOutsideClick }"
     :ui="{ content: 'sm:max-w-4xl', title: 'font-serif text-xl' }"
     @update:open="onOpenChange"
   >
@@ -42,6 +42,15 @@ const emit = defineEmits<{
   close: []
   save: [recipe: Recipe]
 }>()
+
+/**
+ * Un clic à côté de la modale ne la ferme pas (saisie en cours protégée) ;
+ * Échap, lui, la ferme comme toutes les modales de l'app. Avant, `dismissible:
+ * false` bloquait les deux (Nuxt UI ne distingue pas Échap du clic extérieur).
+ */
+const keepOpenOnOutsideClick = (event: Event) => {
+  event.preventDefault()
+}
 
 const onOpenChange = (open: boolean) => {
   if (!open) emit('close')
