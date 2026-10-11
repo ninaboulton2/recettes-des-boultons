@@ -64,7 +64,7 @@ recettes-des-boultons/
 │   │   ├── editor/           # éditeur de recette (RecipeEditorForm, SectionEditor…)
 │   │   ├── planning/         # planning (WeekNavigator, DayColumn, MealSlot, MealCard…)
 │   │   ├── shopping/         # courses (ListTabs, AddItemForm, ItemList, ItemRow, UnitSelect)
-│   │   └── translator/       # traducteur : RecipePreview, FileDrop (dépôt de fichiers), AudioRecorder (dictée)
+│   │   └── translator/       # traducteur : RecipePreview, FileDrop (dépôt de fichiers), AudioRecorder (dictée), DriveButton (Google Drive)
 │   ├── composables/          # useEdition, useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
 │   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
 │   ├── middleware/auth.ts    # garde d'affichage des pages admin
@@ -95,7 +95,7 @@ recettes-des-boultons/
 ├── e2e/                      # tests Playwright (+ support/)
 ├── test/                     # tests Vitest : unit/, integration/ (base locale)
 ├── scripts/                  # ci-seed.sh, ci-env-local.sh, generate-pwa-icons.mjs
-├── docs/                     # IA_MODELES.md, QUALITE_DONNEES.md
+├── docs/                     # IA_MODELES.md, QUALITE_DONNEES.md, GOOGLE_DRIVE_SETUP.md
 ├── public/                   # favicons, icônes PWA, images/ (logo.png, boultons.png, categories/*.png, google.svg)
 ├── nuxt.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.mjs
 ├── sentry.client.config.ts, sentry.server.config.ts
@@ -668,6 +668,7 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 | `shared/schemas/media.ts` | limites, classement des fichiers, lecture de l'en-tête des octets, schémas Zod des envois |
 | `app/composables/useTranslator.ts`, `RecipeTranslator.vue`, `translator/RecipePreview.vue` | interface |
 | `app/composables/useAudioRecorder.ts`, `translator/AudioRecorder.vue`, `translator/FileDrop.vue`, `app/utils/image.ts` | dictaphone, dépôt de fichiers, réduction des photos |
+| `app/composables/useGoogleDrivePicker.ts`, `translator/DriveButton.vue` | import depuis Google Drive (voir plus bas) |
 
 - Fournisseur : `AI_PROVIDER` = `openai` (défaut, `gpt-4.1-mini`), `anthropic`, `google`,
   `mistral` ou `mock`. Changer de fournisseur = changer la variable et la clé, sans code.
@@ -711,8 +712,56 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
   français), le modèle de transcription journalisé est `mock-transcribe`. Aucun appel réseau.
 - Tests : `test/unit/schemas/media.test.ts`, `test/unit/ai/media.test.ts`, `audioRecorder.test.ts`,
   `image.test.ts` ; `test/integration/media-recipe.local.test.ts` (serveur mock) ;
-  `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio).
+  `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio),
+  `e2e/translator-drive.spec.ts` (import Google Drive, scripts Google simulés).
   Les tests e2e et d'intégration consomment le quota du jour : `AI_DAILY_QUOTA=1000` en local.
+
+### Import depuis Google Drive
+
+Bouton « Importer depuis Google Drive » à côté de la zone de dépôt (`translator/DriveButton.vue`,
+logique dans `app/composables/useGoogleDrivePicker.ts`). **Tout se passe dans le navigateur** : pas
+d'endpoint, pas de stockage, aucun jeton côté serveur ni dans `localStorage` (le jeton d'accès vit
+dans une variable du module, en mémoire). Indépendant de la connexion Google de Supabase, qui ne
+fait qu'authentifier.
+
+- **Parcours** : clic → chargement paresseux de `accounts.google.com/gsi/client` (Google Identity
+  Services) et `apis.google.com/js/api.js` (gapi + Picker) → jeton OAuth de portée **`drive.file`**
+  (`initTokenClient`, `requestAccessToken({ prompt: '' })`, fenêtre pop-up de Google) → Google
+  Picker (liste, filtré sur PDF, JPG/PNG/WebP/HEIC, texte/Markdown et Google Docs) → téléchargement
+  par l'API Drive en `fetch` (`files.get?alt=media`, ou `files.export?mimeType=text/plain` pour un
+  Google Docs) → un `File` remis à `useTranslator().addFiles`, c'est-à-dire **le flux « fichier »
+  existant** : texte → zone de saisie, photo (réduite) / PDF → `/api/extract-recipe`. Mêmes types
+  et mêmes limites (10 Mo, `shared/schemas/media.ts`).
+- **Portée `drive.file`** : seuls les fichiers choisis dans le Picker deviennent lisibles par
+  l'appli (jamais le reste du Drive). Portée « non sensible » : pas de vérification renforcée de
+  Google. Les Google Sheets, Slides et dossiers sont refusés (« format non pris en charge »).
+- **Configuration** (3 variables publiques, aucun secret ; `runtimeConfig.public.google`) :
+  `NUXT_PUBLIC_GOOGLE_CLIENT_ID`, `NUXT_PUBLIC_GOOGLE_API_KEY`, `NUXT_PUBLIC_GOOGLE_APP_ID`
+  (numéro du projet Google Cloud). **Une seule manquante = bouton masqué** (c'est le cas en
+  local par défaut). Nuxt convertit un `APP_ID` numérique en nombre : le code le remet en texte.
+  Pas à pas côté Google : [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md).
+- **En-têtes de sécurité** : le dépôt n'a aucune Content-Security-Policy (ni `nuxt-security`, ni
+  en-têtes dans `vercel.json`). Si une CSP est ajoutée un jour, autoriser : `script-src`
+  `https://accounts.google.com https://apis.google.com` ; `frame-src` `https://accounts.google.com
+  https://docs.google.com https://content.googleapis.com` ; `connect-src`
+  `https://www.googleapis.com https://accounts.google.com` ; `img-src` `https://*.googleusercontent.com`
+  `https://*.gstatic.com`. Ne pas ajouter `Cross-Origin-Opener-Policy: same-origin` (il casse la
+  pop-up de connexion Google ; `same-origin-allow-popups` convient). Le service worker (PWA)
+  n'intercepte pas ces requêtes inter-origines.
+- **Erreurs** (toutes traduites, `translator.drive.errors.*`) : scripts injoignables (réseau,
+  bloqueur de publicités), pop-up bloquée, accès refusé, format non pris en charge, fichier trop
+  gros (annoncé par le Picker, ou export Docs > 10 Mo), fichier vide, réseau coupé. Fermer la
+  pop-up ou le Picker n'est pas une erreur.
+- **Tester sans Google** : `test/unit/useGoogleDrivePicker.test.ts` simule `google.accounts.oauth2`,
+  `google.picker`, `gapi`, le DOM et `fetch` ; `useGoogleDrivePicker.nuxt.test.ts` vérifie le
+  bouton masqué sans config. `e2e/translator-drive.spec.ts` remplace les deux scripts Google et
+  l'API Drive par des doublures (`page.route`) ; `playwright.config.ts` démarre son serveur avec
+  trois valeurs factices (un serveur déjà lancé sans elles : les parcours sont ignorés).
+- **Tester pour de vrai** (une fois la config faite) : lancer
+  `NUXT_PUBLIC_GOOGLE_CLIENT_ID=… NUXT_PUBLIC_GOOGLE_API_KEY=… NUXT_PUBLIC_GOOGLE_APP_ID=… npm run dev:local`
+  (ou les mettre dans `.env.local`), ouvrir `/traducteur` avec `admin@local.test`. L'origine
+  `http://localhost:3001` doit être autorisée dans le client OAuth, et le compte Google utilisé
+  doit être « utilisateur test » tant que l'écran de consentement est en mode Test.
 
 ## 13. Observabilité (Sentry)
 
@@ -826,6 +875,7 @@ Variables (aucun fichier `.env` n'est déployé).
 | `SUPABASE_ANON_KEY` | `nuxt.config.ts`, e2e | clé publique (anon ou publishable `sb_publishable_…`) |
 | `NUXT_PUBLIC_AUTH_PROVIDERS` | `runtimeConfig.public.authProviders` | boutons OAuth : `google` (défaut), `google,apple`, `none` |
 | `NUXT_PUBLIC_EDITION` | `runtimeConfig.public.edition` (+ manifeste PWA au build) | édition du site : `boultons` (défaut) ou `generic` (§ 9) |
+| `NUXT_PUBLIC_GOOGLE_CLIENT_ID`, `NUXT_PUBLIC_GOOGLE_API_KEY`, `NUXT_PUBLIC_GOOGLE_APP_ID` | `runtimeConfig.public.google` | import Google Drive du traducteur (publiques) ; l'une vide = bouton masqué (§ 12) |
 | `AI_PROVIDER` | `runtimeConfig.aiProvider`, `getAiConfig()` | `openai` (défaut), `anthropic`, `google`, `mistral`, `mock` |
 | `AI_MODEL` | idem | modèle ; vide = défaut du fournisseur |
 | `AI_TRANSCRIBE_MODEL` | idem | modèle de transcription de la dictée (défaut `gpt-4o-mini-transcribe`, OpenAI) |
