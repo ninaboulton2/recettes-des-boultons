@@ -413,6 +413,7 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 | `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage }` ; rien n'est enregistré |
 | `POST /api/extract-recipe` | 🔑 | `multipart/form-data` : `files` (1–4 JPEG/PNG/WebP/PDF, 4 Mo au total), `targetLanguage?` (`extractRecipeFilesSchema`) | idem, `feature = 'extract'` | même réponse que `translate-recipe` ; 422 si aucune recette lisible |
 | `POST /api/transcribe-recipe` | 🔑 | `multipart/form-data` : `audio` (WebM/MP4/Ogg/WAV/MP3, 4 Mo, 5 min), `durationSeconds?` (`transcribeAudioSchema`) | idem, `feature = 'transcribe'` | `{ success, text, usage: { provider, model, audioSeconds, estimatedCostUsd, durationMs } }` |
+| `POST /api/recipes/similar` | 🔑 | `{ title, ingredientNames?, excludeId? }` (`similarRecipesBodySchema`) | lecture seule de `recipes` et `recipe_ingredients` (pas d'IA, pas de quota) | `{ similar: [{ id, title, score, titleScore, ingredientScore, reason }] }`, 3 au plus (voir § 12, doublons) |
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (404 recette, 409 doublon) | `{ success, favorite, message }` |
 | `DELETE /api/favorites?recipeId=` (ou `?id=`) | 👤 | query | delete (404) | `{ success, message }` |
 | `POST /api/planning` | 👤 | `{ dateString, mealType: lunch\|dinner, recipeId? \| customTitle? }` | insert (404 recette) | `{ success, meal, message }` |
@@ -669,6 +670,7 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 | `app/composables/useTranslator.ts`, `RecipeTranslator.vue`, `translator/RecipePreview.vue` | interface |
 | `app/composables/useAudioRecorder.ts`, `translator/AudioRecorder.vue`, `translator/FileDrop.vue`, `app/utils/image.ts` | dictaphone, dépôt de fichiers, réduction des photos |
 | `app/composables/useGoogleDrivePicker.ts`, `translator/DriveButton.vue` | import depuis Google Drive (voir plus bas) |
+| `shared/utils/similarRecipes.ts`, `shared/schemas/similar.ts`, `server/utils/similarRecipes.ts`, `server/api/recipes/similar.post.ts` | détection des recettes déjà existantes (voir « Détection des doublons ») |
 
 - Fournisseur : `AI_PROVIDER` = `openai` (défaut, `gpt-4.1-mini`), `anthropic`, `google`,
   `mistral` ou `mock`. Changer de fournisseur = changer la variable et la clé, sans code.
@@ -715,6 +717,50 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
   `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio),
   `e2e/translator-drive.spec.ts` (import Google Drive, scripts Google simulés).
   Les tests e2e et d'intégration consomment le quota du jour : `AI_DAILY_QUOTA=1000` en local.
+
+### Détection des doublons
+
+Quand l'aperçu est prêt (texte, fichier, photo, PDF, dictée, Google Drive : tout finit dans le
+même aperçu), `useTranslator().findSimilar()` appelle `POST /api/recipes/similar` avec le titre
+et les noms d'ingrédients de l'aperçu. S'il existe des recettes proches (3 au plus, la plus
+proche d'abord), `translator/RecipePreview.vue` affiche « Cette recette semble déjà exister : »
+suivi de leurs titres (liens vers la fiche, nouvel onglet) et le bouton d'ajout devient
+« Créer quand même ». Rien de proche : aucun avertissement. Ce n'est qu'un avertissement : une
+panne de la vérification n'empêche jamais l'ajout. Aucune migration, aucun appel IA, pas de quota.
+
+- **Chargement** (`server/utils/similarRecipes.ts`) : `id` + `title` de toutes les recettes et
+  `recipe_id` + `name` de tous les ingrédients, en lectures paginées (limite PostgREST de
+  1 000 lignes). `search_recipes` n'est pas utilisée : sa recherche plein texte exige tous les
+  mots et ne tolère ni faute de frappe ni mot en plus. Le coût (quelques dizaines de Ko) est
+  négligeable pour un livre familial ; à revoir si la base dépasse quelques milliers de recettes.
+- **Notation** (`shared/utils/similarRecipes.ts`, fonctions pures, `SIMILARITY` en tête de fichier) :
+  - **Titre** : minuscules, sans accents ni ponctuation, `œ` → `oe`, mots vides retirés (de, du,
+    la, le, aux, au, à, et, the, of… ; « à la » disparaît), pluriels ramenés au singulier, mots
+    triés. Score = 1 si les titres normalisés sont identiques, sinon le meilleur du coefficient
+    de Dice sur les mots (un mot en plus ou en moins) et de la proximité des lettres (faute de
+    frappe : « Tiramissu »). Retenu si **≥ 0,8**.
+  - **Ingrédients** (retrouve une recette renommée, ex. « Gâteau aux carottes » / « Carrot cake »,
+    quand les ingrédients sont dans la même langue) : chaque nom est réduit à ses mots
+    significatifs (« beurre doux, ramolli » → `beurre`), puis Jaccard **pondéré** : un ingrédient
+    présent dans presque toutes les recettes (farine, sucre, sel) pèse peu, un ingrédient rare
+    pèse beaucoup (poids = ln((N+1)/(df+1)) + 1, df calculé sur la base). Ignoré si l'une des
+    deux recettes a moins de 4 ingrédients ou si moins de 3 sont communs. Retenu si **≥ 0,7**.
+  - **Signal combiné** : titre ≥ 0,55 **et** ingrédients ≥ 0,4 (variantes d'une même recette).
+  - Titres FR / EN non traduits : « Carrot cake » ne ressemble pas à « Gâteau aux carottes » par
+    le titre, seulement par les ingrédients.
+- **Réglage des seuils** : calibrés sur le snapshot local (181 recettes) en comparant chaque
+  recette aux autres. Avec 0,55 pour les ingrédients, des recettes sans rapport (Lasagnes /
+  Ratatouille, tomates et oignons communs) ressortaient ; à 0,7 il ne reste que de vraies
+  variantes, plus un vrai doublon de la base (« Gâteau de patate douce et gingembre »,
+  présent deux fois). Pour changer la sensibilité, modifier `SIMILARITY` et rejouer
+  `test/unit/similarRecipes.test.ts`.
+- **Tests** : `test/unit/similarRecipes.test.ts` (titre à accents / casse / ponctuation près,
+  titre proche, autre titre mais mêmes ingrédients, recette sans rapport, plafond de 3),
+  `test/integration/similar-recipes.local.test.ts` (endpoint contre la base locale : 401, 403, 400,
+  titre, ingrédients, exclusion), `e2e/translator-similar.spec.ts` (avertissement avec lien,
+  « Créer quand même », rien d'affiché sans similaire). `e2e/translator-media.spec.ts` attend le
+  bouton « Ajouter aux recettes » : il suppose qu'aucune recette de la base ne ressemble à la
+  recette simulée (« Cookies aux pépites de chocolat »).
 
 ### Import depuis Google Drive
 
@@ -817,7 +863,7 @@ fait qu'authentifier.
   erreurs, IA (mock, erreurs, prix, médias : photo / dictée), courses hors ligne, éditions (`editions.test.ts` :
   configurations, images, contrastes AA ; `useEdition.test.ts`).
 - `test/integration/*.local.test.ts` : contre la base locale (`.env.local`) ; sautés si
-  elle n'est pas joignable. `translate-recipe.local.test.ts` et `media-recipe.local.test.ts` demandent aussi un serveur Nuxt
+  elle n'est pas joignable. `translate-recipe.local.test.ts`, `media-recipe.local.test.ts` et `similar-recipes.local.test.ts` demandent aussi un serveur Nuxt
   avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`).
 - `npm run test:coverage` : rapport dans `coverage/`, sans seuil bloquant.
 
@@ -836,7 +882,7 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   supprimées. Sessions dans `test-results/.auth/`, rapport dans `test-results/report`.
 - Parcours : recherche sans accent, catégorie et pagination, favori, ajout aux courses,
   repas libre au planning, bouton « Modifier » selon le rôle, `/en` sans clé manquante,
-  courses hors ligne, traducteur (`translator-media.spec.ts` : fichier texte, photo, PDF, dictée), édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
+  courses hors ligne, traducteur (`translator-media.spec.ts` : fichier texte, photo, PDF, dictée ; `translator-similar.spec.ts` : doublons), Échap sur les modales (`escape-modals.spec.ts`), édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
   cartes de même hauteur). Les tests suivent `NUXT_PUBLIC_EDITION` (défaut `boultons`,
   comme la CI) ; pour l'édition générique, lancer serveur ET tests avec
   `NUXT_PUBLIC_EDITION=generic`.

@@ -649,9 +649,16 @@
       "usage": "Modèle {model} · {input} + {output} tokens",
       "usageCost": " · ≈ {cost} $",
       "add": "Ajouter aux recettes",
+      "addAnyway": "Créer quand même",
       "adding": "Ajout en cours…",
       "edit": "Modifier le texte",
-      "reset": "Recommencer"
+      "reset": "Recommencer",
+      "similar": {
+        "title": "Cette recette semble déjà exister :",
+        "newTab": "s'ouvre dans un nouvel onglet",
+        "byIngredients": "ingrédients très proches",
+        "byBoth": "titre et ingrédients proches"
+      }
     },
     "success": {
       "title": "Recette « {title} » ajoutée",

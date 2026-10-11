@@ -728,9 +728,16 @@
       "usage": "Model {model} · {input} + {output} tokens",
       "usageCost": " · ≈ ${cost}",
       "add": "Add to recipes",
+      "addAnyway": "Create anyway",
       "adding": "Adding…",
       "edit": "Edit the text",
-      "reset": "Start over"
+      "reset": "Start over",
+      "similar": {
+        "title": "This recipe seems to already exist:",
+        "newTab": "opens in a new tab",
+        "byIngredients": "very similar ingredients",
+        "byBoth": "similar title and ingredients"
+      }
     },
     "success": {
       "title": "Recipe \"{title}\" added",

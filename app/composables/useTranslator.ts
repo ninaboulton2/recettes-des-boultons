@@ -1,5 +1,7 @@
 import type { Recipe, RecipeInput } from '#shared/types'
 import type { AiTargetLanguage, TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
+import type { SimilarRecipesResponse } from '#shared/schemas/similar'
+import type { SimilarRecipe } from '#shared/utils/similarRecipes'
 import {
   classifyRecipeFile,
   RECIPE_FILE_MAX_BYTES,
@@ -25,6 +27,11 @@ import type { RecordedAudio } from '~/composables/useAudioRecorder'
  *  - `transcribe()` : dictée enregistrée → `POST /api/transcribe-recipe` → le
  *    texte rejoint `recipeText` pour relecture avant la structuration.
  *  Leurs erreurs et annonces sont à part (`mediaError`, `mediaStatus`).
+ *
+ * Doublons : une fois l'aperçu produit, `findSimilar()` demande à
+ * `POST /api/recipes/similar` quelles recettes existantes lui ressemblent
+ * (`similar`, au plus 3). Simple avertissement : l'ajout reste possible, et une
+ * panne de cette vérification n'empêche rien (liste vide).
  *
  * Les erreurs passent par `toUserMessage` (messages serveur en français pour
  * les 4xx, générique sinon) ; les 502/504 du fournisseur IA, que
@@ -54,6 +61,10 @@ export function useTranslator() {
   const usage = ref<TranslateUsageInfo | null>(null)
   const added = ref<Recipe | null>(null)
   const error = ref<string | null>(null)
+  /** Recettes déjà en base qui ressemblent à l'aperçu (vide = rien de similaire). */
+  const similar = ref<SimilarRecipe[]>([])
+  /** Numéro de la dernière vérification : une réponse tardive d'un aperçu abandonné est ignorée. */
+  let similarRun = 0
 
   /** Photos et PDF à analyser (déjà allégés), dans l'ordre d'ajout. */
   const pendingFiles = ref<File[]>([])
@@ -216,6 +227,25 @@ export function useTranslator() {
     return apiFetch('/api/extract-recipe', { method: 'POST', body: form })
   }
 
+  /** Cherche les doublons de l'aperçu ; échec = pas d'avertissement (jamais bloquant). */
+  async function findSimilar(recipe: RecipeInput): Promise<void> {
+    const run = ++similarRun
+    similar.value = []
+    try {
+      const ingredientNames = (recipe.sections ?? []).flatMap(section => (section.ingredients ?? []).map(ingredient => ingredient.name))
+      const response = await apiFetch('/api/recipes/similar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: recipe.title, ingredientNames })
+      })
+      if (!response.ok) return
+      const data = (await response.json()) as SimilarRecipesResponse
+      if (run === similarRun) similar.value = data.similar
+    } catch {
+      // Vérification facultative : on ne gêne pas l'ajout.
+    }
+  }
+
   async function translate(): Promise<void> {
     if (!canTranslate.value) return
     isTranslating.value = true
@@ -224,6 +254,8 @@ export function useTranslator() {
       const response = hasFiles.value ? await postFiles() : await postText()
       if (!response.ok) throw await apiErrorFromResponse(response)
       const data = (await response.json()) as TranslateRecipeResponse
+      // Avant d'afficher l'aperçu : l'avertissement n'apparaît pas après coup.
+      await findSimilar(data.recipe)
       preview.value = data.recipe
       usage.value = data.usage
     } catch (err: unknown) {
@@ -248,12 +280,16 @@ export function useTranslator() {
 
   /** Retour à la saisie en conservant le texte collé. */
   function editText(): void {
+    similarRun++
+    similar.value = []
     preview.value = null
     usage.value = null
     error.value = null
   }
 
   function reset(): void {
+    similarRun++
+    similar.value = []
     recipeText.value = ''
     pendingFiles.value = []
     mediaError.value = null
@@ -272,6 +308,7 @@ export function useTranslator() {
     isAdding,
     preview,
     usage,
+    similar,
     added,
     error,
     pendingFiles,

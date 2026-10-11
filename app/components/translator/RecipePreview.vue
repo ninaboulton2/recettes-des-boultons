@@ -1,5 +1,33 @@
 <template>
   <div class="space-y-6">
+    <!-- Doublons possibles : l'ajout reste permis (« Créer quand même ») -->
+    <UAlert
+      v-if="similar.length > 0"
+      data-testid="similar-recipes"
+      color="warning"
+      variant="subtle"
+      icon="i-lucide-copy"
+      :title="$t('translator.preview.similar.title')"
+    >
+      <template #description>
+        <ul class="mt-1 space-y-1">
+          <li v-for="item in similar" :key="item.id">
+            <NuxtLink
+              :to="localePath(`/recettes/${item.id}`)"
+              target="_blank"
+              rel="noopener"
+              class="font-medium text-highlighted underline underline-offset-2 hover:text-primary"
+            >
+              {{ item.title }}<span class="sr-only"> ({{ $t('translator.preview.similar.newTab') }})</span>
+            </NuxtLink>
+            <span v-if="item.reason !== 'title'" class="text-muted">
+              — {{ item.reason === 'ingredients' ? $t('translator.preview.similar.byIngredients') : $t('translator.preview.similar.byBoth') }}
+            </span>
+          </li>
+        </ul>
+      </template>
+    </UAlert>
+
     <!-- En-tête : titre, catégorie, temps, portions, tags -->
     <div>
       <h2 class="font-serif text-2xl text-highlighted">{{ recipe.title }}</h2>
@@ -75,16 +103,24 @@
 <script setup lang="ts">
 import type { RecipeInput, RecipeIngredientInput } from '#shared/schemas/recipe'
 import type { TranslateUsageInfo } from '#shared/schemas/ai'
+import type { SimilarRecipe } from '#shared/utils/similarRecipes'
 
 /**
  * Aperçu lecture seule d'un `RecipeInput` renvoyé par le traducteur, avant
  * ajout. Les unités sont affichées par leur libellé canonique (`useUnits`) ;
  * les unités sans code (`unitText` conservé dans `unit`) sont signalées.
  */
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   recipe: RecipeInput
   usage?: TranslateUsageInfo | null
-}>()
+  /** Recettes déjà en base qui ressemblent à celle-ci (voir `useTranslator().similar`). */
+  similar?: SimilarRecipe[]
+}>(), {
+  usage: null,
+  similar: () => []
+})
+
+const localePath = useLocalePath()
 
 const { unitLabel } = useUnits()
 const numberLocale = useNumberLocale()

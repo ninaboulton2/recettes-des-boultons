@@ -97,7 +97,7 @@
         </div>
       </template>
 
-      <TranslatorRecipePreview :recipe="preview" :usage="usage" />
+      <TranslatorRecipePreview :recipe="preview" :usage="usage" :similar="similar" />
 
       <template #footer>
         <div class="space-y-3">
@@ -130,8 +130,10 @@
             <UButton
               size="lg"
               icon="i-lucide-plus"
+              :color="similar.length > 0 ? 'warning' : 'primary'"
+              :variant="similar.length > 0 ? 'outline' : 'solid'"
               :loading="isAdding"
-              :label="isAdding ? $t('translator.preview.adding') : $t('translator.preview.add')"
+              :label="isAdding ? $t('translator.preview.adding') : similar.length > 0 ? $t('translator.preview.addAnyway') : $t('translator.preview.add')"
               @click="handleAdd"
             />
           </div>
@@ -177,6 +179,7 @@ const {
   mediaStatus,
   preview,
   usage,
+  similar,
   added,
   error,
   step,
