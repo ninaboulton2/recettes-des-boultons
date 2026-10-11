@@ -65,7 +65,15 @@ export default defineConfig({
         command: serverMode === 'preview'
           ? 'node --env-file=.env.local .output/server/index.mjs'
           : `npx nuxt dev --dotenv .env.local --port ${PORT}`,
-        env: { PORT: String(PORT), NUXT_TELEMETRY_DISABLED: '1' },
+        env: {
+          PORT: String(PORT),
+          NUXT_TELEMETRY_DISABLED: '1',
+          // Import Google Drive (e2e/translator-drive.spec.ts) : valeurs factices,
+          // les scripts Google sont remplacés par des doublures dans le test.
+          NUXT_PUBLIC_GOOGLE_CLIENT_ID: 'e2e-client-id.apps.googleusercontent.com',
+          NUXT_PUBLIC_GOOGLE_API_KEY: 'e2e-api-key',
+          NUXT_PUBLIC_GOOGLE_APP_ID: '123456789'
+        },
         url: baseURL,
         reuseExistingServer: !isCI && serverMode === 'dev',
         timeout: 180_000,
