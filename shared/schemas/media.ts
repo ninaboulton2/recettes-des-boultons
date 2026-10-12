@@ -35,11 +35,18 @@ export type UploadMediaType = (typeof UPLOAD_MEDIA_TYPES)[number]
 export const AUDIO_MEDIA_TYPES = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg'] as const
 export type AudioMediaType = (typeof AUDIO_MEDIA_TYPES)[number]
 
-/** Valeur de l'attribut `accept` du sélecteur de fichiers (`image/*` propose l'appareil photo sur mobile). */
-export const RECIPE_FILE_ACCEPT = 'image/*,application/pdf,text/plain,text/markdown,.pdf,.txt,.md,.markdown'
+/** Type MIME d'un document Word récent (`.docx`). */
+export const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const LEGACY_DOC_MIME_TYPE = 'application/msword'
 
-/** Nature d'un fichier choisi par l'utilisateur : `null` = format non pris en charge. */
-export type RecipeFileKind = 'text' | 'image' | 'pdf'
+/** Valeur de l'attribut `accept` du sélecteur de fichiers (`image/*` propose l'appareil photo sur mobile). */
+export const RECIPE_FILE_ACCEPT = `image/*,application/pdf,text/plain,text/markdown,${DOCX_MIME_TYPE},.pdf,.txt,.md,.markdown,.docx`
+
+/**
+ * Nature d'un fichier choisi par l'utilisateur : `null` = format non pris en charge.
+ * `docx` : document Word, dont le texte est extrait dans le navigateur (comme un `.txt`).
+ */
+export type RecipeFileKind = 'text' | 'image' | 'pdf' | 'docx'
 
 interface FileLike {
   name: string
@@ -54,14 +61,30 @@ function extensionOf(name: string): string {
 const TEXT_TYPES = new Set(['text/plain', 'text/markdown', 'text/x-markdown'])
 const TEXT_EXTENSIONS = new Set(['txt', 'md', 'markdown'])
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
+/** Types génériques que certains navigateurs ou systèmes donnent à un document Word. */
+const GENERIC_TYPES = new Set(['', 'application/octet-stream', 'application/zip', 'application/x-zip-compressed'])
+
+function mimeOf(file: FileLike): string {
+  return file.type.toLowerCase().split(';')[0]?.trim() ?? ''
+}
+
+/**
+ * Ancien format Word (`.doc`, binaire) : non pris en charge, mais l'interface
+ * le reconnaît pour conseiller « Enregistrer sous .docx ou PDF ».
+ */
+export function isLegacyWordFile(file: FileLike): boolean {
+  const type = mimeOf(file)
+  return type === LEGACY_DOC_MIME_TYPE || (extensionOf(file.name) === 'doc' && (type === '' || type === 'application/octet-stream'))
+}
 
 /**
  * Classe un fichier d'après son type MIME, avec repli sur l'extension (certains
  * navigateurs laissent le type vide pour `.md` ou `.heic`).
  */
 export function classifyRecipeFile(file: FileLike): RecipeFileKind | null {
-  const type = file.type.toLowerCase().split(';')[0]?.trim() ?? ''
+  const type = mimeOf(file)
   const extension = extensionOf(file.name)
+  if (type === DOCX_MIME_TYPE || (extension === 'docx' && GENERIC_TYPES.has(type))) return 'docx'
   if (type === 'application/pdf' || (type === '' && extension === 'pdf')) return 'pdf'
   if (type.startsWith('image/') || (type === '' && IMAGE_EXTENSIONS.has(extension))) return 'image'
   if (TEXT_TYPES.has(type) || (TEXT_EXTENSIONS.has(extension) && (type === '' || type === 'application/octet-stream'))) return 'text'

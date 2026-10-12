@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { storageStatePath } from './support/accounts'
 import { gotoApp } from './support/app'
@@ -13,6 +15,8 @@ import { gotoApp } from './support/app'
 test.use({ storageState: storageStatePath('admin') })
 
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const DOCX_BYTES = readFileSync(resolve(process.cwd(), 'test/fixtures/gateau-yaourt.docx'))
 const MOCK_TITLE = 'Cookies aux pépites de chocolat'
 
 // Doublure de https://accounts.google.com/gsi/client : l'autorisation aboutit aussitôt.
@@ -156,5 +160,30 @@ test('(d) une feuille Google Sheets est refusée avec un message clair, annuler 
   await driveButton(page).click()
   await expect(page.getByText('Format non pris en charge depuis Google Drive')).toHaveCount(0)
   await expect(driveButton(page)).toBeEnabled()
+  expect(driveRequests).toEqual([])
+})
+
+test('(e) un document Word .docx du Drive est téléchargé tel quel puis son texte extrait dans le navigateur', async ({ page }) => {
+  const apiCalls: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/')) apiCalls.push(request.url())
+  })
+  const driveRequests = await stubGoogle(page, () => ({ body: DOCX_BYTES, contentType: DOCX_MIME }))
+  await pickInDrive(page, { id: 'word-1', name: 'gateau-yaourt.docx', mimeType: DOCX_MIME, sizeBytes: DOCX_BYTES.length })
+  await driveButton(page).click()
+
+  await expect(recipeTextBox(page)).toHaveValue(/Gâteau au yaourt de Mamie[\s\S]*- 1 pot de yaourt nature[\s\S]*320 kcal/)
+  expect(driveRequests).toHaveLength(1)
+  expect(driveRequests[0]?.url).toContain('/files/word-1?alt=media')
+  // Extraction côté navigateur : aucun appel à nos endpoints (donc aucun coût IA).
+  expect(apiCalls).toEqual([])
+})
+
+test('(f) un ancien Word .doc du Drive est refusé avec le conseil d\'enregistrer en .docx ou PDF', async ({ page }) => {
+  const driveRequests = await stubGoogle(page, () => ({ body: 'x', contentType: 'application/msword' }))
+  await pickInDrive(page, { id: 'word-2', name: 'vieux.doc', mimeType: 'application/msword' })
+  await driveButton(page).click()
+  await expect(page.getByText('Le format Word ancien (.doc) n\'est pas pris en charge : vieux.doc.')).toBeVisible()
+  await expect(recipeTextBox(page)).toHaveValue('')
   expect(driveRequests).toEqual([])
 })

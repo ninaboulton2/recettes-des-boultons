@@ -45,6 +45,7 @@
     "@supabase/supabase-js": "^2.117.2",
     "@vite-pwa/nuxt": "^1.1.1",
     "ai": "^7.0.127",
+    "fflate": "^0.8.3",
     "nuxt": "^4.5.2",
     "pinia": "^3.0.4",
     "vue": "^3.5.43",

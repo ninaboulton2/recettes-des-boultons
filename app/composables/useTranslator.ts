@@ -4,11 +4,13 @@ import type { SimilarRecipesResponse } from '#shared/schemas/similar'
 import type { SimilarRecipe } from '#shared/utils/similarRecipes'
 import {
   classifyRecipeFile,
+  isLegacyWordFile,
   RECIPE_FILE_MAX_BYTES,
   RECIPE_FILES_MAX_COUNT,
   RECIPE_UPLOAD_MAX_BYTES,
   type TranscribeRecipeResponse
 } from '#shared/schemas/media'
+import { DocxError, extractDocxText } from '~/utils/docx'
 import { apiFetch } from '~/composables/useApi'
 import type { RecordedAudio } from '~/composables/useAudioRecorder'
 
@@ -20,8 +22,9 @@ import type { RecordedAudio } from '~/composables/useAudioRecorder'
  *  3. `editText()` / `reset()` pour revenir en arrière.
  *
  * Entrées média (phase 5) :
- *  - `addFiles()` : fichiers déposés ou choisis. Un texte (.txt, .md) est lu dans
- *    le navigateur et rejoint `recipeText` (aucun appel serveur) ; une photo
+ *  - `addFiles()` : fichiers déposés ou choisis. Un texte (.txt, .md) ou un
+ *    document Word (.docx, texte extrait par `~/utils/docx`) est lu dans le
+ *    navigateur et rejoint `recipeText` (aucun appel serveur) ; une photo
  *    (allégée avant envoi) ou un PDF rejoint `pendingFiles`. Tant qu'il y en a,
  *    `translate()` appelle `POST /api/extract-recipe` à la place du texte ;
  *  - `transcribe()` : dictée enregistrée → `POST /api/transcribe-recipe` → le
@@ -123,7 +126,9 @@ export function useTranslator() {
       for (const file of incoming) {
         const kind = classifyRecipeFile(file)
         if (!kind) {
-          problems.push(t('translator.files.errors.unsupported', { name: file.name }))
+          problems.push(isLegacyWordFile(file)
+            ? t('translator.files.errors.legacyDoc', { name: file.name })
+            : t('translator.files.errors.unsupported', { name: file.name }))
         } else if (file.size === 0) {
           problems.push(t('translator.files.errors.empty', { name: file.name }))
         } else if (file.size > RECIPE_FILE_MAX_BYTES) {
@@ -133,6 +138,13 @@ export function useTranslator() {
             texts.push(await file.text())
           } catch {
             problems.push(t('translator.files.errors.readFailed', { name: file.name }))
+          }
+        } else if (kind === 'docx') {
+          try {
+            texts.push(await extractDocxText(file))
+          } catch (err: unknown) {
+            const empty = err instanceof DocxError && err.code === 'empty'
+            problems.push(t(empty ? 'translator.files.errors.docxEmpty' : 'translator.files.errors.docxCorrupt', { name: file.name }))
           }
         } else if (kind === 'image') {
           try {

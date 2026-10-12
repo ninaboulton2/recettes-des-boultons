@@ -12,7 +12,7 @@
           />
         </UFormField>
 
-        <!-- Entrées alternatives au collage : fichier (PDF, photo, texte) ou dictée -->
+        <!-- Entrées alternatives au collage : fichier (PDF, photo, Word, texte) ou dictée -->
         <UFormField :label="$t('translator.files.title')" name="files">
           <TranslatorFileDrop
             v-model:files="pendingFiles"

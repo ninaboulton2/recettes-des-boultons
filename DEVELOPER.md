@@ -686,9 +686,22 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 
 - **Fichier** (`FileDrop.vue`, glisser-déposer ou sélecteur ; `accept="image/*"` fait proposer
   l'appareil photo sur mobile). `useTranslator().addFiles` trie : un `.txt` / `.md` est lu dans
-  le navigateur et ajouté à la zone de texte (aucun appel serveur) ; une photo ou un PDF est
+  le navigateur et ajouté à la zone de texte (aucun appel serveur) ; un **Word `.docx`** aussi
+  (voir « Word » ci-dessous) ; une photo ou un PDF est
   retenu (4 au plus) et `translate()` appelle alors `POST /api/extract-recipe` à la place du
   texte. Les types non pris en charge sont refusés avec un message.
+- **Word `.docx`** (`app/utils/docx.ts`) : texte extrait **dans le navigateur**, sans serveur ni
+  coût IA, puis ajouté à la zone de saisie pour relecture (comme un `.txt`). Un `.docx` est un
+  ZIP : `fflate` (chunk à part de ≈ 3 Ko gzip, `dependencies`, chargé par `import()` au premier `.docx`) lit
+  `word/document.xml`, que le `DOMParser` du navigateur parcourt (`w:p` = une ligne ; puces et
+  numéros = `- ` ; `w:tab`, `w:br`, cellules de tableau). Ignorés : images, en-têtes/pieds,
+  notes, texte supprimé en suivi de modifications, doublons des zones de texte. `mammoth` a été
+  écarté (bien plus lourd avec jszip et bluebird, conçu pour produire du HTML alors qu'on veut du texte brut). Reconnu par type MIME
+  **ou** extension (`classifyRecipeFile`) ; mêmes 10 Mo. Erreurs traduites : document abîmé
+  (`docxCorrupt`), sans texte (`docxEmpty`) ; l'ancien `.doc` (`isLegacyWordFile`) est refusé
+  avec le conseil « enregistrer en .docx ou PDF » (`legacyDoc`). Le XML décompressé est limité
+  à 50 Mo (archive piégée). Tests : `test/unit/docx.test.ts` (fixture
+  `test/fixtures/gateau-yaourt.docx`, générée avec python-docx).
 - **Limites** (`shared/schemas/media.ts`, contrôlées côté client et côté serveur) : 10 Mo par
   fichier source ; **4 Mo par requête** (Vercel refuse tout corps de plus de 4,5 Mo avant la
   fonction) ; 4 fichiers ; dictée 5 min et 4 Mo. Les photos sont donc redessinées dans le
@@ -715,7 +728,7 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 - Tests : `test/unit/schemas/media.test.ts`, `test/unit/ai/media.test.ts`, `audioRecorder.test.ts`,
   `image.test.ts` ; `test/integration/media-recipe.local.test.ts` (serveur mock) ;
   `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio),
-  `e2e/translator-drive.spec.ts` (import Google Drive, scripts Google simulés).
+  `e2e/translator-drive.spec.ts` (import Google Drive, scripts Google simulés, dont un `.docx`).
   Les tests e2e et d'intégration consomment le quota du jour : `AI_DAILY_QUOTA=1000` en local.
 
 ### Détection des doublons
@@ -773,10 +786,10 @@ fait qu'authentifier.
 - **Parcours** : clic → chargement paresseux de `accounts.google.com/gsi/client` (Google Identity
   Services) et `apis.google.com/js/api.js` (gapi + Picker) → jeton OAuth de portée **`drive.file`**
   (`initTokenClient`, `requestAccessToken({ prompt: '' })`, fenêtre pop-up de Google) → Google
-  Picker (liste, filtré sur PDF, JPG/PNG/WebP/HEIC, texte/Markdown et Google Docs) → téléchargement
+  Picker (liste, filtré sur PDF, JPG/PNG/WebP/HEIC, texte/Markdown, Word `.docx` et Google Docs) → téléchargement
   par l'API Drive en `fetch` (`files.get?alt=media`, ou `files.export?mimeType=text/plain` pour un
   Google Docs) → un `File` remis à `useTranslator().addFiles`, c'est-à-dire **le flux « fichier »
-  existant** : texte → zone de saisie, photo (réduite) / PDF → `/api/extract-recipe`. Mêmes types
+  existant** : texte et `.docx` (téléchargé tel quel, texte extrait dans le navigateur) → zone de saisie, photo (réduite) / PDF → `/api/extract-recipe`. Mêmes types
   et mêmes limites (10 Mo, `shared/schemas/media.ts`).
 - **Portée `drive.file`** : seuls les fichiers choisis dans le Picker deviennent lisibles par
   l'appli (jamais le reste du Drive). Portée « non sensible » : pas de vérification renforcée de

@@ -751,14 +751,17 @@
       "timeout": "The AI provider did not answer in time. Try again, or paste a shorter recipe."
     },
     "files": {
-      "title": "File (PDF, photo or text)",
+      "title": "File (PDF, photo, Word or text)",
       "label": "Drop a file here or click to choose one",
-      "description": "PDF, photo (JPG, PNG, WebP) or text (.txt, .md), {max} MB maximum. On a phone, you can take a photo of the page.",
+      "description": "PDF, photo (JPG, PNG, WebP), Word document (.docx) or text (.txt, .md), {max} MB maximum. On a phone, you can take a photo of the page.",
       "textIgnored": "The files above will be analysed instead of the text you typed. Remove them to use the text.",
       "added": "{n} file(s) added.",
       "removed": "File removed.",
       "errors": {
-        "unsupported": "Unsupported format: {name}. Accepted formats: PDF, photo (JPG, PNG, WebP) and text (.txt, .md).",
+        "unsupported": "Unsupported format: {name}. Accepted formats: PDF, photo (JPG, PNG, WebP), Word (.docx) and text (.txt, .md).",
+        "legacyDoc": "The old Word format (.doc) is not supported: {name}. Save the document as .docx (or PDF) from Word, then drop it again.",
+        "docxCorrupt": "Could not read the Word document {name}: the file is damaged or is not a real .docx. Try saving it again as .docx or PDF.",
+        "docxEmpty": "The Word document {name} contains no text (images only?). Drop it as a PDF or a photo to analyse the images.",
         "empty": "The file {name} is empty.",
         "tooBig": "The file {name} is larger than {max} MB.",
         "tooMany": "At most four files (photos or PDF) per recipe: the extra ones were ignored.",
@@ -771,7 +774,7 @@
     "drive": {
       "button": "Import from Google Drive",
       "loading": "Opening Google Drive…",
-      "hint": "PDF, photo, text or Google Docs. Only the file you choose is read.",
+      "hint": "PDF, photo, text, Word (.docx) or Google Docs. Only the file you choose is read.",
       "opening": "Opening Google Drive.",
       "imported": "File {name} imported from Google Drive.",
       "errors": {
@@ -780,7 +783,8 @@
         "popupBlocked": "Your browser blocked the Google sign-in window. Allow pop-ups for this site, then try again.",
         "accessDenied": "Access to Google Drive was refused. Allow access to this file to import it, or try again.",
         "pickerFailed": "The Google Drive picker could not open. Try again.",
-        "unsupported": "Unsupported format from Google Drive: {name}. Choose a PDF, a photo, a text file or a Google Docs document.",
+        "unsupported": "Unsupported format from Google Drive: {name}. Choose a PDF, a photo, a text file, a Word document (.docx) or a Google Docs document.",
+        "legacyDoc": "The old Word format (.doc) is not supported: {name}. Save it as .docx (or PDF), then try again.",
         "tooBig": "The file {name} is too large ({max} MB maximum).",
         "empty": "The file {name} is empty.",
         "network": "Could not reach Google Drive, check your network and try again.",

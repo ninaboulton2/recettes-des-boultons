@@ -33,7 +33,7 @@
 import { RECIPE_FILE_ACCEPT, RECIPE_FILE_MAX_BYTES } from '#shared/schemas/media'
 
 /**
- * Zone de dépôt / sélecteur de fichiers du traducteur (PDF, photo, texte).
+ * Zone de dépôt / sélecteur de fichiers du traducteur (PDF, photo, Word, texte).
  * Ne trie rien : elle remonte les fichiers choisis (`add`) et la liste après
  * suppression d'un fichier (`update:files`) ; le tri et les limites sont dans
  * `useTranslator().addFiles`.

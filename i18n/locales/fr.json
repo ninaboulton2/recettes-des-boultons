@@ -672,14 +672,17 @@
       "timeout": "Le fournisseur IA n'a pas répondu à temps. Réessayez, ou collez une recette plus courte."
     },
     "files": {
-      "title": "Fichier (PDF, photo ou texte)",
+      "title": "Fichier (PDF, photo, Word ou texte)",
       "label": "Déposez un fichier ici ou cliquez pour le choisir",
-      "description": "PDF, photo (JPG, PNG, WebP) ou texte (.txt, .md), {max} Mo maximum. Sur téléphone, vous pouvez prendre la page en photo.",
+      "description": "PDF, photo (JPG, PNG, WebP), document Word (.docx) ou texte (.txt, .md), {max} Mo maximum. Sur téléphone, vous pouvez prendre la page en photo.",
       "textIgnored": "Les fichiers ci-dessus seront analysés à la place du texte saisi. Retirez-les pour utiliser le texte.",
       "added": "{n} fichier(s) ajouté(s).",
       "removed": "Fichier retiré.",
       "errors": {
-        "unsupported": "Format non pris en charge : {name}. Formats acceptés : PDF, photo (JPG, PNG, WebP) et texte (.txt, .md).",
+        "unsupported": "Format non pris en charge : {name}. Formats acceptés : PDF, photo (JPG, PNG, WebP), Word (.docx) et texte (.txt, .md).",
+        "legacyDoc": "Le format Word ancien (.doc) n'est pas pris en charge : {name}. Enregistrez le document au format .docx (ou en PDF) depuis Word, puis déposez-le à nouveau.",
+        "docxCorrupt": "Impossible de lire le document Word {name} : le fichier est abîmé ou n'est pas un vrai .docx. Essayez de le réenregistrer en .docx ou en PDF.",
+        "docxEmpty": "Le document Word {name} ne contient aucun texte (des images seulement ?). Déposez-le en PDF ou en photo pour analyser les images.",
         "empty": "Le fichier {name} est vide.",
         "tooBig": "Le fichier {name} dépasse {max} Mo.",
         "tooMany": "Quatre fichiers au maximum (photos ou PDF) par recette : les suivants ont été ignorés.",
@@ -692,7 +695,7 @@
     "drive": {
       "button": "Importer depuis Google Drive",
       "loading": "Ouverture de Google Drive…",
-      "hint": "PDF, photo, texte ou Google Docs. Seul le fichier que vous choisissez est lu.",
+      "hint": "PDF, photo, texte, Word (.docx) ou Google Docs. Seul le fichier que vous choisissez est lu.",
       "opening": "Ouverture de Google Drive.",
       "imported": "Fichier {name} importé depuis Google Drive.",
       "errors": {
@@ -701,7 +704,8 @@
         "popupBlocked": "Le navigateur a bloqué la fenêtre de connexion Google. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
         "accessDenied": "Accès à Google Drive refusé. Autorisez l'accès à ce fichier pour l'importer, ou réessayez.",
         "pickerFailed": "Le sélecteur Google Drive n'a pas pu s'ouvrir. Réessayez.",
-        "unsupported": "Format non pris en charge depuis Google Drive : {name}. Choisissez un PDF, une photo, un fichier texte ou un document Google Docs.",
+        "unsupported": "Format non pris en charge depuis Google Drive : {name}. Choisissez un PDF, une photo, un fichier texte, un document Word (.docx) ou un document Google Docs.",
+        "legacyDoc": "Le format Word ancien (.doc) n'est pas pris en charge : {name}. Enregistrez-le au format .docx (ou en PDF), puis réessayez.",
         "tooBig": "Le fichier {name} est trop volumineux ({max} Mo maximum).",
         "empty": "Le fichier {name} est vide.",
         "network": "Connexion à Google Drive impossible, vérifiez votre réseau puis réessayez.",

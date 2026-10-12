@@ -34,7 +34,7 @@ describe('classifyRecipeFile', () => {
   })
 
   it('refuse les autres formats', () => {
-    expect(classifyRecipeFile({ name: 'x.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toBeNull()
+    expect(classifyRecipeFile({ name: 'x.doc', type: 'application/msword' })).toBeNull()
     expect(classifyRecipeFile({ name: 'x.exe', type: 'application/octet-stream' })).toBeNull()
     expect(classifyRecipeFile({ name: 'x.csv', type: 'text/csv' })).toBeNull()
     expect(classifyRecipeFile({ name: 'x.mp3', type: 'audio/mpeg' })).toBeNull()

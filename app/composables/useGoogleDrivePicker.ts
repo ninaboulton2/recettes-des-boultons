@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { classifyRecipeFile, RECIPE_FILE_MAX_BYTES } from '#shared/schemas/media'
+import { classifyRecipeFile, DOCX_MIME_TYPE, isLegacyWordFile, RECIPE_FILE_MAX_BYTES } from '#shared/schemas/media'
 
 /**
  * Import depuis Google Drive (traducteur IA, administrateurs).
@@ -8,10 +8,11 @@ import { classifyRecipeFile, RECIPE_FILE_MAX_BYTES } from '#shared/schemas/media
  *  1. Google Identity Services (jeton OAuth, portée minimale `drive.file`) ;
  *  2. Google Picker (l'utilisateur choisit UN fichier : c'est ce choix qui
  *     donne à l'appli l'accès à ce seul fichier, rien d'autre dans le Drive) ;
- *  3. API Drive : `files.get?alt=media` (PDF, photo, texte) ou `files.export`
+ *  3. API Drive : `files.get?alt=media` (PDF, photo, texte, Word .docx) ou `files.export`
  *     (Google Docs → texte brut) ;
  *  4. le résultat est un `File` remis au flux « fichier » existant du
- *     traducteur (`useTranslator().addFiles`), mêmes types et mêmes limites.
+ *     traducteur (`useTranslator().addFiles`), mêmes types et mêmes limites
+ *     (un .docx est téléchargé tel quel, son texte est extrait dans le navigateur).
  *
  * Indépendant de la connexion Google de Supabase (qui ne fait qu'authentifier) :
  * le jeton d'accès ne vit qu'en mémoire (variable du module), jamais dans
@@ -42,7 +43,9 @@ export const PICKER_MIME_TYPES: readonly string[] = [
   'image/heif',
   'text/plain',
   'text/markdown',
-  'text/x-markdown'
+  'text/x-markdown',
+  // Word (.docx) : téléchargé tel quel, le texte est extrait ensuite dans le navigateur.
+  DOCX_MIME_TYPE
 ]
 
 /**
@@ -70,6 +73,7 @@ export type DriveErrorCode =
   | 'accessDenied'
   | 'pickerFailed'
   | 'unsupported'
+  | 'legacyDoc'
   | 'tooBig'
   | 'empty'
   | 'network'
@@ -127,7 +131,9 @@ export function planDriveDownload(file: DrivePickedFile): DriveDownloadPlan {
     }
   }
   if (file.mimeType.startsWith(GOOGLE_APPS_PREFIX)) throw new DriveImportError('unsupported', file.name)
-  if (!classifyRecipeFile({ name: file.name, type: file.mimeType })) throw new DriveImportError('unsupported', file.name)
+  if (!classifyRecipeFile({ name: file.name, type: file.mimeType })) {
+    throw new DriveImportError(isLegacyWordFile({ name: file.name, type: file.mimeType }) ? 'legacyDoc' : 'unsupported', file.name)
+  }
   const size = Number(file.sizeBytes)
   if (Number.isFinite(size) && size > RECIPE_FILE_MAX_BYTES) throw new DriveImportError('tooBig', file.name)
   return {

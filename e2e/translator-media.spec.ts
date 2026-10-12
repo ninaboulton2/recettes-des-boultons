@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { storageStatePath } from './support/accounts'
 import { gotoApp } from './support/app'
@@ -14,6 +16,9 @@ test.use({ storageState: storageStatePath('admin') })
 // PNG 1×1 valide (décodable par createImageBitmap, donc par la préparation d'image).
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 const PDF_MINIMAL = '%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n'
+// Vrai document Word (python-docx) : titre, puces, numérotation, tableau.
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const DOCX_BASE64 = readFileSync(resolve(process.cwd(), 'test/fixtures/gateau-yaourt.docx')).toString('base64')
 const MOCK_TITLE = 'Cookies aux pépites de chocolat'
 const MOCK_TRANSCRIPT_START = 'Cookies aux pépites de chocolat. Il faut deux cent quatre-vingts grammes de farine'
 
@@ -88,8 +93,39 @@ test.describe('fichier', () => {
   })
 
   test('(c) un format non pris en charge est refusé avec un message clair', async ({ page }) => {
-    await dropFiles(page, [{ name: 'recette.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', text: 'PK' }])
-    await expect(page.getByText('Format non pris en charge : recette.docx')).toBeVisible()
+    await dropFiles(page, [{ name: 'musique.mp3', type: 'audio/mpeg', text: 'ID3' }])
+    await expect(page.getByText('Format non pris en charge : musique.mp3')).toBeVisible()
+    await expect(recipeTextBox(page)).toHaveValue('')
+  })
+
+  test('(c2) un document Word .docx déposé remplit la zone de texte, sans appel serveur', async ({ page }) => {
+    const apiCalls: string[] = []
+    page.on('request', request => {
+      if (request.url().includes('/api/')) apiCalls.push(request.url())
+    })
+
+    await dropFiles(page, [{ name: 'gateau-yaourt.docx', type: DOCX_MIME, base64: DOCX_BASE64 }])
+
+    await expect(recipeTextBox(page)).toHaveValue(/Gâteau au yaourt de Mamie\n[\s\S]*- 1 pot de yaourt nature\n- 3 pots de farine[\s\S]*- Cuire 35 minutes\./)
+    await expect(page.getByRole('button', { name: 'Structurer la recette' })).toBeEnabled()
+    // Le document n'est pas conservé dans la liste des fichiers à analyser.
+    await expect(page.getByText('gateau-yaourt.docx')).toHaveCount(0)
+    expect(apiCalls).toEqual([])
+  })
+
+  test('(c3) un .docx choisi dans le sélecteur, sans type MIME, est reconnu par son extension', async ({ page }) => {
+    await page.locator('input[type="file"]').setInputFiles({ name: 'gateau.docx', mimeType: '', buffer: Buffer.from(DOCX_BASE64, 'base64') })
+    await expect(recipeTextBox(page)).toHaveValue(/Gâteau au yaourt de Mamie/)
+  })
+
+  test('(c4) un .docx abîmé et l\'ancien .doc sont refusés avec un message clair', async ({ page }) => {
+    await dropFiles(page, [{ name: 'abime.docx', type: DOCX_MIME, text: 'PK ceci n\'est pas une archive' }])
+    await expect(page.getByText(/Impossible de lire le document Word abime\.docx/)).toBeVisible()
+    await expect(recipeTextBox(page)).toHaveValue('')
+
+    await dropFiles(page, [{ name: 'vieux.doc', type: 'application/msword', text: 'x' }])
+    await expect(page.getByText(/Le format Word ancien \(\.doc\) n'est pas pris en charge : vieux\.doc/)).toBeVisible()
+    await expect(page.getByText(/Enregistrez le document au format \.docx/)).toBeVisible()
     await expect(recipeTextBox(page)).toHaveValue('')
   })
 

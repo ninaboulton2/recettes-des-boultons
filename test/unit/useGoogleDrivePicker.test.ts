@@ -6,6 +6,7 @@ import {
   GAPI_SCRIPT_URL,
   GIS_SCRIPT_URL,
   isDriveConfigured,
+  PICKER_MIME_TYPES,
   planDriveDownload,
   type DriveEnvironment,
   type DriveErrorCode,
@@ -169,7 +170,26 @@ describe('planDriveDownload', () => {
     for (const mimeType of ['application/vnd.google-apps.spreadsheet', 'application/vnd.google-apps.presentation', 'application/vnd.google-apps.folder']) {
       expect(() => planDriveDownload({ id: 'x', name: 'x', mimeType })).toThrowError(DriveImportError)
     }
-    expect(() => planDriveDownload({ id: 'x', name: 'recette.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toThrowError(DriveImportError)
+    expect(() => planDriveDownload({ id: 'x', name: 'recette.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })).toThrowError(DriveImportError)
+  })
+
+  it('Word .docx : téléchargé tel quel (alt=media), l\'extraction du texte se fait ensuite dans le navigateur', () => {
+    const mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const plan = planDriveDownload({ id: 'w1', name: 'recette.docx', mimeType, sizeBytes: 50_000 })
+    expect(plan.url).toBe('https://www.googleapis.com/drive/v3/files/w1?alt=media&supportsAllDrives=true')
+    expect(plan.fileName).toBe('recette.docx')
+    expect(plan.mimeType).toBe(mimeType)
+    expect(PICKER_MIME_TYPES).toContain(mimeType)
+  })
+
+  it('ancien Word .doc : refusé avec un code dédié (conseil .docx ou PDF)', () => {
+    try {
+      planDriveDownload({ id: 'w2', name: 'recette.doc', mimeType: 'application/msword' })
+      expect.unreachable()
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(DriveImportError)
+      expect((error as DriveImportError).code).toBe('legacyDoc')
+    }
   })
 
   it('fichier annoncé au-delà de 10 Mo : refusé avant tout téléchargement', () => {
