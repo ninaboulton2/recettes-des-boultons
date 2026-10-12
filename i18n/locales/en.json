@@ -236,9 +236,6 @@
     "servingsDecrease": "One less serving",
     "servingsReset": "Back to {count} servings",
     "scaledNote": "Quantities adjusted for {count} servings (original recipe: {base}).",
-    "photoAlt": "Photo: {title}",
-    "noPhoto": "No photo yet",
-    "categoryIllustrationAlt": "Illustration for the “{category}” category",
     "ingredients": {
       "title": "Ingredients",
       "optional": "optional",

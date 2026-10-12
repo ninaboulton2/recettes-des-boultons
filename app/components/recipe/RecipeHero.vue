@@ -1,45 +1,5 @@
 <template>
   <header class="space-y-5">
-    <!-- Photo (ou icône de repli) -->
-    <div
-      class="relative overflow-hidden rounded-xl border border-default bg-muted print:max-h-64"
-      :class="photoUrl ? 'aspect-video print:aspect-auto' : 'h-36 sm:h-44 print:hidden'"
-    >
-      <!-- Image principale (LCP) : chargée tout de suite, préchargée, optimisée par @nuxt/image. -->
-      <NuxtImg
-        v-if="photoUrl"
-        :src="photoUrl"
-        :alt="$t('recipeDetail.photoAlt', { title: recipe.title })"
-        sizes="xs:100vw md:768px lg:896px"
-        :width="896"
-        :height="504"
-        fit="cover"
-        format="webp"
-        loading="eager"
-        fetchpriority="high"
-        :preload="{ fetchPriority: 'high' }"
-        class="h-full w-full object-cover"
-      />
-      <!-- Sans photo : illustration de la catégorie (édition qui en fournit), cadre blanc. -->
-      <div v-else-if="fallback.type === 'image'" class="flex h-full w-full items-center justify-center p-3 print:hidden">
-        <div class="aspect-square h-full rounded-lg bg-white p-2">
-          <NuxtImg
-            :src="fallback.src"
-            :alt="$t('recipeDetail.categoryIllustrationAlt', { category: categoryLabel })"
-            :width="160"
-            :height="160"
-            densities="x1 x2"
-            format="webp"
-            class="size-full object-contain"
-          />
-        </div>
-      </div>
-      <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 text-muted print:hidden">
-        <UIcon name="i-lucide-chef-hat" class="size-14" aria-hidden="true" />
-        <span class="text-xs">{{ $t('recipeDetail.noPhoto') }}</span>
-      </div>
-    </div>
-
     <!-- Catégorie, tags, titre, description -->
     <div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2">
@@ -104,7 +64,7 @@ import { computed } from 'vue'
 import type { Recipe } from '#shared/types'
 import { categoryI18nKey, totalTime } from '#shared/utils/recipes'
 
-/** En-tête de la fiche : photo, catégorie, titre, temps, compteur de portions. */
+/** En-tête de la fiche (sans image) : catégorie, titre, temps, compteur de portions. */
 const props = withDefaults(defineProps<{
   recipe: Recipe
   /** Portions cibles (compteur) ; `null` si la recette n'en a pas. */
@@ -122,11 +82,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ 'update:servings': [value: number] }>()
 
 const { t, te } = useI18n()
-const { publicUrl } = useRecipePhoto()
 
-const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
-const { categoryVisual } = useCategories()
-const fallback = computed(() => categoryVisual(props.recipe.category))
 const total = computed(() => totalTime(props.recipe))
 const categoryLabel = computed(() => {
   const key = categoryI18nKey(props.recipe.category)

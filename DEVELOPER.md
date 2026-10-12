@@ -587,7 +587,7 @@ manifeste et icônes PWA par groupe.
 
 | Composant | Rôle |
 |---|---|
-| `RecipeHero` | photo (ou icône de catégorie), catégorie, tags, titre, temps, compteur de portions (`RecipeServingsControl`) |
+| `RecipeHero` | catégorie, tags, titre, description, temps, compteur de portions (`RecipeServingsControl`) ; pas d'image sur la fiche (photos et illustrations restent sur les cartes, l'éditeur et l'accueil) |
 | `RecipeIngredients` | ingrédients par section, cases à cocher (état local), quantités mises à l'échelle |
 | `RecipeSteps` | étapes numérotées par section |
 | `RecipeActions` | favori, courses, planning (`PlanningModal`), mode cuisine, impression, modifier / supprimer (admin) |
@@ -626,8 +626,8 @@ manifeste et icônes PWA par groupe.
   trigger Storage).
 - Affichage : `NuxtImg` sur l'URL publique. `image.domains` = hôte de `SUPABASE_URL` (lu au
   build) + `127.0.0.1:54321` hors Vercel ; ipx en dev, optimisation Vercel en prod. Le
-  provider `supabase` de `@nuxt/image` n'est pas utilisé. `RecipeHero` charge l'image en
-  priorité (LCP) ; cartes et planning en différé.
+  provider `supabase` de `@nuxt/image` n'est pas utilisé. Cartes et planning chargent
+  l'image en différé ; la fiche recette n'affiche plus de photo.
 
 ## 11. Planning et listes de courses
 
