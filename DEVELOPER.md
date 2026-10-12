@@ -592,13 +592,25 @@ manifeste et icônes PWA par groupe.
 | `RecipeSteps` | étapes numérotées par section |
 | `RecipeActions` | favori, courses, planning (`PlanningModal`), mode cuisine, impression, modifier / supprimer (admin) |
 | `RecipeAddToShoppingModal` | choix de la liste et des sections → `useShoppingStore().addRecipeToList(…)` |
-| `RecipeCookingMode` | plein écran, une étape à la fois, ←/→/Échap, Wake Lock |
+| `RecipeCookingMode` | plein écran, une étape à la fois, ←/→/Échap, Wake Lock, minuteurs d'étapes |
+| `RecipeCookingTimers` | pile flottante des minuteurs (pause, +1 min, annuler, arrêter l'alarme) |
 
 - `useServingsScaler(recipe)` : portions cibles, `factor`, `scaledAmount()`. Calculs dans
   `shared/utils/recipes.ts` (`servingsFactor`, `roundReadable` : fractions ½ ¼ ¾ ⅓ ⅔ sous 10,
   une décimale jusqu'à 100, entier au-delà). Le facteur est transmis à `add_recipe_to_list`.
 - `useCookingMode(recipe)` : étapes à plat, section d'ingrédients associée,
   `navigator.wakeLock` (silencieux si refusé ou non supporté).
+- Minuteurs du mode cuisine : `parseDurations` (`shared/utils/duration.ts`, FR/EN, fourchettes
+  → borne basse, températures et quantités ignorées) lit les durées d'une étape. Passer à
+  l'étape suivante lance le minuteur de la **première** durée de l'étape quittée (une fois par
+  étape) ; un bouton « Lancer le minuteur » propose chaque durée (elles s'enchaînent, on ne les
+  lance pas en parallèle). `useCookingTimers` : dates de fin absolues (robuste à l'arrière-plan),
+  une clé par étape+durée (pas de doublon), alarme `createCookingAlarm` (bips Web Audio en
+  boucle + vibration, audio débloqué par un geste : sur iOS Safari sans geste préalable
+  l'alarme reste silencieuse), notification système seulement si la permission est déjà
+  accordée et l'app en arrière-plan. Quitter le mode avec des minuteurs demande confirmation
+  (Échap annule la confirmation). Tests : `test/unit/duration.test.ts`,
+  `useCookingTimers.test.ts`, `e2e/cooking-timers.spec.ts`.
 - Impression : `@media print` de `main.css`, limitée à la fiche (`body:has(#recipe-sheet)`).
 
 ### 10.2 Éditeur (`RecipeEditor.vue` → `components/editor/`)

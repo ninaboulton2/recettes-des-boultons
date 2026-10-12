@@ -301,7 +301,32 @@
       "ingredients": "Ingrédients",
       "noSteps": "Cette recette n’a pas d’étapes à suivre.",
       "wakeLockOn": "Écran maintenu allumé",
-      "keyboardHint": "← → pour naviguer · Échap pour quitter"
+      "keyboardHint": "← → pour naviguer · Échap pour quitter",
+      "timers": {
+        "region": "Minuteurs en cours",
+        "start": "Lancer le minuteur · {duration}",
+        "running": "Minuteur en cours · {duration}",
+        "label": "Étape {step} · {duration}",
+        "paused": "En pause",
+        "ended": "Terminé !",
+        "pause": "Mettre en pause le minuteur de l’étape {step}",
+        "resume": "Reprendre le minuteur de l’étape {step}",
+        "addMinute": "+1 min",
+        "addMinuteAria": "Ajouter une minute au minuteur de l’étape {step}",
+        "cancel": "Annuler le minuteur de l’étape {step}",
+        "dismiss": "Arrêter",
+        "dismissAria": "Arrêter l’alarme du minuteur de l’étape {step}",
+        "announceStarted": "Minuteur lancé pour l’étape {step} : {duration}.",
+        "announceEnded": "Minuteur terminé pour l’étape {step} ({duration}).",
+        "notificationTitle": "Minuteur terminé",
+        "notificationBody": "Étape {step} · {duration} — {recipe}"
+      },
+      "leave": {
+        "title": "Quitter le mode cuisine ?",
+        "message": "Un minuteur est encore en cours : il sera arrêté si vous quittez. | {count} minuteurs sont encore en cours : ils seront arrêtés si vous quittez.",
+        "stay": "Rester",
+        "confirm": "Quitter"
+      }
     }
   },
   "editor": {

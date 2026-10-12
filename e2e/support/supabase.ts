@@ -55,6 +55,31 @@ export async function createE2eRecipes(admin: SupabaseClient, category: string, 
   check(await admin.from('recipes').insert(rows), 'Création des recettes E2E')
 }
 
+/**
+ * Crée une recette jetable `E2E_…` avec des étapes dont certaines contiennent une
+ * durée (minuteurs du mode cuisine) et renvoie son identifiant. Supprimée par
+ * `deleteE2eRecipe` ou par le nettoyage global (cascade sur sections et étapes).
+ */
+export async function createE2eTimedRecipe(admin: SupabaseClient, title: string, steps: string[]): Promise<string> {
+  const base = { title, category: 'plats', description: 'Recette jetable des tests de minuteurs.' }
+  let recipe = await admin.from('recipes').insert({ ...base, ingredients: [], instructions: [] }).select('id').single()
+  if (recipe.error) recipe = await admin.from('recipes').insert(base).select('id').single()
+  const recipeId = (check(recipe, 'Création de la recette E2E') as { id: string }).id
+  const section = check(
+    await admin.from('recipe_sections').insert({ recipe_id: recipeId, name: 'Préparation', type: 'instructions', order_index: 1 }).select('id').single(),
+    'Création de la section E2E'
+  ) as { id: string }
+  check(
+    await admin.from('instructions').insert(steps.map((content, index) => ({ recipe_id: recipeId, section_id: section.id, content, order_index: index + 1 }))),
+    'Création des étapes E2E'
+  )
+  return recipeId
+}
+
+export async function deleteE2eRecipe(admin: SupabaseClient, recipeId: string): Promise<void> {
+  check(await admin.from('recipes').delete().eq('id', recipeId), 'Suppression de la recette E2E')
+}
+
 /** Motif LIKE du préfixe (le `_` est échappé : sinon joker d'un caractère). */
 const E2E_LIKE = `${E2E_PREFIX.replace(/_/g, '\\_')}%`
 

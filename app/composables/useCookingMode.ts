@@ -5,11 +5,14 @@ import { flattenSteps, sectionsWithIngredients } from '#shared/utils/recipes'
 /**
  * Mode cuisine : une étape à la fois, navigation précédent/suivant, ingrédients
  * de la section courante, écran maintenu allumé (Wake Lock API, silencieux si
- * non supportée) et raccourcis clavier ←/→/Échap tant que le mode est ouvert.
+ * non supportée) et raccourcis clavier ←/→ tant que le mode est ouvert. Échap est
+ * géré par la modale (qui peut demander confirmation s'il reste des minuteurs).
  */
 export function useCookingMode(recipe: MaybeRefOrGetter<Recipe | null | undefined>) {
   const isOpen = ref(false)
   const currentIndex = ref(0)
+  /** Désactivé pendant une boîte de dialogue (confirmation de sortie) pour ne pas naviguer derrière elle. */
+  const keysEnabled = ref(true)
 
   const steps = computed(() => flattenSteps(toValue(recipe)?.sections ?? []))
   const stepCount = computed(() => steps.value.length)
@@ -87,7 +90,7 @@ export function useCookingMode(recipe: MaybeRefOrGetter<Recipe | null | undefine
   }
 
   const onKeydown = (event: KeyboardEvent) => {
-    if (!isOpen.value) return
+    if (!isOpen.value || !keysEnabled.value) return
     const target = event.target
     if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
     switch (event.key) {
@@ -98,9 +101,6 @@ export function useCookingMode(recipe: MaybeRefOrGetter<Recipe | null | undefine
       case 'ArrowLeft':
         event.preventDefault()
         prev()
-        break
-      case 'Escape':
-        close()
         break
     }
   }
@@ -132,6 +132,7 @@ export function useCookingMode(recipe: MaybeRefOrGetter<Recipe | null | undefine
 
   return {
     isOpen,
+    keysEnabled,
     steps,
     stepCount,
     currentIndex,

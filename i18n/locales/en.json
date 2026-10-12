@@ -301,7 +301,32 @@
       "ingredients": "Ingredients",
       "noSteps": "This recipe has no steps to follow.",
       "wakeLockOn": "Screen kept awake",
-      "keyboardHint": "← → to navigate · Esc to exit"
+      "keyboardHint": "← → to navigate · Esc to exit",
+      "timers": {
+        "region": "Running timers",
+        "start": "Start timer · {duration}",
+        "running": "Timer running · {duration}",
+        "label": "Step {step} · {duration}",
+        "paused": "Paused",
+        "ended": "Time’s up!",
+        "pause": "Pause the timer for step {step}",
+        "resume": "Resume the timer for step {step}",
+        "addMinute": "+1 min",
+        "addMinuteAria": "Add one minute to the timer for step {step}",
+        "cancel": "Cancel the timer for step {step}",
+        "dismiss": "Stop",
+        "dismissAria": "Stop the alarm for the step {step} timer",
+        "announceStarted": "Timer started for step {step}: {duration}.",
+        "announceEnded": "Timer finished for step {step} ({duration}).",
+        "notificationTitle": "Timer finished",
+        "notificationBody": "Step {step} · {duration} — {recipe}"
+      },
+      "leave": {
+        "title": "Exit cooking mode?",
+        "message": "A timer is still running: it will be stopped if you leave. | {count} timers are still running: they will be stopped if you leave.",
+        "stay": "Stay",
+        "confirm": "Leave"
+      }
     }
   },
   "editor": {
