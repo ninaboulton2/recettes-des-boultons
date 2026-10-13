@@ -86,6 +86,7 @@ import type { z } from 'zod'
 import { RECIPE_CATEGORIES, type Recipe, type RecipeInput, type RecipeSectionInput, type SectionType } from '#shared/types'
 import { recipeInputSchema, type UnitCode } from '#shared/schemas'
 import { categoryI18nKey } from '#shared/utils/recipes'
+import { formSnapshot, isFormDirty } from '~/utils/formDirty'
 import EditorPhotoField from './PhotoField.vue'
 import EditorSectionEditor from './SectionEditor.vue'
 
@@ -179,6 +180,11 @@ function fromRecipe(recipe: Recipe | null): RecipeFormState {
 }
 
 const state = reactive<RecipeFormState>(fromRecipe(props.recipe))
+
+// Instantané pris à l'ouverture ; l'état est « modifié » dès qu'il s'en écarte.
+const initialSnapshot = ref(formSnapshot(state))
+const isDirty = computed(() => isFormDirty(state, initialSnapshot.value, pendingPhoto.value !== null || photoRemoved.value))
+defineExpose({ isDirty })
 
 const categoryItems = computed<Array<{ label: string, value: string }>>(() =>
   RECIPE_CATEGORIES.map(category => ({ label: t(categoryI18nKey(category)), value: category }))
@@ -285,6 +291,10 @@ const onSubmit = async () => {
       }
       toast.add({ title: t('editor.toasts.created'), color: 'success', icon: 'i-lucide-check' })
     }
+    // Enregistré : plus rien à perdre, la fermeture ne doit pas demander confirmation.
+    initialSnapshot.value = formSnapshot(state)
+    pendingPhoto.value = null
+    photoRemoved.value = false
     emit('saved', saved)
   } catch (error) {
     toast.add({ title: t('editor.toasts.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })

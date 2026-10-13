@@ -149,6 +149,42 @@ test.describe('administrateur', () => {
     await expect(dialog).toBeHidden()
   })
 
+  test('éditeur de recette : garde « Quitter sans enregistrer ? » si modifié', async ({ page }) => {
+    await gotoApp(page, `/recettes/${recipeId}`)
+    await recipeActions(page).getByRole('button', { name: 'Modifier', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Modifier la recette' })
+    await expect(dialog).toBeVisible()
+
+    // Inchangé : Échap ferme immédiatement.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    await recipeActions(page).getByRole('button', { name: 'Modifier', exact: true }).click()
+    await expect(dialog).toBeVisible()
+    const title = dialog.getByRole('textbox', { name: /^Titre/ })
+    const original = await title.inputValue()
+    await title.fill(`${original} E2E`)
+
+    // Échap → confirmation (focus sur « Continuer l'édition »), Échap → retour à l'éditeur, saisie conservée.
+    await page.keyboard.press('Escape')
+    const confirm = page.getByRole('dialog', { name: 'Quitter sans enregistrer ?' })
+    await expect(confirm).toBeVisible()
+    await expect(confirm.getByRole('button', { name: 'Continuer l\'édition' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(confirm).toBeHidden()
+    await expect(dialog).toBeVisible()
+    await expect(title).toHaveValue(`${original} E2E`)
+
+    // Quitter : l'éditeur se ferme, la recette n'a pas changé.
+    await page.keyboard.press('Escape')
+    await expect(confirm).toBeVisible()
+    await confirm.getByRole('button', { name: 'Quitter sans enregistrer' }).click()
+    await expect(confirm).toBeHidden()
+    await expect(dialog).toBeHidden()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SEARCH_TITLE)
+    await expect(page.getByRole('heading', { level: 1 })).not.toContainText('E2E')
+  })
+
   test('confirmation « Supprimer la recette » : Échap annule', async ({ page }) => {
     await gotoApp(page, `/recettes/${recipeId}`)
     await recipeActions(page).getByRole('button', { name: 'Supprimer', exact: true }).click()

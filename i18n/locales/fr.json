@@ -390,6 +390,12 @@
       "remove": "Supprimer l’étape",
       "drag": "Glisser pour réordonner"
     },
+    "leave": {
+      "title": "Quitter sans enregistrer ?",
+      "message": "Vos modifications seront perdues.",
+      "stay": "Continuer l'édition",
+      "confirm": "Quitter sans enregistrer"
+    },
     "actions": {
       "cancel": "Annuler",
       "create": "Créer la recette",

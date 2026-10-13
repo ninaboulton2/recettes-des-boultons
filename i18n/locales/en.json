@@ -390,6 +390,12 @@
       "remove": "Remove step",
       "drag": "Drag to reorder"
     },
+    "leave": {
+      "title": "Leave without saving?",
+      "message": "Your changes will be lost.",
+      "stay": "Keep editing",
+      "confirm": "Leave without saving"
+    },
     "actions": {
       "cancel": "Cancel",
       "create": "Create recipe",
