@@ -1171,5 +1171,7 @@ les lectures (colonnes `lang`, `recipe_translations` absentes).
 - `e2e/bilingual.spec.ts` : fiche `/en` en anglais (« [EN] … ») et `/` en français, recherche dans
   les deux langues, éditeur (version d'origine), traducteur sans sélecteur de langue avec bascule
   d'aperçu, page « Traductions » (progression, fin, restauration de la base).
-  Cette dernière traduit TOUTES les recettes de la base locale avec le fournisseur simulé puis
-  remet traductions et langues dans l'état initial.
+  Cette dernière marque d'abord toutes les autres recettes de la base comme traduites (lignes
+  factices, sans IA : sinon les ~180 vraies recettes du snapshot local consommeraient le quota
+  `AI_DAILY_QUOTA` du jour et tous les autres tests IA recevraient un 429), traduit ses deux recettes
+  de test avec le fournisseur simulé, puis remet traductions et langues dans l'état initial.

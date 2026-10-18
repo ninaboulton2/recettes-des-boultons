@@ -14,7 +14,7 @@ import { formatScaledAmount, toRecipe } from '#shared/utils/recipes'
 export async function fetchRecipeById(supabase: SupabaseClient<Database>, id: string): Promise<Recipe | null> {
   const { data, error } = await supabase
     .from('recipes')
-    .select('id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at, lang, recipe_translations(*), recipe_sections(*, recipe_ingredients(*), instructions(*))')
+    .select('id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at, lang, recipe_translations(locale, title, description, notes, tags, content, source_hash, model, stale, translated_at), recipe_sections(*, recipe_ingredients(*), instructions(*))')
     .eq('id', id)
     .order('order_index', { referencedTable: 'recipe_sections' })
     .maybeSingle()

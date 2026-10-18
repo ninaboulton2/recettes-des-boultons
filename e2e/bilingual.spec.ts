@@ -3,6 +3,7 @@ import { e2eName, storageStatePath } from './support/accounts'
 import { gotoApp, isMobile } from './support/app'
 import {
   createE2eBilingualRecipe,
+  markOthersTranslated,
   restoreTranslations,
   signedInClient,
   snapshotTranslations
@@ -159,6 +160,9 @@ test.describe('traducteur IA', () => {
     // Les deux langues ont été enregistrées en base.
     const { client } = await signedInClient('admin')
     const { data: recipes } = await client.from('recipes').select('id, lang, recipe_translations(locale, title, stale)').eq('title', title)
+    // La recette simulée ressemble à celle des autres parcours du traducteur (mêmes ingrédients) :
+    // on la supprime tout de suite pour ne pas déclencher leur avertissement « doublon ».
+    await client.from('recipes').delete().eq('title', title)
     await client.auth.signOut({ scope: 'local' })
     expect(recipes).toHaveLength(1)
     expect(recipes![0]).toMatchObject({ lang: 'fr', recipe_translations: [{ locale: 'en', title: `[EN] ${title}`, stale: false }] })
@@ -179,7 +183,7 @@ test.describe('traducteur IA', () => {
 })
 
 test.describe('page Traductions (rattrapage des recettes existantes)', () => {
-  test.describe.configure({ timeout: 480_000 })
+  test.describe.configure({ timeout: 120_000 })
 
   test('(g) traduit les recettes sans traduction, avec progression et coût', async ({ page }, testInfo) => {
     test.skip(isMobile(page), 'même page et mêmes données que sur desktop : exécuté une seule fois')
@@ -193,17 +197,19 @@ test.describe('page Traductions (rattrapage des recettes existantes)', () => {
     ]
 
     try {
+      // Les autres recettes de la base sont marquées traduites (sans IA) : seules les 2 recettes de test restent à faire.
+      await markOthersTranslated(client, snapshot, ids)
       await gotoApp(page, '/traductions')
       await expect(page.getByRole('heading', { level: 1, name: 'Traductions des recettes' })).toBeVisible()
       const missing = page.getByTestId('translations-count-missing')
-      await expect(missing).not.toHaveText('0')
+      await expect(missing).toHaveText('2')
       await expect(page.getByTestId('translations-costs')).toContainText('Dépensé jusqu\'ici')
 
       await page.getByTestId('translations-start').click()
       await expect(page.getByTestId('translations-stop')).toBeVisible()
       // Progression visible pendant le traitement, puis plus rien à traduire.
       await expect(page.getByRole('status').filter({ hasText: 'traitée(s) sur cette exécution' }).first()).toBeVisible()
-      await expect(page.getByTestId('translations-done')).toBeVisible({ timeout: 420_000 })
+      await expect(page.getByTestId('translations-done')).toBeVisible({ timeout: 60_000 })
       await expect(missing).toHaveText('0')
       await expect(page.getByTestId('translations-count-stale')).toHaveText('0')
       await expect(page.getByTestId('translations-start')).toBeDisabled()

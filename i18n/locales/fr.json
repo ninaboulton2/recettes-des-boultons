@@ -330,7 +330,7 @@
       }
     },
     "language": {
-      "translated": "Traduit automatiquement depuis le {lang}.",
+      "translated": "Traduit automatiquement (texte d'origine en {lang}).",
       "original": "Texte d'origine ({lang}) : pas encore traduit.",
       "fr": "français",
       "en": "anglais"

@@ -193,3 +193,19 @@ export async function restoreTranslations(admin: SupabaseClient, snapshot: Trans
     }
   }
 }
+
+/**
+ * Marque comme déjà traduites (ligne factice, sans appel IA ni quota) toutes les
+ * recettes de la base SAUF `except` : la page « Traductions » n'a alors à traiter
+ * que les recettes de test, au lieu des ~180 vraies recettes du snapshot local
+ * (qui consommeraient le quota IA du jour). `restoreTranslations` retire ces lignes.
+ */
+export async function markOthersTranslated(admin: SupabaseClient, snapshot: TranslationsSnapshot, except: string[]): Promise<void> {
+  const pending = [...snapshot.langs.keys()].filter(id => !snapshot.translated.has(id) && !except.includes(id))
+  for (let index = 0; index < pending.length; index += 100) {
+    const rows = pending.slice(index, index + 100).map(recipe_id => ({
+      recipe_id, locale: 'en', title: 'e2e', source_hash: 'e2e', model: 'e2e', stale: false
+    }))
+    check(await admin.from('recipe_translations').insert(rows), 'Traductions factices')
+  }
+}
