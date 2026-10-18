@@ -92,7 +92,9 @@ const unitItems = computed<UnitItem[]>(() => {
   const items: UnitItem[] = [{ label: t('editor.ingredient.unitNone'), value: NO_UNIT }]
   for (const unit of units.value ?? []) {
     const longLabel = locale.value === 'en' ? unit.label_en : unit.label_fr
-    items.push({ label: unit.abbr === longLabel ? unit.abbr : `${unit.abbr} — ${longLabel}`, value: unit.abbr })
+    // La valeur enregistrée reste l'abréviation française (`unit`) ; seul le libellé suit la langue de l'interface.
+    const shortLabel = locale.value === 'en' ? unit.abbr_en : unit.abbr
+    items.push({ label: shortLabel === longLabel ? shortLabel : `${shortLabel} — ${longLabel}`, value: unit.abbr })
   }
   // Unité saisie librement (ou héritée) absente du référentiel : on l'affiche telle quelle.
   const current = props.ingredient.unit.trim()

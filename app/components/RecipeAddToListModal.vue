@@ -87,13 +87,14 @@ import { formatIngredient, sectionsWithIngredients } from '#shared/utils/recipes
 const props = defineProps<{ recipe: RecipeSummary | Recipe }>()
 const open = defineModel<boolean>('open', { default: false })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { toUserMessage } = useApiError()
 const localePath = useLocalePath()
 const supabase = useSupabaseClient<Database>()
 const shoppingStore = useShoppingStore()
 const { $toast } = useNuxtApp()
 const numberLocale = useNumberLocale()
+const { localizeFull } = useRecipeLocale()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -116,7 +117,8 @@ const toggleSection = (id: string, checked: boolean) => {
 const loadSections = async (): Promise<RecipeSection[]> => {
   if ('sections' in props.recipe) return props.recipe.sections
   const full = await fetchRecipeById(supabase, props.recipe.id)
-  return full?.sections ?? []
+  // Noms d'ingrédients dans la langue de l'interface (traduction si elle existe).
+  return full ? localizeFull(full).sections : []
 }
 
 watch(open, async (isOpen) => {
@@ -144,7 +146,9 @@ const submit = async () => {
     const count = await shoppingStore.addRecipeToList(
       selectedListId.value,
       props.recipe.id,
-      allSelected ? undefined : [...selectedSectionIds.value]
+      allSelected ? undefined : [...selectedSectionIds.value],
+      undefined,
+      locale.value === 'en' ? 'en' : 'fr'
     )
     $toast.success(t('ui.addToList.success'), t('ui.addToList.added', { count }, count))
     open.value = false

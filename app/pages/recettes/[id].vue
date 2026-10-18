@@ -21,7 +21,7 @@
       :retry-text="$t('recipes.loadError.retry')"
     />
 
-    <article v-else-if="recipe" id="recipe-sheet" class="mx-auto max-w-4xl space-y-8">
+    <article v-else-if="recipe" id="recipe-sheet" :lang="recipe.displayLang" class="mx-auto max-w-4xl space-y-8">
       <RecipeHero
         :recipe="recipe"
         :servings="scaler.servings.value"
@@ -30,6 +30,12 @@
         :is-scaled="scaler.isScaled.value"
         @update:servings="scaler.setServings"
       />
+
+      <!-- Langue du texte affiché : traduction automatique, ou texte d'origine faute de traduction. -->
+      <p v-if="languageHint" class="-mt-5 flex items-center gap-1.5 text-xs text-muted print:hidden" data-testid="recipe-language-hint">
+        <UIcon name="i-lucide-languages" class="size-3.5" aria-hidden="true" />
+        {{ languageHint }}
+      </p>
 
       <RecipeActions
         :recipe="recipe"
@@ -121,7 +127,21 @@ const recipeId = computed(() => {
 })
 
 // Fiche : une requête ciblée (recette + sections imbriquées), rendue côté serveur
-const { data: recipe, status, error, refresh } = await useRecipe(recipeId)
+const { data: sourceRecipe, status, error, refresh } = await useRecipe(recipeId)
+
+// Texte dans la langue de l'interface (traduction si elle existe, sinon texte d'origine).
+// L'éditeur, lui, reçoit toujours la version d'origine (`sourceRecipe`).
+const { lang, localizeFull } = useRecipeLocale()
+const recipe = computed(() => (sourceRecipe.value ? localizeFull(sourceRecipe.value) : null))
+
+// Discret : dit d'où vient le texte quand ce n'est pas du texte écrit dans la langue de l'interface.
+const languageHint = computed(() => {
+  const shown = recipe.value
+  if (!shown) return null
+  if (shown.displayLang !== lang.value) return t('recipeDetail.language.original', { lang: t(`recipeDetail.language.${shown.displayLang}`) })
+  if (shown.displayLang !== shown.lang) return t('recipeDetail.language.translated', { lang: t(`recipeDetail.language.${shown.lang}`) })
+  return null
+})
 
 const ingredientSections = computed(() => sectionsWithIngredients(recipe.value?.sections ?? []))
 const instructionSections = computed(() => sectionsWithInstructions(recipe.value?.sections ?? []))
@@ -140,7 +160,7 @@ const goBack = () => {
 const showRecipeEditor = ref(false)
 const editingRecipe = ref<Recipe | null>(null)
 const openEditor = () => {
-  editingRecipe.value = recipe.value
+  editingRecipe.value = sourceRecipe.value
   showRecipeEditor.value = true
 }
 const closeRecipeEditor = () => {

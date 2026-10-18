@@ -38,7 +38,8 @@
       "login": "Sign in",
       "logout": "Sign out",
       "account": "My account",
-      "translator": "AI translator"
+      "translator": "AI translator",
+      "translations": "Translations"
     },
     "card": {
       "favoriteAdd": "Add to favorites",
@@ -327,6 +328,12 @@
         "stay": "Stay",
         "confirm": "Leave"
       }
+    },
+    "language": {
+      "translated": "Automatically translated from {lang}.",
+      "original": "Original text ({lang}): not translated yet.",
+      "fr": "French",
+      "en": "English"
     }
   },
   "editor": {
@@ -411,7 +418,15 @@
       "created": "Recipe created",
       "updated": "Recipe updated",
       "error": "Could not save",
-      "photoError": "The photo could not be uploaded; the recipe was saved without it."
+      "photoError": "The photo could not be uploaded; the recipe was saved without it.",
+      "translationFailed": "Recipe saved, but its translation could not be updated",
+      "translationFailedHint": "It will be picked up from the Translations page."
+    },
+    "language": {
+      "title": "You are editing the original version ({lang})",
+      "description": "The {other} version will be regenerated automatically by the AI when you save, if the text changes.",
+      "fr": "French",
+      "en": "English"
     }
   },
   "favorites": {
@@ -725,14 +740,9 @@
   },
   "translator": {
     "title": "Add a recipe with AI",
-    "subtitle": "Paste the raw text of a recipe (website, document, message — in English or French), import a file or a photo, or dictate it: AI structures it into sections, ingredients and steps. You review the preview before adding it.",
+    "subtitle": "Paste the raw text of a recipe (website, document, message — in French or English), import a file or a photo, or dictate it: the AI detects the language, structures it into sections, ingredients and steps, and saves it in both languages. You check the preview before adding it.",
     "back": "Back",
     "form": {
-      "language": "Language of the structured recipe",
-      "languages": {
-        "fr": "French",
-        "en": "English"
-      },
       "text": "Recipe text",
       "placeholder": "Paste the recipe text here (title, ingredients, steps)…",
       "hint": "Between 20 and 20,000 characters. Sub-sections (\"For the dough:\") are kept; cups, oz and °F are converted when safe.",
@@ -765,7 +775,14 @@
         "newTab": "opens in a new tab",
         "byIngredients": "very similar ingredients",
         "byBoth": "similar title and ingredients"
-      }
+      },
+      "versions": "Version shown:",
+      "languages": {
+        "fr": "Français",
+        "en": "English"
+      },
+      "detected": "Original language detected: {lang}.",
+      "bothSaved": "Both versions will be saved."
     },
     "success": {
       "title": "Recipe \"{title}\" added",
@@ -857,5 +874,43 @@
       "checked": "Checked",
       "toBuy": "To buy"
     }
+  },
+  "translationsAdmin": {
+    "title": "Recipe translations",
+    "subtitle": "Every recipe exists in French and English: the original text and its AI translation. Recipes you create or edit are translated automatically; this page translates the ones that are not translated yet.",
+    "back": "Back",
+    "counts": {
+      "total": "Recipes",
+      "translated": "Translated",
+      "stale": "Needs updating",
+      "missing": "Not translated"
+    },
+    "progress": "{done} recipe(s) processed in this run",
+    "start": "Translate the missing recipes",
+    "resume": "Resume",
+    "stop": "Stop",
+    "running": "Translating",
+    "stopping": "Stopping after the current recipe…",
+    "nothing": "All recipes are translated.",
+    "finished": "Done: all recipes are translated.",
+    "stopped": "Stopped.",
+    "costs": {
+      "title": "Cost",
+      "spent": "Spent so far: ≈ ${cost} ({calls} call(s), {failed} failed)",
+      "remaining": "Left to translate: ≈ ${cost} (${average} per recipe on average)",
+      "model": "Model: {model} ({provider})",
+      "quota": "Limit of {quota} AI call(s) per day and per person (AI_DAILY_QUOTA variable). Beyond it the run stops: resume tomorrow or raise the limit."
+    },
+    "errors": {
+      "load": "Could not load the translation status.",
+      "stopped": "Run stopped: {message}",
+      "failedRecipes": "Failed recipes (skipped for this run):"
+    },
+    "log": {
+      "translated": "Translated ({lang})",
+      "unchanged": "Already up to date",
+      "failed": "Failed: {message}"
+    },
+    "retry": "Retry"
   }
 }

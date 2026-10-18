@@ -1,5 +1,6 @@
-import type { Recipe, RecipeInput } from '#shared/types'
-import type { AiTargetLanguage, TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
+import type { Recipe, RecipeInput, RecipeLang } from '#shared/types'
+import type { TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
+import { translatedInput, type TranslationDraft } from '#shared/utils/translation'
 import type { SimilarRecipesResponse } from '#shared/schemas/similar'
 import type { SimilarRecipe } from '#shared/utils/similarRecipes'
 import {
@@ -16,9 +17,13 @@ import type { RecordedAudio } from '~/composables/useAudioRecorder'
 
 /**
  * État et actions de la page /traducteur :
- *  1. `translate()` : texte collé → `POST /api/translate-recipe` → aperçu (`preview`, un `RecipeInput`) ;
- *  2. `addToRecipes()` : aperçu → `useRecipesStore().addRecipe()` → recette créée (`added`) ;
- *     l'aperçu est déjà un `RecipeInput` (schéma Zod) : il part tel quel ;
+ *  1. `translate()` : texte collé → `POST /api/translate-recipe` → aperçu (`preview`, un `RecipeInput`
+ *     dans la langue d'origine détectée `lang`, et `translation`, la même recette dans l'autre langue) ;
+ *     il n'y a plus de langue cible à choisir (0016) ;
+ *  1b. l'aperçu s'affiche dans la langue de l'interface (`previewLang`, modifiable : `showLang()`),
+ *     `previewRecipe` est la version affichée ;
+ *  2. `addToRecipes()` : aperçu → `useRecipesStore().addRecipe()` → recette créée (`added`) avec ses
+ *     deux langues ; l'aperçu est déjà un `RecipeInput` (schéma Zod) : il part tel quel ;
  *  3. `editText()` / `reset()` pour revenir en arrière.
  *
  * Entrées média (phase 5) :
@@ -55,12 +60,18 @@ export function useTranslator() {
   const { toUserMessage, apiErrorFromResponse, isApiError } = useApiError()
 
   const recipeText = ref('')
-  /** Langue cible proposée : celle de l'interface. */
-  const defaultLanguage = (): AiTargetLanguage => (locale.value === 'en' ? 'en' : 'fr')
-  const targetLanguage = ref<AiTargetLanguage>(defaultLanguage())
+  /** Langue de l'interface : version montrée en premier dans l'aperçu. */
+  const uiLanguage = (): RecipeLang => (locale.value === 'en' ? 'en' : 'fr')
   const isTranslating = ref(false)
   const isAdding = ref(false)
+  /** Recette dans sa langue d'origine (celle qui sera enregistrée comme texte source). */
   const preview = ref<RecipeInput | null>(null)
+  /** Langue d'origine détectée par l'IA. */
+  const lang = ref<RecipeLang>('fr')
+  /** La même recette dans l'autre langue. */
+  const translation = ref<TranslationDraft | null>(null)
+  /** Version affichée dans l'aperçu. */
+  const previewLang = ref<RecipeLang>(uiLanguage())
   const usage = ref<TranslateUsageInfo | null>(null)
   const added = ref<Recipe | null>(null)
   const error = ref<string | null>(null)
@@ -83,6 +94,17 @@ export function useTranslator() {
     if (preview.value) return 'preview'
     return 'input'
   })
+
+  /** La recette de l'aperçu dans `previewLang` (l'original, ou sa traduction). */
+  const previewRecipe = computed<RecipeInput | null>(() => {
+    if (!preview.value) return null
+    if (previewLang.value === lang.value || !translation.value) return preview.value
+    return translatedInput(preview.value, translation.value) ?? preview.value
+  })
+
+  function showLang(next: RecipeLang): void {
+    previewLang.value = next
+  }
 
   const textLength = computed(() => recipeText.value.trim().length)
   const hasFiles = computed(() => pendingFiles.value.length > 0)
@@ -228,14 +250,13 @@ export function useTranslator() {
     return apiFetch('/api/translate-recipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipeText: recipeText.value.trim(), targetLanguage: targetLanguage.value })
+      body: JSON.stringify({ recipeText: recipeText.value.trim() })
     })
   }
 
   function postFiles(): Promise<Response> {
     const form = new FormData()
     for (const file of pendingFiles.value) form.append('files', file, file.name)
-    form.append('targetLanguage', targetLanguage.value)
     return apiFetch('/api/extract-recipe', { method: 'POST', body: form })
   }
 
@@ -269,6 +290,9 @@ export function useTranslator() {
       // Avant d'afficher l'aperçu : l'avertissement n'apparaît pas après coup.
       await findSimilar(data.recipe)
       preview.value = data.recipe
+      lang.value = data.lang
+      translation.value = data.translation
+      previewLang.value = uiLanguage()
       usage.value = data.usage
     } catch (err: unknown) {
       error.value = describeError(err)
@@ -282,7 +306,7 @@ export function useTranslator() {
     isAdding.value = true
     error.value = null
     try {
-      added.value = await recipesStore.addRecipe(preview.value)
+      added.value = await recipesStore.addRecipe(preview.value, translation.value ? { lang: lang.value, translation: translation.value } : undefined)
     } catch (err: unknown) {
       error.value = describeError(err)
     } finally {
@@ -295,6 +319,7 @@ export function useTranslator() {
     similarRun++
     similar.value = []
     preview.value = null
+    translation.value = null
     usage.value = null
     error.value = null
   }
@@ -306,7 +331,7 @@ export function useTranslator() {
     pendingFiles.value = []
     mediaError.value = null
     mediaStatus.value = ''
-    targetLanguage.value = defaultLanguage()
+    translation.value = null
     preview.value = null
     usage.value = null
     added.value = null
@@ -315,7 +340,11 @@ export function useTranslator() {
 
   return {
     recipeText,
-    targetLanguage,
+    lang,
+    translation,
+    previewLang,
+    previewRecipe,
+    showLang,
     isTranslating,
     isAdding,
     preview,

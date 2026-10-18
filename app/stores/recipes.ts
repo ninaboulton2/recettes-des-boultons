@@ -3,12 +3,22 @@ import { ref } from 'vue'
 import { apiFetch } from '~/composables/useApi'
 import { apiErrorFromResponse, translateKey } from '~/composables/useApiError'
 import { useRecipePhoto } from '~/composables/useRecipePhoto'
-import type { Recipe, RecipeInput } from '#shared/types'
+import type { Recipe, RecipeInput, RecipeLang } from '#shared/types'
+import type { TranslationDraft } from '#shared/utils/translation'
+import type { TranslationResult } from '#shared/schemas/translation'
 
 interface RecipeMutationResponse {
   success: boolean
   recipe: Recipe
+  /** Traduction de la recette (0016) : fournie, générée, inchangée ou échouée. */
+  translation?: TranslationResult
   message?: string
+}
+
+/** Langue d'origine et traduction livrées par le traducteur IA avec la recette. */
+export interface RecipeTranslationInput {
+  lang: RecipeLang
+  translation: TranslationDraft
 }
 
 interface DeleteResponse {
@@ -32,6 +42,12 @@ export const useRecipesStore = defineStore('recipes', () => {
   const selectedTags = ref<string[]>([])
   const isLoading = ref(false)
 
+  /**
+   * Résultat de la traduction de la dernière écriture (0016) : l'éditeur et le
+   * traducteur préviennent quand l'enregistrement a réussi mais pas la traduction.
+   */
+  const lastTranslation = ref<TranslationResult | null>(null)
+
   /** Incrémenté à chaque écriture ; observé par les lectures (`useAsyncData`). */
   const revision = ref(0)
 
@@ -41,7 +57,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   }
 
   // Actions
-  const addRecipe = async (recipe: RecipeInput) => {
+  const addRecipe = async (recipe: RecipeInput, translation?: RecipeTranslationInput) => {
     try {
       isLoading.value = true
 
@@ -56,7 +72,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ recipe })
+        body: JSON.stringify({ recipe, ...(translation ?? {}) })
       })
 
       if (!response.ok) {
@@ -66,6 +82,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       const result = (await response.json()) as RecipeMutationResponse
 
       if (result.success) {
+        lastTranslation.value = result.translation ?? null
         refresh()
 
         return result.recipe
@@ -100,6 +117,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       const result = (await response.json()) as RecipeMutationResponse
 
       if (result.success) {
+        lastTranslation.value = result.translation ?? null
         refresh()
 
         return result.recipe
@@ -182,6 +200,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     selectedTags,
     isLoading,
     revision,
+    lastTranslation,
 
     // Actions
     addRecipe,

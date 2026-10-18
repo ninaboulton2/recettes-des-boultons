@@ -41,7 +41,8 @@ import type { Favorite, RecipeSummary } from '#shared/types'
 
 type FavoriteWithRecipe = Favorite & { recipe: RecipeSummary }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const { localizeCard } = useRecipeLocale()
 const localePath = useLocalePath()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
@@ -60,7 +61,7 @@ const { status, error, refresh } = await useAsyncData(
 const favoritesWithRecipes = computed(() =>
   favoritesStore.favorites
     .filter((favorite): favorite is FavoriteWithRecipe => favorite.recipe !== null)
-    .sort((a, b) => a.recipe.title.localeCompare(b.recipe.title, 'fr', { sensitivity: 'base' }))
+    .sort((a, b) => localizeCard(a.recipe).title.localeCompare(localizeCard(b.recipe).title, locale.value, { sensitivity: 'base' }))
 )
 const favoriteRecipes = computed(() => favoritesWithRecipes.value.map(favorite => favorite.recipe))
 

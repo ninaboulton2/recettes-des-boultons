@@ -75,7 +75,7 @@
                   <UIcon v-else :name="categoryIcon(recipe.category)" class="size-5 text-dimmed" aria-hidden="true" />
                 </span>
                 <span class="min-w-0 flex-1">
-                  <span class="block truncate text-sm font-medium text-highlighted">{{ recipe.title }}</span>
+                  <span class="block truncate text-sm font-medium text-highlighted">{{ localizeCard(recipe).title }}</span>
                   <span class="block truncate text-xs text-muted">
                     {{ categoryName(recipe.category) }}<template v-if="totalTime(recipe) !== null"> · {{ $t('ui.card.minutes', { n: totalTime(recipe) }) }}</template>
                   </span>
@@ -118,6 +118,8 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import type { MealType, RecipeSummary } from '#shared/types'
 import { totalTime } from '#shared/utils/recipes'
 import type { PlanningDay } from '~/composables/usePlanningWeek'
+
+const { localizeCard } = useRecipeLocale()
 
 /**
  * Ajout d'un repas à un créneau : recette existante (recherche paginée via

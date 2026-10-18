@@ -8,6 +8,17 @@
     @submit="onSubmit"
     @error="onError"
   >
+    <!-- Langue éditée : le texte d'origine ; la traduction est régénérée à l'enregistrement (0016). -->
+    <UAlert
+      v-if="recipe"
+      data-testid="editor-language"
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-languages"
+      :title="$t('editor.language.title', { lang: $t(`editor.language.${recipe.lang}`) })"
+      :description="$t('editor.language.description', { other: $t(`editor.language.${recipe.lang === 'fr' ? 'en' : 'fr'}`) })"
+    />
+
     <!-- Informations générales -->
     <div class="grid gap-4 sm:grid-cols-2">
       <UFormField :label="$t('editor.fields.title')" name="title" required class="sm:col-span-2">
@@ -268,6 +279,11 @@ const onSubmit = async () => {
   if (saving.value) return
   saving.value = true
   const previousPath = props.recipe?.photoPath ?? null
+  // La traduction automatique peut échouer sans que l'enregistrement échoue (0016).
+  let translationFailed = false
+  const noteTranslation = () => {
+    if (recipesStore.lastTranslation?.status === 'failed') translationFailed = true
+  }
   try {
     let saved: Recipe
     if (props.recipe) {
@@ -275,15 +291,18 @@ const onSubmit = async () => {
       let photoPath = photoRemoved.value ? null : previousPath
       if (pendingPhoto.value) photoPath = await uploadPhoto(props.recipe.id, pendingPhoto.value)
       saved = await recipesStore.updateRecipe(props.recipe.id, toRecipeInput(photoPath))
+      noteTranslation()
       if (previousPath && previousPath !== photoPath) await removePhoto(previousPath).catch(() => undefined)
       toast.add({ title: t('editor.toasts.updated'), color: 'success', icon: 'i-lucide-check' })
     } else {
       // Création : la recette d'abord (pour son identifiant), puis la photo.
       saved = await recipesStore.addRecipe(toRecipeInput(null))
+      noteTranslation()
       if (pendingPhoto.value) {
         try {
           const photoPath = await uploadPhoto(saved.id, pendingPhoto.value)
           saved = await recipesStore.updateRecipe(saved.id, toRecipeInput(photoPath))
+          noteTranslation()
         } catch (photoError) {
           console.warn('[éditeur] photo non téléversée', photoError)
           toast.add({ title: t('editor.toasts.photoError'), color: 'warning', icon: 'i-lucide-image-off' })
@@ -295,6 +314,14 @@ const onSubmit = async () => {
     initialSnapshot.value = formSnapshot(state)
     pendingPhoto.value = null
     photoRemoved.value = false
+    if (translationFailed) {
+      toast.add({
+        title: t('editor.toasts.translationFailed'),
+        description: t('editor.toasts.translationFailedHint'),
+        color: 'warning',
+        icon: 'i-lucide-languages'
+      })
+    }
     emit('saved', saved)
   } catch (error) {
     toast.add({ title: t('editor.toasts.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })

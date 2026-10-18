@@ -38,7 +38,8 @@
       "login": "Connexion",
       "logout": "Déconnexion",
       "account": "Mon compte",
-      "translator": "Traducteur IA"
+      "translator": "Traducteur IA",
+      "translations": "Traductions"
     },
     "card": {
       "favoriteAdd": "Ajouter aux favoris",
@@ -327,6 +328,12 @@
         "stay": "Rester",
         "confirm": "Quitter"
       }
+    },
+    "language": {
+      "translated": "Traduit automatiquement depuis le {lang}.",
+      "original": "Texte d'origine ({lang}) : pas encore traduit.",
+      "fr": "français",
+      "en": "anglais"
     }
   },
   "editor": {
@@ -411,7 +418,15 @@
       "created": "Recette créée",
       "updated": "Recette modifiée",
       "error": "Enregistrement impossible",
-      "photoError": "La photo n’a pas pu être envoyée ; la recette a été enregistrée sans photo."
+      "photoError": "La photo n’a pas pu être envoyée ; la recette a été enregistrée sans photo.",
+      "translationFailed": "Recette enregistrée, mais sa traduction n'a pas pu être mise à jour",
+      "translationFailedHint": "Elle sera reprise depuis la page Traductions."
+    },
+    "language": {
+      "title": "Vous modifiez la version d'origine ({lang})",
+      "description": "La version en {other} sera régénérée automatiquement par l'IA à l'enregistrement si le texte change.",
+      "fr": "français",
+      "en": "anglais"
     }
   },
   "favorites": {
@@ -646,14 +661,9 @@
   },
   "translator": {
     "title": "Ajouter une recette par IA",
-    "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français), importez un fichier ou une photo, ou dictez-la : l'IA la structure en sections, ingrédients et étapes. Vous vérifiez l'aperçu avant de l'ajouter.",
+    "subtitle": "Collez le texte brut d'une recette (site, document, message — en anglais ou en français), importez un fichier ou une photo, ou dictez-la : l'IA détecte la langue, la structure en sections, ingrédients et étapes, et l'enregistre dans les deux langues. Vous vérifiez l'aperçu avant de l'ajouter.",
     "back": "Retour",
     "form": {
-      "language": "Langue de la recette structurée",
-      "languages": {
-        "fr": "Français",
-        "en": "Anglais"
-      },
       "text": "Texte de la recette",
       "placeholder": "Collez ici le texte de la recette (titre, ingrédients, étapes)…",
       "hint": "Entre 20 et 20 000 caractères. Les sous-sections (« Pour la pâte : ») sont conservées, les cups, oz et °F convertis quand c'est sûr.",
@@ -686,7 +696,14 @@
         "newTab": "s'ouvre dans un nouvel onglet",
         "byIngredients": "ingrédients très proches",
         "byBoth": "titre et ingrédients proches"
-      }
+      },
+      "versions": "Version affichée :",
+      "languages": {
+        "fr": "Français",
+        "en": "English"
+      },
+      "detected": "Langue d'origine détectée : {lang}.",
+      "bothSaved": "Les deux versions seront enregistrées."
     },
     "success": {
       "title": "Recette « {title} » ajoutée",
@@ -857,5 +874,43 @@
       "checked": "Coché",
       "toBuy": "À acheter"
     }
+  },
+  "translationsAdmin": {
+    "title": "Traductions des recettes",
+    "subtitle": "Chaque recette existe en français et en anglais : le texte d'origine, et sa traduction faite par l'IA. Les recettes créées ou modifiées sont traduites automatiquement ; cette page traduit celles qui ne le sont pas encore.",
+    "back": "Retour",
+    "counts": {
+      "total": "Recettes",
+      "translated": "Traduites",
+      "stale": "À mettre à jour",
+      "missing": "Sans traduction"
+    },
+    "progress": "{done} recette(s) traitée(s) sur cette exécution",
+    "start": "Traduire les recettes manquantes",
+    "resume": "Reprendre",
+    "stop": "Arrêter",
+    "running": "Traduction en cours",
+    "stopping": "Arrêt après la recette en cours…",
+    "nothing": "Toutes les recettes sont traduites.",
+    "finished": "Terminé : toutes les recettes sont traduites.",
+    "stopped": "Arrêté.",
+    "costs": {
+      "title": "Coût",
+      "spent": "Dépensé jusqu'ici : ≈ {cost} $ ({calls} appel(s), dont {failed} en échec)",
+      "remaining": "Reste à traduire : ≈ {cost} $ ({average} $ par recette en moyenne)",
+      "model": "Modèle : {model} ({provider})",
+      "quota": "Limite de {quota} appel(s) IA par jour et par personne (variable AI_DAILY_QUOTA). Au-delà, l'opération s'arrête : reprenez le lendemain ou augmentez la limite."
+    },
+    "errors": {
+      "load": "Impossible de charger l'état des traductions.",
+      "stopped": "Traitement arrêté : {message}",
+      "failedRecipes": "Recettes en échec (ignorées pour cette exécution) :"
+    },
+    "log": {
+      "translated": "Traduite ({lang})",
+      "unchanged": "Déjà à jour",
+      "failed": "Échec : {message}"
+    },
+    "retry": "Réessayer"
   }
 }

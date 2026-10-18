@@ -82,7 +82,8 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const { publicUrl } = useRecipePhoto()
 
-const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled')))
+const { lang } = useRecipeLocale()
+const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled'), lang.value))
 
 /** URL publique de la photo (bucket `recipe-photos`), `null` sans photo. */
 const photoUrl = computed(() => publicUrl(props.meal.recipe?.photoPath))

@@ -3,15 +3,6 @@
     <!-- Étape 1 : saisie -->
     <UCard v-if="step === 'input'">
       <form class="space-y-5" @submit.prevent="translate">
-        <UFormField :label="$t('translator.form.language')" name="targetLanguage">
-          <URadioGroup
-            v-model="targetLanguage"
-            orientation="horizontal"
-            :items="languageItems"
-            :disabled="isBusy"
-          />
-        </UFormField>
-
         <!-- Entrées alternatives au collage : fichier (PDF, photo, Word, texte) ou dictée -->
         <UFormField :label="$t('translator.files.title')" name="files">
           <TranslatorFileDrop
@@ -86,7 +77,7 @@
     </UCard>
 
     <!-- Étape 2 : aperçu avant ajout -->
-    <UCard v-else-if="step === 'preview' && preview">
+    <UCard v-else-if="step === 'preview' && preview && previewRecipe">
       <template #header>
         <div class="flex items-start gap-3">
           <UIcon name="i-lucide-eye" class="mt-0.5 size-5 shrink-0 text-primary" />
@@ -97,7 +88,29 @@
         </div>
       </template>
 
-      <TranslatorRecipePreview :recipe="preview" :usage="usage" :similar="similar" />
+      <!-- Les deux langues sont enregistrées : l'aperçu montre l'une ou l'autre. -->
+      <div v-if="translation" class="mb-5 space-y-2" data-testid="preview-languages">
+        <div role="group" :aria-label="$t('translator.preview.versions')" class="flex flex-wrap items-center gap-2">
+          <span class="text-sm text-muted">{{ $t('translator.preview.versions') }}</span>
+          <UButton
+            v-for="option in languageOptions"
+            :key="option.value"
+            size="sm"
+            :color="previewLang === option.value ? 'primary' : 'neutral'"
+            :variant="previewLang === option.value ? 'solid' : 'outline'"
+            :aria-pressed="previewLang === option.value"
+            :data-testid="`preview-lang-${option.value}`"
+            :label="option.label"
+            @click="showLang(option.value)"
+          />
+        </div>
+        <p class="text-xs text-muted">
+          {{ $t('translator.preview.detected', { lang: $t(`translator.preview.languages.${lang}`) }) }}
+          {{ $t('translator.preview.bothSaved') }}
+        </p>
+      </div>
+
+      <TranslatorRecipePreview :recipe="previewRecipe" :lang="previewLang" :usage="usage" :similar="similar" />
 
       <template #footer>
         <div class="space-y-3">
@@ -155,8 +168,6 @@
 </template>
 
 <script setup lang="ts">
-import type { AiTargetLanguage } from '#shared/schemas/ai'
-
 /**
  * Traducteur IA : collage du texte → aperçu structuré → ajout via le store.
  * Toute la logique est dans `useTranslator()` ; ce composant ne fait que
@@ -168,7 +179,11 @@ const toast = useToast()
 
 const {
   recipeText,
-  targetLanguage,
+  lang,
+  translation,
+  previewLang,
+  previewRecipe,
+  showLang,
   isTranslating,
   isAdding,
   isBusy,
@@ -194,8 +209,8 @@ const {
   reset
 } = useTranslator()
 
-const languageItems = computed(() =>
-  (['fr', 'en'] as AiTargetLanguage[]).map(value => ({ value, label: t(`translator.form.languages.${value}`) }))
+const languageOptions = computed(() =>
+  (['fr', 'en'] as const).map(value => ({ value, label: t(`translator.preview.languages.${value}`) }))
 )
 
 async function handleAdd(): Promise<void> {

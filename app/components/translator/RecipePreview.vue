@@ -29,8 +29,8 @@
     </UAlert>
 
     <!-- En-tête : titre, catégorie, temps, portions, tags -->
-    <div>
-      <h2 class="font-serif text-2xl text-highlighted">{{ recipe.title }}</h2>
+    <div :lang="lang">
+      <h2 class="font-serif text-2xl text-highlighted" data-testid="preview-title">{{ recipe.title }}</h2>
       <p v-if="recipe.description" class="mt-1 text-muted">{{ recipe.description }}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
         <UBadge color="primary" variant="subtle" icon="i-lucide-tag">{{ recipe.category }}</UBadge>
@@ -112,10 +112,13 @@ import type { SimilarRecipe } from '#shared/utils/similarRecipes'
  */
 const props = withDefaults(defineProps<{
   recipe: RecipeInput
+  /** Langue du texte montré (unités, attribut `lang`) ; défaut : langue de l'interface. */
+  lang?: 'fr' | 'en'
   usage?: TranslateUsageInfo | null
   /** Recettes déjà en base qui ressemblent à celle-ci (voir `useTranslator().similar`). */
   similar?: SimilarRecipe[]
 }>(), {
+  lang: undefined,
   usage: null,
   similar: () => []
 })
@@ -124,6 +127,8 @@ const localePath = useLocalePath()
 
 const { unitLabel } = useUnits()
 const numberLocale = useNumberLocale()
+const { lang: uiLang } = useRecipeLocale()
+const shownLang = computed(() => props.lang ?? uiLang.value)
 
 interface PreviewSection {
   name: string
@@ -154,7 +159,7 @@ function formatAmount(amount: RecipeIngredientInput['amount']): string {
 
 function formatQuantity(ingredient: RecipeIngredientInput): string {
   const amount = formatAmount(ingredient.amount)
-  const unit = unitLabel(ingredient.unitCode ?? null, ingredient.unit ?? null)
+  const unit = unitLabel(ingredient.unitCode ?? null, ingredient.unit ?? null, false, shownLang.value)
   return [amount, unit].filter(part => part !== '').join(' ')
 }
 </script>

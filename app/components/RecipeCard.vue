@@ -64,20 +64,20 @@
     </div>
 
     <div class="flex flex-1 flex-col gap-2 p-4">
-      <h3 class="line-clamp-2 font-serif text-lg font-semibold leading-snug text-highlighted" :title="recipe.title">
+      <h3 class="line-clamp-2 font-serif text-lg font-semibold leading-snug text-highlighted" :title="shown.title">
         <NuxtLink
           :to="localePath(`/recettes/${recipe.id}`)"
           class="after:absolute after:inset-0 after:rounded-xl focus:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
         >
-          {{ recipe.title }}
+          {{ shown.title }}
         </NuxtLink>
       </h3>
 
-      <p v-if="recipe.description" class="line-clamp-2 text-sm text-muted">
-        {{ recipe.description }}
+      <p v-if="shown.description" class="line-clamp-2 text-sm text-muted" :lang="shown.displayLang">
+        {{ shown.description }}
       </p>
 
-      <div v-if="recipe.tags.length > 0" class="flex flex-wrap gap-1">
+      <div v-if="shown.tags.length > 0" class="flex flex-wrap gap-1">
         <UBadge v-for="tag in visibleTags" :key="tag" color="neutral" variant="subtle" size="sm" :label="tag" />
         <UBadge v-if="hiddenTagCount > 0" color="neutral" variant="outline" size="sm" :label="`+${hiddenTagCount}`" />
       </div>
@@ -103,9 +103,9 @@
 
     </div>
 
-    <RecipeAddToListModal v-model:open="showShoppingModal" :recipe="recipe" />
+    <RecipeAddToListModal v-model:open="showShoppingModal" :recipe="shown" />
 
-    <PlanningModal :show="showPlanningModal" :recipe="recipe" @close="showPlanningModal = false" />
+    <PlanningModal :show="showPlanningModal" :recipe="shown" @close="showPlanningModal = false" />
   </article>
 </template>
 
@@ -140,14 +140,18 @@ const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 const { $toast } = useNuxtApp()
 const { categoryVisual } = useCategories()
+const { localizeCard } = useRecipeLocale()
 const { publicUrl } = useRecipePhoto()
+
+/** Titre, description, tags dans la langue de l'interface (repli sur le texte d'origine). */
+const shown = computed(() => localizeCard(props.recipe))
 
 const isFavorite = computed(() => favoritesStore.isFavorite(props.recipe.id))
 // Cœur : favoris chargés une seule fois par utilisateur (attendus en SSR).
 useFavoritesLoader()
 const duration = computed(() => totalTime(props.recipe))
-const visibleTags = computed(() => props.recipe.tags.slice(0, MAX_TAGS))
-const hiddenTagCount = computed(() => Math.max(0, props.recipe.tags.length - MAX_TAGS))
+const visibleTags = computed(() => shown.value.tags.slice(0, MAX_TAGS))
+const hiddenTagCount = computed(() => Math.max(0, shown.value.tags.length - MAX_TAGS))
 
 /** URL publique de la photo dans le bucket Storage `recipe-photos`. */
 const photoUrl = computed(() => publicUrl(props.recipe.photoPath))

@@ -95,3 +95,101 @@ export async function cleanupE2eData(): Promise<void> {
     await client.auth.signOut({ scope: 'local' })
   }
 }
+
+/**
+ * Crée une recette jetable `E2E_…` déjà bilingue (texte français + traduction
+ * anglaise « [EN] … », comme le fournisseur IA simulé) en une transaction
+ * (`save_recipe` avec `lang` et `translation`). `translated: false` : recette
+ * seule, sans traduction (comme les recettes existantes avant 0016).
+ */
+export async function createE2eBilingualRecipe(
+  admin: SupabaseClient,
+  title: string,
+  options: { translated?: boolean } = {}
+): Promise<string> {
+  const translated = options.translated ?? true
+  const translation = {
+    title: `[EN] ${title}`,
+    description: '[EN] A disposable marmalade recipe.',
+    notes: null,
+    tags: [],
+    source_hash: 'e2e',
+    model: 'e2e',
+    content: {
+      sections: [
+        {
+          name: '[EN] Pâte',
+          ingredients: [
+            { name: '[EN] farine', amount: null, unit: null },
+            { name: '[EN] huile', amount: null, unit: null },
+            { name: '[EN] sel', amount: '[EN] au goût', unit: null }
+          ],
+          instructions: []
+        },
+        { name: '[EN] Préparation', ingredients: [], instructions: ['[EN] Mélanger.', '[EN] Cuire.'] }
+      ]
+    }
+  }
+  const payload = {
+    title,
+    category: 'plats',
+    description: 'Une recette jetable de confiture.',
+    servings: 4,
+    tags: [],
+    lang: 'fr',
+    sections: [
+      {
+        name: 'Pâte',
+        type: 'ingredients',
+        order_index: 0,
+        ingredients: [
+          { name: 'farine', amount: '200', unit: 'g', order_index: 0 },
+          { name: 'huile', amount: '2', unit_code: 'cas', order_index: 1 },
+          { name: 'sel', amount: 'au goût', order_index: 2 }
+        ],
+        instructions: []
+      },
+      {
+        name: 'Préparation',
+        type: 'instructions',
+        order_index: 1,
+        ingredients: [],
+        instructions: [{ content: 'Mélanger.', order_index: 0 }, { content: 'Cuire.', order_index: 1 }]
+      }
+    ],
+    ...(translated ? { translation } : {})
+  }
+  return check(await admin.rpc('save_recipe', { payload }), 'Création de la recette bilingue E2E') as string
+}
+
+/** État des traductions avant un test qui en crée beaucoup (page « Traductions »). */
+export interface TranslationsSnapshot {
+  translated: Set<string>
+  langs: Map<string, string>
+}
+
+export async function snapshotTranslations(admin: SupabaseClient): Promise<TranslationsSnapshot> {
+  const translations = check(await admin.from('recipe_translations').select('recipe_id'), 'Lecture des traductions') as Array<{ recipe_id: string }>
+  const recipes = check(await admin.from('recipes').select('id, lang').range(0, 999), 'Lecture des langues') as Array<{ id: string, lang: string }>
+  return { translated: new Set(translations.map(row => row.recipe_id)), langs: new Map(recipes.map(row => [row.id, row.lang])) }
+}
+
+/**
+ * Remet les traductions et les langues dans l'état du `snapshot` : les tests de
+ * la page « Traductions » traduisent TOUTES les recettes de la base (avec le
+ * fournisseur simulé) ; la base locale (vraies recettes) n'en garde pas de trace.
+ */
+export async function restoreTranslations(admin: SupabaseClient, snapshot: TranslationsSnapshot): Promise<void> {
+  const rows = check(await admin.from('recipe_translations').select('recipe_id'), 'Lecture des traductions') as Array<{ recipe_id: string }>
+  const added = rows.map(row => row.recipe_id).filter(id => !snapshot.translated.has(id))
+  for (let index = 0; index < added.length; index += 50) {
+    check(await admin.from('recipe_translations').delete().in('recipe_id', added.slice(index, index + 50)), 'Suppression des traductions de test')
+  }
+  const recipes = check(await admin.from('recipes').select('id, lang').range(0, 999), 'Lecture des langues') as Array<{ id: string, lang: string }>
+  for (const lang of ['fr', 'en']) {
+    const changed = recipes.filter(recipe => snapshot.langs.has(recipe.id) && recipe.lang !== snapshot.langs.get(recipe.id) && snapshot.langs.get(recipe.id) === lang).map(recipe => recipe.id)
+    for (let index = 0; index < changed.length; index += 50) {
+      check(await admin.from('recipes').update({ lang }).in('id', changed.slice(index, index + 50)), 'Restauration des langues')
+    }
+  }
+}

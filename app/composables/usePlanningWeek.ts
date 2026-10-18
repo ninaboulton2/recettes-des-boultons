@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
-import type { DayMeals, MealType, PlanningMeal } from '#shared/types'
+import type { DayMeals, MealType, PlanningMeal, RecipeLang, RecipeSummary } from '#shared/types'
+import { localizeSummary } from '#shared/utils/translation'
 import type { NoteType } from '#shared/schemas/planning'
 import { toUserMessage } from '~/composables/useApiError'
 import { fromDateString, isSameDay, shiftWeeks, startOfWeek, toDateString, weekDates } from '~/utils/week'
@@ -13,8 +14,8 @@ export interface PlanningDay {
 }
 
 /** Titre affiché d'un repas : recette ou intitulé personnalisé. */
-export function mealTitle(meal: PlanningMeal, fallback = ''): string {
-  return meal.recipe?.title ?? meal.customTitle ?? fallback
+export function mealTitle(meal: PlanningMeal, fallback = '', lang: RecipeLang = 'fr'): string {
+  return meal.recipe ? localizeSummary(meal.recipe, lang).title : (meal.customTitle ?? fallback)
 }
 
 /**
@@ -26,6 +27,8 @@ export function usePlanningWeek(initialDate: Date = new Date()) {
   const store = usePlanningStore()
   const toast = useToast()
   const { t, locale } = useI18n()
+  /** Langue d'affichage des recettes = langue de l'interface. */
+  const lang = (): RecipeLang => (locale.value === 'en' ? 'en' : 'fr')
 
   const currentWeek = ref<Date>(startOfWeek(initialDate))
   /** Clé stable de la semaine affichée (lundi `YYYY-MM-DD`). */
@@ -89,10 +92,10 @@ export function usePlanningWeek(initialDate: Date = new Date()) {
     }
   }
 
-  const addRecipe = (dateString: string, mealType: MealType, recipe: { id: string, title: string }) =>
+  const addRecipe = (dateString: string, mealType: MealType, recipe: { id: string, title: string } & Partial<RecipeSummary>) =>
     run(() => store.addMeal(dateString, mealType, recipe), {
       title: t('planning.toast.added'),
-      description: t('planning.toast.addedDescription', { title: recipe.title, date: longDateString(dateString), slot: slotLabel(mealType) })
+      description: t('planning.toast.addedDescription', { title: recipe.lang ? localizeSummary(recipe as RecipeSummary, lang()).title : recipe.title, date: longDateString(dateString), slot: slotLabel(mealType) })
     })
 
   const addCustom = (dateString: string, mealType: MealType, title: string) =>
@@ -102,12 +105,12 @@ export function usePlanningWeek(initialDate: Date = new Date()) {
     })
 
   const remove = (meal: PlanningMeal) =>
-    run(() => store.removeMeal(meal.id), { title: t('planning.toast.removed'), description: mealTitle(meal) })
+    run(() => store.removeMeal(meal.id), { title: t('planning.toast.removed'), description: mealTitle(meal, '', lang()) })
 
   const move = (meal: PlanningMeal, toDate: string, toMealType: MealType) =>
     run(() => store.moveMeal(meal.id, toDate, toMealType), {
       title: t('planning.toast.moved'),
-      description: t('planning.toast.addedDescription', { title: mealTitle(meal), date: longDateString(toDate), slot: slotLabel(toMealType) })
+      description: t('planning.toast.addedDescription', { title: mealTitle(meal, '', lang()), date: longDateString(toDate), slot: slotLabel(toMealType) })
     })
 
   const saveNote = (dateString: string, noteType: NoteType, content: string | null) =>

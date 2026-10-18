@@ -114,7 +114,7 @@ const open = defineModel<boolean>('open', { default: false })
 
 const shoppingStore = useShoppingStore()
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { toUserMessage } = useApiError()
 const { ingredientLabel } = useIngredientLabel()
 
@@ -178,7 +178,7 @@ const submit = async () => {
   }
   submitting.value = true
   try {
-    const count = await shoppingStore.addRecipeToList(listId, props.recipe.id, selected.value, props.factor)
+    const count = await shoppingStore.addRecipeToList(listId, props.recipe.id, selected.value, props.factor, locale.value === 'en' ? 'en' : 'fr')
     const listName = shoppingStore.shoppingLists.find(list => list.id === listId)?.name ?? ''
     toast.add({
       title: t('recipeDetail.shopping.success', { count, list: listName }, count),

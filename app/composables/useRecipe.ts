@@ -6,13 +6,15 @@ import { formatScaledAmount, toRecipe } from '#shared/utils/recipes'
 
 /**
  * Charge une recette complète (ligne `recipes` + sections imbriquées avec
- * ingrédients et instructions) en une seule requête PostgREST, triée par
- * `order_index`. `null` si la recette n'existe pas.
+ * ingrédients et instructions, langue source et traduction) en une seule
+ * requête PostgREST, triée par `order_index`. `null` si la recette n'existe pas.
+ * La recette est renvoyée dans sa langue d'origine : l'affichage choisit la
+ * langue avec `useRecipeLocale().localizeFull`, l'éditeur reçoit l'original.
  */
 export async function fetchRecipeById(supabase: SupabaseClient<Database>, id: string): Promise<Recipe | null> {
   const { data, error } = await supabase
     .from('recipes')
-    .select('id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at, recipe_sections(*, recipe_ingredients(*), instructions(*))')
+    .select('id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at, lang, recipe_translations(*), recipe_sections(*, recipe_ingredients(*), instructions(*))')
     .eq('id', id)
     .order('order_index', { referencedTable: 'recipe_sections' })
     .maybeSingle()

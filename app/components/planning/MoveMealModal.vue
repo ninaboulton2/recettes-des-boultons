@@ -2,7 +2,7 @@
   <UModal
     :open="open"
     :title="$t('planning.move.title')"
-    :description="meal ? $t('planning.move.description', { title: mealTitle(meal, $t('planning.meal.untitled')) }) : undefined"
+    :description="meal ? $t('planning.move.description', { title: mealTitle(meal, $t('planning.meal.untitled'), lang) }) : undefined"
     @update:open="value => !value && emit('close')"
   >
     <template #body>
@@ -32,6 +32,8 @@
 import { computed, ref, watch } from 'vue'
 import type { MealType, PlanningMeal } from '#shared/types'
 import { mealTitle, type PlanningDay } from '~/composables/usePlanningWeek'
+
+const { lang } = useRecipeLocale()
 
 /** Repli accessible du glisser-déposer : choix du jour et du créneau cibles. */
 const props = defineProps<{

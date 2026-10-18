@@ -105,7 +105,7 @@
       :open="removeModal.open"
       :title="$t('planning.remove.title')"
       :description="removeModal.meal ? $t('planning.remove.message', {
-        title: mealTitle(removeModal.meal, $t('planning.meal.untitled')),
+        title: mealTitle(removeModal.meal, $t('planning.meal.untitled'), recipeLang),
         date: week.longDateString(removeModal.meal.dateString),
         slot: week.slotLabel(removeModal.meal.mealType)
       }) : undefined"
@@ -127,6 +127,8 @@ import type { MealType, PlanningMeal, RecipeSummary } from '#shared/types'
 import type { NoteType } from '#shared/schemas/planning'
 import { mealTitle, usePlanningWeek } from '~/composables/usePlanningWeek'
 import { fromDateString, toDateString } from '~/utils/week'
+
+const { lang: recipeLang } = useRecipeLocale()
 
 const authStore = useAuthStore()
 const route = useRoute()

@@ -51,7 +51,7 @@ const { units } = useUnits()
 const items = computed<UnitOption[]>(() => {
   const known: UnitOption[] = (units.value ?? []).map(unit => ({
     value: unit.code,
-    label: `${unit.abbr} — ${locale.value === 'en' ? unit.label_en : unit.label_fr}`
+    label: `${locale.value === 'en' ? unit.abbr_en : unit.abbr} — ${locale.value === 'en' ? unit.label_en : unit.label_fr}`
   }))
   const current = props.modelValue ?? ''
   const extra = current !== '' && !known.some(item => item.value === current)

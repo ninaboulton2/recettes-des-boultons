@@ -299,15 +299,18 @@ export const useShoppingStore = defineStore('shopping', () => {
    * Ajoute les ingrédients d'une recette à une liste en un seul appel
    * (`POST /api/shopping-lists/:id/recipes` → RPC `add_recipe_to_list`) :
    * fusion des doublons en base, quantités × `servingsFactor` (ex. 6 / recipe.servings),
-   * `sectionIds` pour limiter l'ajout à certaines sections. Renvoie le nombre d'articles touchés.
+   * `sectionIds` pour limiter l'ajout à certaines sections, `locale` pour les noms dans la langue de
+   * l'interface (traduction de la recette, si elle existe). Renvoie le nombre d'articles touchés.
    */
-  const addRecipeToList = async (listId: string, recipeId: string, sectionIds?: string[], servingsFactor?: number): Promise<number> => {
+  const addRecipeToList = async (listId: string, recipeId: string, sectionIds?: string[], servingsFactor?: number, locale?: 'fr' | 'en'): Promise<number> => {
     const data = await request<{ items: unknown[] }>(`/api/shopping-lists/${listId}/recipes`, {
       method: 'POST',
       body: JSON.stringify({
         recipeId,
         ...(sectionIds && sectionIds.length > 0 ? { sectionIds } : {}),
-        ...(servingsFactor !== undefined ? { servingsFactor } : {})
+        ...(servingsFactor !== undefined ? { servingsFactor } : {}),
+        // Langue de l'interface : articles ajoutés avec le nom traduit (0016).
+        ...(locale ? { locale } : {})
       })
     })
     await refresh()
