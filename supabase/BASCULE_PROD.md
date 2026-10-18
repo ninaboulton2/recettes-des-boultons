@@ -382,6 +382,59 @@ Si 0015 a été appliquée et que tout va bien quelques semaines plus tard :
 
 ---
 
+## 9. Recettes bilingues (migration 0016, après la bascule)
+
+Branche `feat/bilingual-recipes`. **Prérequis : 0013 appliquée** (et 0009 pour `private.is_admin()`).
+0014 et 0015 n'ont pas besoin d'être passées. Ordre, à respecter :
+
+1. **Appliquer 0016** (`apply_migration`, nom `0016_recipe_translations`). Elle ne supprime ni ne
+   modifie aucune ligne de recette : ajoute `recipes.lang` (défaut `'fr'`), `units.abbr_en`, la table
+   vide `recipe_translations`, `save_recipe_translation`, et remplace `save_recipe`, `search_recipes`
+   et `add_recipe_to_list` par des versions compatibles (mêmes paramètres, colonnes de fin ajoutées).
+   **L'ancien code continue de fonctionner** après 0016 : on peut donc l'appliquer avant le
+   déploiement sans interruption.
+2. **Déployer le code** (fusion de la branche, déploiement Vercel). Le nouveau code tolère
+   l'absence de traductions : tant qu'aucune recette n'est traduite, le site affiche le texte
+   d'origine (et `/en` aussi, avec la mention « pas encore traduit » sur la fiche). Le déployer
+   **avant** 0016 ferait échouer les lectures (colonnes `lang` et `recipe_translations` absentes) :
+   ne pas inverser.
+3. **Relever temporairement `AI_DAILY_QUOTA`** sur Vercel (ex. 300 ; ~181 appels pour toutes les
+   recettes, la valeur par défaut est 50 par personne et par jour) et redéployer ; sinon reprendre sur
+   plusieurs jours (la page s'arrête au quota et se reprend sans perte). La clé du fournisseur
+   (`OPENAI_API_KEY`) doit déjà être en place (traducteur).
+4. **Lancer la traduction** : connecté en admin → menu utilisateur → **Traductions** → bouton
+   **« Traduire les recettes manquantes »**. Une recette par appel IA, progression à l'écran, arrêt et
+   reprise possibles. Coût attendu ≈ 0,22 $ (0,40 $ au plus) avec `gpt-4.1-mini`, voir
+   `docs/IA_MODELES.md`. Garder l'onglet ouvert pendant l'exécution (≈ 5 à 10 minutes).
+5. **Contrôles** (SQL Editor ou `execute_sql`) :
+
+   ```sql
+   -- 181 recettes attendues, toutes traduites, aucune périmée
+   select count(*) as recettes,
+          count(*) filter (where t.recipe_id is not null and not t.stale) as traduites,
+          count(*) filter (where t.stale) as perimees,
+          count(*) filter (where t.recipe_id is null) as sans_traduction
+     from public.recipes r left join public.recipe_translations t on t.recipe_id = r.id;
+   -- langues détectées
+   select lang, count(*) from public.recipes group by 1;
+   -- coût réel
+   select count(*), sum(estimated_cost_usd) from public.ai_usage where feature = 'translate_recipe';
+   ```
+
+   Ouvrir `/en/recettes/<id>` d'une recette : titre, ingrédients et étapes en anglais.
+6. **Remettre `AI_DAILY_QUOTA`** à sa valeur d'avant.
+
+**Retour arrière** : revenir à l'ancien déploiement (Instant Rollback) suffit, 0016 est
+compatible avec l'ancien code. Pour retirer 0016 elle-même (après retour au code précédent) :
+`supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions et `recipes.lang`,
+restaure les fonctions d'avant ; les recettes ne sont pas touchées). Les traductions se refont avec la
+page « Traductions ».
+
+**Recette modifiée ensuite** : l'éditeur régénère la traduction tout seul quand le texte change. Si
+l'IA échoue (quota, panne), la recette est enregistrée, sa traduction est « à mettre à jour » (le
+site montre le texte d'origine) et la page « Traductions » la reprend (« Traduire les recettes
+manquantes » traite aussi les traductions périmées).
+
 ## Retour arrière
 
 **Code** : Vercel → **Deployments** → le déploiement de production **précédent** (ancien
@@ -398,6 +451,7 @@ code, noté à l'étape 3) → menu « … » → **Instant Rollback**. Effet en
 | Après l'étape 6 (hook activé) | Rien d'obligatoire ; on peut désactiver le hook (Authentication → Hooks). |
 | Après 0013 et retour à l'ancien code | 1) `supabase/rollback/0013_contract_jsonb_down.sql` (recrée et recalcule les colonnes JSONB) ; 2) relancer `supabase/migrations/0011_save_recipe_photo.sql` ; 3) si besoin, `rollback/0005_restore_from_backup.sql` ; 4) Instant Rollback. |
 | Après 0015 | Requêtes de retour dans l'en-tête de `0015_data_cleanup.sql` (depuis les tables `*_backup_cleanup`). |
+| Après 0016 (§ 9) | L'ancien code fonctionne tel quel. Pour retirer 0016 : `supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions, `recipes.lang`, `units.abbr_en`, restaure `save_recipe`, `search_recipes`, `add_recipe_to_list`). |
 | Après 0014 | Plus de sauvegarde en base : restaurer depuis l'export `pg_dump` (§ 0.1) avec `pg_restore` (à faire avec moi). |
 
 Toutes les migrations « ajout seulement » (0003, 0004, 0006 → 0012) sont réversibles sans

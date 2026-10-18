@@ -22,7 +22,10 @@ Site : https://recettes-des-boultons.vercel.app
   rayon, mode « magasin » avec de grandes cases à cocher.
 - **Hors ligne** : la dernière version des listes de courses reste lisible sans réseau.
 - **Traducteur IA** (administrateurs) : une recette collée en texte libre devient une
-  recette structurée, relue avant l'ajout.
+  recette structurée, relue avant l'ajout, enregistrée en français ET en anglais.
+- **Recettes bilingues** : chaque recette existe dans sa langue d'origine et en traduction
+  automatique ; le site affiche la langue de l'interface et la recherche trouve dans les deux
+  (DEVELOPER.md § 19).
 - **Connexion** par e-mail et mot de passe, ou avec Google.
 - **Français et anglais**, **mode sombre**, **installable** sur téléphone (PWA).
 - **Deux éditions** : « Recettes des Boultons » (identité d'origine, par défaut) ou

@@ -84,6 +84,46 @@ minute d'audio) et `POST /api/extract-recipe` (photo ou PDF dans `generateObject
 le texte). Voir `server/utils/ai/media.ts`. Limites : 4 fichiers, 4 Mo par requête (plafond de
 Vercel, photos réduites dans le navigateur), dictée de 5 minutes au plus (≈ 0,015 $).
 
+## Traduction des recettes (existantes et éditions)
+
+Depuis les recettes bilingues (migration 0016, [DEVELOPER.md § 19](../DEVELOPER.md#19-recettes-bilingues-fr--en)),
+chaque recette existe en français et en anglais. Trois usages de l'IA, tous avec le modèle par
+défaut (`gpt-4.1-mini`, 0,40 $/M en entrée, 1,60 $/M en sortie) :
+
+| Usage | `ai_usage.feature` | Appel | Coût estimé |
+|---|---|---|---|
+| Import (texte, photo, PDF, dictée) | `translate` / `extract` | 1 appel : recette structurée **dans les deux langues** (la sortie double) | ≈ 0,003 $ (≈ 1 800 tokens en entrée, ≈ 1 500 en sortie) |
+| Création ou modification d'une recette dans l'éditeur, **si le texte a changé** | `translate_recipe` | 1 appel : traduction de la recette vers l'autre langue | ≈ 0,001 $ (recette moyenne) |
+| Page « Traductions » : rattrapage des recettes existantes | `translate_recipe` | 1 appel par recette | voir ci-dessous |
+
+Modifier seulement la photo, les temps, les portions, la catégorie ou une quantité chiffrée ne
+déclenche **aucun appel** (l'empreinte des textes sources est inchangée).
+
+### Rattrapage des 181 recettes existantes
+
+Mesuré sur le snapshot local (181 recettes, 358 sections, 1 546 ingrédients, 1 538 étapes) : 171 298
+caractères de texte traduisible (moyenne 946 par recette, maximum 2 887).
+
+| Poste | Calcul | Tokens |
+|---|---|---|
+| Textes à traduire (entrée) | 171 298 caractères ÷ ≈ 3,5 | ≈ 49 000 |
+| Structure JSON de l'entrée | ≈ 14 tokens × 1 546 ingrédients + sections / étapes | ≈ 27 000 |
+| Consigne et schéma de sortie, répétés à chaque appel | ≈ 1 000 tokens × 181 appels | ≈ 181 000 |
+| **Entrée totale** | | **≈ 257 000** → 0,10 $ |
+| Texte traduit (sortie) | ≈ autant de tokens que l'entrée en anglais | ≈ 45 000 |
+| Structure JSON de la sortie | ≈ 14 tokens × 1 546 ingrédients + le reste | ≈ 30 000 |
+| **Sortie totale** | | **≈ 75 000** → 0,12 $ |
+
+**Total attendu ≈ 0,22 $ pour les 181 recettes (≈ 0,0012 $ par recette), 0,40 $ au plus** (marge de
+sécurité sur le découpage en tokens des accents et le surcoût des sorties structurées). La page
+« Traductions » affiche le coût réellement dépensé (somme de `ai_usage.estimated_cost_usd`) et le reste
+estimé ; avant 3 appels réussis, l'estimation par recette est de 0,002 $
+(`DEFAULT_COST_PER_RECIPE_USD`).
+
+**Quota** : chaque recette compte pour un appel dans `AI_DAILY_QUOTA` (50 par personne et par jour
+par défaut). Pour tout traduire d'un coup, relever temporairement la variable sur Vercel (ex. 300)
+puis la remettre ; sinon la page s'arrête au quota (message clair) et se reprend le lendemain.
+
 ## Mise en œuvre dans l'application
 
 - Fournisseur et modèle : `AI_PROVIDER` / `AI_MODEL` (défauts : `openai` / `gpt-4.1-mini`),

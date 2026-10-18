@@ -1,8 +1,9 @@
-# Migrations 0003 → 0015 — fondations base de données
+# Migrations 0003 → 0016 — fondations base de données
 
 > **Mise en production : suivre `supabase/BASCULE_PROD.md`** (ordre de la bascule, comptes
 > attendus relevés en prod le 2026-10-03, retour arrière). Les sections 8 à 10 ci-dessous
-> décrivent la phase « contract » (0013, 0014) et le nettoyage optionnel (0015).
+> décrivent la phase « contract » (0013, 0014) et le nettoyage optionnel (0015) ; la section 12
+> décrit les recettes bilingues (0016).
 
 Projet Supabase `recettes-boultons` (`tzlkabxcmmbwhpyvmato`, Postgres 17, `en_US.UTF-8`).
 Lecture de l'état prod : **2026-10-03**. Aucune de ces migrations n'est encore appliquée en
@@ -26,6 +27,7 @@ jour, avec et sans correctif, sont dans `BASCULE_PROD.md`.
 9. [0014 — suppression des sauvegardes de 0005](#9-migration-0014--suppression-des-sauvegardes-de-0005)
 10. [0015 — nettoyage des données (optionnel)](#10-migration-0015-optionnelle--nettoyage-mécanique-des-données)
 11. [Outillage et tests](#11-outillage-et-tests-phase-contract)
+12. [0016 — recettes bilingues](#12-migration-0016--recettes-bilingues-fr--en)
 
 Principe **« expand only »** pour 0003 → 0012 : aucune colonne/table supprimée, aucun changement de type,
 politiques RLS existantes conservées (0009 les recrée à l'identique en changeant uniquement la
@@ -59,7 +61,8 @@ correspond pas.
 | `migrations/0013_contract_jsonb.sql` | Suppression de `recipes.ingredients`/`instructions`, `save_recipe`/`search_recipes` sans JSONB, 7 étapes orphelines (§ 8) |
 | `migrations/0014_drop_backups.sql` | Suppression des 6 tables `*_20261003` — une semaine après la bascule (§ 9) |
 | `migrations/0015_data_cleanup.sql` | Nettoyage mécanique optionnel des ingrédients (§ 10, `docs/QUALITE_DONNEES.md`) |
-| `rollback/0005_restore_from_backup.sql`, `rollback/0013_contract_jsonb_down.sql` | Retours arrière (retour à l'ancien code) |
+| `migrations/0016_recipe_translations.sql` | Recettes bilingues : `recipes.lang`, `recipe_translations`, `units.abbr_en`, `save_recipe_translation`, `save_recipe` / `search_recipes` / `add_recipe_to_list` étendues (§ 12) |
+| `rollback/0005_restore_from_backup.sql`, `rollback/0013_contract_jsonb_down.sql`, `rollback/0016_recipe_translations_down.sql` | Retours arrière (retour à l'ancien code ; 0016 : supprime les traductions) |
 | `fixes/2026-10-03_carrot_cake_ingredients.sql` | Correctif prod : 17 ingrédients perdus le 2026-10-03 |
 | `BASCULE_PROD.md` | Runbook de mise en production |
 | `seed_test.sql` | Données **jetables** pour les tests locaux (jamais en prod) |
@@ -351,8 +354,9 @@ const { data: { publicUrl } } = supabase.storage.from('recipe-photos').getPublic
 | `public.save_recipe(jsonb) → uuid` | invoker | authenticated | upsert recette (RLS admin) |
 | `public.delete_recipe(uuid) → void` | invoker | authenticated | suppression (RLS admin) |
 | `public.merge_shopping_item(uuid, text, numeric, text, uuid) → shopping_items` | invoker | authenticated | ajout/fusion article |
-| `public.add_recipe_to_list(uuid, uuid, uuid[], numeric) → setof shopping_items` | invoker | authenticated | recette → liste |
-| `public.search_recipes(text, text, text[], int, int) → table` | invoker, stable | anon, authenticated | recherche |
+| `public.add_recipe_to_list(uuid, uuid, uuid[], numeric, text) → setof shopping_items` (0016) | invoker | authenticated | recette → liste (noms traduits si `p_locale`) |
+| `public.search_recipes(text, text, text[], int, int) → table` | invoker, stable | anon, authenticated | recherche (texte d'origine + traduction) |
+| `public.save_recipe_translation(uuid, text, jsonb) → void` (0016) | invoker | authenticated | écrit une traduction (admin) |
 | `public.immutable_unaccent(text) → text` | invoker, immutable | anon, authenticated | utilitaire |
 | `private.is_admin() → boolean` | **definer**, stable | anon, authenticated (hors API) | politiques RLS |
 | `public.custom_access_token_hook(jsonb) → jsonb` | invoker, stable | supabase_auth_admin | hook GoTrue |
@@ -361,7 +365,8 @@ const { data: { publicUrl } } = supabase.storage.from('recipe-photos').getPublic
 
 Toutes les fonctions ont un `search_path` figé (advisor « Function Search Path Mutable » OK).
 `save_recipe` est recréée par 0011 (`photo_path`) puis 0013 (sans JSONB) ; `search_recipes`
-par 0010 (`photo_path`) puis 0013 (sans JSONB). Les signatures ne changent pas.
+par 0010 (`photo_path`) puis 0013 (sans JSONB) ; 0016 les étend (`lang` / `translation`). Les signatures
+de `save_recipe` et `search_recipes` ne changent pas ; `add_recipe_to_list` gagne un paramètre facultatif.
 
 ---
 
@@ -633,8 +638,8 @@ Retour arrière : requêtes dans l'en-tête. À supprimer après validation : le
 
 * `tests/run_local.sh` (Postgres 17 jetable) et `local/test.sh` (`npm run db:local:test`, stack
   Docker) : phase « expand » 0003 → 0012 + rejeu + `test_0003` → `test_0010`, puis phase
-  « contract » 0013 → 0015 + rejeu + `test_0013_contract`, `test_0014_drop_backups`,
-  `test_0015_cleanup` (ce dernier crée des recettes témoins portant les identifiants de la
+  « contract » 0013 → 0016 + rejeu + `test_0013_contract`, `test_0014_drop_backups`,
+  `test_0015_cleanup`, `test_0016_translations` (ce dernier crée des recettes témoins portant les identifiants de la
   prod, rejoue 0015, vérifie, nettoie ; ignoré sur une base avec le snapshot).
 * `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` : même suite sur une **base séparée**
   de la stack (schéma Supabase recopié depuis `postgres` par `pg_dump --schema-only`, schéma
@@ -647,3 +652,45 @@ Retour arrière : requêtes dans l'en-tête. À supprimer après validation : le
 * Retours arrière testés : `rollback/0005_restore_from_backup.sql`,
   `rollback/0013_contract_jsonb_down.sql` ; correctif prod
   `fixes/2026-10-03_carrot_cake_ingredients.sql` testé sur une copie dans l'état de la prod.
+
+## 12. Migration 0016 — recettes bilingues (fr / en)
+
+Fichier : `migrations/0016_recipe_translations.sql` ; retour arrière :
+`rollback/0016_recipe_translations_down.sql` ; test : `tests/test_0016_translations.sql` ; mise en
+production : `BASCULE_PROD.md` § 9 (ordre **0016 → déploiement → page « Traductions »**).
+Prérequis : 0013 (et 0003, 0009). Compatible avec l'ancien code, idempotente, aucune ligne de recette
+modifiée.
+
+* **`units.abbr_en`** : abréviation anglaise des 37 unités (`cas` → `tbsp`, `cac` → `tsp`, `pincee`
+  → `pinch`…) ; l'unité affichée suit la langue de l'interface.
+* **`recipes.lang`** (`'fr'` | `'en'`, défaut `'fr'`, contrainte `recipes_lang_check`) : langue du
+  texte saisi. `recipes.search` (colonne générée) est recréée une fois : `french` si `lang = 'fr'`,
+  `english` sinon (+ index GIN).
+* **`recipe_translations(recipe_id, locale, …)`** : une ligne par recette (la traduction vers
+  l'autre langue). `title`, `description`, `notes`, `tags`, `content jsonb` (textes des sections par
+  position : `{ "sections": [ { "name", "ingredients": [ { "name", "amount", "unit" } ],
+  "instructions": [ … ] } ] }`), `source_hash`, `model`, `stale`, `translated_at`, `search`
+  (tsvector généré : titre A, description B, noms d'ingrédients C ; `french` / `english` selon
+  `locale`). RLS : lecture publique, insert / update / delete `private.is_admin()` ; cascade à la
+  suppression de la recette.
+  **Par position et non par identifiant** : `save_recipe` recrée sections, ingrédients et étapes
+  (nouveaux identifiants) à chaque enregistrement ; par position la traduction survit.
+* **`save_recipe_translation(recipe_id, lang, translation)`** (invoker, `authenticated`) : admin
+  seulement (`private.is_admin()`, sinon 42501) ; pose `recipes.lang`, supprime une éventuelle
+  traduction vers la langue source (langue corrigée), upsert la traduction (`stale = false`).
+  Erreurs : 22023 (langue, titre, `source_hash` ou `content` invalides), P0002 (recette inconnue).
+* **`save_recipe`** : mêmes signature et droits ; le payload accepte `lang` et `translation`
+  (écrite dans la même transaction par `save_recipe_translation`). Sans `translation`, toute
+  traduction existante de la recette est marquée `stale = true`.
+* **`search_recipes`** : mêmes paramètres ; cherche dans `recipes.search` (config selon `lang`) et
+  dans `recipe_translations.search` (config selon `locale`) + repli `ILIKE` sur les deux titres ;
+  rang = meilleur des deux. Colonnes de fin ajoutées : `lang`, `translation` (jsonb `{locale, title,
+  description, notes, tags}`, `null` si absente ou périmée). Drop + create (type de retour).
+* **`add_recipe_to_list(…, p_locale text default null)`** : avec `'fr'` / `'en'` différent de la
+  langue source et une traduction non périmée dont le nombre de sections correspond, les articles
+  ajoutés portent le nom traduit (recherché par position). Drop de l'ancienne surcharge à 4
+  paramètres (même appel nommé ou positionnel qu'avant, `p_locale` facultatif).
+* **Vérifications** : comptes de recettes, sections, ingrédients, étapes inchangés ; RLS activée,
+  4 politiques ; droits `anon` (lecture seule) ; une seule surcharge par fonction.
+* **Rejeu** : `local/setup.sh` rejoue 0013 (qui recrée les anciennes fonctions) puis 0016 (qui les
+  remplace) : même état final. `local/verify.sql` attend 48 politiques `public` (44 + 4).

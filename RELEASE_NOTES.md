@@ -27,7 +27,7 @@ Coucou, votre site de recettes préféré a fait peau neuve !
 - **Un planning plus simple** : on glisse-dépose un repas d'un jour à l'autre, on ajoute une petite note à un repas, et on peut imprimer la semaine.
 - **Connexion avec Google** : un clic, et plus besoin de retenir un mot de passe de plus (la connexion par e-mail marche toujours).
 - **Le traducteur amélioré** : il comprend mieux les sous-parties des recettes (« pour la pâte », « pour le glaçage »…), range les quantités dans les bonnes unités, et montre un aperçu de la recette traduite avant de l'ajouter, pour corriger si besoin.
-- **Le site parle aussi anglais**, pour les amis anglophones (choix de la langue dans le menu).
+- **Le site parle aussi anglais**, pour les amis anglophones (choix de la langue dans le menu) : et **chaque recette existe en français et en anglais**. En passant le site en anglais, les recettes (titres, ingrédients, étapes, quantités) s'affichent en anglais ; la recherche trouve une recette aussi bien avec un mot français qu'anglais. Les traductions sont faites automatiquement par l'IA (à la création ou à la modification d'une recette), et une recette pas encore traduite s'affiche dans sa langue d'origine.
 
 ## Bientôt
 

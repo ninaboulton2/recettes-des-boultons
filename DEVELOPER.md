@@ -28,6 +28,7 @@ listes de courses, favoris, traducteur IA. Pour une présentation rapide, voir
 16. [Variables d'environnement](#16-variables-denvironnement)
 17. [Déploiement](#17-déploiement)
 18. [À savoir](#18-à-savoir)
+19. [Recettes bilingues (fr / en)](#19-recettes-bilingues-fr--en)
 
 ---
 
@@ -68,23 +69,23 @@ recettes-des-boultons/
 │   ├── composables/          # useEdition, useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
 │   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
 │   ├── middleware/auth.ts    # garde d'affichage des pages admin
-│   ├── pages/                # recettes, planning, courses, favoris, traducteur, confirm, reset-password
+│   ├── pages/                # recettes, planning, courses, favoris, traducteur, traductions (admin), confirm, reset-password
 │   ├── plugins/              # edition.ts (thème de l'édition), toast.client.ts, pwa-offline.client.ts
 │   ├── stores/               # Pinia : auth, recipes, favorites, planning, shopping
 │   └── utils/                # week.ts (semaines du planning), homeFeatures.ts, image.ts (photos allégées avant envoi)
 ├── shared/                   # code commun client/serveur (alias #shared)
 │   ├── editions/             # configuration des éditions : types, boultons, generic, theme (voir § 9)
-│   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, media, units, common
+│   ├── schemas/              # schémas Zod : recipe, shopping, planning, favorites, ai, translation, media, units, common
 │   ├── types/index.ts        # modèle de lecture (RecipeSummary, Recipe, ShoppingList…)
 │   ├── types/database.ts     # types Supabase GÉNÉRÉS (ne pas éditer)
-│   └── utils/                # recipes.ts (mapping, quantités), shopping.ts (rayons), text.ts, color.ts (contraste)
+│   └── utils/                # recipes.ts (mapping, quantités), translation.ts (recettes bilingues), shopping.ts (rayons), text.ts, color.ts (contraste)
 ├── server/
 │   ├── api/                  # endpoints d'écriture (voir § 7)
 │   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
 ├── i18n/locales/             # fr.json, en.json
 ├── supabase/
-│   ├── migrations/           # 0001 → 0015 (SQL, appliquées à la main, voir § 4)
-│   ├── rollback/             # retours arrière (0005, 0013)
+│   ├── migrations/           # 0001 → 0016 (SQL, appliquées à la main, voir § 4)
+│   ├── rollback/             # retours arrière (0005, 0013, 0016)
 │   ├── fixes/                # correctifs de données ponctuels
 │   ├── local/                # base de dev locale : up.sh, setup.sh, test.sh, comptes, snapshot
 │   ├── tests/                # tests SQL par migration + schéma de base
@@ -216,14 +217,18 @@ d'e-mail (Mailpit), inscription sans confirmation ; `max_rows = 1000` comme en p
 
 ## 4. Modèle de données
 
-### 4.1 Tables (état après la migration 0015)
+### 4.1 Tables (état après la migration 0016)
 
 ```
 profiles            id (= auth.users.id), email, name, role 'user'|'admin', language, theme,
                     notifications, created_at, updated_at
 recipes             id, title, description, category, prep_time, cook_time, servings,
-                    image, photo_path, tags text[], notes, search (tsvector généré),
-                    created_at, updated_at
+                    image, photo_path, tags text[], notes, lang 'fr'|'en', search (tsvector
+                    généré, selon lang), created_at, updated_at
+recipe_translations recipe_id → recipes (cascade), locale 'fr'|'en' (= l'AUTRE langue que
+                    recipes.lang), title, description, notes, tags, content jsonb (textes des
+                    sections PAR POSITION), source_hash, model, stale, translated_at,
+                    search (tsvector généré)   — PK (recipe_id, locale), voir § 19
 recipe_sections     id, recipe_id, name, type 'ingredients'|'instructions'|'mixed',
                     order_index, created_at, updated_at
 recipe_ingredients  id, recipe_id, section_id, name, amount (texte saisi), amount_num,
@@ -236,7 +241,7 @@ planning_notes      id, user_id, date_string, note_type 'day'|'lunch'|'dinner', 
 shopping_lists      id, user_id, name, created_at, updated_at
 shopping_items      id, list_id, name, amount, amount_num, unit, unit_code, recipe_id?,
                     is_checked, created_at, updated_at
-units               code, label_fr, label_en, abbr, kind, to_base, sort_order   (37 unités)
+units               code, label_fr, label_en, abbr, abbr_en, kind, to_base, sort_order   (37 unités)
 unit_aliases        alias (replié), code                                         (190 alias)
 ai_usage            id, user_id, created_at, provider, model, feature, input_tokens,
                     output_tokens, estimated_cost_usd, status 'ok'|'error', duration_ms
@@ -262,11 +267,12 @@ Toutes en `SECURITY INVOKER` (le RLS s'applique), `search_path` figé.
 | `normalize_unit(text)` | 0003 | graphie libre → code d'unité | trigger, `POST /api/shopping-items` |
 | `parse_amount(text)` | 0004 | « 1/2 », « 1,5 », « 2 à 3 » → nombre (borne basse) | trigger, `POST /api/shopping-items` |
 | `format_amount(numeric)` | 0004 | nombre → texte | `save_recipe`, fusion |
-| `save_recipe(payload jsonb)` | 0006, 0011, 0013 | crée ou remplace une recette entière (sections, ingrédients, étapes, `photo_path`) en une transaction | `add-recipe`, `update-recipe` |
+| `save_recipe(payload jsonb)` | 0006, 0011, 0013, 0016 | crée ou remplace une recette entière (sections, ingrédients, étapes, `photo_path`, `lang`, traduction jointe) en une transaction ; marque les traductions périmées sinon | `add-recipe`, `update-recipe` |
 | `delete_recipe(p_id)` | 0006 | supprime une recette | `delete-recipe` |
 | `merge_shopping_item(…)` | 0007 | ajoute un article ou l'additionne à un article de même nom replié et même `unit_code` | `POST /api/shopping-items` |
-| `add_recipe_to_list(…)` | 0007 | ajoute les ingrédients d'une recette (sections choisies, facteur de portions) avec fusion | `POST /api/shopping-lists/:id/recipes` |
-| `search_recipes(p_query, p_category, p_tags, p_limit, p_offset)` | 0008, 0010, 0013 | recherche plein texte sans accents, filtres, pagination, `total_count` | `useRecipeSearch` |
+| `add_recipe_to_list(…, p_locale)` | 0007, 0016 | ajoute les ingrédients d'une recette (sections choisies, facteur de portions) avec fusion ; `p_locale` : noms traduits | `POST /api/shopping-lists/:id/recipes` |
+| `search_recipes(p_query, p_category, p_tags, p_limit, p_offset)` | 0008, 0010, 0013, 0016 | recherche plein texte sans accents dans le texte d'origine ET la traduction, filtres, pagination, `total_count`, renvoie `lang` et `translation` | `useRecipeSearch` |
+| `save_recipe_translation(p_recipe_id, p_lang, p_translation)` | 0016 | pose `recipes.lang` et écrit la traduction vers l'autre langue (admin) | `update-recipe`, `add-recipe`, `translations/run` |
 | `check_ai_quota(p_max_per_day)` | 0012 | vrai si l'appelant est sous son quota du jour (Europe/Paris) | traducteur |
 | `custom_access_token_hook(event)` | 0009 | hook Auth : ajoute le claim `user_role` au JWT | Supabase Auth |
 | `private.is_admin()` | 0009 | vrai si le claim `user_role` vaut `admin`, sinon repli sur `profiles.role` | politiques RLS |
@@ -279,7 +285,7 @@ Erreurs volontaires des RPC : SQLSTATE `22023` (donnée invalide), `P0002` (intr
 
 | Tables | Lecture | Écriture |
 |---|---|---|
-| `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions` | publique | admin (`private.is_admin()`) |
+| `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `recipe_translations` | publique | admin (`private.is_admin()`) |
 | `favorites`, `planning`, `planning_notes`, `shopping_lists` | propriétaire (`auth.uid() = user_id`) | propriétaire |
 | `shopping_items` | propriétaire de la liste parente | propriétaire de la liste parente |
 | `profiles` | sa ligne, ou admin ; `supabase_auth_admin` pour le hook | sa ligne, ou admin (sans changer son rôle) |
@@ -305,6 +311,7 @@ supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
 | 0013 | suppression des colonnes JSONB |
 | 0014 | suppression des sauvegardes de 0005 (une semaine après la bascule) |
 | 0015 | nettoyage mécanique des ingrédients (optionnel, voir [docs/QUALITE_DONNEES.md](docs/QUALITE_DONNEES.md)) |
+| 0016 | recettes bilingues : `recipes.lang`, `recipe_translations`, `units.abbr_en`, `save_recipe_translation`, `save_recipe` / `search_recipes` / `add_recipe_to_list` étendues (§ 19) |
 
 Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
 Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
@@ -328,9 +335,13 @@ l'en-tête « fichier généré ».
 - `app/stores/auth.ts` suit `useSupabaseUser()` : `isAuthenticated`, `isAdmin`, `role`,
   `currentUser`, `login`, `logout`, `checkAuth`, `init`. Le profil (`profiles`) est chargé en
   arrière-plan.
-- `app/middleware/auth.ts` protège les pages `definePageMeta({ requiresAdmin: true })`
-  (aujourd'hui `/traducteur`), sans requête réseau. C'est une garde d'affichage : la sécurité
-  est côté serveur et en base.
+- `app/middleware/auth.ts` est prévu pour protéger les pages `definePageMeta({ requiresAdmin: true })`
+  (`/traducteur`, `/traductions`), sans requête réseau. **Constat (0016) : il n'est pas exécuté**
+  (middleware nommé, déclaré par aucune page ; `e2e/bilingual.spec.ts` (h) le vérifie : un
+  utilisateur simple voit la coquille de `/traductions`, sans donnée, tout est refusé en 403 par
+  le serveur). Ce n'est de toute façon qu'une garde d'affichage : la sécurité est côté serveur et en base. Le
+  rendre global exigerait de s'assurer que `isAdmin` est fiable sans requête (claim `user_role`
+  absent tant que le hook n'est pas activé en prod).
 
 ### 5.2 Côté serveur
 
@@ -378,7 +389,7 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 |---|---|---|
 | Liste paginée (24 par page), recherche, filtres | `useRecipeSearch(scope, { query, category, tags, page })` | RPC `search_recipes` |
 | Compteurs par catégorie, tags | `useRecipeFacets()` | `recipes` (`category, tags`) |
-| Fiche complète | `useRecipe(id)` / `fetchRecipeById` | `recipes` + `recipe_sections(*, recipe_ingredients(*), instructions(*))` |
+| Fiche complète | `useRecipe(id)` / `fetchRecipeById` | `recipes` + `recipe_translations(*)` + `recipe_sections(*, recipe_ingredients(*), instructions(*))` |
 | Favoris | `useFavoritesStore().refresh()` | `favorites`, puis `recipes` par identifiants |
 | Planning d'une semaine et notes | `usePlanningStore().loadWeek(date)` | `planning` (+ recette) et `planning_notes` par dates |
 | Listes de courses | `useShoppingStore().refresh()` | `shopping_lists` avec `shopping_items(*)` |
@@ -399,7 +410,8 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
   (`validateBody`, `validateQuery`, `validateRouterParams` de `server/utils/validate.ts`,
   schémas de `shared/schemas/`) → requête ou RPC Supabase sous RLS → `handleApiError` dans
   le `catch`.
-- Aucun endpoint `GET` : les lectures sont décrites au § 6.
+- Aucun endpoint `GET` pour les lectures publiques (§ 6). Seule exception : `GET /api/translations`
+  (admin), qui agrège `recipes`, `recipe_translations` et `ai_usage` (§ 19).
 
 ### 7.2 Liste des endpoints
 
@@ -407,11 +419,13 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 
 | Endpoint | Auth | Entrée (schéma) | SQL | Réponse |
 |---|---|---|---|---|
-| `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput }` (`addRecipeBodySchema`) | `save_recipe` | `{ success, recipe: RecipeDetail, message }` |
-| `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`), remplacement complet | vérification d'existence (404), `save_recipe` | `{ success, recipe, message }` |
+| `POST /api/add-recipe` | 🔑 | `{ recipe: RecipeInput, lang?, translation? }` (`addRecipeBodySchema`) | `save_recipe` (recette + traduction jointe) ; sans `translation` : appel IA `translate_recipe` après l'enregistrement | `{ success, recipe: RecipeDetail, translation: { status }, message }` |
+| `PUT /api/update-recipe?id=` | 🔑 | `{ updates: RecipeInput }` (`updateRecipeBodySchema`), remplacement complet | vérification d'existence (404), `save_recipe`, puis revalidation (même empreinte) ou régénération IA de la traduction | `{ success, recipe, translation: { status, reason?, message? }, message }` |
 | `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `delete_recipe` | `{ success, deletedRecipeId, message }` |
-| `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000), targetLanguage?: fr\|en }` | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput, aiRecipe, usage }` ; rien n'est enregistré |
-| `POST /api/extract-recipe` | 🔑 | `multipart/form-data` : `files` (1–4 JPEG/PNG/WebP/PDF, 4 Mo au total), `targetLanguage?` (`extractRecipeFilesSchema`) | idem, `feature = 'extract'` | même réponse que `translate-recipe` ; 422 si aucune recette lisible |
+| `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000) }` (plus de langue cible : l'IA détecte la langue) | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput (langue d'origine), lang, translation (l'autre langue), aiRecipe, usage }` ; rien n'est enregistré |
+| `POST /api/extract-recipe` | 🔑 | `multipart/form-data` : `files` (1–4 JPEG/PNG/WebP/PDF, 4 Mo au total) (`extractRecipeFilesSchema`) | idem, `feature = 'extract'` | même réponse que `translate-recipe` ; 422 si aucune recette lisible |
+| `GET /api/translations` | 🔑 | — | lectures `recipes`, `recipe_translations`, `ai_usage` | `{ success, status: TranslationStatus }` : traduites / périmées / manquantes, appels, coût, quota |
+| `POST /api/translations/run` | 🔑 | `{ limit? (1–3, défaut 1), exclude?: uuid[], ids?: uuid[] }` | `check_ai_quota`, appel IA par recette (`feature = 'translate_recipe'`), `save_recipe_translation` | `{ success, results[], stopped, status }` (§ 19) |
 | `POST /api/transcribe-recipe` | 🔑 | `multipart/form-data` : `audio` (WebM/MP4/Ogg/WAV/MP3, 4 Mo, 5 min), `durationSeconds?` (`transcribeAudioSchema`) | idem, `feature = 'transcribe'` | `{ success, text, usage: { provider, model, audioSeconds, estimatedCostUsd, durationMs } }` |
 | `POST /api/recipes/similar` | 🔑 | `{ title, ingredientNames?, excludeId? }` (`similarRecipesBodySchema`) | lecture seule de `recipes` et `recipe_ingredients` (pas d'IA, pas de quota) | `{ similar: [{ id, title, score, titleScore, ingredientScore, reason }] }`, 3 au plus (voir § 12, doublons) |
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (404 recette, 409 doublon) | `{ success, favorite, message }` |
@@ -424,7 +438,7 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 | `POST /api/shopping-lists` | 👤 | `{ name }` | insert | `{ success, list, message }` |
 | `PUT /api/shopping-lists/:id` | 👤 | `{ name }` | update (404) | `{ success, list, message }` |
 | `DELETE /api/shopping-lists/:id` | 👤 | — | delete, articles en cascade (404) | `{ success, message }` |
-| `POST /api/shopping-lists/:id/recipes` | 👤 | `{ recipeId, sectionIds?, servingsFactor? }` | `add_recipe_to_list` | `{ success, items, message }` |
+| `POST /api/shopping-lists/:id/recipes` | 👤 | `{ recipeId, sectionIds?, servingsFactor?, locale? }` | `add_recipe_to_list` | `{ success, items, message }` |
 | `POST /api/shopping-items` | 👤 | `{ listId, name, amount?, unit?, recipeId? }` | `parse_amount`, `normalize_unit`, `merge_shopping_item` | `{ success, item, message }` |
 | `PUT /api/shopping-items/:id` | 👤 | `{ name?, amount?, unit?, isChecked? }` | update (triggers `amount_num` / `unit_code`, 404) | `{ success, item, message }` |
 | `DELETE /api/shopping-items/:id` | 👤 | — | delete (404) | `{ success, message }` |
@@ -662,19 +676,24 @@ manifeste et icônes PWA par groupe.
 ## 12. Traducteur IA
 
 Page `/traducteur` (admins) : texte collé, fichier (PDF, photo, texte) ou dictée → recette
-structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des modèles et coûts :
+structurée **dans les deux langues** (l'IA détecte la langue d'origine et fournit la traduction
+vers l'autre, en un seul appel ; plus de langue cible à choisir) → aperçu (langue de
+l'interface d'abord, bouton pour voir l'autre version) → ajout par `POST /api/add-recipe`, qui
+enregistre les deux. Voir § 19. Comparatif des modèles et coûts :
 [docs/IA_MODELES.md](docs/IA_MODELES.md).
 
 | Fichier | Rôle |
 |---|---|
-| `shared/schemas/ai.ts` | `translateRecipeBodySchema`, `aiRecipeSchema` (unité parmi les 37 codes, catégorie parmi 9), `aiRecipeToRecipeInput` |
+| `shared/schemas/ai.ts` | `translateRecipeBodySchema`, `aiRecipeSchema` (unité parmi les 37 codes, catégorie parmi 9, `sourceLanguage`, `translation`), `aiRecipeToRecipeInput`, `aiRecipeToBilingual` (recette + traduction alignées) |
+| `shared/schemas/translation.ts`, `shared/utils/translation.ts` | schémas Zod des traductions, textes traduisibles, empreinte, affichage par langue (§ 19) |
+| `server/utils/translations.ts`, `server/api/translations/` | traduction d'une recette enregistrée, état et file d'attente de la page « Traductions » (§ 19) |
 | `server/utils/ai/provider.ts` | `getAiConfig()` (variables `AI_*`, clés), `getModel()` |
-| `server/utils/ai/translate.ts` | `generateObject` + `aiRecipeSchema`, délai 25 s, 1 nouvel essai |
+| `server/utils/ai/translate.ts` | `generateObject` : `translateRecipeText` (`aiRecipeSchema`, recette bilingue) et `translateRecipeTexts` (`aiTranslateExistingSchema`, recette existante), délai 25 s, 1 nouvel essai |
 | `server/utils/ai/prompt.ts` | prompt système en français |
 | `server/utils/ai/errors.ts` | erreurs du fournisseur → 401, 402, 422, 502, 504, messages sans détail technique |
 | `server/utils/ai/usage.ts` | quota (`check_ai_quota`, 429) et journal `ai_usage` |
 | `server/utils/ai/pricing.ts` | grille de prix datée, coût estimé |
-| `server/utils/ai/mock.ts` | fournisseur `mock` : recette fixe, dictée fixe, aucun appel réseau |
+| `server/utils/ai/mock.ts` | fournisseur `mock` : recette fixe, dictée fixe, traduction préfixée « [EN] » / « [FR] », aucun appel réseau |
 | `server/utils/ai/media.ts` | `transcribeAudio` (dictée) et `extractRecipeFromFiles` (photo / PDF) |
 | `server/utils/ai/upload.ts` | lecture des envois multipart (413 sur `Content-Length`) |
 | `server/utils/ai/recipe-response.ts` | `AiRecipe` → `RecipeInput` et réponse commune aux endpoints |
@@ -686,7 +705,8 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 
 - Fournisseur : `AI_PROVIDER` = `openai` (défaut, `gpt-4.1-mini`), `anthropic`, `google`,
   `mistral` ou `mock`. Changer de fournisseur = changer la variable et la clé, sans code.
-- Quota : `AI_DAILY_QUOTA` appels par personne et par jour (défaut 50, admins compris) ;
+- Quota : `AI_DAILY_QUOTA` appels par personne et par jour (défaut 50, admins compris ; la traduction des
+  ~181 recettes existantes en demande autant : voir § 19) ;
   `0` désactive le traducteur. Si `check_ai_quota` est indisponible, l'appel passe (le quota
   est un garde-fou, la barrière reste `requireAdmin`).
 - Sorties structurées strictes : pas de champ optionnel ni de longueur dans `aiRecipeSchema` ;
@@ -737,6 +757,11 @@ structurée → aperçu → ajout par `POST /api/add-recipe`. Comparatif des mod
 - **Mock** (`AI_PROVIDER=mock`) : une photo ou un PDF renvoie toujours la recette « Cookies aux
   pépites de chocolat » ; la dictée renvoie toujours `MOCK_TRANSCRIPT` (une recette dictée en
   français), le modèle de transcription journalisé est `mock-transcribe`. Aucun appel réseau.
+  **Traductions simulées** : la langue d'origine est devinée par `detectLanguage` (mots courants,
+  français par défaut) et chaque texte de la traduction est préfixé de « [EN] » (source française) ou
+  « [FR] » (source anglaise) : déterministe, reconnaissable dans les tests. Un texte contenant
+  `__MOCK_AI_FAILURE__` (`MOCK_FAILURE_MARKER`) fait échouer la traduction d'une recette existante
+  (panne simulée : enregistrement réussi, traduction périmée).
 - Tests : `test/unit/schemas/media.test.ts`, `test/unit/ai/media.test.ts`, `audioRecorder.test.ts`,
   `image.test.ts` ; `test/integration/media-recipe.local.test.ts` (serveur mock) ;
   `e2e/translator-media.spec.ts` (dépôt, photo, PDF, dictée avec micro simulé par WebAudio),
@@ -888,8 +913,10 @@ fait qu'authentifier.
   erreurs, IA (mock, erreurs, prix, médias : photo / dictée), courses hors ligne, éditions (`editions.test.ts` :
   configurations, images, contrastes AA ; `useEdition.test.ts`).
 - `test/integration/*.local.test.ts` : contre la base locale (`.env.local`) ; sautés si
-  elle n'est pas joignable. `translate-recipe.local.test.ts`, `media-recipe.local.test.ts` et `similar-recipes.local.test.ts` demandent aussi un serveur Nuxt
-  avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`).
+  elle n'est pas joignable. `translate-recipe.local.test.ts`, `media-recipe.local.test.ts`, `similar-recipes.local.test.ts` et `bilingual.local.test.ts` demandent aussi un serveur Nuxt
+  avec `AI_PROVIDER=mock` (`APP_URL`, défaut `http://localhost:3001`). Les fichiers de test
+  tournent **en série** (`fileParallelism: false` dans `vitest.config.ts`) : ils partagent la base,
+  les comptes et comptent des lignes `ai_usage` par fonctionnalité.
 - `npm run test:coverage` : rapport dans `coverage/`, sans seuil bloquant.
 
 ### 15.2 Playwright
@@ -907,7 +934,7 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   supprimées. Sessions dans `test-results/.auth/`, rapport dans `test-results/report`.
 - Parcours : recherche sans accent, catégorie et pagination, favori, ajout aux courses,
   repas libre au planning, bouton « Modifier » selon le rôle, `/en` sans clé manquante,
-  courses hors ligne, traducteur (`translator-media.spec.ts` : fichier texte, photo, PDF, dictée ; `translator-similar.spec.ts` : doublons), Échap sur les modales (`escape-modals.spec.ts`), édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
+  courses hors ligne, recettes bilingues (`bilingual.spec.ts`), traducteur (`translator-media.spec.ts` : fichier texte, photo, PDF, dictée ; `translator-similar.spec.ts` : doublons), Échap sur les modales (`escape-modals.spec.ts`), édition (`edition.spec.ts` : `data-edition`, thème, illustrations,
   cartes de même hauteur). Les tests suivent `NUXT_PUBLIC_EDITION` (défaut `boultons`,
   comme la CI) ; pour l'édition générique, lancer serveur ET tests avec
   `NUXT_PUBLIC_EDITION=generic`.
@@ -922,7 +949,7 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
 ### 15.4 Tests SQL
 
 - `npm run db:local:test` : base vide, `seed_test.sql`, 0003 → 0012, rejeu, tests
-  `test_0003` → `test_0010`, puis 0013 → 0015, rejeu, tests `test_0013` → `test_0015`.
+  `test_0003` → `test_0010`, puis 0013 → 0016, rejeu, tests `test_0013` → `test_0016`.
   Il vide la base `postgres` : relancer `npm run db:local:reset` ensuite.
 - `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` : même suite sur une base séparée
   `ci_test` de la stack ; la base `postgres` et ses données restent intactes (pg_dump 17
@@ -973,7 +1000,7 @@ Variables (aucun fichier `.env` n'est déployé).
 - Vercel construit chaque push (`nuxt build`, preset `vercel`, Node 22.x) ; `main` part en
   production. Fonctions `server/api/**` : `maxDuration` 30 s.
 - Les migrations SQL ne sont pas appliquées par le déploiement. Mise en production de
-  0003 → 0015 : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md) ; détail par migration :
+  0003 → 0016 : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md) ; détail par migration :
   [supabase/MIGRATION_NOTES.md](supabase/MIGRATION_NOTES.md).
 - Nouveau projet Supabase : [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 - Notes de version pour la famille : `RELEASE_NOTES.md`.
@@ -990,6 +1017,9 @@ Variables (aucun fichier `.env` n'est déployé).
   sont rédigés en français et affichés tels quels, y compris en anglais.
 - **Nombres formatés en `fr-FR`** : `shared/utils/recipes.ts` (`toLocaleString('fr-FR')`)
   affiche « 1,5 » aussi dans l'interface anglaise.
+- **Traductions = textes par position** : ne jamais y stocker d'identifiants (recréés à chaque
+  `save_recipe`), et passer par `save_recipe_translation` (ou le payload de `save_recipe`) pour
+  les écrire. Voir § 19.
 - **`recipes.image` inutilisée** : la colonne existe, `RecipeInput` l'accepte et
   `RecipeDetail` la renvoie, mais l'interface ne la lit ni ne l'écrit plus (les photos
   passent par `photo_path`).
@@ -1005,3 +1035,141 @@ Variables (aucun fichier `.env` n'est déployé).
   tronquée sans erreur. Paginer ou filtrer.
 - **Prévisualisation dans Claude Code** : `.claude/launch.json`, configuration
   `preview-local` (port 3007, base locale). La configuration `preview` utilise `npm run dev`.
+
+## 19. Recettes bilingues (fr / en)
+
+Chaque recette existe en **français et en anglais** : le texte d'origine (saisi, dans sa langue) et
+sa traduction par l'IA. Migration `0016_recipe_translations.sql` (retour arrière :
+`supabase/rollback/0016_recipe_translations_down.sql`).
+
+### 19.1 Modèle de données
+
+- `recipes.lang` (`'fr'` | `'en'`, défaut `'fr'`) : langue du texte saisi. `recipes.search` (colonne
+  générée) utilise le stemming français ou anglais selon `lang`.
+- `recipe_translations (recipe_id, locale, …)` : **une ligne par recette**, `locale` = l'autre langue
+  que `recipes.lang`. Colonnes : `title`, `description`, `notes`, `tags`, `content` (jsonb),
+  `source_hash`, `model`, `stale`, `translated_at`, `search` (tsvector généré : titre, description,
+  noms d'ingrédients traduits). RLS : lecture publique, écriture admin (`private.is_admin()`) ;
+  suppression en cascade.
+- `content` = `{ "sections": [ { "name", "ingredients": [ { "name", "amount", "unit" } ], "instructions": [ "…" ] } ] }`,
+  les textes **par position** (section n° i, ingrédient n° j, étape n° k, dans l'ordre `order_index`).
+  `amount` n'est rempli que pour une quantité qui contient des mots (« au goût », « 2 à 3 »), `unit`
+  que pour une unité en texte libre : les quantités chiffrées et les unités codées ne se traduisent
+  pas (l'unité affichée suit la langue grâce à `units.abbr_en`).
+- **Pourquoi par position et pas par identifiant** : `save_recipe` supprime et recrée toutes les
+  sections, ingrédients et étapes à chaque enregistrement (nouveaux identifiants). Des identifiants
+  dans `content` seraient orphelins dès la première modification. Par position, la traduction
+  **survit** à `save_recipe`. Deux garde-fous évitent d'afficher un texte devenu faux :
+  1. `save_recipe` marque `stale = true` toute traduction existante quand le texte est
+     ré-enregistré sans traduction jointe (même si un autre chemin d'écriture oublie la suite) ;
+  2. l'affichage n'applique une traduction que si elle n'est pas `stale` **et** si sa forme
+     (nombre de sections, d'ingrédients et d'étapes) correspond à la recette (`localizeRecipe`).
+- `source_hash` : empreinte (`sourceHash`, 2 × cyrb53) des textes sources traduisibles
+  (`recipeTexts` : titre, description, notes, tags, noms de sections, ingrédients, quantités avec
+  mots, unités libres, étapes ; ni quantités chiffrées, ni photo, temps, portions, catégorie). Elle
+  sert à savoir si une modification change vraiment le texte : sinon la traduction est simplement
+  revalidée, **sans appel IA**.
+- `save_recipe_translation(recipe_id, lang, translation)` pose `recipes.lang` (la langue peut être
+  corrigée par la détection de l'IA : l'éventuelle traduction vers cette même langue est
+  supprimée) et écrit la traduction (`stale = false`). `save_recipe` accepte aussi `lang` et
+  `translation` dans son payload : l'import IA enregistre la recette et ses deux langues dans
+  **une seule transaction**.
+
+### 19.2 Affichage
+
+- Langue d'affichage = langue de l'interface (`/` français, `/en` anglais), choisie **à
+  l'affichage** (`useRecipeLocale()` : `localizeCard`, `localizeFull`), donc le changement de langue
+  ne recharge rien. Repli sur le texte d'origine quand la traduction manque, est périmée ou ne
+  correspond plus à la recette ; la fiche indique alors discrètement « Texte d'origine (…) : pas
+  encore traduit » (ou « Traduit automatiquement depuis le … »).
+- Lectures : `search_recipes` renvoie `lang` et `translation` (jsonb, `null` si absente ou périmée) ;
+  les lectures directes (favoris, planning) joignent `recipe_translations(...)` ; la fiche lit la
+  traduction complète. `toRecipeSummary` / `toRecipe` (`shared/utils/recipes.ts`) convertissent.
+- Où : cartes et listes (`RecipeCard`), résultats de recherche, favoris (tri par titre affiché),
+  planning (titre des repas, toasts, sélecteur de recette), fiche (titre, description, notes,
+  sections, ingrédients, étapes, tags), mode cuisine (utilise la fiche affichée), ajout aux courses
+  (noms traduits : `locale` envoyé à `add_recipe_to_list`), aperçu du traducteur. Les unités suivent
+  la langue de l'interface (`useUnits().unitLabel`, `abbr` / `abbr_en`).
+- **Recherche** : `search_recipes` cherche dans le texte d'origine **et** dans la traduction (titre,
+  description, noms d'ingrédients traduits), avec la configuration de langue de chaque texte ;
+  une recette se trouve donc par un mot anglais comme par un mot français, sans accents.
+- **Tags** : texte libre, ils servent de clé aux filtres. La traduction des tags est stockée et
+  affichée sur les cartes et la fiche, mais les **filtres** (`RecipeFilters`) listent les tags
+  d'origine. Suite possible : table de correspondance des tags usuels.
+
+### 19.3 Import (traducteur IA)
+
+- Plus de choix de langue. Un seul appel `generateObject` (`aiRecipeSchema` étendu : `sourceLanguage`
+  + `translation`) renvoie la recette dans sa langue d'origine **et** dans l'autre langue, avec la
+  même structure. `aiRecipeToBilingual` écarte les mêmes éléments vides des deux côtés et lève
+  `TranslationShapeError` (422 « traduction incomplète ») si le modèle n'a pas respecté la structure.
+- L'aperçu s'ouvre dans la langue de l'interface, deux boutons montrent l'autre version
+  (`translatedInput`). « Ajouter » envoie `{ recipe, lang, translation }` à `POST /api/add-recipe`
+  (validée contre la recette ; 400 sinon) : les deux langues sont enregistrées ensemble, sans appel
+  IA supplémentaire.
+
+### 19.4 Éditeur
+
+- L'éditeur modifie la **version d'origine** (bandeau « Vous modifiez la version d'origine (…) »).
+- À l'enregistrement (`POST /api/add-recipe` sans traduction, `PUT /api/update-recipe`), le serveur
+  relit la recette, calcule `sourceHash` et : (a) hash identique → traduction revalidée (`unchanged`,
+  aucun appel IA) ; (b) sinon → appel IA `translateRecipeTexts` (une requête, détecte la langue,
+  traduit vers l'autre), `ai_usage.feature = 'translate_recipe'`, comptée dans `AI_DAILY_QUOTA`.
+- **L'enregistrement ne dépend jamais de l'IA** : en cas d'échec (quota, clé, panne, réponse
+  incohérente) la recette est enregistrée, la traduction reste `stale` (ignorée à l'affichage) et la
+  réponse porte `translation: { status: 'failed', reason, message }` (l'éditeur affiche un
+  avertissement). La page « Traductions » reprend ces recettes.
+- Pas d'édition manuelle de la traduction dans cette version (suite possible : champs de la
+  traduction dans l'éditeur, enregistrés avec `save_recipe_translation`).
+
+### 19.5 Page « Traductions » (rattrapage des recettes existantes)
+
+`/traductions` (admin ; lien dans le menu utilisateur et le tiroir « Moi »). Elle affiche les
+compteurs (recettes, traduites, à mettre à jour, sans traduction), une barre de progression, le coût
+(dépensé d'après `ai_usage`, reste estimé), le modèle et le quota, et le bouton **« Traduire les
+recettes manquantes »**.
+
+- `POST /api/translations/run` traite `limit` recettes (1 par défaut, 3 au plus ; au plus ~12 s
+  de travail par requête, Vercel limite à 30 s) : d'abord les recettes sans traduction (plus
+  anciennes d'abord), puis les périmées ; **une recette = un appel IA**. La file est recalculée à
+  chaque requête d'après la base : le traitement est **reprenable** (arrêter, recharger, relancer
+  plus tard) et **idempotent** (une recette traduite n'est jamais retraitée ; une périmée dont le
+  texte n'a pas changé est revalidée sans appel IA).
+- La page enchaîne les requêtes une à une, affiche le journal des dernières recettes et le nombre de
+  recettes traitées, et peut être arrêtée. Un échec isolé (réponse incohérente, panne ponctuelle)
+  est listé et la recette ignorée pour cette exécution (`exclude`). Un échec **systémique** (quota
+  journalier atteint, clé IA absente, crédit du fournisseur épuisé) arrête tout avec un message
+  clair.
+- Langue des recettes existantes : l'IA la détecte dans le même appel (`sourceLanguage`) et
+  `save_recipe_translation` corrige `recipes.lang` (défaut `'fr'` pour tout l'existant).
+- **Quota** : ~181 recettes = ~181 appels ; avec `AI_DAILY_QUOTA` = 50 (défaut), prévoir de le
+  relever temporairement sur Vercel (ex. 300) ou de reprendre sur 4 jours.
+- **Coût** : voir [docs/IA_MODELES.md](docs/IA_MODELES.md#traduction-des-recettes-existantes-et-des-éditions)
+  (≈ 0,20 $ attendu pour les 181 recettes avec `gpt-4.1-mini`, 0,40 $ au plus).
+
+### 19.6 Mise en production
+
+Ordre : **(1) appliquer 0016, (2) déployer le code, (3) lancer la traduction**
+([supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md), « Recettes bilingues »). Le code tolère
+l'absence de traductions (le site affiche le texte d'origine tant que rien n'est traduit) ; 0016 est
+compatible avec l'ancien code (colonnes et paramètres ajoutés avec valeurs par défaut,
+`search_recipes` ne gagne que deux colonnes de fin). Déployer le **nouveau code avant 0016** casserait
+les lectures (colonnes `lang`, `recipe_translations` absentes).
+
+### 19.7 Tests
+
+- `test/unit/translation.test.ts` (textes, empreinte, forme, affichage, détection de langue,
+  aperçu), `test/unit/schemas/ai.test.ts` (schéma bilingue, alignement), `test/unit/ai/translate.test.ts`
+  (mock, `translateRecipeTexts`).
+- `test/integration/bilingual.local.test.ts` (serveur Nuxt `AI_PROVIDER=mock` + base locale) :
+  import des deux langues, création et modification éditeur (régénération, revalidation sans IA,
+  échec IA → `stale`), rattrapage (comptes, lots, idempotence, détection de langue), recherche dans
+  les deux langues, RLS (un utilisateur ne peut ni écrire ni modifier ni supprimer une traduction),
+  courses en anglais.
+- `supabase/tests/test_0016_translations.sql` (migration, droits, atomicité, `stale`, recherche,
+  courses, cascade).
+- `e2e/bilingual.spec.ts` : fiche `/en` en anglais (« [EN] … ») et `/` en français, recherche dans
+  les deux langues, éditeur (version d'origine), traducteur sans sélecteur de langue avec bascule
+  d'aperçu, page « Traductions » (progression, fin, restauration de la base).
+  Cette dernière traduit TOUTES les recettes de la base locale avec le fournisseur simulé puis
+  remet traductions et langues dans l'état initial.
