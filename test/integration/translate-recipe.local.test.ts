@@ -108,7 +108,7 @@ describe.skipIf(!appUp)('POST /api/translate-recipe (mock) + ai_usage (base loca
     // Filtré par `feature` : media-recipe.local.test.ts journalise aussi pour ce compte, en parallèle.
     const { count: before } = await admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', adminId).eq('feature', 'translate')
 
-    const response = await post(adminToken, { recipeText: SAMPLE, targetLanguage: 'fr' })
+    const response = await post(adminToken, { recipeText: SAMPLE })
     expect(response.status).toBe(200)
     const data = (await response.json()) as TranslateRecipeResponse
     expect(data.success).toBe(true)
@@ -116,6 +116,9 @@ describe.skipIf(!appUp)('POST /api/translate-recipe (mock) + ai_usage (base loca
     expect(data.recipe.title).toBe(`${PREFIX}Cookies du test`)
     expect(data.usage).toMatchObject({ provider: 'mock', model: 'mock-recipe', estimatedCostUsd: 0 })
     expect(data.usage.inputTokens).toBeGreaterThan(0)
+    // Recettes bilingues : texte anglais détecté, traduction française jointe.
+    expect(data.lang).toBe('en')
+    expect(data.translation.title).toBe(`[FR] ${PREFIX}Cookies du test`)
 
     const ingredients = data.recipe.sections?.[0]?.ingredients ?? []
     expect(ingredients.find(i => i.name === 'farine')).toMatchObject({ unitCode: 'g', unit: 'g', amount: 280 })
@@ -134,12 +137,13 @@ describe.skipIf(!appUp)('POST /api/translate-recipe (mock) + ai_usage (base loca
 
   it('la recette convertie passe dans add-recipe avec les unit_code en base', async () => {
     const translated = await post(adminToken, { recipeText: SAMPLE })
-    const { recipe } = (await translated.json()) as TranslateRecipeResponse
+    const { recipe, lang, translation } = (await translated.json()) as TranslateRecipeResponse
 
     const added = await fetch(`${APP_URL}/api/add-recipe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      body: JSON.stringify({ recipe })
+      // Traduction jointe (parcours du traducteur) : aucun appel IA supplémentaire.
+      body: JSON.stringify({ recipe, lang, translation })
     })
     expect(added.status).toBe(200)
     const { recipe: saved } = (await added.json()) as { recipe: { id: string, sections: Array<{ ingredients: Array<{ name: string, unitCode: string | null, unit: string | null }> }> } }

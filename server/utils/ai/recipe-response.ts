@@ -1,14 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { recipeInputSchema } from '#shared/schemas/recipe'
-import { aiRecipeToRecipeInput, type AiRecipe, type TranslateRecipeResponse } from '#shared/schemas/ai'
+import { aiRecipeToBilingual, assertTranslationShape, type AiRecipe, type TranslateRecipeResponse } from '#shared/schemas/ai'
+import { inputTexts } from '#shared/utils/translation'
 import { isUnitCode, type UnitCode } from '#shared/schemas/units'
 import type { AiConfig } from './provider'
 import type { AiUsageLogged } from './usage'
 
 /**
  * Passage commun à `translate-recipe` et `extract-recipe` : la recette produite
- * par le modèle devient un `RecipeInput` (libellés d'unité lus en base) et la
- * réponse de l'API est assemblée.
+ * par le modèle devient un `RecipeInput` (libellés d'unité lus en base) avec sa
+ * traduction alignée et sa langue d'origine, et la réponse de l'API est assemblée.
  */
 
 /** Libellés canoniques (`units.abbr`) par code, lus en base (lecture publique). */
@@ -45,13 +46,17 @@ export async function buildRecipeResponse(
   durationMs: number
 ): Promise<TranslateRecipeResponse> {
   const unitLabels = await loadUnitLabels(supabase, context)
-  const converted = aiRecipeToRecipeInput(aiRecipe, code => unitLabels.get(code) ?? code)
+  const bilingual = aiRecipeToBilingual(aiRecipe, code => unitLabels.get(code) ?? code)
   // Garantit que l'aperçu renvoyé passera tel quel dans POST /api/add-recipe.
-  const recipe = recipeInputSchema.parse(converted)
+  const recipe = recipeInputSchema.parse(bilingual.recipe)
+  // ... et que la traduction correspond position par position à la recette validée.
+  assertTranslationShape(inputTexts(recipe), bilingual.translation)
 
   return {
     success: true,
     recipe,
+    lang: bilingual.lang,
+    translation: bilingual.translation,
     aiRecipe,
     usage: {
       provider: config.provider,

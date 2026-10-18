@@ -6,7 +6,7 @@ import type { ShoppingItemRow } from '~~/server/utils/shopping'
  * POST /api/shopping-lists/:id/recipes — ajoute les ingrédients d'une recette
  * à la liste (toutes les sections ou `sectionIds`), quantités × `servingsFactor`,
  * avec fusion des doublons (`add_recipe_to_list` → `merge_shopping_item`).
- * Body : `{ recipeId, sectionIds?, servingsFactor? }`.
+ * Body : `{ recipeId, sectionIds?, servingsFactor?, locale? }` (`locale` : noms traduits, 0016).
  * Réponse : `{ success, items }` — les articles créés ou mis à jour.
  */
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,8 @@ export default defineEventHandler(async (event) => {
       p_recipe_id: input.recipeId,
       p_list_id: listId,
       p_section_ids: input.sectionIds ?? null,
-      p_servings_factor: input.servingsFactor ?? 1
+      p_servings_factor: input.servingsFactor ?? 1,
+      p_locale: input.locale ?? null
     })
     if (error) {
       throwSupabaseError(error, 'shopping-lists/[id]/recipes add_recipe_to_list')

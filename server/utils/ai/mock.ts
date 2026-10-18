@@ -1,6 +1,10 @@
+import { APICallError } from 'ai'
 import { MockLanguageModelV4, MockTranscriptionModelV4 } from 'ai/test'
 import type { LanguageModelV4CallOptions } from '@ai-sdk/provider'
 import type { AiRecipe } from '#shared/schemas/ai'
+import type { AiTranslateExisting, AiTranslation } from '#shared/schemas/translation'
+import { detectLanguage, flattenTexts, otherLang, type RecipeTexts } from '#shared/utils/translation'
+import type { RecipeLang } from '#shared/types'
 
 /**
  * Fournisseur simulé (`AI_PROVIDER=mock`) : aucun appel réseau, aucun coût.
@@ -11,6 +15,13 @@ import type { AiRecipe } from '#shared/schemas/ai'
  *    les recettes de test `TEST_…` et les retrouver/supprimer) ;
  *  - un comptage de tokens approximatif (4 caractères ≈ 1 token) pour
  *    exercer la journalisation `ai_usage` et l'estimation de coût.
+ *
+ * Recettes bilingues (0016) : la « traduction » simulée préfixe chaque texte de
+ * « [EN] » (source française) ou « [FR] » (source anglaise), ce qui la rend
+ * déterministe et reconnaissable dans les tests. La langue source est devinée
+ * par `detectLanguage` (heuristique de mots courants). La traduction d'une
+ * recette existante (`schemaName` « traduction ») préfixe les textes reçus ; les
+ * quantités purement numériques ne sont jamais envoyées donc jamais préfixées.
  *
  * Entrées média (phase 5) :
  *  - photo / PDF (`generateObject` avec des parties `image` ou `file`) : la
@@ -33,7 +44,55 @@ export const MOCK_TRANSCRIPT = 'Cookies aux pépites de chocolat. Il faut deux c
   + 'Préchauffer le four à cent quatre-vingts degrés, fouetter le beurre avec le sucre, ajouter les œufs, '
   + 'puis la farine et les pépites. Former des boules de pâte et enfourner dix à douze minutes.'
 
-export const MOCK_RECIPE: AiRecipe = {
+/** Préfixe de la traduction simulée vers `target`. */
+export const mockPrefix = (target: RecipeLang): string => (target === 'en' ? '[EN] ' : '[FR] ')
+
+const prefixed = (prefix: string, value: string): string => (value.trim() === '' ? value : `${prefix}${value}`)
+const prefixedOrNull = (prefix: string, value: string | null): string | null => (value === null ? null : prefixed(prefix, value))
+
+/** Traduction simulée de textes de recette (structure identique, chaque texte préfixé). */
+export function mockTranslateTexts(texts: RecipeTexts, target: RecipeLang): AiTranslation {
+  const prefix = mockPrefix(target)
+  return {
+    title: prefixed(prefix, texts.title),
+    description: prefixedOrNull(prefix, texts.description),
+    notes: prefixedOrNull(prefix, texts.notes),
+    tags: texts.tags.map(tag => prefixed(prefix, tag)),
+    sections: texts.sections.map(section => ({
+      name: prefixed(prefix, section.name),
+      ingredients: section.ingredients.map(ingredient => ({
+        name: prefixed(prefix, ingredient.name),
+        amount: prefixedOrNull(prefix, ingredient.amount),
+        unit: prefixedOrNull(prefix, ingredient.unit)
+      })),
+      instructions: section.instructions.map(step => prefixed(prefix, step))
+    }))
+  }
+}
+
+/** Textes d'une recette de l'IA (mêmes positions que sa traduction). */
+function aiRecipeTexts(recipe: MockRecipeBase): RecipeTexts {
+  return {
+    title: recipe.title,
+    description: recipe.description,
+    notes: recipe.notes,
+    tags: recipe.tags,
+    sections: recipe.sections.map(section => ({
+      name: section.name,
+      ingredients: section.ingredients.map(ingredient => ({
+        name: ingredient.name,
+        // Les quantités de l'IA sont des nombres : rien à traduire.
+        amount: null,
+        unit: ingredient.unit ? null : ingredient.unitText
+      })),
+      instructions: section.instructions
+    }))
+  }
+}
+
+type MockRecipeBase = Omit<AiRecipe, 'sourceLanguage' | 'translation'>
+
+export const MOCK_RECIPE_BASE: MockRecipeBase = {
   title: 'Cookies aux pépites de chocolat',
   description: 'Des cookies moelleux au centre et croustillants sur les bords.',
   category: 'desserts et gâteaux',
@@ -74,6 +133,15 @@ export const MOCK_RECIPE: AiRecipe = {
   ]
 }
 
+/** Recette fixe, rédigée dans `sourceLanguage` (le mock ne traduit pas la base : il préfixe la traduction). */
+export function mockRecipe(title: string, sourceLanguage: RecipeLang): AiRecipe {
+  const base: MockRecipeBase = { ...MOCK_RECIPE_BASE, title }
+  return { ...base, sourceLanguage, translation: mockTranslateTexts(aiRecipeTexts(base), otherLang(sourceLanguage)) }
+}
+
+/** Recette fixe d'origine (français), avec sa traduction simulée vers l'anglais. */
+export const MOCK_RECIPE: AiRecipe = mockRecipe('Cookies aux pépites de chocolat', 'fr')
+
 /** Nombre d'images / PDF joints au dernier message utilisateur. */
 function countFileParts(options: LanguageModelV4CallOptions): number {
   const lastUser = [...options.prompt].reverse().find(message => message.role === 'user')
@@ -89,8 +157,8 @@ function textLengthOfPrompt(options: LanguageModelV4CallOptions): number {
   }, 0)
 }
 
-/** Première ligne non vide du dernier message utilisateur (titre de la recette simulée). */
-function firstLineOfPrompt(options: LanguageModelV4CallOptions): string | null {
+/** Texte du dernier message utilisateur, hors balise fermante. */
+function recipeBodyOfPrompt(options: LanguageModelV4CallOptions): string | null {
   const lastUser = [...options.prompt].reverse().find(message => message.role === 'user')
   if (!lastUser || lastUser.role !== 'user') return null
   const text = lastUser.content
@@ -99,8 +167,39 @@ function firstLineOfPrompt(options: LanguageModelV4CallOptions): string | null {
   // La balise ouvrante est aussi citée dans la consigne : on prend la dernière.
   const marker = text.lastIndexOf('<recette>\n')
   const body = marker >= 0 ? text.slice(marker + '<recette>\n'.length) : text
-  const line = body.split('\n').map(s => s.trim()).find(s => s !== '' && s !== '</recette>')
+  const end = body.lastIndexOf('\n</recette>')
+  return end >= 0 ? body.slice(0, end) : body
+}
+
+/** Première ligne non vide du dernier message utilisateur (titre de la recette simulée). */
+function firstLineOfPrompt(options: LanguageModelV4CallOptions): string | null {
+  const body = recipeBodyOfPrompt(options)
+  const line = body?.split('\n').map(s => s.trim()).find(s => s !== '' && s !== '</recette>')
   return line ? line.slice(0, 200) : null
+}
+
+/** Nom du schéma demandé à `generateObject` (« recette » ou « traduction »). */
+function schemaNameOf(options: LanguageModelV4CallOptions): string | undefined {
+  const format = options.responseFormat
+  return format && format.type === 'json' ? format.name : undefined
+}
+
+/**
+ * Marqueur de panne simulée : une recette dont les textes le contiennent fait
+ * échouer la traduction (503 du « fournisseur »), pour tester l'échec sans IA
+ * (enregistrement réussi, traduction périmée, reprise par la page Traductions).
+ */
+export const MOCK_FAILURE_MARKER = '__MOCK_AI_FAILURE__'
+
+/** Réponse simulée à une demande de traduction d'une recette existante. */
+function mockTranslateExisting(options: LanguageModelV4CallOptions): AiTranslateExisting {
+  const body = recipeBodyOfPrompt(options) ?? '{}'
+  if (body.includes(MOCK_FAILURE_MARKER)) {
+    throw new APICallError({ message: 'panne simulée', url: 'mock://ai', requestBodyValues: {}, statusCode: 503, isRetryable: false })
+  }
+  const texts = JSON.parse(body) as RecipeTexts
+  const sourceLanguage = detectLanguage(flattenTexts(texts))
+  return { sourceLanguage, translation: mockTranslateTexts(texts, otherLang(sourceLanguage)) }
 }
 
 export function createMockRecipeModel(): MockLanguageModelV4 {
@@ -109,10 +208,15 @@ export function createMockRecipeModel(): MockLanguageModelV4 {
     modelId: MOCK_MODEL_ID,
     doGenerate: async (options) => {
       const files = countFileParts(options)
-      // Avec une photo ou un PDF, la consigne texte n'est pas une recette : titre d'origine.
-      const title = (files > 0 ? null : firstLineOfPrompt(options)) ?? MOCK_RECIPE.title
-      const recipe: AiRecipe = { ...MOCK_RECIPE, title }
-      const text = JSON.stringify(recipe)
+      let text: string
+      if (schemaNameOf(options) === 'traduction') {
+        text = JSON.stringify(mockTranslateExisting(options))
+      } else {
+        // Avec une photo ou un PDF, la consigne texte n'est pas une recette : titre d'origine, français.
+        const title = (files > 0 ? null : firstLineOfPrompt(options)) ?? MOCK_RECIPE.title
+        const sourceLanguage = files > 0 ? 'fr' : detectLanguage(recipeBodyOfPrompt(options) ?? '')
+        text = JSON.stringify(mockRecipe(title, sourceLanguage))
+      }
       const promptTokens = Math.ceil(textLengthOfPrompt(options) / 4) + files * MOCK_TOKENS_PER_FILE
       return {
         content: [{ type: 'text', text }],

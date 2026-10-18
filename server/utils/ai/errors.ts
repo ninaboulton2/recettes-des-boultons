@@ -1,5 +1,6 @@
 import { createError } from 'h3'
 import { APICallError, LoadAPIKeyError, NoObjectGeneratedError, NoSuchModelError } from 'ai'
+import { TranslationShapeError } from '#shared/schemas/ai'
 import { AiConfigError } from './provider'
 
 /**
@@ -12,7 +13,8 @@ import { AiConfigError } from './provider'
  *  - crédit ou quota du fournisseur épuisé (402, 429)                 → 402
  *  - modèle inconnu (404, NoSuchModelError), autre réponse 4xx/5xx     → 502
  *  - délai dépassé (abort / timeout)                                   → 504
- *  - réponse inexploitable (JSON invalide, schéma non respecté)        → 422
+ *  - réponse inexploitable (JSON invalide, schéma non respecté,
+ *    traduction qui n'a pas la structure de la recette)               → 422
  *
  * Tout ce qui n'est pas reconnu est laissé à `handleApiError` (500 générique).
  */
@@ -23,7 +25,8 @@ export const AI_ERROR_MESSAGES = {
   unavailable: 'Service de traduction indisponible pour le moment (fournisseur IA).',
   timeout: 'Le fournisseur IA n\'a pas répondu à temps. Réessayez, ou collez une recette plus courte.',
   noRecipe: 'Aucune recette lisible n\'a été trouvée dans ce fichier. Essayez une photo plus nette, mieux cadrée, ou collez le texte.',
-  unusable: 'La recette n\'a pas pu être structurée. Vérifiez que le texte collé est bien une recette complète et réessayez.'
+  unusable: 'La recette n\'a pas pu être structurée. Vérifiez que le texte collé est bien une recette complète et réessayez.',
+  inconsistent: 'La traduction renvoyée par l\'IA est incomplète. Réessayez.'
 } as const
 
 function isAbortError(error: unknown): boolean {
@@ -46,6 +49,11 @@ export function throwAiProviderError(error: unknown, context: string): void {
   if (NoSuchModelError.isInstance(error)) {
     console.error(`[api] ${context} : modèle inconnu`, error.message)
     throw createError({ statusCode: 502, statusMessage: AI_ERROR_MESSAGES.unavailable })
+  }
+
+  if (error instanceof TranslationShapeError) {
+    console.error(`[api] ${context} : traduction incohérente`, error.message)
+    throw createError({ statusCode: 422, statusMessage: AI_ERROR_MESSAGES.inconsistent })
   }
 
   if (NoObjectGeneratedError.isInstance(error)) {

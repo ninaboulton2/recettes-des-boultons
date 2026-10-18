@@ -98,6 +98,12 @@ describe.skipIf(!appUp)('POST /api/recipes/similar (base locale)', () => {
             ingredients: INGREDIENTS.map((name, orderIndex) => ({ name, amount: 1, orderIndex })),
             instructions: []
           }]
+        },
+        // Traduction jointe : pas d'appel IA (feature translate_recipe) pendant ce test.
+        lang: 'fr',
+        translation: {
+          title: `${PREFIX}Carrot and walnut cake`,
+          content: { sections: [{ name: '', ingredients: INGREDIENTS.map(name => ({ name: `[EN] ${name}`, amount: null, unit: null })), instructions: [] }] }
         }
       })
     })

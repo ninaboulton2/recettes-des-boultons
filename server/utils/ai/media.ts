@@ -1,6 +1,6 @@
 import { experimental_transcribe as transcribe, generateObject, type LanguageModel, type TranscriptionModel } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
-import { aiRecipeSchema, type AiTargetLanguage } from '#shared/schemas/ai'
+import { aiRecipeSchema } from '#shared/schemas/ai'
 import type { UploadMediaType } from '#shared/schemas/media'
 import { AiConfigError, type AiConfig } from './provider'
 import { createMockTranscriptionModel } from './mock'
@@ -65,18 +65,17 @@ export async function transcribeAudio(model: TranscriptionModel, audio: Uint8Arr
   return { text: result.text.trim(), durationInSeconds: result.durationInSeconds }
 }
 
-/** Photo(s) ou PDF d'une recette → `AiRecipe` validée par `aiRecipeSchema`. */
+/** Photo(s) ou PDF d'une recette → `AiRecipe` bilingue validée par `aiRecipeSchema`. */
 export async function extractRecipeFromFiles(
   model: LanguageModel,
-  files: UploadedRecipeFile[],
-  targetLanguage: AiTargetLanguage
+  files: UploadedRecipeFile[]
 ): Promise<TranslateResult> {
   const result = await generateObject({
     model,
     schema: aiRecipeSchema,
     schemaName: 'recette',
     schemaDescription: 'Recette de cuisine structurée en sections (ingrédients et étapes).',
-    system: buildExtractSystemPrompt(targetLanguage),
+    system: buildExtractSystemPrompt(),
     messages: [{
       role: 'user',
       content: [

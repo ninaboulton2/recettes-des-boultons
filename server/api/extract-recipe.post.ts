@@ -1,7 +1,6 @@
 import { createError, defineEventHandler } from 'h3'
 import type { TranslateRecipeResponse } from '#shared/schemas/ai'
 import {
-  extractRecipeFieldsSchema,
   extractRecipeFilesSchema,
   RECIPE_UPLOAD_MAX_BYTES,
   sniffImageOrPdfType
@@ -11,7 +10,7 @@ import { extractRecipeFromFiles, type UploadedRecipeFile } from '../utils/ai/med
 import { AI_ERROR_MESSAGES, throwAiProviderError } from '../utils/ai/errors'
 import { assertAiQuota, trackAiCall } from '../utils/ai/usage'
 import { buildRecipeResponse, hasRecipeContent } from '../utils/ai/recipe-response'
-import { fileParts, readUploadParts, textField } from '../utils/ai/upload'
+import { fileParts, readUploadParts } from '../utils/ai/upload'
 
 /**
  * POST /api/extract-recipe — photo(s) ou PDF d'une recette → `RecipeInput`
@@ -19,7 +18,7 @@ import { fileParts, readUploadParts, textField } from '../utils/ai/upload'
  * enregistré ici).
  *
  * Corps `multipart/form-data` : `files` (1 à 4 JPEG / PNG / WebP / PDF, 4 Mo au
- * total, 10 Mo chacun) et `targetLanguage?` (`fr` | `en`). Le format est reconnu
+ * total, 10 Mo chacun). La langue est détectée par le modèle (0016). Le format est reconnu
  * à l'en-tête des octets, jamais d'après le type annoncé par le navigateur.
  *
  * Étapes : auth admin → lecture et validation Zod → quota journalier (même
@@ -32,7 +31,6 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     const { supabase, user } = await requireAdmin(event)
 
     const parts = await readUploadParts(event, RECIPE_UPLOAD_MAX_BYTES)
-    const { targetLanguage } = validateData(extractRecipeFieldsSchema, { targetLanguage: textField(parts, 'targetLanguage') })
 
     const rawFiles = fileParts(parts, 'files').map(part => ({
       filename: part.filename ?? 'fichier',
@@ -57,7 +55,7 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     const { result, logged, durationMs } = await trackAiCall(
       supabase,
       { userId: user.id, provider: config.provider, model: config.model, feature: 'extract' },
-      () => extractRecipeFromFiles(model, files, targetLanguage),
+      () => extractRecipeFromFiles(model, files),
       ({ usage }) => usage
     )
 

@@ -127,15 +127,15 @@ describe.skipIf(!appUp)('POST /api/extract-recipe et /api/transcribe-recipe (moc
 
     it('renvoie un RecipeInput valide pour une photo et journalise feature=extract', async () => {
       const before = await usageCount('extract')
-      const response = await post('/api/extract-recipe', adminToken, form([
-        ['files', JPEG, 'page.jpg', 'image/jpeg'],
-        ['targetLanguage', 'fr']
-      ]))
+      const response = await post('/api/extract-recipe', adminToken, form([['files', JPEG, 'page.jpg', 'image/jpeg']]))
       expect(response.status).toBe(200)
       const data = (await response.json()) as TranslateRecipeResponse
       expect(data.success).toBe(true)
       expect(recipeInputSchema.safeParse(data.recipe).success).toBe(true)
       expect(data.recipe.title).toBe(MOCK_RECIPE.title)
+      // Recettes bilingues : langue détectée + traduction dans l'autre langue (plus de langue cible).
+      expect(data.lang).toBe('fr')
+      expect(data.translation.title).toBe(`[EN] ${MOCK_RECIPE.title}`)
       expect(data.usage).toMatchObject({ provider: 'mock', model: 'mock-recipe', estimatedCostUsd: 0 })
       expect(data.usage.inputTokens).toBeGreaterThan(0)
       expect(await usageCount('extract')).toBe(before + 1)
@@ -158,11 +158,11 @@ describe.skipIf(!appUp)('POST /api/extract-recipe et /api/transcribe-recipe (moc
       expect(payload.statusMessage).toContain('format non pris en charge')
     })
 
-    it('refuse zéro fichier, plus de 4 fichiers et une langue inconnue (400)', async () => {
+    it('refuse zéro fichier et plus de 4 fichiers (400) ; une ancienne langue cible est ignorée', async () => {
       expect((await post('/api/extract-recipe', adminToken, form([['targetLanguage', 'fr']]))).status).toBe(400)
       const five = Array.from({ length: 5 }, (_, i): [string, Uint8Array, string, string] => ['files', JPEG, `p${i}.jpg`, 'image/jpeg'])
       expect((await post('/api/extract-recipe', adminToken, form(five))).status).toBe(400)
-      expect((await post('/api/extract-recipe', adminToken, form([['files', JPEG, 'p.jpg', 'image/jpeg'], ['targetLanguage', 'de']]))).status).toBe(400)
+      expect((await post('/api/extract-recipe', adminToken, form([['files', JPEG, 'p.jpg', 'image/jpeg'], ['targetLanguage', 'de']]))).status).toBe(200)
     })
 
     it('refuse un envoi trop volumineux (413 ou 400) sans appeler l\'IA', async () => {
