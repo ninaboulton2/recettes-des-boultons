@@ -7,7 +7,7 @@
 #       migrations/0001, 0002           (déjà appliquées en prod)      ┘ fois
 #    2. local/snapshot/*.sql  (données prod anonymisées, gitignorées)
 #       ou seed_test.sql avec --seed-test (données jetables des tests)
-#    3. migrations/0003 → dernière (0015) — idempotentes, rejouées à chaque
+#    3. migrations/0003 → dernière (0016) — idempotentes, rejouées à chaque
 #       appel ; une fois 0013 (« contract » : colonnes JSONB supprimées)
 #       appliquée, 0003 → 0012 ne sont plus rejouées (0005 lit le JSONB) :
 #       seules 0013 et suivantes le sont

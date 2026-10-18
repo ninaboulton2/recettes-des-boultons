@@ -1,7 +1,7 @@
 -- ============================================================================
 --  Vérifications post-amorçage (base LOCALE avec le snapshot prod)
 -- ============================================================================
---  Compare l'état de la base locale, migrations 0003 → 0015 appliquées, aux
+--  Compare l'état de la base locale, migrations 0003 → 0016 appliquées, aux
 --  comptes attendus (MIGRATION_NOTES.md § 4 et § 8, snapshot prod du
 --  2026-10-03). Les comptes de contenu ne portent que sur les recettes du
 --  snapshot (created_at < 2026-10-03) : les recettes créées ensuite en local
@@ -33,7 +33,7 @@ insert into tmp_verify values
   ('search_recipes sans JSONB (0013)', 'oui', case when position('ingredients' in pg_get_function_result('public.search_recipes(text, text, text[], int, int)'::regprocedure)) = 0 then 'oui' else 'non' end),
   ('sauvegardes *_20261003 (0014)', '0 ou 6', (select case when count(*) in (0, 6) then '0 ou 6' else count(*)::text end from pg_tables where schemaname = 'public' and (tablename like '%\_backup\_20261003' or tablename like '%\_orphans\_20261003'))),
   ('sauvegarde nettoyage (0015)',   '28',   (select count(*) from public.recipe_ingredients_backup_cleanup)::text),
-  ('politiques public (0009/0012)', '44',   (select count(*) from pg_policies where schemaname = 'public')::text),
+  ('politiques public (0009/0012/0016)', '48',   (select count(*) from pg_policies where schemaname = 'public')::text),
   ('public.is_admin (0009)',        'absente', case when to_regprocedure('public.is_admin()') is null then 'absente' else 'présente' end),
   ('private.is_admin (0009)',       'présente', case when to_regprocedure('private.is_admin()') is null then 'absente' else 'présente' end),
   ('hook JWT (0009)',               'présente', case when to_regprocedure('public.custom_access_token_hook(jsonb)') is null then 'absente' else 'présente' end),

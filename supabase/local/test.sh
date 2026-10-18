@@ -13,7 +13,7 @@
 #         touchée. Nécessite pg_dump 17 (brew install postgresql@17).
 #  2. setup.sh --seed-test --until 0012 : baseline, 0001/0002, seed_test.sql,
 #     0003 → 0012 (« expand »), rejeu (idempotence), tests test_0003 → 0012
-#  3. 0013 → dernière (« contract » : 0013, 0014, 0015), rejeu, tests
+#  3. 0013 → dernière (« contract » : 0013 → 0016), rejeu, tests
 #     test_0013 → …  (chaque script annule sa transaction ou nettoie)
 #  Ne touche jamais à la prod.
 # ============================================================================
