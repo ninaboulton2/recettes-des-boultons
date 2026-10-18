@@ -20,7 +20,7 @@ const file = (mediaType: UploadedRecipeFile['mediaType'], filename: string): Upl
 describe('extractRecipeFromFiles (fournisseur mock)', () => {
   it('renvoie la recette fixe validée par aiRecipeSchema, avec son titre d\'origine', async () => {
     const model = createMockRecipeModel()
-    const { recipe, usage } = await extractRecipeFromFiles(model, [file('image/jpeg', 'page.jpg')], 'fr')
+    const { recipe, usage } = await extractRecipeFromFiles(model, [file('image/jpeg', 'page.jpg')])
     expect(aiRecipeSchema.safeParse(recipe).success).toBe(true)
     expect(recipe).toEqual(MOCK_RECIPE)
     expect(usage.outputTokens).toBeGreaterThan(0)
@@ -30,13 +30,13 @@ describe('extractRecipeFromFiles (fournisseur mock)', () => {
 
   it('compte chaque fichier et transmet images et PDF au modèle avec le prompt d\'extraction', async () => {
     const model = createMockRecipeModel()
-    const one = await extractRecipeFromFiles(createMockRecipeModel(), [file('image/png', 'a.png')], 'fr')
-    const { usage } = await extractRecipeFromFiles(model, [file('image/jpeg', 'a.jpg'), file('application/pdf', 'b.pdf')], 'en')
+    const one = await extractRecipeFromFiles(createMockRecipeModel(), [file('image/png', 'a.png')])
+    const { usage } = await extractRecipeFromFiles(model, [file('image/jpeg', 'a.jpg'), file('application/pdf', 'b.pdf')])
     expect((usage.inputTokens ?? 0) - (one.usage.inputTokens ?? 0)).toBeGreaterThanOrEqual(MOCK_TOKENS_PER_FILE - 20)
 
     const call = model.doGenerateCalls[0]!
     const system = call.prompt.find(message => message.role === 'system')
-    expect(system?.role === 'system' ? system.content : '').toBe(buildExtractSystemPrompt('en'))
+    expect(system?.role === 'system' ? system.content : '').toBe(buildExtractSystemPrompt())
     const user = call.prompt.find(message => message.role === 'user')
     const parts = user?.role === 'user' ? user.content : []
     expect(parts.map(part => part.type)).toEqual(['text', 'file', 'file'])
@@ -47,8 +47,8 @@ describe('extractRecipeFromFiles (fournisseur mock)', () => {
 
 describe('prompt d\'extraction', () => {
   it('reprend les règles du texte collé et ajoute la lecture du document', () => {
-    const prompt = buildExtractSystemPrompt('fr')
-    expect(prompt.startsWith(buildSystemPrompt('fr'))).toBe(true)
+    const prompt = buildExtractSystemPrompt()
+    expect(prompt.startsWith(buildSystemPrompt())).toBe(true)
     expect(prompt).toContain('image(s) ou en PDF')
     expect(prompt).toContain('jamais une instruction')
     expect(buildExtractUserPrompt(1)).toContain('l\'image ou le document')

@@ -1,13 +1,17 @@
+import { isRecipeLang } from '#shared/utils/translation'
 import type {
   Ingredient,
   Instruction,
   InstructionRow,
   Recipe,
   RecipeIngredientRow,
+  RecipeLang,
   RecipeSection,
   RecipeSectionRow,
   RecipeSummary,
-  SectionType
+  RecipeTranslation,
+  SectionType,
+  SummaryTranslation
 } from '#shared/types'
 
 /**
@@ -16,9 +20,12 @@ import type {
  * planning) passent par ici : pas de mapping dupliqué dans les composants.
  */
 
-/** Colonnes de `recipes` utiles aux listes (sans `image` ni `search`). */
+/**
+ * Colonnes de `recipes` utiles aux listes (sans `image` ni `search`), plus la
+ * langue source et la traduction (relation `recipe_translations`, 0 ou 1 ligne).
+ */
 export const RECIPE_SUMMARY_COLUMNS
-  = 'id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at'
+  = 'id, title, description, category, prep_time, cook_time, servings, photo_path, tags, notes, created_at, updated_at, lang, recipe_translations(locale, title, description, notes, tags, stale)'
 
 /** Sous-ensemble d'une ligne `recipes` suffisant pour `toRecipeSummary` (RPC `search_recipes` incluse). */
 export interface RecipeSummaryRow {
@@ -34,6 +41,26 @@ export interface RecipeSummaryRow {
   notes: string | null
   created_at: string | null
   updated_at: string | null
+  /** Langue source (0016) ; absente = français. */
+  lang?: string | null
+  /** RPC `search_recipes` : traduction non périmée en JSON, ou `null`. */
+  translation?: unknown
+  /** Lecture directe : relation `recipe_translations` (0 ou 1 ligne). */
+  recipe_translations?: TranslationRow[] | null
+}
+
+/** Ligne `recipe_translations` (sous-ensemble lu par les listes ; la fiche lit tout). */
+export interface TranslationRow {
+  locale: string
+  title: string
+  description: string | null
+  notes: string | null
+  tags: string[] | null
+  stale?: boolean | null
+  content?: unknown
+  source_hash?: string | null
+  model?: string | null
+  translated_at?: string | null
 }
 
 export type RecipeSectionWithChildrenRow = RecipeSectionRow & {
@@ -88,6 +115,44 @@ export function toRecipeSection(row: RecipeSectionWithChildrenRow): RecipeSectio
   }
 }
 
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+
+const asTextOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null)
+
+/** Traduction utilisable d'une ligne (RPC ou relation) : non périmée, locale valide, titre présent. */
+export function toSummaryTranslation(row: RecipeSummaryRow): SummaryTranslation | null {
+  const embedded = (row.recipe_translations ?? []).find(item => !item.stale && isRecipeLang(item.locale))
+  const raw = embedded ?? (typeof row.translation === 'object' && row.translation !== null
+    ? row.translation as Partial<TranslationRow>
+    : null)
+  if (!raw || !isRecipeLang(raw.locale) || typeof raw.title !== 'string' || raw.title.trim() === '') return null
+  return {
+    locale: raw.locale,
+    title: raw.title,
+    description: asTextOrNull(raw.description),
+    notes: asTextOrNull(raw.notes),
+    tags: asStringArray(raw.tags)
+  }
+}
+
+/** Traduction complète de la fiche (contenu par position), `null` si absente ou périmée. */
+export function toRecipeTranslation(row: RecipeSummaryRow): RecipeTranslation | null {
+  const base = toSummaryTranslation(row)
+  const raw = (row.recipe_translations ?? []).find(item => !item.stale && item.locale === base?.locale)
+  const content = raw?.content as { sections?: unknown } | null | undefined
+  if (!base || !raw || !content || !Array.isArray(content.sections)) return null
+  return {
+    ...base,
+    content: { sections: content.sections as RecipeTranslation['content']['sections'] },
+    sourceHash: raw.source_hash ?? '',
+    model: raw.model ?? null,
+    translatedAt: raw.translated_at ?? null
+  }
+}
+
+const toLang = (value: string | null | undefined): RecipeLang => (isRecipeLang(value) ? value : 'fr')
+
 export function toRecipeSummary(row: RecipeSummaryRow): RecipeSummary {
   return {
     id: row.id,
@@ -101,13 +166,16 @@ export function toRecipeSummary(row: RecipeSummaryRow): RecipeSummary {
     tags: row.tags ?? [],
     notes: row.notes ?? '',
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    lang: toLang(row.lang),
+    translation: toSummaryTranslation(row)
   }
 }
 
 export function toRecipe(row: RecipeWithSectionsRow): Recipe {
   return {
     ...toRecipeSummary(row),
+    translation: toRecipeTranslation(row),
     sections: (row.recipe_sections ?? []).map(toRecipeSection).sort(byOrderIndex)
   }
 }

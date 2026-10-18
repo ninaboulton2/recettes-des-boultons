@@ -30,7 +30,9 @@ export const addRecipeToListSchema = z.object({
   servingsFactor: z.number({ invalid_type_error: 'doit être un nombre' })
     .positive('doit être strictement positif')
     .max(100, 'trop grand (max 100)')
-    .optional()
+    .optional(),
+  /** Langue de l'interface : les articles portent le nom traduit si la recette a une traduction valide (0016). */
+  locale: z.enum(['fr', 'en'], { errorMap: () => ({ message: 'doit être fr ou en' }) }).optional()
 })
 
 /** `POST /api/shopping-lists` et `PUT /api/shopping-lists/:id`. */

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { aiRecipeSchema, aiRecipeToRecipeInput, translateRecipeBodySchema, type AiRecipe } from '#shared/schemas/ai'
+import {
+  aiRecipeSchema,
+  aiRecipeToBilingual,
+  aiRecipeToRecipeInput,
+  TranslationShapeError,
+  translateRecipeBodySchema,
+  type AiRecipe
+} from '#shared/schemas/ai'
+import { aiTranslateExistingSchema, translationDraftSchema } from '#shared/schemas/translation'
+import { inputTexts, translationShapeProblem } from '#shared/utils/translation'
 import { recipeInputSchema } from '#shared/schemas/recipe'
 import { UNIT_CODES } from '#shared/schemas/units'
 import { RECIPE_CATEGORIES } from '#shared/types'
@@ -28,17 +37,37 @@ const base: AiRecipe = {
     },
     { name: 'Préparation', type: 'instructions', ingredients: [], instructions: ['Éplucher.', '  ', 'Cuire 25 min.'] },
     { name: 'Vide', type: 'mixed', ingredients: [], instructions: [] }
-  ]
+  ],
+  sourceLanguage: 'fr',
+  translation: {
+    title: 'Carrot soup',
+    description: null,
+    notes: null,
+    tags: ['Vegetarian', 'vegan', 'vegan'],
+    sections: [
+      {
+        name: '',
+        ingredients: [
+          { name: 'carrots', amount: null, unit: null },
+          { name: 'onion', amount: null, unit: null },
+          { name: 'stock', amount: null, unit: null },
+          { name: 'coriander', amount: null, unit: 'bunch of 50 g' },
+          { name: 'cream', amount: null, unit: null }
+        ],
+        instructions: []
+      },
+      { name: 'Method', ingredients: [], instructions: ['Peel.', '  ', 'Cook 25 min.'] },
+      { name: 'Empty', ingredients: [], instructions: [] }
+    ]
+  }
 }
 
 describe('translateRecipeBodySchema', () => {
-  it('exige 20 à 20 000 caractères et une langue fr|en (fr par défaut)', () => {
+  it('exige 20 à 20 000 caractères ; plus de langue cible (ignorée si envoyée par un ancien client)', () => {
     expect(translateRecipeBodySchema.safeParse({ recipeText: 'trop court' }).success).toBe(false)
     expect(translateRecipeBodySchema.safeParse({ recipeText: 'x'.repeat(20001) }).success).toBe(false)
-    expect(translateRecipeBodySchema.safeParse({ recipeText: 'x'.repeat(30), targetLanguage: 'de' }).success).toBe(false)
-    const ok = translateRecipeBodySchema.parse({ recipeText: `  ${'x'.repeat(30)}  ` })
-    expect(ok.targetLanguage).toBe('fr')
-    expect(ok.recipeText).toBe('x'.repeat(30))
+    const ok = translateRecipeBodySchema.parse({ recipeText: `  ${'x'.repeat(30)}  `, targetLanguage: 'en' })
+    expect(ok).toEqual({ recipeText: 'x'.repeat(30) })
   })
 })
 
@@ -115,5 +144,69 @@ describe('aiRecipeToRecipeInput', () => {
   it('utilise le code comme libellé par défaut', () => {
     const plain = aiRecipeToRecipeInput(base)
     expect(plain.sections?.[0]?.ingredients?.[0]?.unit).toBe('g')
+  })
+})
+
+describe('aiRecipeSchema : recette bilingue', () => {
+  it('exige la langue détectée (fr | en) et la traduction', () => {
+    expect(aiRecipeSchema.safeParse({ ...base, sourceLanguage: 'de' }).success).toBe(false)
+    const { translation: _translation, ...withoutTranslation } = base
+    expect(aiRecipeSchema.safeParse(withoutTranslation).success).toBe(false)
+  })
+
+  it('aiTranslateExistingSchema : langue + traduction, sans champ optionnel', () => {
+    expect(aiTranslateExistingSchema.safeParse({ sourceLanguage: 'en', translation: base.translation }).success).toBe(true)
+    expect(aiTranslateExistingSchema.safeParse({ sourceLanguage: 'es', translation: base.translation }).success).toBe(false)
+    expect(JSON.stringify(aiTranslateExistingSchema._def)).not.toContain('"typeName":"ZodOptional"')
+  })
+})
+
+describe('aiRecipeToBilingual', () => {
+  const bilingual = aiRecipeToBilingual(base, code => `<${code}>`)
+
+  it('renvoie la recette, la langue d\'origine et la traduction alignée', () => {
+    expect(bilingual.lang).toBe('fr')
+    expect(bilingual.recipe).toEqual(aiRecipeToRecipeInput(base, code => `<${code}>`))
+    expect(bilingual.translation.title).toBe('Carrot soup')
+  })
+
+  it('écarte les mêmes sections, ingrédients et étapes vides des deux côtés', () => {
+    expect(bilingual.translation.content.sections).toHaveLength(2)
+    expect(bilingual.translation.content.sections[1]).toEqual({ name: 'Method', ingredients: [], instructions: ['Peel.', 'Cook 25 min.'] })
+    expect(translationShapeProblem(inputTexts(bilingual.recipe), bilingual.translation)).toBeNull()
+  })
+
+  it('traduit l\'unité libre seulement (les quantités de l\'IA sont des nombres)', () => {
+    const ingredients = bilingual.translation.content.sections[0]!.ingredients
+    expect(ingredients[3]).toEqual({ name: 'coriander', amount: null, unit: 'bunch of 50 g' })
+    expect(ingredients[0]).toEqual({ name: 'carrots', amount: null, unit: null })
+  })
+
+  it('lève TranslationShapeError si la traduction n\'a pas la structure de la recette', () => {
+    const fewerSections = structuredClone(base)
+    fewerSections.translation.sections.pop()
+    expect(() => aiRecipeToBilingual(fewerSections)).toThrow(TranslationShapeError)
+    const fewerIngredients = structuredClone(base)
+    fewerIngredients.translation.sections[0]!.ingredients.pop()
+    expect(() => aiRecipeToBilingual(fewerIngredients)).toThrow(TranslationShapeError)
+    const fewerSteps = structuredClone(base)
+    fewerSteps.translation.sections[1]!.instructions.pop()
+    expect(() => aiRecipeToBilingual(fewerSteps)).toThrow(TranslationShapeError)
+  })
+
+  it('ignore des tags traduits qui ne correspondent plus un pour un', () => {
+    const bad = structuredClone(base)
+    bad.translation.tags = ['only one']
+    expect(aiRecipeToBilingual(bad).translation.tags).toEqual([])
+  })
+})
+
+describe('translationDraftSchema', () => {
+  it('accepte une traduction, normalise les null et refuse un titre vide', () => {
+    const ok = translationDraftSchema.parse({ title: ' T ', content: { sections: [{ name: '', ingredients: [{ name: 'a' }], instructions: ['x'] }] } })
+    expect(ok).toMatchObject({ title: 'T', description: null, notes: null, tags: [] })
+    expect(ok.content.sections[0]!.ingredients[0]).toEqual({ name: 'a', amount: null, unit: null })
+    expect(translationDraftSchema.safeParse({ title: ' ', content: { sections: [] } }).success).toBe(false)
+    expect(translationDraftSchema.safeParse({ title: 'T' }).success).toBe(false)
   })
 })

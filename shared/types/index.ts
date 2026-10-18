@@ -1,4 +1,5 @@
 import type { Tables } from './database'
+import type { TranslationContent } from '../utils/translation'
 
 /**
  * Modèle de lecture de l'application (camelCase).
@@ -78,6 +79,27 @@ export type RecipeSection = Section & {
   instructions: Instruction[]
 }
 
+/** Langue d'une recette ou de l'interface (`recipes.lang`, `recipe_translations.locale`). */
+export type RecipeLang = 'fr' | 'en'
+
+/** Traduction d'une recette telle que les listes la lisent (carte, favori, planning). */
+export interface SummaryTranslation {
+  /** Langue de la traduction (toujours l'autre que `recipe.lang`). */
+  locale: RecipeLang
+  title: string
+  description: string | null
+  notes: string | null
+  tags: string[]
+}
+
+/** Traduction complète d'une fiche (0016) : textes des sections par position. */
+export interface RecipeTranslation extends SummaryTranslation {
+  content: TranslationContent
+  sourceHash: string
+  model: string | null
+  translatedAt: string | null
+}
+
 /** Ligne `recipes` sans ses sections (listes, favoris, planning). */
 export interface RecipeSummary {
   id: string
@@ -93,10 +115,15 @@ export interface RecipeSummary {
   notes: string
   createdAt: string | null
   updatedAt: string | null
+  /** Langue du texte saisi (`recipes.lang`). */
+  lang: RecipeLang
+  /** Traduction utilisable (non périmée), `null` si absente ou périmée. */
+  translation: SummaryTranslation | null
 }
 
 /** Recette complète : ligne `recipes` + sections (ingrédients, instructions). */
 export interface Recipe extends RecipeSummary {
+  translation: RecipeTranslation | null
   sections: RecipeSection[]
 }
 

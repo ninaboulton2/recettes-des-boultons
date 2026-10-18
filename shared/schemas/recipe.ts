@@ -10,6 +10,7 @@ import {
   textOrNull,
   uuidSchema
 } from './common'
+import { recipeLangSchema, translationDraftSchema } from './translation'
 
 /**
  * Schémas d'écriture d'une recette.
@@ -67,8 +68,16 @@ export const recipeInputSchema = z.object({
   sections: z.array(recipeSectionInputSchema).max(50, 'trop de sections (max 50)').nullish()
 })
 
-/** Corps attendu par `POST /api/add-recipe`. */
-export const addRecipeBodySchema = z.object({ recipe: recipeInputSchema })
+/**
+ * Corps attendu par `POST /api/add-recipe`. `lang` + `translation` (facultatifs,
+ * fournis par le traducteur IA) : la recette est enregistrée avec sa traduction ;
+ * sans eux, le serveur traduit lui-même (IA) après l'enregistrement (0016).
+ */
+export const addRecipeBodySchema = z.object({
+  recipe: recipeInputSchema,
+  lang: recipeLangSchema.optional(),
+  translation: translationDraftSchema.nullish()
+})
 /** Corps attendu par `PUT /api/update-recipe?id=`. */
 export const updateRecipeBodySchema = z.object({ updates: recipeInputSchema })
 export const recipeIdQuerySchema = z.object({ id: uuidSchema })
@@ -92,6 +101,10 @@ export interface SaveRecipePayload {
   image: string | null
   photo_path: string | null
   tags: string[]
+  /** Langue du texte saisi (0016) ; absente = inchangée. */
+  lang?: 'fr' | 'en'
+  /** Traduction écrite dans la même transaction (0016) : `{ title, description, notes, tags, content, source_hash, model }`. */
+  translation?: Record<string, unknown>
   sections: Array<{
     name: string
     type: SectionType
@@ -114,7 +127,11 @@ export interface SaveRecipePayload {
  * `amount_num` ; `unit_code` n'est transmis que s'il est connu, sinon
  * `normalize_unit(unit)` s'en charge côté base.
  */
-export function toSaveRecipePayload(input: RecipeInput, id?: string): SaveRecipePayload {
+export function toSaveRecipePayload(
+  input: RecipeInput,
+  id?: string,
+  extra: Pick<SaveRecipePayload, 'lang' | 'translation'> = {}
+): SaveRecipePayload {
   const sections = (input.sections ?? []).map((section, sectionIndex) => ({
     name: section.name?.trim() ?? '',
     type: section.type ?? 'mixed',
@@ -146,6 +163,8 @@ export function toSaveRecipePayload(input: RecipeInput, id?: string): SaveRecipe
     image: textOrNull(input.image),
     photo_path: textOrNull(input.photoPath),
     tags: input.tags ?? [],
+    ...(extra.lang ? { lang: extra.lang } : {}),
+    ...(extra.translation ? { translation: extra.translation } : {}),
     sections
   }
 }

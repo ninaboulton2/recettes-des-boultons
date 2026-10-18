@@ -1,7 +1,9 @@
 import { z } from 'zod'
-import { RECIPE_CATEGORIES, type RecipeCategory } from '../types'
+import { RECIPE_CATEGORIES, type RecipeCategory, type RecipeLang } from '../types'
 import { SECTION_TYPES, type RecipeInput } from './recipe'
 import { UNIT_CODES, type UnitCode } from './units'
+import { aiTranslationSchema, recipeLangSchema, type AiTranslation } from './translation'
+import { translationShapeProblem, type RecipeTexts, type TranslationDraft } from '../utils/translation'
 
 /**
  * Schémas du traducteur IA (`POST /api/translate-recipe`).
@@ -13,19 +15,22 @@ import { UNIT_CODES, type UnitCode } from './units'
  *    et sans contraintes de longueur : les fournisseurs à « sortie structurée »
  *    stricte (OpenAI) refusent les mots-clés `minLength`/`maxLength`/`optional`.
  *    Règle : aucun champ optionnel, tout ce qui peut manquer est `nullable`.
- *  - `aiRecipeToRecipeInput` : conversion vers `RecipeInput` (forme de
- *    l'éditeur, validée ensuite par `recipeInputSchema`).
+ *  - `aiRecipeToBilingual` : conversion vers `RecipeInput` (forme de
+ *    l'éditeur, validée ensuite par `recipeInputSchema`) ET vers la
+ *    traduction alignée (`TranslationDraft`), avec la langue détectée.
+ *
+ * Recettes bilingues (0016) : le modèle détecte la langue du texte (`sourceLanguage`,
+ * fr ou en), rédige la recette dans cette langue (fidèlement, sans traduire) et
+ * fournit dans `translation` la même recette dans l'AUTRE langue, avec la même
+ * structure (mêmes sections, ingrédients et étapes, dans le même ordre). Il n'y
+ * a plus de langue cible à choisir.
  */
-
-export const AI_TARGET_LANGUAGES = ['fr', 'en'] as const
-export type AiTargetLanguage = (typeof AI_TARGET_LANGUAGES)[number]
 
 export const translateRecipeBodySchema = z.object({
   recipeText: z.string({ required_error: 'requis', invalid_type_error: 'doit être du texte' })
     .trim()
     .min(20, 'trop court (min 20 caractères)')
-    .max(20000, 'trop long (max 20000 caractères)'),
-  targetLanguage: z.enum(AI_TARGET_LANGUAGES, { errorMap: () => ({ message: 'doit être fr ou en' }) }).default('fr')
+    .max(20000, 'trop long (max 20000 caractères)')
 })
 
 export type TranslateRecipeBody = z.infer<typeof translateRecipeBodySchema>
@@ -61,7 +66,10 @@ export const aiRecipeSchema = z.object({
   servings: z.number().int().nullable().describe('Nombre de portions, null si inconnu'),
   tags: z.array(z.string()).describe('Tags parmi : végétarien, vegan, sans gluten, rapide ; vide sinon'),
   notes: z.string().nullable().describe('Astuces, variantes, infos qui ne rentrent nulle part ailleurs ; null sinon'),
-  sections: z.array(aiSectionSchema)
+  sections: z.array(aiSectionSchema),
+  sourceLanguage: recipeLangSchema.describe('Langue du texte d\'origine, dans laquelle les champs ci-dessus sont rédigés : fr ou en'),
+  translation: aiTranslationSchema
+    .describe('La même recette traduite dans l\'autre langue (en si sourceLanguage = fr, fr sinon), même structure')
 })
 
 export type AiRecipe = z.infer<typeof aiRecipeSchema>
@@ -81,8 +89,12 @@ export interface TranslateUsageInfo {
 /** Réponse de `POST /api/translate-recipe`. */
 export interface TranslateRecipeResponse {
   success: true
-  /** Prêt pour `POST /api/add-recipe` (déjà validé par `recipeInputSchema`). */
+  /** Prêt pour `POST /api/add-recipe` (déjà validé par `recipeInputSchema`), dans la langue d'origine. */
   recipe: RecipeInput
+  /** Langue d'origine détectée (`recipe` est rédigée dans cette langue). */
+  lang: RecipeLang
+  /** La recette dans l'autre langue, alignée sur `recipe` ; à renvoyer à `POST /api/add-recipe`. */
+  translation: TranslationDraft
   aiRecipe: AiRecipe
   usage: TranslateUsageInfo
 }
@@ -94,6 +106,27 @@ const trimOrNull = (value: string | null): string | null => {
   if (value === null) return null
   const trimmed = value.trim()
   return trimmed === '' ? null : trimmed
+}
+
+/** La réponse du modèle n'a pas la structure demandée (sections, ingrédients, étapes à aligner). */
+export class TranslationShapeError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TranslationShapeError'
+  }
+}
+
+/** Positions conservées d'une recette de l'IA : sections, ingrédients et étapes non vides. */
+interface KeptSection { section: number, ingredients: number[], steps: number[] }
+
+function keptPositions(recipe: AiRecipe): KeptSection[] {
+  return recipe.sections
+    .map((section, sectionIndex) => ({
+      section: sectionIndex,
+      ingredients: section.ingredients.flatMap((ingredient, i) => (ingredient.name.trim() !== '' ? [i] : [])),
+      steps: section.instructions.flatMap((step, i) => (step.trim() !== '' ? [i] : []))
+    }))
+    .filter(kept => kept.ingredients.length > 0 || kept.steps.length > 0)
 }
 
 /**
@@ -108,32 +141,29 @@ const trimOrNull = (value: string | null): string | null => {
  *    suivent la position.
  */
 export function aiRecipeToRecipeInput(recipe: AiRecipe, unitLabel: UnitLabelResolver = code => code): RecipeInput {
-  const sections = recipe.sections
-    .map((section, sectionIndex) => {
-      const ingredients = section.ingredients
-        .filter(ingredient => ingredient.name.trim() !== '')
-        .map((ingredient, ingredientIndex) => ({
+  const sections = keptPositions(recipe).map((kept, index) => {
+    const section = recipe.sections[kept.section]!
+    return {
+      name: section.name.trim(),
+      type: section.type,
+      orderIndex: index,
+      ingredients: kept.ingredients.map((position, ingredientIndex) => {
+        const ingredient = section.ingredients[position]!
+        return {
           name: ingredient.name.trim(),
           amount: ingredient.amount,
           unit: ingredient.unit ? unitLabel(ingredient.unit) : trimOrNull(ingredient.unitText),
           unitCode: ingredient.unit,
           optional: ingredient.optional,
           orderIndex: ingredientIndex
-        }))
-      const instructions = section.instructions
-        .map(step => step.trim())
-        .filter(step => step !== '')
-        .map((content, instructionIndex) => ({ content, orderIndex: instructionIndex }))
-      return {
-        name: section.name.trim(),
-        type: section.type,
-        orderIndex: sectionIndex,
-        ingredients,
-        instructions
-      }
-    })
-    .filter(section => section.ingredients.length > 0 || section.instructions.length > 0)
-    .map((section, index) => ({ ...section, orderIndex: index }))
+        }
+      }),
+      instructions: kept.steps.map((position, instructionIndex) => ({
+        content: section.instructions[position]!.trim(),
+        orderIndex: instructionIndex
+      }))
+    }
+  })
 
   const tags = [...new Set(recipe.tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag !== ''))]
 
@@ -148,4 +178,68 @@ export function aiRecipeToRecipeInput(recipe: AiRecipe, unitLabel: UnitLabelReso
     tags,
     sections
   }
+}
+
+/** Recette de l'IA convertie dans les deux langues. */
+export interface BilingualRecipe {
+  /** Dans la langue d'origine (`lang`). */
+  recipe: RecipeInput
+  lang: RecipeLang
+  /** Vers l'autre langue, alignée position par position sur `recipe`. */
+  translation: TranslationDraft
+}
+
+/**
+ * Convertit la sortie du modèle (`AiRecipe`) en recette + traduction ALIGNÉES :
+ * les mêmes sections, ingrédients et étapes sont écartés des deux côtés (vides),
+ * donc la traduction correspond position par position à la recette enregistrée.
+ * Lève `TranslationShapeError` si le modèle n'a pas respecté la structure
+ * (nombre de sections, d'ingrédients ou d'étapes différent).
+ */
+export function aiRecipeToBilingual(recipe: AiRecipe, unitLabel: UnitLabelResolver = code => code): BilingualRecipe {
+  const input = aiRecipeToRecipeInput(recipe, unitLabel)
+  const translated: AiTranslation = recipe.translation
+
+  if (translated.sections.length !== recipe.sections.length) {
+    throw new TranslationShapeError(`${translated.sections.length} section(s) traduite(s) pour ${recipe.sections.length}`)
+  }
+  const sections = keptPositions(recipe).map((kept) => {
+    const source = recipe.sections[kept.section]!
+    const target = translated.sections[kept.section]!
+    if (target.ingredients.length !== source.ingredients.length || target.instructions.length !== source.instructions.length) {
+      throw new TranslationShapeError(`section ${kept.section + 1} : ingrédients ou étapes non alignés`)
+    }
+    return {
+      name: target.name.trim(),
+      ingredients: kept.ingredients.map((position) => {
+        const item = target.ingredients[position]!
+        const original = source.ingredients[position]!
+        return {
+          name: item.name.trim(),
+          // Quantité numérique de l'IA : rien à traduire. Unité libre : traduite.
+          amount: null,
+          unit: original.unit ? null : trimOrNull(item.unit)
+        }
+      }),
+      instructions: kept.steps.map(position => target.instructions[position]!.trim())
+    }
+  })
+
+  const draft: TranslationDraft = {
+    title: translated.title.trim(),
+    description: input.description ? trimOrNull(translated.description) : null,
+    notes: input.notes ? trimOrNull(translated.notes) : null,
+    tags: translated.tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag !== ''),
+    content: { sections }
+  }
+  // Étiquettes : mêmes positions que `input.tags` (dédoublonnées, comme la recette).
+  if (draft.tags.length !== input.tags?.length) draft.tags = []
+
+  return { recipe: input, lang: recipe.sourceLanguage, translation: draft }
+}
+
+/** Vérifie qu'une traduction (IA ou client) correspond aux textes de la recette ; lève sinon. */
+export function assertTranslationShape(texts: RecipeTexts, draft: TranslationDraft): void {
+  const problem = translationShapeProblem(texts, draft)
+  if (problem) throw new TranslationShapeError(problem)
 }

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { AI_TARGET_LANGUAGES } from './ai'
 
 /**
  * Entrées « média » du traducteur IA (phase 5) : fichier (PDF, image, texte)
@@ -145,11 +144,6 @@ export const extractRecipeFilesSchema = z.array(recipeUploadFileSchema)
   .refine(files => files.reduce((sum, file) => sum + file.size, 0) <= RECIPE_UPLOAD_MAX_BYTES, {
     message: `fichiers trop volumineux au total (max ${mb(RECIPE_UPLOAD_MAX_BYTES)} Mo)`
   })
-
-/** Champs texte (non fichiers) de `POST /api/extract-recipe`. */
-export const extractRecipeFieldsSchema = z.object({
-  targetLanguage: z.enum(AI_TARGET_LANGUAGES, { errorMap: () => ({ message: 'doit être fr ou en' }) }).default('fr')
-})
 
 /** Fichier audio reçu par `POST /api/transcribe-recipe` (+ durée annoncée par le navigateur). */
 export const transcribeAudioSchema = z.object({

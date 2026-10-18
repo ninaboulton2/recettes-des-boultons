@@ -8,6 +8,12 @@ export default defineVitestConfig({
     environment: 'happy-dom',
     // Les parcours de bout en bout (e2e/) relèvent de Playwright, pas de Vitest.
     include: ['test/**/*.{test,spec}.ts'],
+    // Fichiers en série : les tests d'intégration (test/integration/*.local.test.ts)
+    // partagent la même base locale, les mêmes comptes et comptent des lignes
+    // `ai_usage` par fonctionnalité ; en parallèle ils se faussent mutuellement
+    // (et les tests d'environnement Nuxt dépassent plus facilement leur délai).
+    // ~20 s au total, intégration comprise.
+    fileParallelism: false,
     environmentOptions: {
       nuxt: {
         domEnvironment: 'happy-dom'

@@ -3,7 +3,6 @@ import {
   AUDIO_MAX_BYTES,
   AUDIO_MAX_SECONDS,
   classifyRecipeFile,
-  extractRecipeFieldsSchema,
   extractRecipeFilesSchema,
   RECIPE_FILE_MAX_BYTES,
   RECIPE_FILES_MAX_COUNT,
@@ -105,14 +104,6 @@ describe('extractRecipeFilesSchema', () => {
     const over = extractRecipeFilesSchema.safeParse([file({ size: half }), file({ size: half + 1 })])
     expect(over.success).toBe(false)
     if (!over.success) expect(over.error.issues[0]?.message).toContain('au total')
-  })
-})
-
-describe('extractRecipeFieldsSchema', () => {
-  it('langue fr par défaut, fr|en seulement', () => {
-    expect(extractRecipeFieldsSchema.parse({}).targetLanguage).toBe('fr')
-    expect(extractRecipeFieldsSchema.parse({ targetLanguage: 'en' }).targetLanguage).toBe('en')
-    expect(extractRecipeFieldsSchema.safeParse({ targetLanguage: 'de' }).success).toBe(false)
   })
 })
 
