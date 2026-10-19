@@ -17,7 +17,7 @@ import { toRpcTranslation, translateRecipe } from '../utils/translations'
  *  - sans `translation` (éditeur), la recette est enregistrée, puis traduite
  *    par l'IA (quota et `ai_usage`, `translate_recipe`). Si l'IA échoue, la
  *    création réussit quand même : la réponse porte `translation.status =
- *    'failed'` et la page « Traductions » reprendra la recette.
+ *    'failed'` et la traduction est refaite au prochain enregistrement.
  */
 export default defineEventHandler(async (event) => {
   try {

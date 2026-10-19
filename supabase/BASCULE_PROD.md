@@ -398,15 +398,12 @@ Branche `feat/bilingual-recipes`. **Prérequis : 0013 appliquée** (et 0009 pour
    d'origine (et `/en` aussi, avec la mention « pas encore traduit » sur la fiche). Le déployer
    **avant** 0016 ferait échouer les lectures (colonnes `lang` et `recipe_translations` absentes) :
    ne pas inverser.
-3. **Relever temporairement `AI_DAILY_QUOTA`** sur Vercel (ex. 300 ; ~181 appels pour toutes les
-   recettes, la valeur par défaut est 50 par personne et par jour) et redéployer ; sinon reprendre sur
-   plusieurs jours (la page s'arrête au quota et se reprend sans perte). La clé du fournisseur
-   (`OPENAI_API_KEY`) doit déjà être en place (traducteur).
-4. **Lancer la traduction** : connecté en admin → menu utilisateur → **Traductions** → bouton
-   **« Traduire les recettes manquantes »**. Une recette par appel IA, progression à l'écran, arrêt et
-   reprise possibles. Coût attendu ≈ 0,22 $ (0,40 $ au plus) avec `gpt-4.1-mini`, voir
-   `docs/IA_MODELES.md`. Garder l'onglet ouvert pendant l'exécution (≈ 5 à 10 minutes).
-5. **Contrôles** (SQL Editor ou `execute_sql`) :
+3. **Rattrapage des traductions : fait le 2026-10-19 (181/181 recettes traduites).** La page admin
+   `/traductions` qui le pilotait a été retirée ; elle se restaure depuis l'historique git
+   (`git log` du commit « Retire la page Traductions ») si jamais il fallait refaire un rattrapage
+   (relever alors temporairement `AI_DAILY_QUOTA`, ~181 appels, coût ≈ 0,22 $ avec `gpt-4.1-mini`,
+   voir `docs/IA_MODELES.md`).
+4. **Contrôles** (SQL Editor ou `execute_sql`) :
 
    ```sql
    -- 181 recettes attendues, toutes traduites, aucune périmée
@@ -422,18 +419,16 @@ Branche `feat/bilingual-recipes`. **Prérequis : 0013 appliquée** (et 0009 pour
    ```
 
    Ouvrir `/en/recettes/<id>` d'une recette : titre, ingrédients et étapes en anglais.
-6. **Remettre `AI_DAILY_QUOTA`** à sa valeur d'avant.
 
 **Retour arrière** : revenir à l'ancien déploiement (Instant Rollback) suffit, 0016 est
 compatible avec l'ancien code. Pour retirer 0016 elle-même (après retour au code précédent) :
 `supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions et `recipes.lang`,
-restaure les fonctions d'avant ; les recettes ne sont pas touchées). Les traductions se refont avec la
-page « Traductions ».
+restaure les fonctions d'avant ; les recettes ne sont pas touchées). Les traductions se refont en
+réenregistrant les recettes (ou en restaurant la page depuis git, voir l'étape 3).
 
 **Recette modifiée ensuite** : l'éditeur régénère la traduction tout seul quand le texte change. Si
 l'IA échoue (quota, panne), la recette est enregistrée, sa traduction est « à mettre à jour » (le
-site montre le texte d'origine) et la page « Traductions » la reprend (« Traduire les recettes
-manquantes » traite aussi les traductions périmées).
+site montre le texte d'origine) et réenregistrer la recette dans l'éditeur relance la traduction.
 
 ## Retour arrière
 

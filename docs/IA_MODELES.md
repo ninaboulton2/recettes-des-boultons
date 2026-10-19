@@ -94,7 +94,7 @@ défaut (`gpt-4.1-mini`, 0,40 $/M en entrée, 1,60 $/M en sortie) :
 |---|---|---|---|
 | Import (texte, photo, PDF, dictée) | `translate` / `extract` | 1 appel : recette structurée **dans les deux langues** (la sortie double) | ≈ 0,003 $ (≈ 1 800 tokens en entrée, ≈ 1 500 en sortie) |
 | Création ou modification d'une recette dans l'éditeur, **si le texte a changé** | `translate_recipe` | 1 appel : traduction de la recette vers l'autre langue | ≈ 0,001 $ (recette moyenne) |
-| Page « Traductions » : rattrapage des recettes existantes | `translate_recipe` | 1 appel par recette | voir ci-dessous |
+| Rattrapage ponctuel des recettes existantes (fait le 2026-10-19, page retirée) | `translate_recipe` | 1 appel par recette | voir ci-dessous |
 
 Modifier seulement la photo, les temps, les portions, la catégorie ou une quantité chiffrée ne
 déclenche **aucun appel** (l'empreinte des textes sources est inchangée).
@@ -115,14 +115,16 @@ caractères de texte traduisible (moyenne 946 par recette, maximum 2 887).
 | **Sortie totale** | | **≈ 75 000** → 0,12 $ |
 
 **Total attendu ≈ 0,22 $ pour les 181 recettes (≈ 0,0012 $ par recette), 0,40 $ au plus** (marge de
-sécurité sur le découpage en tokens des accents et le surcoût des sorties structurées). La page
-« Traductions » affiche le coût réellement dépensé (somme de `ai_usage.estimated_cost_usd`) et le reste
-estimé ; avant 3 appels réussis, l'estimation par recette est de 0,002 $
-(`DEFAULT_COST_PER_RECIPE_USD`).
+sécurité sur le découpage en tokens des accents et le surcoût des sorties structurées). Le coût réel
+se lit dans `ai_usage` (somme de `estimated_cost_usd`, `feature = 'translate_recipe'`).
 
 **Quota** : chaque recette compte pour un appel dans `AI_DAILY_QUOTA` (50 par personne et par jour
-par défaut). Pour tout traduire d'un coup, relever temporairement la variable sur Vercel (ex. 300)
-puis la remettre ; sinon la page s'arrête au quota (message clair) et se reprend le lendemain.
+par défaut).
+
+**État** : le rattrapage a été fait le 2026-10-19 (181/181 recettes traduites) ; la page
+`/traductions` qui le pilotait a été retirée (restaurable depuis l'historique git, `git log` du commit
+« Retire la page Traductions »). Une traduction périmée (échec de l'IA à l'enregistrement) se corrige
+en réenregistrant la recette dans l'éditeur.
 
 ## Mise en œuvre dans l'application
 

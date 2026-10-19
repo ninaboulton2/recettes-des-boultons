@@ -43,8 +43,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     { label: t('navigation.shopping'), icon: 'i-lucide-shopping-cart', to: localePath('/courses') },
     ...(authStore.isAdmin
       ? [
-          { label: t('ui.user.translator'), icon: 'i-lucide-sparkles', to: localePath('/traducteur') },
-          { label: t('ui.user.translations'), icon: 'i-lucide-languages', to: localePath('/traductions') }
+          { label: t('ui.user.translator'), icon: 'i-lucide-sparkles', to: localePath('/traducteur') }
         ]
       : [])
   ],

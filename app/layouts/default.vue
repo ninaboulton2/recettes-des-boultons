@@ -61,7 +61,6 @@
         <nav class="flex flex-col gap-1 pb-4" :aria-label="$t('ui.user.menu')">
           <p class="px-2 pb-2 text-sm text-muted">{{ authStore.currentUser?.name || authStore.currentUser?.email }}</p>
           <UButton v-if="authStore.isAdmin" :to="localePath('/traducteur')" color="neutral" variant="ghost" icon="i-lucide-sparkles" :label="$t('ui.user.translator')" @click="showMobileMenu = false" />
-          <UButton v-if="authStore.isAdmin" :to="localePath('/traductions')" color="neutral" variant="ghost" icon="i-lucide-languages" :label="$t('ui.user.translations')" @click="showMobileMenu = false" />
           <UButton color="error" variant="soft" icon="i-lucide-log-out" :label="$t('ui.user.logout')" @click="handleLogout" />
         </nav>
       </template>

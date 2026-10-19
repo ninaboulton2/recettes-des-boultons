@@ -187,7 +187,7 @@ function schemaNameOf(options: LanguageModelV4CallOptions): string | undefined {
 /**
  * Marqueur de panne simulée : une recette dont les textes le contiennent fait
  * échouer la traduction (503 du « fournisseur »), pour tester l'échec sans IA
- * (enregistrement réussi, traduction périmée, reprise par la page Traductions).
+ * (enregistrement réussi, traduction périmée, retraduction au réenregistrement).
  */
 export const MOCK_FAILURE_MARKER = '__MOCK_AI_FAILURE__'
 

@@ -3,7 +3,7 @@
 -- ============================================================================
 --  QUAND : pour revenir à l'état d'avant 0016 (ancien code, sans traductions).
 --  ⚠️ SUPPRIME les traductions (`recipe_translations`) et la langue source
---  (`recipes.lang`) : elles se régénèrent avec la page /admin/traductions
+--  (`recipes.lang`) : elles se régénèrent en réenregistrant les recettes
 --  après un nouveau passage de 0016 (coût IA, voir docs/IA_MODELES.md).
 --  Les recettes, sections, ingrédients, étapes, favoris, planning et listes
 --  ne sont pas touchés.

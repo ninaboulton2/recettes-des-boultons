@@ -10,8 +10,7 @@ import { buildSystemPrompt, buildTranslateSystemPrompt, buildTranslateUserPrompt
  *  - `translateRecipeText` : texte brut → `AiRecipe` bilingue (langue détectée +
  *    recette + traduction) validée par `aiRecipeSchema` ;
  *  - `translateRecipeTexts` : textes d'une recette existante → langue détectée +
- *    traduction vers l'autre langue (`aiTranslateExistingSchema`), pour l'édition
- *    et la page « Traductions ».
+ *    traduction vers l'autre langue (`aiTranslateExistingSchema`), pour l'édition.
  * Sortie structurée native du fournisseur quand elle existe, sinon validation
  * Zod côté SDK ; une réponse non conforme lève `NoObjectGeneratedError`.
  */
@@ -65,7 +64,7 @@ export interface TranslateTextsResult {
 /**
  * Traduit les textes d'une recette existante vers l'autre langue. Une seule
  * requête par recette ; lève `TranslationShapeError` si le modèle n'a pas
- * respecté la structure (la page « Traductions » réessaiera plus tard).
+ * respecté la structure (la traduction sera refaite au prochain enregistrement).
  */
 export async function translateRecipeTexts(model: LanguageModel, texts: RecipeTexts): Promise<TranslateTextsResult> {
   const result = await generateObject({

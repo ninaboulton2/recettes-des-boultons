@@ -69,7 +69,7 @@ recettes-des-boultons/
 │   ├── composables/          # useEdition, useRecipeSearch, useRecipe, usePlanningWeek, useShoppingLists…
 │   ├── layouts/default.vue   # header, barre d'onglets mobile, bandeau hors ligne
 │   ├── middleware/auth.ts    # garde d'affichage des pages admin
-│   ├── pages/                # recettes, planning, courses, favoris, traducteur, traductions (admin), confirm, reset-password
+│   ├── pages/                # recettes, planning, courses, favoris, traducteur, confirm, reset-password
 │   ├── plugins/              # edition.ts (thème de l'édition), toast.client.ts, pwa-offline.client.ts
 │   ├── stores/               # Pinia : auth, recipes, favorites, planning, shopping
 │   └── utils/                # week.ts (semaines du planning), homeFeatures.ts, image.ts (photos allégées avant envoi)
@@ -336,10 +336,9 @@ l'en-tête « fichier généré ».
   `currentUser`, `login`, `logout`, `checkAuth`, `init`. Le profil (`profiles`) est chargé en
   arrière-plan.
 - `app/middleware/auth.ts` est prévu pour protéger les pages `definePageMeta({ requiresAdmin: true })`
-  (`/traducteur`, `/traductions`), sans requête réseau. **Constat (0016) : il n'est pas exécuté**
-  (middleware nommé, déclaré par aucune page ; `e2e/bilingual.spec.ts` (h) le vérifie : un
-  utilisateur simple voit la coquille de `/traductions`, sans donnée, tout est refusé en 403 par
-  le serveur). Ce n'est de toute façon qu'une garde d'affichage : la sécurité est côté serveur et en base. Le
+  (`/traducteur`), sans requête réseau. **Constat (0016) : il n'est pas exécuté**
+  (middleware nommé, déclaré par aucune page ; tout est refusé en 403 par
+  le serveur pour un utilisateur simple). Ce n'est de toute façon qu'une garde d'affichage : la sécurité est côté serveur et en base. Le
   rendre global exigerait de s'assurer que `isAdmin` est fiable sans requête (claim `user_role`
   absent tant que le hook n'est pas activé en prod).
 
@@ -410,8 +409,7 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
   (`validateBody`, `validateQuery`, `validateRouterParams` de `server/utils/validate.ts`,
   schémas de `shared/schemas/`) → requête ou RPC Supabase sous RLS → `handleApiError` dans
   le `catch`.
-- Aucun endpoint `GET` pour les lectures publiques (§ 6). Seule exception : `GET /api/translations`
-  (admin), qui agrège `recipes`, `recipe_translations` et `ai_usage` (§ 19).
+- Aucun endpoint `GET` pour les lectures publiques (§ 6).
 
 ### 7.2 Liste des endpoints
 
@@ -424,8 +422,6 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 | `DELETE /api/delete-recipe?id=` | 🔑 | `?id=uuid` | `delete_recipe` | `{ success, deletedRecipeId, message }` |
 | `POST /api/translate-recipe` | 🔑 | `{ recipeText (20–20 000) }` (plus de langue cible : l'IA détecte la langue) | `check_ai_quota` (429), appel IA, insert `ai_usage` | `{ success, recipe: RecipeInput (langue d'origine), lang, translation (l'autre langue), aiRecipe, usage }` ; rien n'est enregistré |
 | `POST /api/extract-recipe` | 🔑 | `multipart/form-data` : `files` (1–4 JPEG/PNG/WebP/PDF, 4 Mo au total) (`extractRecipeFilesSchema`) | idem, `feature = 'extract'` | même réponse que `translate-recipe` ; 422 si aucune recette lisible |
-| `GET /api/translations` | 🔑 | — | lectures `recipes`, `recipe_translations`, `ai_usage` | `{ success, status: TranslationStatus }` : traduites / périmées / manquantes, appels, coût, quota |
-| `POST /api/translations/run` | 🔑 | `{ limit? (1–3, défaut 1), exclude?: uuid[], ids?: uuid[] }` | `check_ai_quota`, appel IA par recette (`feature = 'translate_recipe'`), `save_recipe_translation` | `{ success, results[], stopped, status }` (§ 19) |
 | `POST /api/transcribe-recipe` | 🔑 | `multipart/form-data` : `audio` (WebM/MP4/Ogg/WAV/MP3, 4 Mo, 5 min), `durationSeconds?` (`transcribeAudioSchema`) | idem, `feature = 'transcribe'` | `{ success, text, usage: { provider, model, audioSeconds, estimatedCostUsd, durationMs } }` |
 | `POST /api/recipes/similar` | 🔑 | `{ title, ingredientNames?, excludeId? }` (`similarRecipesBodySchema`) | lecture seule de `recipes` et `recipe_ingredients` (pas d'IA, pas de quota) | `{ similar: [{ id, title, score, titleScore, ingredientScore, reason }] }`, 3 au plus (voir § 12, doublons) |
 | `POST /api/favorites` | 👤 | `{ recipeId }` | insert (404 recette, 409 doublon) | `{ success, favorite, message }` |
@@ -686,7 +682,7 @@ enregistre les deux. Voir § 19. Comparatif des modèles et coûts :
 |---|---|
 | `shared/schemas/ai.ts` | `translateRecipeBodySchema`, `aiRecipeSchema` (unité parmi les 37 codes, catégorie parmi 9, `sourceLanguage`, `translation`), `aiRecipeToRecipeInput`, `aiRecipeToBilingual` (recette + traduction alignées) |
 | `shared/schemas/translation.ts`, `shared/utils/translation.ts` | schémas Zod des traductions, textes traduisibles, empreinte, affichage par langue (§ 19) |
-| `server/utils/translations.ts`, `server/api/translations/` | traduction d'une recette enregistrée, état et file d'attente de la page « Traductions » (§ 19) |
+| `server/utils/translations.ts` | traduction d'une recette enregistrée (création, édition) (§ 19) |
 | `server/utils/ai/provider.ts` | `getAiConfig()` (variables `AI_*`, clés), `getModel()` |
 | `server/utils/ai/translate.ts` | `generateObject` : `translateRecipeText` (`aiRecipeSchema`, recette bilingue) et `translateRecipeTexts` (`aiTranslateExistingSchema`, recette existante), délai 25 s, 1 nouvel essai |
 | `server/utils/ai/prompt.ts` | prompt système en français |
@@ -1118,34 +1114,18 @@ sa traduction par l'IA. Migration `0016_recipe_translations.sql` (retour arrièr
 - **L'enregistrement ne dépend jamais de l'IA** : en cas d'échec (quota, clé, panne, réponse
   incohérente) la recette est enregistrée, la traduction reste `stale` (ignorée à l'affichage) et la
   réponse porte `translation: { status: 'failed', reason, message }` (l'éditeur affiche un
-  avertissement). La page « Traductions » reprend ces recettes.
+  avertissement). Réenregistrer la recette dans l'éditeur relance la traduction (§ 19.5).
 - Pas d'édition manuelle de la traduction dans cette version (suite possible : champs de la
   traduction dans l'éditeur, enregistrés avec `save_recipe_translation`).
 
-### 19.5 Page « Traductions » (rattrapage des recettes existantes)
+### 19.5 Rattrapage des recettes existantes (page retirée)
 
-`/traductions` (admin ; lien dans le menu utilisateur et le tiroir « Moi »). Elle affiche les
-compteurs (recettes, traduites, à mettre à jour, sans traduction), une barre de progression, le coût
-(dépensé d'après `ai_usage`, reste estimé), le modèle et le quota, et le bouton **« Traduire les
-recettes manquantes »**.
-
-- `POST /api/translations/run` traite `limit` recettes (1 par défaut, 3 au plus ; au plus ~12 s
-  de travail par requête, Vercel limite à 30 s) : d'abord les recettes sans traduction (plus
-  anciennes d'abord), puis les périmées ; **une recette = un appel IA**. La file est recalculée à
-  chaque requête d'après la base : le traitement est **reprenable** (arrêter, recharger, relancer
-  plus tard) et **idempotent** (une recette traduite n'est jamais retraitée ; une périmée dont le
-  texte n'a pas changé est revalidée sans appel IA).
-- La page enchaîne les requêtes une à une, affiche le journal des dernières recettes et le nombre de
-  recettes traitées, et peut être arrêtée. Un échec isolé (réponse incohérente, panne ponctuelle)
-  est listé et la recette ignorée pour cette exécution (`exclude`). Un échec **systémique** (quota
-  journalier atteint, clé IA absente, crédit du fournisseur épuisé) arrête tout avec un message
-  clair.
-- Langue des recettes existantes : l'IA la détecte dans le même appel (`sourceLanguage`) et
-  `save_recipe_translation` corrige `recipes.lang` (défaut `'fr'` pour tout l'existant).
-- **Quota** : ~181 recettes = ~181 appels ; avec `AI_DAILY_QUOTA` = 50 (défaut), prévoir de le
-  relever temporairement sur Vercel (ex. 300) ou de reprendre sur 4 jours.
-- **Coût** : voir [docs/IA_MODELES.md](docs/IA_MODELES.md#traduction-des-recettes-existantes-et-des-éditions)
-  (≈ 0,20 $ attendu pour les 181 recettes avec `gpt-4.1-mini`, 0,40 $ au plus).
+La page admin `/traductions` et ses endpoints (`GET /api/translations`, `POST /api/translations/run`)
+ont servi une seule fois : le rattrapage a été fait en production le 2026-10-19 (181/181 recettes
+traduites). Ils ont été supprimés. Une traduction périmée (échec de l'IA à l'enregistrement) se
+corrige en **réenregistrant la recette dans l'éditeur**, ce qui relance la traduction. En cas de
+besoin, la page peut être restaurée depuis l'historique git (`git log` du commit « Retire la page
+Traductions »).
 
 ### 19.6 Mise en production
 
@@ -1163,15 +1143,11 @@ les lectures (colonnes `lang`, `recipe_translations` absentes).
   (mock, `translateRecipeTexts`).
 - `test/integration/bilingual.local.test.ts` (serveur Nuxt `AI_PROVIDER=mock` + base locale) :
   import des deux langues, création et modification éditeur (régénération, revalidation sans IA,
-  échec IA → `stale`), rattrapage (comptes, lots, idempotence, détection de langue), recherche dans
+  échec IA → `stale`, corrigé en réenregistrant), recherche dans
   les deux langues, RLS (un utilisateur ne peut ni écrire ni modifier ni supprimer une traduction),
   courses en anglais.
 - `supabase/tests/test_0016_translations.sql` (migration, droits, atomicité, `stale`, recherche,
   courses, cascade).
 - `e2e/bilingual.spec.ts` : fiche `/en` en anglais (« [EN] … ») et `/` en français, recherche dans
   les deux langues, éditeur (version d'origine), traducteur sans sélecteur de langue avec bascule
-  d'aperçu, page « Traductions » (progression, fin, restauration de la base).
-  Cette dernière marque d'abord toutes les autres recettes de la base comme traduites (lignes
-  factices, sans IA : sinon les ~180 vraies recettes du snapshot local consommeraient le quota
-  `AI_DAILY_QUOTA` du jour et tous les autres tests IA recevraient un 429), traduit ses deux recettes
-  de test avec le fournisseur simulé, puis remet traductions et langues dans l'état initial.
+  d'aperçu.

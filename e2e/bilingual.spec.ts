@@ -1,12 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { e2eName, storageStatePath } from './support/accounts'
-import { gotoApp, isMobile } from './support/app'
+import { gotoApp } from './support/app'
 import {
   createE2eBilingualRecipe,
-  markOthersTranslated,
-  restoreTranslations,
-  signedInClient,
-  snapshotTranslations
+  signedInClient
 } from './support/supabase'
 
 /**
@@ -179,66 +176,5 @@ test.describe('traducteur IA', () => {
     await expect(page.getByTestId('preview-languages')).toContainText('Original language detected: English')
     await page.getByTestId('preview-lang-fr').click()
     await expect(page.getByTestId('preview-title')).toHaveText(`[FR] ${title}`)
-  })
-})
-
-test.describe('page Traductions (rattrapage des recettes existantes)', () => {
-  test.describe.configure({ timeout: 120_000 })
-
-  test('(g) traduit les recettes sans traduction, avec progression et coût', async ({ page }, testInfo) => {
-    test.skip(isMobile(page), 'même page et mêmes données que sur desktop : exécuté une seule fois')
-
-    const { client } = await signedInClient('admin')
-    const snapshot = await snapshotTranslations(client)
-    const titles = [e2eName('Rattrapage1', testInfo.project.name), e2eName('Rattrapage2', testInfo.project.name)]
-    const ids = [
-      await createE2eBilingualRecipe(client, titles[0]!, { translated: false }),
-      await createE2eBilingualRecipe(client, titles[1]!, { translated: false })
-    ]
-
-    try {
-      // Les autres recettes de la base sont marquées traduites (sans IA) : seules les 2 recettes de test restent à faire.
-      await markOthersTranslated(client, snapshot, ids)
-      await gotoApp(page, '/traductions')
-      await expect(page.getByRole('heading', { level: 1, name: 'Traductions des recettes' })).toBeVisible()
-      const missing = page.getByTestId('translations-count-missing')
-      await expect(missing).toHaveText('2')
-      await expect(page.getByTestId('translations-costs')).toContainText('Dépensé jusqu\'ici')
-
-      await page.getByTestId('translations-start').click()
-      await expect(page.getByTestId('translations-stop')).toBeVisible()
-      // Progression visible pendant le traitement, puis plus rien à traduire.
-      await expect(page.getByRole('status').filter({ hasText: 'traitée(s) sur cette exécution' }).first()).toBeVisible()
-      await expect(page.getByTestId('translations-done')).toBeVisible({ timeout: 60_000 })
-      await expect(missing).toHaveText('0')
-      await expect(page.getByTestId('translations-count-stale')).toHaveText('0')
-      await expect(page.getByTestId('translations-start')).toBeDisabled()
-      await expect(page.getByTestId('translations-log')).toContainText(titles[1]!)
-
-      const { data } = await client.from('recipe_translations').select('recipe_id, locale, title, stale').in('recipe_id', ids)
-      expect(data).toHaveLength(2)
-      for (const row of data ?? []) {
-        expect(row).toMatchObject({ locale: 'en', stale: false })
-        expect(titles.map(title => `[EN] ${title}`)).toContain(row.title)
-      }
-    } finally {
-      await restoreTranslations(client, snapshot)
-      await client.auth.signOut({ scope: 'local' })
-    }
-  })
-
-  test('(h) réservée aux administrateurs : un utilisateur ne voit ni compteurs ni bouton, le serveur refuse (403)', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: storageStatePath('user') })
-    const page = await context.newPage()
-    const statuses: number[] = []
-    page.on('response', (response) => {
-      if (response.url().endsWith('/api/translations')) statuses.push(response.status())
-    })
-    await gotoApp(page, '/traductions')
-    await expect(page.getByRole('alert')).toContainText('Impossible de charger l\'état des traductions.')
-    await expect(page.getByTestId('translations-start')).toHaveCount(0)
-    await expect(page.getByTestId('translations-counts')).toHaveCount(0)
-    expect(statuses).toContain(403)
-    await context.close()
   })
 })

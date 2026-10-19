@@ -38,8 +38,7 @@
       "login": "Connexion",
       "logout": "Déconnexion",
       "account": "Mon compte",
-      "translator": "Traducteur IA",
-      "translations": "Traductions"
+      "translator": "Traducteur IA"
     },
     "card": {
       "favoriteAdd": "Ajouter aux favoris",
@@ -420,7 +419,7 @@
       "error": "Enregistrement impossible",
       "photoError": "La photo n’a pas pu être envoyée ; la recette a été enregistrée sans photo.",
       "translationFailed": "Recette enregistrée, mais sa traduction n'a pas pu être mise à jour",
-      "translationFailedHint": "Elle sera reprise depuis la page Traductions."
+      "translationFailedHint": "Réenregistrez la recette pour relancer la traduction."
     },
     "language": {
       "title": "Vous modifiez la version d'origine ({lang})",
@@ -874,43 +873,5 @@
       "checked": "Coché",
       "toBuy": "À acheter"
     }
-  },
-  "translationsAdmin": {
-    "title": "Traductions des recettes",
-    "subtitle": "Chaque recette existe en français et en anglais : le texte d'origine, et sa traduction faite par l'IA. Les recettes créées ou modifiées sont traduites automatiquement ; cette page traduit celles qui ne le sont pas encore.",
-    "back": "Retour",
-    "counts": {
-      "total": "Recettes",
-      "translated": "Traduites",
-      "stale": "À mettre à jour",
-      "missing": "Sans traduction"
-    },
-    "progress": "{done} recette(s) traitée(s) sur cette exécution",
-    "start": "Traduire les recettes manquantes",
-    "resume": "Reprendre",
-    "stop": "Arrêter",
-    "running": "Traduction en cours",
-    "stopping": "Arrêt après la recette en cours…",
-    "nothing": "Toutes les recettes sont traduites.",
-    "finished": "Terminé : toutes les recettes sont traduites.",
-    "stopped": "Arrêté.",
-    "costs": {
-      "title": "Coût",
-      "spent": "Dépensé jusqu'ici : ≈ {cost} $ ({calls} appel(s), dont {failed} en échec)",
-      "remaining": "Reste à traduire : ≈ {cost} $ ({average} $ par recette en moyenne)",
-      "model": "Modèle : {model} ({provider})",
-      "quota": "Limite de {quota} appel(s) IA par jour et par personne (variable AI_DAILY_QUOTA). Au-delà, l'opération s'arrête : reprenez le lendemain ou augmentez la limite."
-    },
-    "errors": {
-      "load": "Impossible de charger l'état des traductions.",
-      "stopped": "Traitement arrêté : {message}",
-      "failedRecipes": "Recettes en échec (ignorées pour cette exécution) :"
-    },
-    "log": {
-      "translated": "Traduite ({lang})",
-      "unchanged": "Déjà à jour",
-      "failed": "Échec : {message}"
-    },
-    "retry": "Réessayer"
   }
 }

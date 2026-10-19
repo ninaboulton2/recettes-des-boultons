@@ -657,7 +657,7 @@ Retour arrière : requêtes dans l'en-tête. À supprimer après validation : le
 
 Fichier : `migrations/0016_recipe_translations.sql` ; retour arrière :
 `rollback/0016_recipe_translations_down.sql` ; test : `tests/test_0016_translations.sql` ; mise en
-production : `BASCULE_PROD.md` § 9 (ordre **0016 → déploiement → page « Traductions »**).
+production : `BASCULE_PROD.md` § 9 (ordre **0016 → déploiement → rattrapage des traductions, fait le 2026-10-19**).
 Prérequis : 0013 (et 0003, 0009). Compatible avec l'ancien code, idempotente, aucune ligne de recette
 modifiée.
 

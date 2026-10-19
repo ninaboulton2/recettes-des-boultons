@@ -2,19 +2,18 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
 import type { RecipeLang } from '#shared/types'
 import { recipeTexts, sourceHash, type TranslationDraft } from '#shared/utils/translation'
-import type { TranslationFailureReason, TranslationStatus } from '#shared/schemas/translation'
+import type { TranslationFailureReason } from '#shared/schemas/translation'
 import { getAiConfig, getModel } from './ai/provider'
 import { translateRecipeTexts } from './ai/translate'
 import { throwAiProviderError } from './ai/errors'
 import { assertAiQuota, trackAiCall } from './ai/usage'
 import type { AuthContext } from './auth'
-import { fetchRecipeDetail, type RecipeDetail } from './recipes'
+import type { RecipeDetail } from './recipes'
 import { GENERIC_ERROR_MESSAGE } from './errors'
 
 /**
  * Traductions des recettes (migration 0016) côté serveur : traduction d'une
- * recette enregistrée (édition, page « Traductions »), état global et liste
- * des recettes à traduire.
+ * recette enregistrée (création, édition).
  *
  * Règles :
  *  - une recette = un appel IA (`feature = 'translate_recipe'` dans `ai_usage`,
@@ -23,24 +22,13 @@ import { GENERIC_ERROR_MESSAGE } from './errors'
  *    source, traduction vers l'autre langue, `stale = false`) ;
  *  - un échec n'est jamais une erreur HTTP pour l'appelant : il devient un
  *    `TranslationOutcome` `failed` (l'enregistrement de la recette, lui, a
- *    réussi) ; la traduction reste « périmée » et sera reprise par la page
- *    « Traductions ».
+ *    réussi) ; la traduction reste « périmée » jusqu'au prochain
+ *    enregistrement de la recette.
  */
 
 export const TRANSLATE_FEATURE = 'translate_recipe'
 
-/**
- * Coût estimé d'une traduction (USD) avec gpt-4.1-mini, quand moins de 3 appels
- * ont été journalisés (voir docs/IA_MODELES.md, « Traduction des recettes ») :
- * ≈ 0,001 $ attendu pour une recette moyenne (950 caractères), arrondi au double
- * par prudence.
- */
-export const DEFAULT_COST_PER_RECIPE_USD = 0.002
-
 export type FailureReason = TranslationFailureReason
-
-/** Raisons qui arrêtent un traitement en série : insister serait inutile. */
-export const SYSTEMIC_FAILURES: readonly FailureReason[] = ['quota', 'config', 'provider']
 
 export type TranslationOutcome
   = | { status: 'translated', lang: RecipeLang, costUsd: number | null }
@@ -154,91 +142,4 @@ export async function translateRecipe(
 /** Traduction au format de la RPC `save_recipe_translation` (clés snake_case). */
 export function toRpcTranslation(draft: TranslationDraft, hash: string, model: string | null) {
   return { ...draft, source_hash: hash, model }
-}
-
-/** Recharge la recette puis la traduit (page « Traductions »). */
-export async function translateRecipeById(event: H3Event, auth: AuthContext, recipeId: string, options: { force?: boolean } = {}) {
-  const recipe = await fetchRecipeDetail(auth.supabase, recipeId)
-  return { recipe, outcome: await translateRecipe(event, auth, recipe, options) }
-}
-
-// ---------------------------------------------------------------------------
-// État global et file d'attente
-// ---------------------------------------------------------------------------
-
-const PAGE = 1000
-
-/** Lit toutes les lignes d'une requête paginée (PostgREST plafonne à 1000 lignes). */
-async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null, error: unknown }>): Promise<T[]> {
-  const rows: T[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1)
-    if (error) throw error
-    rows.push(...(data ?? []))
-    if (!data || data.length < PAGE) return rows
-  }
-}
-
-interface PendingRecipe { id: string, title: string, kind: 'missing' | 'stale' }
-
-/** Recettes à traduire : d'abord celles sans traduction (plus anciennes en premier), puis les périmées. */
-async function loadPending(supabase: SupabaseClient): Promise<{ total: number, translated: number, pending: PendingRecipe[] }> {
-  const recipes = await fetchAll<{ id: string, title: string }>((from, to) =>
-    supabase.from('recipes').select('id, title').order('created_at', { ascending: true }).order('id').range(from, to))
-  const translations = await fetchAll<{ recipe_id: string, stale: boolean }>((from, to) =>
-    supabase.from('recipe_translations').select('recipe_id, stale').order('recipe_id').range(from, to))
-  const byRecipe = new Map(translations.map(row => [row.recipe_id, row.stale]))
-
-  const missing: PendingRecipe[] = []
-  const stale: PendingRecipe[] = []
-  let translated = 0
-  for (const recipe of recipes) {
-    const state = byRecipe.get(recipe.id)
-    if (state === undefined) missing.push({ ...recipe, kind: 'missing' })
-    else if (state) stale.push({ ...recipe, kind: 'stale' })
-    else translated++
-  }
-  return { total: recipes.length, translated, pending: [...missing, ...stale] }
-}
-
-/** Prochaines recettes à traduire (hors `exclude`), au plus `limit`. */
-export async function nextPendingRecipes(
-  supabase: SupabaseClient,
-  limit: number,
-  exclude: readonly string[] = [],
-  only?: readonly string[]
-): Promise<PendingRecipe[]> {
-  const { pending } = await loadPending(supabase)
-  const skipped = new Set(exclude)
-  const wanted = only ? new Set(only) : null
-  return pending.filter(recipe => !skipped.has(recipe.id) && (!wanted || wanted.has(recipe.id))).slice(0, limit)
-}
-
-export async function loadTranslationStatus(event: H3Event, supabase: SupabaseClient): Promise<TranslationStatus> {
-  const { total, translated, pending } = await loadPending(supabase)
-  const usage = await fetchAll<{ estimated_cost_usd: number | string | null, status: string }>((from, to) =>
-    supabase.from('ai_usage').select('estimated_cost_usd, status').eq('feature', TRANSLATE_FEATURE).order('created_at').range(from, to))
-
-  const ok = usage.filter(row => row.status === 'ok')
-  const costs = ok.map(row => Number(row.estimated_cost_usd ?? 0))
-  const costUsd = costs.reduce((sum, cost) => sum + cost, 0)
-  const averageCostUsd = ok.length >= 3 ? costUsd / ok.length : DEFAULT_COST_PER_RECIPE_USD
-  const config = getAiConfig(event)
-  const stale = pending.filter(recipe => recipe.kind === 'stale').length
-
-  return {
-    total,
-    translated,
-    stale,
-    missing: pending.length - stale,
-    calls: usage.length,
-    failedCalls: usage.length - ok.length,
-    costUsd: Math.round(costUsd * 1_000_000) / 1_000_000,
-    averageCostUsd: Math.round(averageCostUsd * 1_000_000) / 1_000_000,
-    // Le fournisseur simulé ne coûte rien : pas d'estimation de reste à payer.
-    estimatedRemainingUsd: config.provider === 'mock' ? 0 : Math.round(pending.length * averageCostUsd * 10_000) / 10_000,
-    dailyQuota: config.dailyQuota,
-    provider: config.provider,
-    model: config.model
-  }
 }

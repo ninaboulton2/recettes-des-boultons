@@ -69,19 +69,6 @@ export const aiTranslateExistingSchema = z.object({
 
 export type AiTranslateExisting = z.infer<typeof aiTranslateExistingSchema>
 
-/** Corps de `POST /api/translations/run` (page « Traductions »). */
-export const runTranslationsBodySchema = z.object({
-  /** Recettes traitées par requête (une requête serveur est limitée à 30 s). */
-  limit: z.number({ invalid_type_error: 'doit être un nombre' }).int('doit être un entier')
-    .min(1, 'min 1').max(3, 'max 3').default(1),
-  /** Recettes à ignorer (échecs précédents de la même exécution). */
-  exclude: z.array(z.string().uuid('identifiant invalide')).max(500, 'trop d\'identifiants').default([]),
-  /** Restreint le traitement à ces recettes (outil / tests) ; absent = toutes celles qui en ont besoin. */
-  ids: z.array(z.string().uuid('identifiant invalide')).max(50, 'trop d\'identifiants').optional()
-})
-
-export type RunTranslationsBody = z.infer<typeof runTranslationsBodySchema>
-
 export type TranslationOutcomeStatus = 'translated' | 'unchanged' | 'failed' | 'provided'
 
 /** Résultat de traduction joint aux réponses de `add-recipe` / `update-recipe`. */
@@ -95,43 +82,3 @@ export interface TranslationResult {
 
 /** Pourquoi une traduction a échoué (voir `server/utils/translations.ts`). */
 export type TranslationFailureReason = 'quota' | 'config' | 'provider' | 'ai' | 'save'
-
-/** Réponse de `GET /api/translations` : état des traductions et coûts. */
-export interface TranslationStatus {
-  total: number
-  /** Traduction à jour. */
-  translated: number
-  /** Traduction existante mais périmée (texte modifié depuis). */
-  stale: number
-  /** Pas de traduction. */
-  missing: number
-  /** Appels de traduction journalisés (`ai_usage`, feature `translate_recipe`). */
-  calls: number
-  failedCalls: number
-  /** Coût cumulé estimé en USD. */
-  costUsd: number
-  /** Coût moyen par appel réussi (repli : estimation gpt-4.1-mini). */
-  averageCostUsd: number
-  /** Coût estimé de ce qui reste à traduire. */
-  estimatedRemainingUsd: number
-  /** Quota journalier configuré (`AI_DAILY_QUOTA`). */
-  dailyQuota: number
-  provider: string
-  model: string
-}
-
-/** Réponse de `POST /api/translations/run`. */
-export interface RunTranslationsResponse {
-  success: true
-  results: Array<{
-    id: string
-    title: string
-    status: 'translated' | 'unchanged' | 'failed'
-    lang?: 'fr' | 'en'
-    reason?: TranslationFailureReason
-    message?: string
-  }>
-  /** Renseigné quand le traitement doit s'arrêter (quota, clé IA, crédit épuisé). */
-  stopped: { reason: TranslationFailureReason, message: string } | null
-  status: TranslationStatus
-}

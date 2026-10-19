@@ -5,7 +5,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { TranslateRecipeResponse } from '#shared/schemas/ai'
 import type { RecipeInput } from '#shared/schemas/recipe'
-import type { RunTranslationsResponse, TranslationStatus } from '#shared/schemas/translation'
 import { recipeTexts, sourceHash, type TranslatableRecipe } from '#shared/utils/translation'
 import { toRecipe, type RecipeWithSectionsRow } from '#shared/utils/recipes'
 import { MOCK_FAILURE_MARKER } from '../../server/utils/ai/mock'
@@ -53,7 +52,7 @@ async function isReachable(url: string, init: RequestInit = {}): Promise<boolean
 
 const env = readLocalEnv()
 const supabaseUp = env ? await isReachable(`${env.url}/rest/v1/`, { headers: { apikey: env.key } }) : false
-const appUp = supabaseUp && await isReachable(`${APP_URL}/api/translations`)
+const appUp = supabaseUp && await isReachable(`${APP_URL}/`)
 
 const FRENCH_TEXT = `${PREFIX}Gâteau au yaourt\n\nMélanger la farine avec le sucre et les œufs, puis cuire au four.`
 const ENGLISH_TEXT = `${PREFIX}Chocolate chip cookies\n\n2 cups flour and 1 cup butter. Mix the flour with the butter and bake until golden.`
@@ -250,7 +249,7 @@ describe.skipIf(!appUp)('recettes bilingues (mock + base locale)', () => {
       expect(after!.content).toEqual(row!.content)
     })
 
-    it('si l\'IA échoue, l\'enregistrement réussit et la traduction est marquée périmée, puis reprise par la page Traductions', async () => {
+    it('si l\'IA échoue, l\'enregistrement réussit et la traduction est marquée périmée, puis corrigée en réenregistrant la recette', async () => {
       const created1 = await call(adminToken, '/api/add-recipe', 'POST', { recipe: baseInput(`${PREFIX}Panne`) })
       const { recipe } = (await created1.json()) as MutationResponse
       created.push(recipe.id)
@@ -270,85 +269,10 @@ describe.skipIf(!appUp)('recettes bilingues (mock + base locale)', () => {
       expect((found as Array<{ translation: unknown }>)[0]!.translation).toBeNull()
       expect((await loadRecipe(recipe.id)).translation).toBeNull()
 
-      // La page Traductions la voit comme périmée…
-      const status = (await (await call(adminToken, '/api/translations', 'GET')).json()) as { status: TranslationStatus }
-      expect(status.status.stale).toBeGreaterThanOrEqual(1)
-      // … tant que le texte contient la panne simulée, la reprise échoue sans bloquer (non systémique)…
-      const retry = (await (await call(adminToken, '/api/translations/run', 'POST', { ids: [recipe.id] })).json()) as RunTranslationsResponse
-      expect(retry.results[0]).toMatchObject({ id: recipe.id, status: 'failed', reason: 'ai' })
-      expect(retry.stopped).toBeNull()
-      // … puis réussit une fois la panne disparue.
+      // Réenregistrer la recette (panne disparue) retraduit et rétablit la traduction.
       const fixed = baseInput(`${PREFIX}Panne`)
       await call(adminToken, `/api/update-recipe?id=${recipe.id}`, 'PUT', { updates: fixed })
       expect((await translationRows(recipe.id))[0]!.stale).toBe(false)
-    })
-  })
-
-  describe('page Traductions : état et rattrapage des recettes existantes', () => {
-    const createRaw = async (title: string, lang?: 'fr' | 'en') => {
-      const input = lang === 'en'
-        ? baseInput(title, { description: 'The best pie, with a cup of sugar.', tags: [], sections: [
-          { name: '', type: 'ingredients', orderIndex: 0, ingredients: [{ name: 'flour', amount: 2, unit: 'cup', orderIndex: 0 }] },
-          { name: '', type: 'instructions', orderIndex: 1, instructions: [{ content: 'Mix the flour with the butter and bake until golden.', orderIndex: 0 }] }
-        ] })
-        : baseInput(title)
-      // Direct en base (RPC), comme les recettes existantes avant 0016 : aucune traduction, lang par défaut.
-      const { data, error } = await admin.rpc('save_recipe', {
-        payload: {
-          title: input.title, category: input.category, description: input.description, servings: 4, tags: input.tags ?? [], notes: null,
-          sections: (input.sections ?? []).map(section => ({
-            name: section.name, type: section.type, order_index: section.orderIndex,
-            ingredients: (section.ingredients ?? []).map((i, index) => ({ name: i.name, amount: i.amount == null ? null : String(i.amount), unit: i.unit ?? null, order_index: index })),
-            instructions: (section.instructions ?? []).map((s, index) => ({ content: typeof s === 'string' ? s : s.content, order_index: index }))
-          }))
-        }
-      })
-      if (error) throw error
-      created.push(data as string)
-      return data as string
-    }
-
-    it('compte les recettes sans traduction ; le traitement par lots est reprenable, idempotent et détecte la langue', async () => {
-      const frId = await createRaw(`${PREFIX}Rattrapage FR`)
-      const enId = await createRaw(`${PREFIX}Rattrapage EN`, 'en')
-      const before = (await (await call(adminToken, '/api/translations', 'GET')).json()) as { status: TranslationStatus }
-      expect(before.status.missing).toBeGreaterThanOrEqual(2)
-      expect(before.status.total).toBe(before.status.translated + before.status.stale + before.status.missing)
-      expect(before.status.provider).toBe('mock')
-      expect(before.status.estimatedRemainingUsd).toBe(0)
-      const calls = await usageCount('translate_recipe')
-
-      // Un lot d'une recette à la fois, comme la page.
-      const first = (await (await call(adminToken, '/api/translations/run', 'POST', { limit: 1, ids: [frId, enId] })).json()) as RunTranslationsResponse
-      expect(first.results).toHaveLength(1)
-      expect(first.results[0]).toMatchObject({ status: 'translated' })
-      expect(first.stopped).toBeNull()
-      expect(first.status.missing).toBe(before.status.missing - 1)
-
-      const second = (await (await call(adminToken, '/api/translations/run', 'POST', { limit: 3, ids: [frId, enId] })).json()) as RunTranslationsResponse
-      expect(second.results).toHaveLength(1)
-      expect(await usageCount('translate_recipe')).toBe(calls + 2)
-
-      // Idempotent : plus rien à faire sur ces recettes, aucun appel IA.
-      const again = (await (await call(adminToken, '/api/translations/run', 'POST', { limit: 3, ids: [frId, enId] })).json()) as RunTranslationsResponse
-      expect(again.results).toHaveLength(0)
-      expect(await usageCount('translate_recipe')).toBe(calls + 2)
-
-      // Langue détectée : la recette anglaise passe en « en » et reçoit une traduction française.
-      expect((await loadRecipe(frId)).lang).toBe('fr')
-      expect((await translationRows(frId))[0]).toMatchObject({ locale: 'en', stale: false, title: `[EN] ${PREFIX}Rattrapage FR` })
-      expect((await loadRecipe(enId)).lang).toBe('en')
-      expect((await translationRows(enId))[0]).toMatchObject({ locale: 'fr', stale: false })
-    })
-
-    it('exclude saute une recette ; non-admin refusé (403)', async () => {
-      const id = await createRaw(`${PREFIX}Exclue`)
-      const skipped = (await (await call(adminToken, '/api/translations/run', 'POST', { ids: [id], exclude: [id] })).json()) as RunTranslationsResponse
-      expect(skipped.results).toHaveLength(0)
-      expect((await translationRows(id))).toHaveLength(0)
-      expect((await call(userToken, '/api/translations', 'GET')).status).toBe(403)
-      expect((await call(userToken, '/api/translations/run', 'POST', { ids: [id] })).status).toBe(403)
-      expect((await call(adminToken, '/api/translations/run', 'POST', { limit: 9 })).status).toBe(400)
     })
   })
 

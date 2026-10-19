@@ -34,7 +34,7 @@ RÈGLES
 }
 
 /**
- * Traduction d'une recette déjà enregistrée (édition, page « Traductions ») :
+ * Traduction d'une recette déjà enregistrée (édition) :
  * l'entrée est un JSON de textes (voir `RecipeTexts`), pas du texte brut.
  */
 export function buildTranslateSystemPrompt(): string {

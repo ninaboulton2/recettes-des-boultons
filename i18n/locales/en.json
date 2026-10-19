@@ -38,8 +38,7 @@
       "login": "Sign in",
       "logout": "Sign out",
       "account": "My account",
-      "translator": "AI translator",
-      "translations": "Translations"
+      "translator": "AI translator"
     },
     "card": {
       "favoriteAdd": "Add to favorites",
@@ -420,7 +419,7 @@
       "error": "Could not save",
       "photoError": "The photo could not be uploaded; the recipe was saved without it.",
       "translationFailed": "Recipe saved, but its translation could not be updated",
-      "translationFailedHint": "It will be picked up from the Translations page."
+      "translationFailedHint": "Save the recipe again to retry the translation."
     },
     "language": {
       "title": "You are editing the original version ({lang})",
@@ -874,43 +873,5 @@
       "checked": "Checked",
       "toBuy": "To buy"
     }
-  },
-  "translationsAdmin": {
-    "title": "Recipe translations",
-    "subtitle": "Every recipe exists in French and English: the original text and its AI translation. Recipes you create or edit are translated automatically; this page translates the ones that are not translated yet.",
-    "back": "Back",
-    "counts": {
-      "total": "Recipes",
-      "translated": "Translated",
-      "stale": "Needs updating",
-      "missing": "Not translated"
-    },
-    "progress": "{done} recipe(s) processed in this run",
-    "start": "Translate the missing recipes",
-    "resume": "Resume",
-    "stop": "Stop",
-    "running": "Translating",
-    "stopping": "Stopping after the current recipe…",
-    "nothing": "All recipes are translated.",
-    "finished": "Done: all recipes are translated.",
-    "stopped": "Stopped.",
-    "costs": {
-      "title": "Cost",
-      "spent": "Spent so far: ≈ ${cost} ({calls} call(s), {failed} failed)",
-      "remaining": "Left to translate: ≈ ${cost} (${average} per recipe on average)",
-      "model": "Model: {model} ({provider})",
-      "quota": "Limit of {quota} AI call(s) per day and per person (AI_DAILY_QUOTA variable). Beyond it the run stops: resume tomorrow or raise the limit."
-    },
-    "errors": {
-      "load": "Could not load the translation status.",
-      "stopped": "Run stopped: {message}",
-      "failedRecipes": "Failed recipes (skipped for this run):"
-    },
-    "log": {
-      "translated": "Translated ({lang})",
-      "unchanged": "Already up to date",
-      "failed": "Failed: {message}"
-    },
-    "retry": "Retry"
   }
 }
