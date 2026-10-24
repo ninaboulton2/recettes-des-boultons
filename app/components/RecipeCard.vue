@@ -156,7 +156,8 @@ const hiddenTagCount = computed(() => Math.max(0, shown.value.tags.length - MAX_
 /** URL publique de la photo dans le bucket Storage `recipe-photos`. */
 const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
 /** Repli sans photo : illustration ou icône de la catégorie selon l'édition. */
-const fallback = computed(() => categoryVisual(props.recipe.category))
+// v2 : la recette du carnet porte l'identifiant de MA catégorie (`categoryId`) ; v1 : l'ancien texte.
+const fallback = computed(() => categoryVisual(('categoryId' in props.recipe && typeof props.recipe.categoryId === 'string' ? props.recipe.categoryId : null) ?? props.recipe.category))
 
 const showPlanningModal = ref(false)
 const showShoppingModal = ref(false)

@@ -262,6 +262,8 @@ export interface ProfileSettingsRow {
   discoverable: boolean
   theme_settings: unknown
   active_theme_group_id: string | null
+  /** Renvoyé depuis la phase 6A (0023) ; absent des anciennes lignes de test. */
+  onboarded_at?: string | null
 }
 export interface ProfileSettings {
   displayName: string | null
@@ -269,6 +271,8 @@ export interface ProfileSettings {
   discoverable: boolean
   themeSettings: Record<string, unknown> | null
   activeThemeGroupId: string | null
+  /** `null` : l'accueil en 3 écrans n'est pas terminé. */
+  onboardedAt: string | null
 }
 export const toProfileSettings = (row: ProfileSettingsRow): ProfileSettings => ({
   displayName: row.display_name ?? null,
@@ -277,5 +281,6 @@ export const toProfileSettings = (row: ProfileSettingsRow): ProfileSettings => (
   themeSettings: row.theme_settings && typeof row.theme_settings === 'object' && !Array.isArray(row.theme_settings)
     ? row.theme_settings as Record<string, unknown>
     : null,
-  activeThemeGroupId: row.active_theme_group_id ?? null
+  activeThemeGroupId: row.active_theme_group_id ?? null,
+  onboardedAt: row.onboarded_at ?? null
 })

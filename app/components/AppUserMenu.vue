@@ -26,9 +26,11 @@ const emit = defineEmits<{ login: [], logout: [] }>()
 const { t } = useI18n()
 const authStore = useAuthStore()
 const localePath = useLocalePath()
+const { v2, menuLinks } = useNav()
 
+// v2 : le pseudonyme (visible des autres) passe avant `profiles.name`, qui peut contenir l'e-mail.
 const displayName = computed(() =>
-  authStore.currentUser?.name || authStore.currentUser?.email || t('ui.user.account')
+  (v2 ? authStore.profile?.display_name : null) || authStore.currentUser?.name || authStore.currentUser?.email || t('ui.user.account')
 )
 
 const items = computed<DropdownMenuItem[][]>(() => [
@@ -38,9 +40,13 @@ const items = computed<DropdownMenuItem[][]>(() => [
     description: authStore.currentUser?.name ? authStore.currentUser.email : undefined
   }],
   [
-    { label: t('navigation.favorites'), icon: 'i-lucide-heart', to: localePath('/favoris') },
-    { label: t('navigation.planning'), icon: 'i-lucide-calendar-days', to: localePath('/planning') },
-    { label: t('navigation.shopping'), icon: 'i-lucide-shopping-cart', to: localePath('/courses') },
+    ...(v2
+      ? menuLinks.value.map(link => ({ label: link.label, icon: link.icon, to: localePath(link.to) }))
+      : [
+          { label: t('navigation.favorites'), icon: 'i-lucide-heart', to: localePath('/favoris') },
+          { label: t('navigation.planning'), icon: 'i-lucide-calendar-days', to: localePath('/planning') },
+          { label: t('navigation.shopping'), icon: 'i-lucide-shopping-cart', to: localePath('/courses') }
+        ]),
     ...(authStore.isAdmin
       ? [
           { label: t('ui.user.translator'), icon: 'i-lucide-sparkles', to: localePath('/traducteur') }

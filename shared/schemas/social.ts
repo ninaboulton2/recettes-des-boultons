@@ -122,7 +122,9 @@ export const updateMyProfileInputSchema = z.object({
   cookbookTitle: optionalText(80),
   discoverable: z.boolean().optional(),
   themeSettings: themeObjectSchema.nullish(),
-  activeThemeGroupId: uuidSchema.nullish()
+  activeThemeGroupId: uuidSchema.nullish(),
+  /** `true` : fin de l'accueil en 3 écrans (`onboarded_at`, renseigné une seule fois). */
+  completeOnboarding: z.boolean().optional()
 })
 
 /** `POST /api/account/delete` : saisie de confirmation = l'adresse e-mail du compte. */

@@ -1,6 +1,9 @@
 import colors from 'tailwindcss/colors'
 import { SHADES, type EditionConfig, type NeutralColor, type Shade } from './types'
 
+/** Ce dont la feuille de style a besoin (une `EditionConfig`, ou un thème v2 résolu). */
+export type ThemeSource = Pick<EditionConfig, 'id' | 'theme'>
+
 /** Valeur Tailwind (oklch) d'une nuance de neutre. */
 export function neutralShade(neutral: NeutralColor, shade: Shade): string {
   return colors[neutral][shade]
@@ -19,7 +22,7 @@ export function neutralShade(neutral: NeutralColor, shade: Shade): string {
  * Sélecteur `:root[data-edition=…]` (hors couche, spécificité 0-2-0) : il
  * l'emporte sur les déclarations `:root` / `.dark` de Nuxt UI et de main.css.
  */
-export function editionThemeCss(edition: EditionConfig): string {
+export function editionThemeCss(edition: ThemeSource): string {
   const { primary, neutral, primaryShade } = edition.theme
   const root = `:root[data-edition="${edition.id}"]`
   const declarations = [

@@ -30,6 +30,7 @@
         <div class="flex shrink-0 items-center gap-1">
           <UColorModeButton :aria-label="$t('ui.colorMode.toggle')" />
           <LanguageSwitcher />
+          <NotificationBell v-if="v2 && authStore.isAuthenticated" />
           <div class="hidden md:block">
             <AppUserMenu @login="showLoginModal = true" @logout="handleLogout" />
           </div>
@@ -60,6 +61,16 @@
       <template #body>
         <nav class="flex flex-col gap-1 pb-4" :aria-label="$t('ui.user.menu')">
           <p class="px-2 pb-2 text-sm text-muted">{{ authStore.currentUser?.name || authStore.currentUser?.email }}</p>
+          <UButton
+            v-for="link in menuLinks"
+            :key="link.to"
+            :to="localePath(link.to)"
+            color="neutral"
+            variant="ghost"
+            :icon="link.icon"
+            :label="link.label"
+            @click="showMobileMenu = false"
+          />
           <UButton v-if="authStore.isAdmin" :to="localePath('/traducteur')" color="neutral" variant="ghost" icon="i-lucide-sparkles" :label="$t('ui.user.translator')" @click="showMobileMenu = false" />
           <UButton color="error" variant="soft" icon="i-lucide-log-out" :label="$t('ui.user.logout')" @click="handleLogout" />
         </nav>
@@ -71,28 +82,30 @@
 </template>
 
 <script setup lang="ts">
-const { t } = useI18n()
 const route = useRoute()
-const { config: { brand }, siteName } = useEdition()
+// `brand` est un accesseur calculé : en v2 il suit le thème actif (logo, couleur du nom) sans rechargement.
+const edition = useEdition()
+const brand = computed(() => edition.config.brand)
+const { siteName } = edition
 const localePath = useLocalePath()
+const { v2, mainLinks: links, menuLinks } = useNav()
 
 const authStore = useAuthStore()
 // Profil chargé aussi pendant le rendu serveur : le nom affiché (menu, tiroir mobile)
 // est alors identique côté serveur et navigateur (plus d'écart d'hydratation).
-onServerPrefetch(() => authStore.checkAuth())
+// v2 : thème de groupe et catégories personnelles aussi, pour un premier rendu sans flash.
+const themeStore = v2 ? useThemeStore() : null
+const categoriesStore = v2 ? useCategoriesStore() : null
+onServerPrefetch(async () => {
+  await authStore.checkAuth()
+  if (v2) await Promise.all([themeStore?.loadGroupThemes(), categoriesStore?.load()])
+})
 const favoritesStore = useFavoritesStore()
 const planningStore = usePlanningStore()
 const shoppingStore = useShoppingStore()
 
 const showLoginModal = ref(false)
 const showMobileMenu = ref(false)
-
-const links = computed(() => [
-  { to: '/recettes', icon: 'i-lucide-book-open', label: t('navigation.recipes') },
-  { to: '/planning', icon: 'i-lucide-calendar-days', label: t('navigation.planning') },
-  { to: '/courses', icon: 'i-lucide-shopping-cart', label: t('navigation.shopping') },
-  { to: '/favoris', icon: 'i-lucide-heart', label: t('navigation.favorites') }
-])
 
 const isActive = (to: string) => route.path === localePath(to) || route.path.startsWith(`${localePath(to)}/`)
 
@@ -123,4 +136,13 @@ const handleLogout = async () => {
 
 // Connexion / déconnexion (y compris retour OAuth) : synchroniser les stores
 watch(() => authStore.isAuthenticated, () => { void refreshUserStores() })
+
+// v2 : thème de groupe et catégories suivent la personne (connexion, déconnexion, changement de thème actif)
+if (v2) {
+  watch(() => authStore.profile?.id, () => {
+    void themeStore?.loadGroupThemes(true)
+    void categoriesStore?.load()
+  }, { immediate: import.meta.client })
+  watch(() => authStore.profile?.active_theme_group_id, () => { void themeStore?.loadGroupThemes(true) })
+}
 </script>

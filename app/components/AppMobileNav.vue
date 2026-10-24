@@ -37,17 +37,11 @@
  */
 const emit = defineEmits<{ me: [] }>()
 
-const { t } = useI18n()
 const route = useRoute()
 const localePath = useLocalePath()
 const authStore = useAuthStore()
-
-const tabs = computed(() => [
-  { to: '/recettes', icon: 'i-lucide-book-open', label: t('navigation.recipes') },
-  { to: '/planning', icon: 'i-lucide-calendar-days', label: t('navigation.planning') },
-  { to: '/courses', icon: 'i-lucide-shopping-cart', label: t('navigation.shopping') },
-  { to: '/favoris', icon: 'i-lucide-heart', label: t('navigation.favorites') }
-])
+// Onglets : v1 = Recettes / Planning / Courses / Favoris ; v2 = Mon carnet / Partagées / Amis / Groupes (useNav).
+const { mainLinks: tabs } = useNav()
 
 const isActive = (to: string) => route.path === localePath(to) || route.path.startsWith(`${localePath(to)}/`)
 </script>

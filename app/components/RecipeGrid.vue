@@ -29,7 +29,7 @@ const emit = defineEmits<{
   delete: [recipe: RecipeSummary]
 }>()
 
-const { config } = useEdition()
+const edition = useEdition()
 
 /**
  * Hauteur de la zone visuelle, décidée pour TOUTE la grille (cartes de même
@@ -39,6 +39,6 @@ const { config } = useEdition()
  *   la grille a une photo, sinon zone basse (icône seule) partout.
  */
 const compactVisual = computed(() =>
-  config.recipeCards.visual === 'adaptive' && !props.recipes.some(recipe => recipe.photoPath)
+  edition.config.recipeCards.visual === 'adaptive' && !props.recipes.some(recipe => recipe.photoPath)
 )
 </script>

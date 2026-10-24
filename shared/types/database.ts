@@ -859,8 +859,8 @@ isOneToOne: false
 { Args: { "p_group": string,"p_theme": Json }; Returns: undefined
                            },
 "update_my_profile":
-{ Args: { "p_active_theme_group_id"?: string,"p_cookbook_title"?: string,"p_discoverable"?: boolean,"p_display_name"?: string,"p_personal_theme"?: boolean,"p_theme_settings"?: Json }; Returns: {
-              "active_theme_group_id": string,"cookbook_title": string,"discoverable": boolean,"display_name": string,"theme_settings": Json
+{ Args: { "p_active_theme_group_id"?: string,"p_complete_onboarding"?: boolean,"p_cookbook_title"?: string,"p_discoverable"?: boolean,"p_display_name"?: string,"p_personal_theme"?: boolean,"p_theme_settings"?: Json }; Returns: {
+              "active_theme_group_id": string,"cookbook_title": string,"discoverable": boolean,"display_name": string,"onboarded_at": string,"theme_settings": Json
             }[]
                            }
           }

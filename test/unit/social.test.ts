@@ -91,7 +91,8 @@ describe('conversions snake_case → camelCase', () => {
     expect(toUserProfile({ ...row, friendship_status: 'bizarre', common_groups: null }).friendshipStatus).toBe('none')
     expect(toDeletionBlocker({ group_id: A, group_name: 'G', other_member_count: 2 })).toEqual({ groupId: A, groupName: 'G', otherMemberCount: 2 })
     expect(toProfileSettings({ display_name: 'Dave', cookbook_title: null, discoverable: true, theme_settings: { preset: 'x' }, active_theme_group_id: null }))
-      .toEqual({ displayName: 'Dave', cookbookTitle: null, discoverable: true, themeSettings: { preset: 'x' }, activeThemeGroupId: null })
+      .toEqual({ displayName: 'Dave', cookbookTitle: null, discoverable: true, themeSettings: { preset: 'x' }, activeThemeGroupId: null, onboardedAt: null })
+    expect(toProfileSettings({ display_name: 'Dave', cookbook_title: null, discoverable: true, theme_settings: null, active_theme_group_id: null, onboarded_at: '2026-10-24T10:00:00Z' }).onboardedAt).toBe('2026-10-24T10:00:00Z')
     expect(toProfileSettings({ display_name: null, cookbook_title: null, discoverable: false, theme_settings: [], active_theme_group_id: null }).themeSettings).toBeNull()
   })
 

@@ -146,6 +146,10 @@ export default defineNuxtConfig({
       // (base de la v2). Surchargeable à l'exécution par NUXT_PUBLIC_EDITION ;
       // valeur inconnue = `boultons` (shared/editions/index.ts).
       edition: process.env.NUXT_PUBLIC_EDITION || 'boultons',
+      // Interrupteur v2 (DEVELOPER.md § 20.10) : `NUXT_PUBLIC_V2=true` active l'interface v2
+      // (navigation, accueil en 3 écrans, thèmes par personne / groupe, catégories personnelles).
+      // Absent = l'application v1, strictement. Lu à l'exécution (pas besoin de rebuild).
+      v2: false,
       // --- Import depuis Google Drive (composables/useGoogleDrivePicker.ts) ---
       // Trois valeurs publiques (aucun secret) ; l'une d'elles vide = bouton
       // masqué. Surchargeables à l'exécution par NUXT_PUBLIC_GOOGLE_CLIENT_ID,

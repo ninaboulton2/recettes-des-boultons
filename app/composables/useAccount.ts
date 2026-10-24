@@ -36,7 +36,8 @@ export async function updateMyProfile(supabase: Client, input: z.input<typeof up
     // '{}' efface côté base
     p_theme_settings: given('themeSettings') ? ((parsed.themeSettings ?? {}) as Json) : undefined,
     p_active_theme_group_id: parsed.activeThemeGroupId ?? undefined,
-    p_personal_theme: given('activeThemeGroupId') && parsed.activeThemeGroupId == null ? true : undefined
+    p_personal_theme: given('activeThemeGroupId') && parsed.activeThemeGroupId == null ? true : undefined,
+    p_complete_onboarding: parsed.completeOnboarding ? true : undefined
   })
   if (error) throw error
   const row = data?.[0]

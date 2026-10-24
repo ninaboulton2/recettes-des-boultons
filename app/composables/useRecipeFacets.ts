@@ -17,10 +17,21 @@ const sortTags = (tags: Iterable<string>) => Array.from(tags).sort((a, b) => a.l
 export function useRecipeFacets() {
   const supabase = useSupabaseClient<Database>()
   const recipesStore = useRecipesStore()
+  const v2 = useV2()
+  const authStore = useAuthStore()
 
   const asyncData = useAsyncData<FacetRow[]>(
     'recipe-facets',
     async () => {
+      if (v2) {
+        // v2 : compteurs de MES recettes par catégorie personnelle (`category_id`). Le carnet complet (recettes
+        // ajoutées) relève de la phase 6B.
+        const ownerId = authStore.currentUser?.id
+        if (!ownerId) return []
+        const { data, error } = await supabase.from('recipes').select('category_id, tags').eq('owner_id', ownerId)
+        if (error) throw error
+        return (data ?? []).map(row => ({ category: row.category_id ?? '', tags: row.tags }))
+      }
       const { data, error } = await supabase.from('recipes').select('category, tags')
       if (error) throw error
       return data ?? []

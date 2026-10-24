@@ -4,7 +4,13 @@
     "recipes": "Recipes",
     "favorites": "Favorites",
     "shopping": "Shopping",
-    "planning": "Planning"
+    "planning": "Planning",
+    "myCookbook": "My cookbook",
+    "sharedWithMe": "Shared with me",
+    "friends": "Friends",
+    "groups": "Groups",
+    "settings": "Settings",
+    "notifications": "Notifications"
   },
   "ui": {
     "_agent": "3A",
@@ -20,7 +26,8 @@
       "backHome": "Back to home",
       "search": "Search…",
       "selectAll": "Select all",
-      "deselectAll": "Deselect all"
+      "deselectAll": "Deselect all",
+      "save": "Save"
     },
     "nav": {
       "main": "Main navigation",
@@ -872,6 +879,164 @@
       "none": "No copy of your lists on this device: open the shopping page once while online to find it offline.",
       "checked": "Checked",
       "toBuy": "To buy"
+    }
+  },
+  "comingSoon": {
+    "description": "This page is coming soon.",
+    "back": "Back to home",
+    "sharedWithMe": "Shared with me",
+    "friends": "Friends",
+    "groups": "Groups",
+    "notifications": "Notifications",
+    "explore": "Explore recipes"
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread": "Notifications, none unread | Notifications, {count} unread | Notifications, {count} unread"
+  },
+  "prompts": {
+    "dismiss": "Dismiss this banner",
+    "someone": "Someone",
+    "error": "Action failed, please try again.",
+    "authorRecipes": {
+      "title": "Explore {author}'s recipes",
+      "description": "No recipe to discover | One recipe to discover | {n} recipes to discover",
+      "explore": "Explore"
+    },
+    "newRecipe": {
+      "title": "{author} added a recipe",
+      "add": "Add to my cookbook",
+      "view": "View recipe",
+      "added": "Recipe added to your cookbook."
+    }
+  },
+  "profile": {
+    "errors": {
+      "required": "A nickname is required.",
+      "taken": "This nickname is already taken.",
+      "noAt": "The nickname cannot contain \"@\" (an email address is never shown).",
+      "forbiddenChar": "The nickname contains a forbidden character.",
+      "invisibleChar": "The nickname contains an invisible character or a special space.",
+      "mixedScripts": "The nickname cannot mix the Latin alphabet with Cyrillic or Greek.",
+      "length": "The nickname must be 1 to 60 characters long.",
+      "titleLength": "The cookbook title must be 80 characters or fewer.",
+      "notMember": "You are not a member of this group.",
+      "rate": "Too many attempts, please try again later.",
+      "generic": "Could not save, please try again."
+    }
+  },
+  "onboarding": {
+    "documentTitle": "Welcome",
+    "steps": "Welcome steps",
+    "progress": "Step {step} of {total}",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish",
+    "done": "Welcome! Your cookbook is ready.",
+    "step1": {
+      "title": "What should we call you?",
+      "description": "This nickname is the only name others see, never your email address.",
+      "label": "Nickname",
+      "hint": "1 to 60 characters, no \"@\". It must be unique."
+    },
+    "step2": {
+      "title": "Name your cookbook",
+      "description": "A title for your recipes. You can change it later in settings.",
+      "label": "Cookbook title",
+      "hint": "Optional, 80 characters or fewer.",
+      "suggestion": "{name}'s recipes"
+    },
+    "step3": {
+      "title": "Pick your colors",
+      "description": "A theme for the app, which you can change any time in settings.",
+      "suggestions": "Start with the suggested categories",
+      "suggestionsHint": "Soups, mains, desserts… you can rename them, add more or remove some.",
+      "suggestionsError": "The suggested categories could not be added. You can do it from settings."
+    }
+  },
+  "theme": {
+    "presets": "Suggested themes",
+    "customColor": "Main color",
+    "colorPicker": "Choose a color",
+    "customHint": "A #rrggbb code. Text must stay readable: a color that is too light is refused.",
+    "preset": {
+      "boultons": "Boultons",
+      "terracotta": "Terracotta",
+      "olive": "Olive",
+      "ocean": "Ocean",
+      "prune": "Plum",
+      "framboise": "Raspberry",
+      "moutarde": "Mustard",
+      "custom": "Custom color"
+    },
+    "sample": {
+      "button": "Button",
+      "badge": "Label",
+      "link": "Link"
+    },
+    "errors": {
+      "format": "Expected a color code: #rrggbb (for example #aa4466).",
+      "tooLight": "This color is too light: text would not be readable.",
+      "tooDark": "This color is too dark to make a readable palette.",
+      "contrast": "This color does not give enough contrast (AA).",
+      "invalid": "Invalid theme."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your profile, colors and categories.",
+    "saved": "Settings saved.",
+    "profile": {
+      "title": "Profile",
+      "displayName": "Nickname",
+      "cookbookTitle": "Cookbook title"
+    },
+    "theme": {
+      "title": "Theme",
+      "description": "The app colors for you: your own theme, or the theme of one of your groups.",
+      "source": "Theme in use",
+      "mine": "My theme",
+      "group": "Theme of the group \"{name}\"",
+      "groupInfo": "This group's theme is managed by its creator.",
+      "save": "Save theme"
+    }
+  },
+  "categoriesManager": {
+    "title": "My categories",
+    "description": "Categories organize your recipes. They are yours: rename them, change their icon, color and order.",
+    "add": "New category",
+    "addSuggested": "Add the missing suggested category | Add the missing suggested category | Add the {count} suggested categories",
+    "moveUp": "Move \"{name}\" up",
+    "moveDown": "Move \"{name}\" down",
+    "edit": "Edit \"{name}\"",
+    "delete": "Delete \"{name}\"",
+    "empty": {
+      "title": "No categories",
+      "description": "Create your own or add the suggested categories."
+    },
+    "editor": {
+      "createTitle": "New category",
+      "editTitle": "Edit category",
+      "description": "One name is enough (French or English); the other language is optional.",
+      "nameFr": "Name in French",
+      "nameEn": "Name in English",
+      "icon": "Icon",
+      "color": "Color",
+      "noColor": "None"
+    },
+    "deleteModal": {
+      "title": "Delete this category?",
+      "message": "\"{name}\" will be deleted. Your recipes are not deleted: they stay uncategorized."
+    },
+    "created": "Category created.",
+    "updated": "Category updated.",
+    "deleted": "Category deleted.",
+    "errors": {
+      "nameRequired": "Enter at least one name.",
+      "invalid": "Some values are invalid.",
+      "save": "Could not save, please try again.",
+      "delete": "Could not delete, please try again.",
+      "move": "Could not move, please try again."
     }
   }
 }

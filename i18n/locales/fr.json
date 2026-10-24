@@ -4,7 +4,13 @@
     "recipes": "Recettes",
     "favorites": "Favoris",
     "shopping": "Courses",
-    "planning": "Planning"
+    "planning": "Planning",
+    "myCookbook": "Mon carnet",
+    "sharedWithMe": "Partagées avec moi",
+    "friends": "Amis",
+    "groups": "Groupes",
+    "settings": "Réglages",
+    "notifications": "Notifications"
   },
   "ui": {
     "_agent": "3A",
@@ -20,7 +26,8 @@
       "backHome": "Retour à l'accueil",
       "search": "Rechercher…",
       "selectAll": "Tout sélectionner",
-      "deselectAll": "Tout désélectionner"
+      "deselectAll": "Tout désélectionner",
+      "save": "Enregistrer"
     },
     "nav": {
       "main": "Navigation principale",
@@ -872,6 +879,164 @@
       "none": "Aucune copie de vos listes sur cet appareil : ouvrez la page des courses une fois en ligne pour la retrouver hors ligne.",
       "checked": "Coché",
       "toBuy": "À acheter"
+    }
+  },
+  "comingSoon": {
+    "description": "Cette page arrive bientôt.",
+    "back": "Retour à l'accueil",
+    "sharedWithMe": "Partagées avec moi",
+    "friends": "Amis",
+    "groups": "Groupes",
+    "notifications": "Notifications",
+    "explore": "Explorer les recettes"
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread": "Notifications, aucune non lue | Notifications, {count} non lue | Notifications, {count} non lues"
+  },
+  "prompts": {
+    "dismiss": "Fermer cette bannière",
+    "someone": "Quelqu'un",
+    "error": "Action impossible, réessayez.",
+    "authorRecipes": {
+      "title": "Explorer les recettes de {author}",
+      "description": "Aucune recette à découvrir | Une recette à découvrir | {n} recettes à découvrir",
+      "explore": "Explorer"
+    },
+    "newRecipe": {
+      "title": "{author} a ajouté une recette",
+      "add": "Ajouter à mon carnet",
+      "view": "Voir la recette",
+      "added": "Recette ajoutée à votre carnet."
+    }
+  },
+  "profile": {
+    "errors": {
+      "required": "Le pseudonyme est obligatoire.",
+      "taken": "Ce pseudonyme est déjà pris.",
+      "noAt": "Le pseudonyme ne peut pas contenir « @ » (jamais d'adresse e-mail affichée).",
+      "forbiddenChar": "Le pseudonyme contient un caractère interdit.",
+      "invisibleChar": "Le pseudonyme contient un caractère invisible ou une espace spéciale.",
+      "mixedScripts": "Le pseudonyme ne peut pas mélanger l'alphabet latin avec le cyrillique ou le grec.",
+      "length": "Le pseudonyme doit faire de 1 à 60 caractères.",
+      "titleLength": "Le titre du carnet doit faire 80 caractères au plus.",
+      "notMember": "Vous n'êtes pas membre de ce groupe.",
+      "rate": "Trop de tentatives, réessayez plus tard.",
+      "generic": "Enregistrement impossible, réessayez."
+    }
+  },
+  "onboarding": {
+    "documentTitle": "Bienvenue",
+    "steps": "Étapes de l'accueil",
+    "progress": "Étape {step} sur {total}",
+    "next": "Suivant",
+    "back": "Retour",
+    "finish": "Terminer",
+    "done": "Bienvenue ! Votre carnet est prêt.",
+    "step1": {
+      "title": "Comment vous appelle-t-on ?",
+      "description": "Ce pseudonyme est le seul nom que les autres voient, jamais votre adresse e-mail.",
+      "label": "Pseudonyme",
+      "hint": "1 à 60 caractères, sans « @ ». Il doit être unique."
+    },
+    "step2": {
+      "title": "Le nom de votre carnet",
+      "description": "Un titre pour vos recettes. Vous pourrez le changer plus tard dans les réglages.",
+      "label": "Titre du carnet",
+      "hint": "Facultatif, 80 caractères au plus.",
+      "suggestion": "Recettes de {name}"
+    },
+    "step3": {
+      "title": "Choisissez vos couleurs",
+      "description": "Un thème pour l'application, modifiable à tout moment dans les réglages.",
+      "suggestions": "Commencer avec les catégories suggérées",
+      "suggestionsHint": "Soupes, plats, desserts… vous pourrez les renommer, en ajouter ou en supprimer.",
+      "suggestionsError": "Les catégories suggérées n'ont pas pu être ajoutées. Vous pouvez le faire depuis les réglages."
+    }
+  },
+  "theme": {
+    "presets": "Thèmes proposés",
+    "customColor": "Couleur principale",
+    "colorPicker": "Choisir une couleur",
+    "customHint": "Un code #rrggbb. Les textes restent lisibles : une couleur trop claire est refusée.",
+    "preset": {
+      "boultons": "Boultons",
+      "terracotta": "Terracotta",
+      "olive": "Olive",
+      "ocean": "Océan",
+      "prune": "Prune",
+      "framboise": "Framboise",
+      "moutarde": "Moutarde",
+      "custom": "Couleur libre"
+    },
+    "sample": {
+      "button": "Bouton",
+      "badge": "Étiquette",
+      "link": "Lien"
+    },
+    "errors": {
+      "format": "Code couleur attendu : #rrggbb (par exemple #aa4466).",
+      "tooLight": "Cette couleur est trop claire : le texte ne serait pas lisible.",
+      "tooDark": "Cette couleur est trop sombre pour former une palette lisible.",
+      "contrast": "Cette couleur n'offre pas un contraste suffisant (AA).",
+      "invalid": "Thème invalide."
+    }
+  },
+  "settings": {
+    "title": "Réglages",
+    "subtitle": "Votre profil, vos couleurs et vos catégories.",
+    "saved": "Réglages enregistrés.",
+    "profile": {
+      "title": "Profil",
+      "displayName": "Pseudonyme",
+      "cookbookTitle": "Titre du carnet"
+    },
+    "theme": {
+      "title": "Thème",
+      "description": "Les couleurs de l'application pour vous : votre thème, ou celui d'un de vos groupes.",
+      "source": "Thème utilisé",
+      "mine": "Mon thème",
+      "group": "Thème du groupe « {name} »",
+      "groupInfo": "Le thème de ce groupe est géré par son créateur.",
+      "save": "Enregistrer le thème"
+    }
+  },
+  "categoriesManager": {
+    "title": "Mes catégories",
+    "description": "Les catégories rangent vos recettes. Elles sont à vous : renommez-les, changez leur icône, leur couleur et leur ordre.",
+    "add": "Nouvelle catégorie",
+    "addSuggested": "Ajouter la catégorie suggérée manquante | Ajouter la catégorie suggérée manquante | Ajouter les {count} catégories suggérées",
+    "moveUp": "Monter « {name} »",
+    "moveDown": "Descendre « {name} »",
+    "edit": "Modifier « {name} »",
+    "delete": "Supprimer « {name} »",
+    "empty": {
+      "title": "Aucune catégorie",
+      "description": "Créez la vôtre ou ajoutez les catégories suggérées."
+    },
+    "editor": {
+      "createTitle": "Nouvelle catégorie",
+      "editTitle": "Modifier la catégorie",
+      "description": "Un nom suffit (français ou anglais) ; l'autre langue est facultative.",
+      "nameFr": "Nom en français",
+      "nameEn": "Nom en anglais",
+      "icon": "Icône",
+      "color": "Couleur",
+      "noColor": "Aucune"
+    },
+    "deleteModal": {
+      "title": "Supprimer cette catégorie ?",
+      "message": "« {name} » sera supprimée. Vos recettes ne sont pas supprimées : elles restent sans catégorie."
+    },
+    "created": "Catégorie créée.",
+    "updated": "Catégorie modifiée.",
+    "deleted": "Catégorie supprimée.",
+    "errors": {
+      "nameRequired": "Indiquez au moins un nom.",
+      "invalid": "Certaines valeurs sont invalides.",
+      "save": "Enregistrement impossible, réessayez.",
+      "delete": "Suppression impossible, réessayez.",
+      "move": "Déplacement impossible, réessayez."
     }
   }
 }
