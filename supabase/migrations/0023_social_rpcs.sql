@@ -96,8 +96,6 @@
 --      aurait modifié la table v1. Le doublon est un choix à valider (il évite les sosies dans la recherche). Pour
 --      un changement partiel : un paramètre NULL = inchangé ; titre '' = effacer ; thème '{}' = effacer ;
 --      `p_personal_theme => true` = revenir au thème personnel (thème actif NULL).
---      Phase 6A : `p_complete_onboarding => true` renseigne `onboarded_at` (accueil en 3 écrans terminé), une seule fois
---      (la 1re date est conservée), jamais remis à NULL par la fonction ; la fonction renvoie aussi `onboarded_at`.
 --   8. Notifications créées par déclencheurs (et non seulement dans les RPC) quand l'API peut écrire directement :
 --      demande d'ami (friendships), invitation de groupe (invitations), droit direct ou repartage à une personne
 --      (recipe_grants : grant_recipe / reshare_recipe de 0021 sont donc couvertes SANS les modifier ; pas de
@@ -1210,11 +1208,9 @@ create or replace function public.update_my_profile(
   p_discoverable          boolean default null,
   p_theme_settings        jsonb   default null,
   p_active_theme_group_id uuid    default null,
-  p_personal_theme        boolean default false,
-  p_complete_onboarding   boolean default false
+  p_personal_theme        boolean default false
 )
-returns table (display_name text, cookbook_title text, discoverable boolean, theme_settings jsonb, active_theme_group_id uuid,
-               onboarded_at timestamptz)
+returns table (display_name text, cookbook_title text, discoverable boolean, theme_settings jsonb, active_theme_group_id uuid)
 language plpgsql
 security definer
 set search_path = ''
@@ -1266,19 +1262,16 @@ begin
          theme_settings        = case when p_theme_settings is null then p.theme_settings
                                       when p_theme_settings = '{}'::jsonb then null else p_theme_settings end,
          active_theme_group_id = case when p_personal_theme then null
-                                      else coalesce(p_active_theme_group_id, p.active_theme_group_id) end,
-         -- phase 6A : fin de l'accueil en 3 écrans. Idempotent : la 1re date est conservée. Jamais remis à NULL par cette fonction.
-         onboarded_at          = case when coalesce(p_complete_onboarding, false) then coalesce(p.onboarded_at, now())
-                                      else p.onboarded_at end
+                                      else coalesce(p_active_theme_group_id, p.active_theme_group_id) end
    where p.id = v_me;
 
   return query
-    select p.display_name, p.cookbook_title, p.discoverable, p.theme_settings, p.active_theme_group_id, p.onboarded_at
+    select p.display_name, p.cookbook_title, p.discoverable, p.theme_settings, p.active_theme_group_id
       from public.profiles p where p.id = v_me;
 end;
 $$;
-comment on function public.update_my_profile(text, text, boolean, jsonb, uuid, boolean, boolean) is
-  'Met à jour MON profil (paramètre NULL = inchangé ; titre '''' = effacer ; thème ''{}'' = effacer ; p_personal_theme => true = thème personnel ; p_complete_onboarding => true = renseigne onboarded_at, une fois). Pseudonyme 1-60 caractères, sans « @ », unique ; titre ≤ 80 ; thème objet ≤ 4000 caractères ; thème actif = un de mes groupes. Renvoie les valeurs enregistrées. 0023.';
+comment on function public.update_my_profile(text, text, boolean, jsonb, uuid, boolean) is
+  'Met à jour MON profil (paramètre NULL = inchangé ; titre '''' = effacer ; thème ''{}'' = effacer ; p_personal_theme => true = thème personnel). Pseudonyme 1-60 caractères, sans « @ », unique ; titre ≤ 80 ; thème objet ≤ 4000 caractères ; thème actif = un de mes groupes. Renvoie les valeurs enregistrées. 0023.';
 
 create or replace function public.get_user_profile(p_user uuid)
 returns table (user_id uuid, display_name text, cookbook_title text, is_self boolean, friendship_status text,

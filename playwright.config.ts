@@ -25,6 +25,8 @@ const isCI = !!process.env.CI
 
 export default defineConfig({
   testDir: './e2e',
+  // Parcours v2 : base locale en état v2 + NUXT_PUBLIC_V2=true (playwright.v2.config.ts, npm run test:e2e:v2).
+  testIgnore: '**/e2e/v2/**',
   outputDir: 'test-results/artifacts',
   // Une seule base partagée (et de vraies données en local) : exécution en série.
   fullyParallel: false,

@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "db:local:up": "bash supabase/local/up.sh",
     "db:local:reset": "npx supabase db reset && bash supabase/local/setup.sh",
+    "db:local:v2": "bash supabase/local/up.sh && bash supabase/local/setup_v2.sh",
     "db:local:down": "npx supabase stop",
     "db:local:status": "npx supabase status",
     "db:local:test": "bash supabase/local/test.sh",
@@ -26,6 +27,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:v2": "playwright test -c playwright.v2.config.ts",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs",
     "icons:boultons": "node scripts/generate-edition-icons.mjs"
   },

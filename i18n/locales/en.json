@@ -914,7 +914,7 @@
     "errors": {
       "required": "A nickname is required.",
       "taken": "This nickname is already taken.",
-      "noAt": "The nickname cannot contain \"@\" (an email address is never shown).",
+      "noAt": "The nickname cannot contain \"{'@'}\" (an email address is never shown).",
       "forbiddenChar": "The nickname contains a forbidden character.",
       "invisibleChar": "The nickname contains an invisible character or a special space.",
       "mixedScripts": "The nickname cannot mix the Latin alphabet with Cyrillic or Greek.",
@@ -937,7 +937,7 @@
       "title": "What should we call you?",
       "description": "This nickname is the only name others see, never your email address.",
       "label": "Nickname",
-      "hint": "1 to 60 characters, no \"@\". It must be unique."
+      "hint": "1 to 60 characters, no \"{'@'}\". It must be unique."
     },
     "step2": {
       "title": "Name your cookbook",

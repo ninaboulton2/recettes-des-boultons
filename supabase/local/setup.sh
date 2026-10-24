@@ -111,11 +111,16 @@ if has_table public.recipes && [[ "$(sql "select count(*) from information_schem
   CONTRACTED=1
   echo "• 0013 déjà appliquée : 0003 → 0012 ne sont pas rejouées"
 fi
+if has_table public.groups; then echo "• Schéma social (0017+) déjà présent : 0003 → 0023 ne sont pas rejouées"; fi
 for f in "$SUPA"/migrations/0*_*.sql; do
   b="$(basename "$f")"; n=$((10#${b:0:4}))
   (( n < 3 )) && continue
   (( n > UNTIL )) && break
   (( CONTRACTED == 1 && n <= 12 )) && continue
+  # Schéma social (0017+) déjà posé : 0003 → 0023 ne sont pas rejouées. 0016 et 0017 vérifient l'état d'avant (4 politiques,
+  # aucune politique sociale) et 0020 (bascule v2) les change ; 0023 et 0025 ne se rejouent pas l'une sur l'autre
+  # (surcharge de update_my_profile). 0024 et suivantes sont idempotentes.
+  if (( n < 24 )) && has_table public.groups; then continue; fi
   run "$f"
 done
 
@@ -128,7 +133,10 @@ fi
 run "$HERE/tests_shim.sql"
 
 # 5. Vérifications ------------------------------------------------------------
-if [[ $MODE == snapshot && $HAS_DATA -eq 1 && $VERIFY -eq 1 && $UNTIL -ge 9999 ]]; then
+# verify.sql décrit l'état de la v1 (0016 : 48 politiques…) : sans objet une fois le schéma social (0017+) posé.
+if has_table public.groups; then
+  echo "• verify.sql ignoré : schéma social (0017+) en place (contrôles de l'état v1)"
+elif [[ $MODE == snapshot && $HAS_DATA -eq 1 && $VERIFY -eq 1 && $UNTIL -ge 9999 ]]; then
   run "$HERE/verify.sql"
 fi
 

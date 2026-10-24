@@ -103,7 +103,7 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
-Ordre complet : **0017 → 0019 → 0021 → 0023** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
+Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
 pas l'utiliser.)
 
 * **0023 s'applique tout de suite après 0021** : `supabase/migrations/0023_social_rpcs.sql`, un seul Run dans le SQL Editor (ou

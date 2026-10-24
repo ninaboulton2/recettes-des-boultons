@@ -27,7 +27,7 @@ drop function if exists public.prepare_account_deletion(uuid);
 drop function if exists public.account_deletion_blockers();
 drop function if exists public.export_my_data();
 drop function if exists public.get_user_profile(uuid);
-drop function if exists public.update_my_profile(text, text, boolean, jsonb, uuid, boolean, boolean);
+drop function if exists public.update_my_profile(text, text, boolean, jsonb, uuid, boolean);
 drop function if exists public.unread_notifications_count();
 drop function if exists public.mark_notifications_read(uuid[]);
 drop function if exists public.list_notifications(int, timestamptz);

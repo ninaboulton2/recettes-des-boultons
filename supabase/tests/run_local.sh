@@ -92,7 +92,7 @@ num() { local b; b="$(basename "$1")"; echo $((10#${b:0:4})); }
 EXPAND=(); CONTRACT=(); LATE=()
 for f in "$SUPA"/migrations/0*_*.sql; do
   n=$(num "$f")
-  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 && n <= 17 )); then CONTRACT+=("$f"); elif (( n >= 18 && n != 24 )); then LATE+=("$f"); fi
+  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 && n <= 17 )); then CONTRACT+=("$f"); elif (( n >= 18 && n != 24 && n != 25 )); then LATE+=("$f"); fi
 done
 
 for f in "${EXPAND[@]}"; do run "$f"; done
@@ -407,5 +407,19 @@ for f in "${LATE[@]}"; do run "$f"; done
 for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 run "$HERE/test_0019_rls.sql"
 run "$HERE/test_0021_v1_compat.sql"
+run "$HERE/test_0023_v1_compat.sql"
+# ---------------------------------------------------------------- 0025 : update_my_profile gère onboarded_at (phase 6A)
+echo "▶ 0025 : onboarded_at (+ rejeu + test), retour arrière, ré-application"
+M25="$SUPA/migrations/0025_profile_onboarding.sql"
+run "$M25"
+"${PSQL[@]}" -f "$M25"
+run "$HERE/test_0025_profile_onboarding.sql"
+run "$SUPA/rollback/0025_profile_onboarding_down.sql"
+"${PSQL[@]}" -c "do \$\$ begin
+  assert to_regprocedure('public.update_my_profile(text, text, boolean, jsonb, uuid, boolean)') is not null
+     and to_regprocedure('public.update_my_profile(text, text, boolean, jsonb, uuid, boolean, boolean)') is null, 'retour arrière de 0025 incomplet';
+end \$\$;"
+run "$M25"
+run "$HERE/test_0025_profile_onboarding.sql"
 run "$HERE/test_0023_v1_compat.sql"
 echo "✅ Toutes les migrations et tous les tests sont passés."

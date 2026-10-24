@@ -83,6 +83,12 @@ Le hook JWT est **activé** (`[auth.hook.custom_access_token]` → `public.custo
 les tokens émis en local portent le claim `user_role` (`admin` / `user`), exactement ce que
 0009 attend en prod après activation manuelle du hook dans le dashboard.
 
+## Base locale en état v2
+
+`npm run db:local:v2` applique la chaîne de la bascule avec des paramètres factices (voir `setup_v2.sh`, DEVELOPER.md § 20.10) et crée
+`nouveau@local.test` / `ami@local.test`. Puis `NUXT_PUBLIC_V2=true` dans `.env.local` et `npm run dev:local`. Cette base n'est plus compatible v1 :
+retour à la v1 par `npm run db:local:reset`. Parcours e2e v2 : `npm run test:e2e:v2`.
+
 ## Basculer l'app entre prod et local
 
 Le module `@nuxtjs/supabase` lit `SUPABASE_URL` / `SUPABASE_KEY` ; `nuxt.config.ts` mappe

@@ -1469,7 +1469,7 @@ select public.send_friend_request('<uuid>'::uuid);   -- exécutable par authenti
 
 - La recherche d'utilisateurs (`search_users`, 0019) n'a pas de limite de débit ; pas de blocage de personne ; l'invitation par
   **e-mail** (`target_email`) et l'envoi de messages (Resend) relèvent de la phase 7.
-- `update_my_profile` ne touche pas `onboarded_at` (l'update direct de sa ligne reste possible) ; le pseudonyme est validé aussi en
+- `update_my_profile` ne touche pas `onboarded_at` en 0023 : ajouté par la migration **0025** (§ 20.10, `p_complete_onboarding`) ; le pseudonyme est validé aussi en
   écriture directe (déclencheur `trg_0023_profiles_display_name`).
 - Les tests de 0019 (`test_0019_rls.sql`) ont dû être adaptés : la relance d'une demande refusée par le demandeur d'origine demande
   désormais 7 jours, et les déclencheurs créent des notifications.
@@ -1520,3 +1520,42 @@ ligne si elle n'existe pas : le profil est créé par `handle_new_user` (0024 : 
 (ou antérieur) dans un dossier à part, y mettre les nouveaux `test_0025_*.sql` et `run_local.sh`, et rejouer les deux fichiers de test avec
 `psql -v ON_ERROR_STOP=0 -v ON_ERROR_ROLLBACK=on` : chaque bloc `[n]` échoue séparément.
 
+### 20.10 Interface v2, phase 6A : interrupteur, base locale, thèmes, catégories, accueil
+
+**Interrupteur.** Une seule variable : `NUXT_PUBLIC_V2=true` (`runtimeConfig.public.v2`, lue à l'exécution, `useV2()` / `isV2Enabled()`).
+Absente, l'application est la v1 à l'identique (nav, thème figé par `NUXT_PUBLIC_EDITION`, aucune requête v2 ; les pages v2 répondent 404 grâce
+au middleware `v2-only`). Choix d'une variable plutôt que d'une détection des RPC : pas de requête par rendu, comportement prévisible.
+À poser dans Vercel **au moment du déploiement v2** (après 0018/0020, `SUPABASE_SECRET_KEY` comprise).
+
+**Migration 0025** (`0025_profile_onboarding.sql`, rollback, `test_0025_profile_onboarding.sql`, branchée dans `run_local.sh`) : `update_my_profile`
+gagne `p_complete_onboarding boolean default false` et renvoie `onboarded_at` (renseigné une fois, jamais remis à NULL). L'ancienne signature à 6 paramètres
+est supprimée (deux surcharges rendraient les appels par nom ambigus). 0023 n'est pas modifiée. Ordre : 0017 → 0019 → 0021 → 0023 → 0024 → **0025** → 0018 → 0020.
+Catégories : **aucune RPC** (les politiques `categories_*_own` de 0019 suffisent) ; ce que la base ne contrôle pas (`icon`, `color` en texte libre, pas de plafond)
+l'est côté client (liste blanche, `#rrggbb`, 60 catégories) et à la lecture (`toMyCategory`).
+
+**Base locale v2.** `npm run db:local:v2` (`supabase/local/setup_v2.sh`) : démarre la stack (`up.sh`), rejoue 0024+ (`setup.sh` ne rejoue plus 0003 → 0023 quand le
+schéma social est présent : 0016/0017 ne sont pas rejouables après 0019/0020), applique `v2/0018_params.sql` + paramètres factices (`local/v2_params.sql`),
+`v2/0018_v2_data_fill.sql`, `v2/0020_rls_switchover.sql`, puis crée `nouveau@local.test` (accueil en 3 écrans) et `ami@local.test` (`local/v2_accounts.sql`).
+Comptes : `admin@`, `user@`, `admin2@`, `user2@`, `user3@`, `nouveau@`, `ami@local.test`, mot de passe `password123`. Rejouable. Lancer l'app :
+`echo NUXT_PUBLIC_V2=true >> .env.local && npm run dev:local`. ⚠ Cette base n'est plus compatible v1 : e2e v1 (`npm run test:e2e`) sur `db:local:reset`, e2e v2
+(`npm run test:e2e:v2`, `playwright.v2.config.ts`, `e2e/v2/`) sur `db:local:v2`.
+
+**Thèmes** (`shared/themes/`). JSON de thème = entrée NON FIABLE (un créateur de groupe le fait lire à tous). `themeInputSchema` (Zod, liste blanche) : `preset`
+parmi `boultons, terracotta, olive, ocean, prune, framboise, moutarde, custom` ; `primary` `#rrggbb` exactement ; `neutral` parmi 5 ; `name` lettres/chiffres/espace
+et `. , ' ’ & ! ( ) -` (affiché comme texte, jamais HTML) ; `home` accepté, ignoré ; toute autre clé supprimée. Entrée invalide : thème par défaut (terracotta).
+`resolveTheme()` → une `EditionConfig` : `boultons` = `boultonsEdition` tel quel (look inchangé, test d'identité), `terracotta` = `genericEdition`, les autres = édition
+générique + palette générée (OKLCH, la nuance 500 = la couleur choisie ; nuance de texte AA choisie automatiquement ; couleur trop claire / trop sombre / sans contraste AA refusée
+avec explication). Le CSS (`editionThemeCss`) ne contient que des variables `--color-primary-*` (hex généré), `--ui-color-neutral-*` et `--ui-primary` ; `data-edition` vaut `boultons`
+ou `generic`. Thème actif (`stores/theme.ts`) : aperçu > thème du groupe (`profiles.active_theme_group_id`, chargé par `list_my_groups`) > `profiles.theme_settings` > défaut.
+`plugins/edition.ts` passe par `useHead(() => …)` : rendu serveur sans flash, réactif aux changements. `useEdition()` expose `config` en accesseur (relire dans un `computed`).
+Ajouter un préréglage : une entrée dans `shared/themes/presets.ts` + `schema.ts` (liste) + clé i18n `theme.preset.<id>`.
+
+**Catégories personnelles** (`useMyCategories.ts`, `stores/categories.ts`, `CategoryManager.vue`, page `/reglages`). En v2, `useCategories()` renvoie MES catégories (identifiant, nom
+FR/EN selon la langue, icône Lucide de la liste blanche, couleur) ; les filtres, la grille d'accueil et les cartes les utilisent ; `useRecipeSearch` appelle `list_cookbook`
+(les tags ne sont pas filtrables : 6B). Les 9 suggestions (`SUGGESTED_CATEGORIES`, mêmes clés que 0018) s'ajoutent à la demande ou à la fin de l'accueil. Icônes `food_icons/` : non
+utilisées (aucune licence, voir le rapport) ; les icônes Lucide restent.
+
+**Accueil en 3 écrans** (`/onboarding`, middleware global `v2-onboarding`) : pseudonyme (obligatoire, erreurs de la base traduites : `shared/utils/profileErrors.ts`), titre du carnet, thème + catégories
+de départ ; chaque « Suivant » enregistre son écran ; « Terminer » passe `completeOnboarding`. **Fondations pour 6B à 6E** : `useNav()` (entrées, v1 inchangé), `PromptBanner.vue` /
+`PromptBanners.vue` (`pending_prompts`, `dismiss_prompt`), `NotificationBell.vue` (compteur seul ; liste = 6C), `ComingSoon.vue` + pages `/partagees`, `/amis`, `/groupes`, `/notifications`,
+`/explorer/[authorId]` (à remplacer), middleware `v2-only`.

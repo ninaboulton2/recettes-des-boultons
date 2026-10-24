@@ -831,23 +831,6 @@ begin
   assert tests.try(format($q$select public.update_my_profile(p_active_theme_group_id => %L, p_personal_theme => true)$q$, gb)) = '22023', 'groupe ET thème personnel refusé';
   select * into k from public.update_my_profile(p_personal_theme => true);
   assert k.active_theme_group_id is null, 'retour au thème personnel';
-  -- phase 6A : fin de l'accueil (onboarded_at) : renseigné une fois, jamais remis à NULL, sans effet sans le paramètre
-  -- (0018 renseigne onboarded_at des comptes existants : on simule un compte neuf par l'update direct, autorisé par 0019)
-  update public.profiles set onboarded_at = null where id = b;
-  assert (select onboarded_at from public.profiles where id = b) is null, 'onboarded_at : vide au départ';
-  select * into k from public.update_my_profile(p_display_name => 'Bob Accueil');
-  assert k.onboarded_at is null, 'onboarded_at : inchangé sans p_complete_onboarding';
-  select * into k from public.update_my_profile(p_display_name => 'Bob Accueil 2', p_cookbook_title => 'Carnet de Bob', p_complete_onboarding => true);
-  assert k.onboarded_at is not null and k.display_name = 'Bob Accueil 2' and k.cookbook_title = 'Carnet de Bob', 'onboarded_at renseigné avec le profil';
-  declare t0 timestamptz := k.onboarded_at; begin
-    perform pg_sleep(0.05);
-    select * into k from public.update_my_profile(p_complete_onboarding => true);
-    assert k.onboarded_at = t0, 'onboarded_at : la 1re date est conservée (idempotent)';
-    select * into k from public.update_my_profile(p_complete_onboarding => false);
-    assert k.onboarded_at = t0, 'onboarded_at : jamais remis à NULL par la fonction';
-  end;
-  -- refus pendant l'accueil : le pseudonyme invalide empêche aussi de terminer l'accueil
-  assert tests.try(format($q$select public.update_my_profile(p_display_name => %L, p_complete_onboarding => true)$q$, 'bob@exemple.fr')) = '22023', 'onboarding : pseudonyme avec @ refusé';
   -- l'update direct reste possible mais les règles du pseudonyme s'appliquent aussi (déclencheur)
   assert tests.try($q$update public.profiles set display_name = 'bob@exemple.fr' where id = '00000000-0000-0000-0000-00000000000b'$q$) = '22023', 'update direct avec @ refusé';
   assert tests.try($q$update public.profiles set display_name = 'eve AMIE' where id = '00000000-0000-0000-0000-00000000000b'$q$) = '22023', 'update direct en doublon refusé';

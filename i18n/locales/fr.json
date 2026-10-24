@@ -914,7 +914,7 @@
     "errors": {
       "required": "Le pseudonyme est obligatoire.",
       "taken": "Ce pseudonyme est déjà pris.",
-      "noAt": "Le pseudonyme ne peut pas contenir « @ » (jamais d'adresse e-mail affichée).",
+      "noAt": "Le pseudonyme ne peut pas contenir « {'@'} » (jamais d'adresse e-mail affichée).",
       "forbiddenChar": "Le pseudonyme contient un caractère interdit.",
       "invisibleChar": "Le pseudonyme contient un caractère invisible ou une espace spéciale.",
       "mixedScripts": "Le pseudonyme ne peut pas mélanger l'alphabet latin avec le cyrillique ou le grec.",
@@ -937,7 +937,7 @@
       "title": "Comment vous appelle-t-on ?",
       "description": "Ce pseudonyme est le seul nom que les autres voient, jamais votre adresse e-mail.",
       "label": "Pseudonyme",
-      "hint": "1 à 60 caractères, sans « @ ». Il doit être unique."
+      "hint": "1 à 60 caractères, sans « {'@'} ». Il doit être unique."
     },
     "step2": {
       "title": "Le nom de votre carnet",
