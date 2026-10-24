@@ -70,7 +70,10 @@ begin
   end if;
 end $$;
 
-create temporary table tmp_0020_before on commit drop as
+-- Instantané dans une vraie table (le SQL Editor de Supabase ne garde pas les tables temporaires
+-- d'une instruction à l'autre) ; supprimée par la vérification finale.
+drop table if exists private.tmp_0020_before;
+create table private.tmp_0020_before as
   select (select count(*) from public.recipes)            as n_recipes,
          (select count(*) from public.recipe_sections)    as n_sections,
          (select count(*) from public.recipe_ingredients) as n_ingredients,
@@ -220,7 +223,7 @@ create policy "recipe_photos_delete_editor" on storage.objects for delete to aut
 do $$
 declare b record; t text;
 begin
-  select * into b from tmp_0020_before;
+  select * into b from private.tmp_0020_before;
   assert (select count(*) from public.recipes) = b.n_recipes
      and (select count(*) from public.recipe_sections) = b.n_sections
      and (select count(*) from public.recipe_ingredients) = b.n_ingredients
@@ -238,6 +241,8 @@ begin
              and policyname like 'recipe_photos_%') = 4, '[0020] 4 politiques storage attendues';
   raise notice '[0020] bascule appliquée : recettes, contenu, favoris (insertion) et photos sous RLS v2 ; owner_id NOT NULL';
 end $$;
+
+drop table if exists private.tmp_0020_before;
 
 notify pgrst, 'reload schema';
 

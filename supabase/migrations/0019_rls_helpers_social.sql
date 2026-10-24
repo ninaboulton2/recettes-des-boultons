@@ -140,7 +140,10 @@ begin
   assert to_regprocedure('public.immutable_unaccent(text)') is not null, '[0019] immutable_unaccent absente : appliquer 0008';
 end $$;
 
-create temporary table tmp_0019_before on commit drop as
+-- Instantané dans une vraie table (le SQL Editor de Supabase ne garde pas les tables temporaires
+-- d'une instruction à l'autre) ; supprimée par la vérification finale.
+drop table if exists private.tmp_0019_before;
+create table private.tmp_0019_before as
   select (select count(*) from public.recipes)  as n_recipes,
          (select count(*) from public.profiles) as n_profiles,
          (select md5(coalesce(string_agg(
@@ -704,7 +707,7 @@ grant execute on function public.search_users(text), public.get_public_profiles(
 do $$
 declare b record; t text; n bigint;
 begin
-  select * into b from tmp_0019_before;
+  select * into b from private.tmp_0019_before;
   assert (select count(*) from public.recipes) = b.n_recipes and (select count(*) from public.profiles) = b.n_profiles,
     '[0019] des données ont changé';
 
@@ -758,6 +761,8 @@ begin
                      'recipe_share_links', 'cookbook_entries', 'notifications', 'reports', 'system_alerts', 'dismissed_prompts');
   raise notice '[0019] helpers + % politiques sur 12 tables sociales ; politiques et fonctions existantes inchangées', n;
 end $$;
+
+drop table if exists private.tmp_0019_before;
 
 notify pgrst, 'reload schema';
 
