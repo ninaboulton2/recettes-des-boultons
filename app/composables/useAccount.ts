@@ -60,7 +60,8 @@ export async function accountDeletionBlockers(supabase: Client): Promise<Deletio
 
 /**
  * Supprime DÉFINITIVEMENT mon compte et mes données (route serveur). `confirmEmail` = l'adresse e-mail du compte.
- * 409 si un groupe est à transférer (`accountDeletionBlockers`). Après succès, déconnecter la personne.
+ * 409 si un groupe est à transférer (`accountDeletionBlockers`). 401 `REAUTH_REQUIRED` (`isReauthRequired(error)`) si la connexion
+ * date de plus de 10 minutes : redemander le mot de passe (`supabase.auth.signInWithPassword`) puis réessayer. Après succès, déconnecter la personne.
  */
 export async function deleteAccount(input: z.input<typeof deleteAccountInputSchema>): Promise<void> {
   const body = parseClientInput(deleteAccountInputSchema, input)

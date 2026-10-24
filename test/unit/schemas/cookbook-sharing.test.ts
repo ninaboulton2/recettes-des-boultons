@@ -83,6 +83,7 @@ describe('droits et repartage (sharing.ts)', () => {
     expect(refused.success).toBe(false)
     if (!refused.success) expect(refused.error.issues[0]?.message).toContain('jamais edit_original')
     expect(reshareRecipeInputSchema.safeParse({ recipeId: A, permission: 'read' }).success).toBe(false)
+    expect(reshareRecipeInputSchema.safeParse({ recipeId: A, granteeGroupId: B, permission: 'read' }).success).toBe(false)   // jamais un groupe
   })
 
   it('identifiants requis (revoke, lien, usage, visibilité, jeton)', () => {

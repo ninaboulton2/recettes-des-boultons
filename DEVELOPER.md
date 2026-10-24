@@ -975,6 +975,8 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   le « non » pour un étranger, un membre de groupe et une amie), et « up, down, up » de 0021 (`save_recipe` /
   `save_recipe_translation` restaurées à l'identique).
   0023 : `test_0023_v1_compat.sql` (0023 avec 0021, puis 0023 SEULE sans 0021 : la v1 n'est pas cassée),
+  `test_0024_handle_new_user.sql` (0024, appliquée avant la boucle 0019 → 0023), `test_0025_sec2_v1.sql` / `test_0025_sec2_security.sql` et une
+  vraie concurrence à deux sessions (relecture de sécurité n° 2, § 20.9),
   `test_0023_social_rpcs.sql` sous la chaîne complète 0019 → 0021 → 0023 → 0018 → 0020 (deux fois, comme 0021 : chaque
   fonction a son « oui » et son « non » pour un étranger, un membre et le créateur ; notifications sans e-mail ; limites de
   débit ; transfert du créateur ; départ qui fait perdre l'accès ; suppression de groupe ; export sans donnée d'autrui ;
@@ -1203,7 +1205,8 @@ appliqués** (le site actuel suppose que tout compte connecté lit toutes les re
 
 Le support (`private.is_support()`, alias de `is_admin()` pour l'instant) **ne lit une recette que si elle est
 signalée** (statut `open` ou `reviewed`) et peut alors la supprimer ; il ne modifie jamais le contenu des autres. Un repartage
-(`origin = 'reshare'`) exige un droit explicite détenu, ne dépasse jamais `copy` ni son propre niveau.
+(`origin = 'reshare'`) exige un droit explicite détenu, ne dépasse jamais `copy` ni son propre niveau, et ne vise qu'une **personne**
+(ami ou co-membre d'un groupe), jamais un groupe.
 
 ### 20.2 Partage par groupe et bannières (clarification de Nina, 2026-10-24)
 
@@ -1305,11 +1308,11 @@ Erreurs : refus de droit = SQLSTATE `42501` (message français), introuvable = `
 | `list_shared_with_me(p_limit, p_offset)` | connecté | Lisibles par moi (droit direct, de groupe, ou partage implicite « groupes »), pas encore dans mon carnet ; `via` = `user` / `group`. |
 | `grant_recipe(p_recipe, p_grantee_user?, p_grantee_group?, p_permission)` | **auteur** | Ami ou personne d'un groupe commun, ou groupe dont l'auteur est membre (`private.can_create_grant`) ; le plus récent remplace. Renvoie l'id du droit. |
 | `revoke_recipe_grant(p_grant_id)` | auteur ; auteur d'un repartage ; bénéficiaire qui renonce | `true` si retiré, `false` sinon (inconnu ou non permis, sans distinction). Les repartages issus de ce droit disparaissent. |
-| `reshare_recipe(p_recipe, p_grantee_user?, p_grantee_group?, p_permission)` | détenteur d'un droit **explicite** | `read` ou `copy` seulement (**jamais `edit_original`**), au plus son niveau ; ne remplace jamais un droit qui n'est pas le sien (renvoie `NULL`). |
+| `reshare_recipe(p_recipe, p_grantee_user, p_permission)` (`p_grantee_group` existe encore mais est **refusé**, 22023) | détenteur d'un droit **explicite** | À une **personne** seulement (ami ou co-membre), `read` ou `copy` (**jamais `edit_original`**), au plus son niveau ; ne remplace jamais un droit qui n'est pas le sien (renvoie `NULL`). |
 | `list_recipe_grants(p_recipe)` | **auteur** | Droits donnés (personnes, groupes, repartages) avec noms d'affichage, jamais d'e-mail. |
 | `create_share_link(p_recipe)` / `revoke_share_link(p_recipe)` | **auteur** | Jeton du lien public (le même s'il existe) / désactivation. |
 | `get_shared_recipe(p_token, p_locale?)` | **`anon`** et `authenticated` | Recette complète en JSON pour un jeton actif, sinon `NULL`. Ni id de recette, ni `owner_id`, ni e-mail, ni `photo_path` (`has_photo`) ; seulement `author_name` (pseudonyme). |
-| `claim_shared_recipe(p_token)` | connecté | Depuis la page publique : droit `copy` (`origin = link`, ne rétrograde jamais) + ajout au carnet. Renvoie l'id de la recette. |
+| `claim_shared_recipe(p_token)` | connecté | Depuis la page publique : droit `copy` (`origin = link`) s'il n'y en a pas déjà un (un droit existant n'est JAMAIS modifié) + ajout au carnet. Renvoie l'id de la recette. |
 | `recipe_usage(p_recipe)` | **auteur** | `cookbook_count` (carnets d'AUTRES personnes) et `copy_count` : à appeler avant `delete_recipe` pour avertir. |
 | `pending_prompts(p_since?, p_limit)` | connecté | Bannières `author_recipes` / `new_recipe` (voir ci-dessous). |
 | `dismiss_prompt(p_kind, p_target)` | connecté | Ferme une bannière pour de bon (idempotente). |
@@ -1334,7 +1337,7 @@ await dismissPrompt({ kind: 'new_recipe', targetId: banners[0].targetId })
 
 const { grantRecipe, reshareRecipe, createShareLink, getSharedRecipe, recipeUsage } = useSharing()
 await grantRecipe({ recipeId, granteeUserId, permission: 'edit_original' })   // auteur seulement
-await reshareRecipe({ recipeId, granteeGroupId, permission: 'copy' })         // jamais edit_original
+await reshareRecipe({ recipeId, granteeUserId, permission: 'copy' })          // une personne ; jamais edit_original, jamais un groupe
 const { path } = await createShareLink({ recipeId })        // '/r/<jeton>'
 const page = await getSharedRecipe({ token, locale: 'en' }) // sans compte ; null si le lien est inconnu ou révoqué
 const { cookbookCount, copyCount } = await recipeUsage({ recipeId })   // avant de supprimer
@@ -1470,3 +1473,50 @@ select public.send_friend_request('<uuid>'::uuid);   -- exécutable par authenti
   écriture directe (déclencheur `trg_0023_profiles_display_name`).
 - Les tests de 0019 (`test_0019_rls.sql`) ont dû être adaptés : la relance d'une demande refusée par le demandeur d'origine demande
   désormais 7 jours, et les déclencheurs créent des notifications.
+
+### 20.9 Relecture de sécurité n° 2 (0019, 0021, 0023, v2/0020, serveur)
+
+Corrections faites **directement dans les fichiers** (0019, 0021, 0023 et `v2/0020` ne sont pas encore en production ; seul `0024` est à part,
+déjà appliqué ou à appliquer tout de suite, et son SQL n'a pas changé). Chaque point a un test qui échoue avant et passe après
+(`supabase/tests/test_0025_sec2_security.sql`, `test_0025_sec2_v1.sql`, la concurrence dans `run_local.sh`, les tests vitest).
+
+| Point | Correction | Test |
+|---|---|---|
+| Limites de débit contournables en parallèle | `pg_advisory_xact_lock(hashtextextended(personne || ':' || genre, 0))` dans `private.check_rate_limit`, le déclencheur des signalements et les plafonds de volume | présence du verrou (`pg_get_functiondef`) + **deux sessions psql réelles** (demandes d'ami 19/20, signalements 9/10 : une seule passe) |
+| Transfert du créateur vs départ / retrait | `private.require_group_creator` verrouille le groupe (`for update`, volatile) ; `leave_group` verrouille puis relit son rôle ; `remove_group_member` verrouille ; `transfer_group_ownership` vérifie `row_count = 1` (sinon 55000) | deux sessions : départ du futur créateur pendant le transfert = refusé, un seul créateur |
+| Invitation / lien d'un ex-créateur | `redeem_invite_link` et `respond_group_invitation` exigent `groups.created_by = invitations.inviter_id` (même message qu'un jeton / une invitation inconnus) ; `invite_to_group` et `create_invite_link` passent par le verrou du groupe (« introuvable » si le rôle a changé) | transfert, puis ancienne invitation et ancien lien : refusés, y compris un reliquat « pending » inséré à la main |
+| E-mail du profil | `revoke update on profiles from anon, authenticated` puis `grant update (name, role, language, theme, notifications, display_name, cookbook_title, theme_settings, active_theme_group_id, discoverable, onboarded_at)` (0019). **Colonnes modifiables par l'API après correction : ces 11.** Le code v1 ne modifie aucune colonne de `profiles` (lecture seule) | `update profiles set email` / `id` = 42501 ; `name`, `language`, `theme`, `notifications` et les colonnes v2 : 1 ligne ; `anon` : refusé |
+| Volumes | déclencheurs d'insertion (0019, 53400) : 2000 recettes par auteur (**seulement si `owner_id` n'est pas NULL** : sans effet en v1), 20 groupes créés, 5000 bannières fermées ; contraintes `profiles_theme_settings_size` et `groups_theme_size` (≤ 4000 caractères, `not valid` puis `validate`) | 2001ᵉ recette / 21ᵉ groupe / 5001ᵉ bannière refusés ; 2005 recettes sans propriétaire insérées en v1 ; thèmes démesurés refusés en écriture directe |
+| Suppression de compte | `iat` du JWT < 10 minutes sinon 401 `data.code = 'REAUTH_REQUIRED'` (`server/utils/recentAuth.ts`, côté client `isReauthRequired(error)` : redemander le mot de passe puis réessayer) ; photos listées dans le bucket par préfixe `<recette>/` avec pagination (`collectPhotoPaths`) ; middleware `server/middleware/csrf.ts` | `test/unit/recentAuth.test.ts`, `accountDeletion.test.ts`, `csrf.test.ts` |
+| `claim_shared_recipe` | un droit existant n'est **jamais modifié** (`on conflict do nothing`) ; seule l'entrée de carnet est ajoutée | droits `read` et `edit_original` conservés |
+| Repartage | à une **personne** seulement ; refusé vers un groupe (RPC : 22023 ; écriture directe : `can_create_grant` renvoie faux) | RPC + insertion directe |
+| `invitations` | l'insertion directe n'autorise que `kind = 'group'` et `is_group_creator(group_id)` ; `kind = 'friend'` : RPC ou phase 7 | insertion d'une invitation d'ami = refusée |
+| Oracle d'existence | `save_recipe` avec un `id` existant mais illisible : `insert … on conflict do nothing`, puis le même refus (42501) qu'un `id` lisible non modifiable ; sans effet sur la v1 (tout compte y lit tout) | même sqlstate et même message |
+| Pseudonymes | caractères de format / invisibles (Cf, Zl, Zp, U+00A0 et autres espaces, fillers) refusés ; pas de mélange latin + cyrillique / grec ; unicité sur `normalize(…, NFKC)` en minuscules sans accents | « Ni​na » (U+200B), « Nіna » (і cyrillique), « ﬁdele » contre « Fidèle »… |
+| `recipes_guard_owner_fields` | à profondeur > 1 le contrôle n'est plus levé : seuls `copied_from` → NULL et `category_id` → NULL sont tolérés ; `owner_id` et `visibility` jamais | déclencheur de test qui met `recipes` à jour en profondeur 2 |
+| `.gitignore` | `.env*` ignoré, sauf `.env.example` et `.env.local.example` (`env.example` n'est pas concerné) ; les doublons iCloud (`.env 2.local`…) disparaissent de `git status` | `git check-ignore` |
+
+**Middleware CSRF** (`server/middleware/csrf.ts`, logique dans `server/utils/csrf.ts`) : refuse en 403 tout `POST` / `PUT` / `PATCH` / `DELETE` sur
+`/api/**` quand `Sec-Fetch-Site` vaut `cross-site`, ou quand `Origin` est présent et diffère de l'hôte (`Host`, ou `X-Forwarded-Host`).
+Acceptés : même origine, `Origin` absent (tests serveur, scripts, Playwright `request`, appels `Authorization: Bearer` sans navigateur), lectures.
+Les routes IA (`extract-recipe`, `transcribe-recipe`, `translate-recipe`) et Drive sont appelées en même origine par l'application : non touchées.
+Un client navigateur d'un **autre site** qui appellerait l'API avec un jeton `Bearer` est désormais refusé.
+
+**Limites connues.** (1) `iat` est renouvelé par Supabase à chaque rafraîchissement du jeton : la garantie est « jeton émis il y a moins de
+10 minutes », pas « mot de passe saisi il y a moins de 10 minutes » (pour cela, lire l'horodatage de `amr`). (2) Un pseudonyme **entièrement**
+cyrillique qui ressemble à un pseudonyme latin n'est pas détecté. (3) `profiles_insert_self` (0001) autorise encore l'insertion de sa propre
+ligne si elle n'existe pas : le profil est créé par `handle_new_user` (0024 : rôle `user` en dur).
+
+**À vérifier par Nina dans le tableau de bord Supabase** (rien à coder) :
+
+- **Settings → API → « Exposed schemas »** : le schéma `private` ne doit PAS y figurer (seul `public`, plus `graphql_public` si utilisé). Les fonctions
+  `private.*` (aides RLS, journal `rate_events`) reposent sur le fait que l'API ne les expose pas ; elles sont de toute façon révoquées pour `anon` et
+  `authenticated`.
+- **Thème de groupe** (`groups.theme`) et thème personnel (`profiles.theme_settings`) : JSON libre (objet, ≤ 4000 caractères, rien d'autre n'est contrôlé par
+  la base). Le rendu (phase 6A) doit les valider par une **liste blanche** (préréglage connu, couleurs `#rrggbb`, jamais de CSS, d'URL ni de HTML brut) avant de les
+  appliquer.
+
+**Tester l'ancien comportement.** Pour vérifier qu'un test échoue bien sur les anciennes migrations : copier `supabase/` du commit `8f0f729`
+(ou antérieur) dans un dossier à part, y mettre les nouveaux `test_0025_*.sql` et `run_local.sh`, et rejouer les deux fichiers de test avec
+`psql -v ON_ERROR_STOP=0 -v ON_ERROR_ROLLBACK=on` : chaque bloc `[n]` échoue séparément.
+

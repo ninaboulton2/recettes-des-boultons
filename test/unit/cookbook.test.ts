@@ -147,9 +147,11 @@ describe('fonctions de partage (RPC)', () => {
     const { client, rpc } = fakeClient({ data: B })
     expect(await grantRecipe(client, { recipeId: A, granteeUserId: B, permission: 'edit_original' })).toBe(B)
     expect(rpc).toHaveBeenLastCalledWith('grant_recipe', { p_recipe: A, p_grantee_user: B, p_grantee_group: undefined, p_permission: 'edit_original' })
-    expect(await reshareRecipe(client, { recipeId: A, granteeGroupId: B })).toBe(B)
-    expect(rpc).toHaveBeenLastCalledWith('reshare_recipe', { p_recipe: A, p_grantee_user: undefined, p_grantee_group: B, p_permission: 'read' })
+    expect(await reshareRecipe(client, { recipeId: A, granteeUserId: B })).toBe(B)
+    expect(rpc).toHaveBeenLastCalledWith('reshare_recipe', { p_recipe: A, p_grantee_user: B, p_permission: 'read' })
     rpc.mockClear()
+    await expect(reshareRecipe(client, { recipeId: A, granteeGroupId: B } as never)).rejects.toThrow()   // jamais un groupe
+    expect(rpc).not.toHaveBeenCalled()
     await expect(reshareRecipe(client, { recipeId: A, granteeUserId: B, permission: 'edit_original' as never })).rejects.toThrow(/jamais edit_original/)
     expect(rpc).not.toHaveBeenCalled()
     expect(await reshareRecipe(fakeClient({ data: null }).client, { recipeId: A, granteeUserId: B })).toBeNull()

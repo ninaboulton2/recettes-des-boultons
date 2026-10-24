@@ -11,6 +11,15 @@ export const RATE_LIMIT_SQLSTATE = '54000'
 /** SQLSTATE d'une suppression de compte bloquée par un groupe à transférer. */
 export const ACCOUNT_BLOCKED_SQLSTATE = '55000'
 
+/** Code (`data.code` d'une 401) d'une action irréversible qui exige une connexion de moins de 10 minutes : l'interface redemande le mot de passe. */
+export const REAUTH_REQUIRED_CODE = 'REAUTH_REQUIRED'
+/** SQLSTATE d'un plafond de volume (2000 recettes, 20 groupes, 5000 bannières fermées). */
+export const QUOTA_SQLSTATE = '53400'
+
+export function isQuotaError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === QUOTA_SQLSTATE
+}
+
 export function isRateLimitError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === RATE_LIMIT_SQLSTATE
 }

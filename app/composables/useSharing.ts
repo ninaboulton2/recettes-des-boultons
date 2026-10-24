@@ -37,13 +37,12 @@ export async function grantRecipe(supabase: Client, input: z.input<typeof grantR
   return data
 }
 
-/** Repartage d'un droit reçu (read ou copy, jamais edit_original). `null` : la personne avait déjà un droit qui n'est pas le mien. */
+/** Repartage d'un droit reçu à UNE PERSONNE (read ou copy, jamais edit_original, jamais un groupe). `null` : la personne avait déjà un droit qui n'est pas le mien. */
 export async function reshareRecipe(supabase: Client, input: z.input<typeof reshareRecipeInputSchema>): Promise<string | null> {
-  const { recipeId, granteeUserId, granteeGroupId, permission } = parseClientInput(reshareRecipeInputSchema, input)
+  const { recipeId, granteeUserId, permission } = parseClientInput(reshareRecipeInputSchema, input)
   const { data, error } = await supabase.rpc('reshare_recipe', {
     p_recipe: recipeId,
-    p_grantee_user: granteeUserId ?? undefined,
-    p_grantee_group: granteeGroupId ?? undefined,
+    p_grantee_user: granteeUserId,
     p_permission: permission
   })
   if (error) throw error

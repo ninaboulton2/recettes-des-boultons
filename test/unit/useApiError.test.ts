@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError, apiErrorFromResponse, toUserMessage } from '../../app/composables/useApiError'
+import { ApiError, apiErrorFromResponse, isReauthRequired, toUserMessage } from '../../app/composables/useApiError'
 
 const GENERIC = 'Une erreur est survenue, réessayez plus tard.'
 
@@ -44,5 +44,21 @@ describe('apiErrorFromResponse', () => {
     const html = await apiErrorFromResponse(new Response('<html>Bad gateway</html>', { status: 502 }))
     expect(html.message).toBe(GENERIC)
     expect(toUserMessage(html)).toBe(GENERIC)
+  })
+})
+
+describe('REAUTH_REQUIRED', () => {
+  it('apiErrorFromResponse lit data.code ; isReauthRequired ne répond oui que pour une 401 REAUTH_REQUIRED', async () => {
+    const response = new Response(JSON.stringify({ statusCode: 401, statusMessage: 'Reconnectez-vous pour confirmer cette action', data: { code: 'REAUTH_REQUIRED' } }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const error = await apiErrorFromResponse(response)
+    expect(error.code).toBe('REAUTH_REQUIRED')
+    expect(isReauthRequired(error)).toBe(true)
+    expect(toUserMessage(error)).toBe('Reconnectez-vous pour confirmer cette action')
+    expect(isReauthRequired(new ApiError(401, 'Authentification requise'))).toBe(false)
+    expect(isReauthRequired(new ApiError(403, 'x', 'REAUTH_REQUIRED'))).toBe(false)
+    expect(isReauthRequired(new Error('x'))).toBe(false)
   })
 })

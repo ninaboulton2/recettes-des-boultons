@@ -38,6 +38,10 @@
 --      recettes pour la personne connectée ; la phase 5A le rendra explicite.
 --      Un client sans identité (service_role) doit donner owner_id.
 --
+--  9. (relecture de sécurité n° 2) `recipes_guard_owner_fields` ne lève plus le contrôle à profondeur de déclencheur > 1 : seuls
+--     `copied_from` → NULL (suppression de l'original) et `category_id` → NULL sont tolérés ; toute autre modification d'`owner_id` ou
+--     de `visibility` reste refusée (42501).
+--
 --  CE QUI RESTE À FAIRE ENSUITE (hors de ce fichier)
 --   - `save_recipe_translation` garde son garde-fou `is_admin()` (0016) ; la v2 le
 --     remplace par can_edit_recipe (phase 5A).

@@ -43,13 +43,15 @@ export const grantRecipeInputSchema = z.object({
   permission: grantPermissionSchema.default('copy')
 }).refine(exactlyOneGrantee, oneGranteeMessage)
 
-/** `reshare_recipe(p_recipe, p_grantee_user, p_grantee_group, p_permission)` — détenteur d'un droit explicite. */
+/**
+ * `reshare_recipe(p_recipe, p_grantee_user, p_permission)` — détenteur d'un droit explicite. Un repartage ne vise qu'une PERSONNE
+ * (ami ou membre d'un de ses groupes) : jamais un groupe (relecture de sécurité n° 2, 0021 CHOIX n° 6).
+ */
 export const reshareRecipeInputSchema = z.object({
   recipeId: uuidSchema,
-  granteeUserId: uuidSchema.nullish(),
-  granteeGroupId: uuidSchema.nullish(),
+  granteeUserId: uuidSchema,
   permission: resharePermissionSchema.default('read')
-}).refine(exactlyOneGrantee, oneGranteeMessage)
+})
 
 /** `revoke_recipe_grant(p_grant_id)` */
 export const revokeRecipeGrantInputSchema = z.object({ grantId: uuidSchema })

@@ -19,17 +19,25 @@ const FALLBACK_NETWORK = 'Connexion impossible, vérifiez votre réseau puis ré
 export class ApiError extends Error {
   readonly statusCode: number
   readonly statusMessage: string
+  /** Code applicatif facultatif renvoyé par le serveur (`data.code`), ex. `REAUTH_REQUIRED`. */
+  readonly code: string | undefined
 
-  constructor(statusCode: number, statusMessage: string) {
+  constructor(statusCode: number, statusMessage: string, code?: string) {
     super(statusCode >= 500 || !statusMessage ? translateKey('errors.generic', FALLBACK_GENERIC) : statusMessage)
     this.name = 'ApiError'
     this.statusCode = statusCode
     this.statusMessage = statusMessage
+    this.code = code
   }
 }
 
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError
+}
+
+/** Le serveur demande de se reconnecter avant cette action (401 `REAUTH_REQUIRED`) : afficher la reconnexion puis réessayer. */
+export function isReauthRequired(error: unknown): boolean {
+  return isApiError(error) && error.statusCode === 401 && error.code === 'REAUTH_REQUIRED'
 }
 
 /**
@@ -110,17 +118,20 @@ export function toUserMessage(error: unknown): string {
  */
 export async function apiErrorFromResponse(response: Response): Promise<ApiError> {
   let statusMessage = ''
+  let code: string | undefined
   try {
     const payload: unknown = await response.json()
     if (typeof payload === 'object' && payload !== null) {
       statusMessage = readStatusMessage(payload as StatusLike)
+      const rawCode = (payload as { data?: { code?: unknown } }).data?.code
+      if (typeof rawCode === 'string') code = rawCode
     }
   } catch {
     // Corps absent ou non JSON : on s'en tient au statut.
   }
-  return new ApiError(response.status, statusMessage)
+  return new ApiError(response.status, statusMessage, code)
 }
 
 export function useApiError() {
-  return { toUserMessage, apiErrorFromResponse, isApiError }
+  return { toUserMessage, apiErrorFromResponse, isApiError, isReauthRequired }
 }

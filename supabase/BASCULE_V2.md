@@ -333,6 +333,15 @@ Ensuite : `drop table private.v2_fill_params;` si ce n'est pas déjà fait.
 * **Créateur du groupe** : Nina ne peut pas supprimer son compte tant que le groupe « Les Boultons » a d'autres membres
   (`groups.created_by` est `on delete restrict`) : elle doit d'abord passer le rôle (`transfer_group_ownership`, 0023) ou
   supprimer le groupe ; `account_deletion_blockers()` le lui indique, `prepare_account_deletion` le contrôle côté serveur.
+* **À vérifier dans Supabase avant la bascule (relecture de sécurité n° 2)** :
+  1. *Settings → API → Exposed schemas* : le schéma `private` ne doit **pas** figurer dans la liste (seulement `public`, et `graphql_public`
+     si utilisé). Les aides RLS, le journal `private.rate_events` et les fonctions de déclencheurs ne doivent jamais être joignables par l'API.
+  2. Le **thème de groupe** (`groups.theme`) et le thème personnel (`profiles.theme_settings`) sont du JSON libre (objet de 4000 caractères au plus,
+     seule contrainte de la base) : à valider par une **liste blanche au rendu** (phase 6A) avant d'appliquer la moindre couleur ou propriété.
+  3. Après 0019 : `select has_column_privilege('authenticated', 'public.profiles', 'email', 'update');` doit répondre `false` (l'e-mail du profil
+     n'est plus modifiable par l'API ; le code actuel ne modifie aucune colonne de `profiles`).
+  4. Déploiement du code v2 : le middleware `server/middleware/csrf.ts` refuse les écritures `/api/**` venues d'un autre site ; la suppression
+     de compte exige une connexion de moins de 10 minutes (401 `REAUTH_REQUIRED` : l'interface redemande le mot de passe).
 * **Photos publiques** jusqu'à la phase 8 (bucket `recipe-photos` toujours public).
 * **Nouvelles inscriptions** : tant que les inscriptions sont ouvertes, un compte neuf ne voit rien (pas de groupe) ;
   c'est normal.

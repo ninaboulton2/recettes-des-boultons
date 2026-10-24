@@ -42,6 +42,9 @@
 #      complète (deux fois, comme 0021), « up, down, up » de 0023 (empreinte de toutes les fonctions, déclencheurs,
 #      politiques et tables private identique à l'avant), et 0023 SEULE sans 0021 (indépendance). Les tests de 0019 sont
 #      adaptés à 0023 (relance après refus : délai de 7 jours ; notifications créées par les déclencheurs).
+#  15. 0024 (rôle 'user' en dur à l'inscription) est appliquée AVANT la boucle 0019 → 0023 (test_0024) : l'empreinte « avant 0023 » l'inclut.
+#      Relecture de sécurité n° 2 : test_0025_sec2_v1.sql (v1 non cassée), test_0025_sec2_security.sql (chaîne complète, deux fois) et
+#      une vraie concurrence à deux sessions psql (limites de débit, départ pendant un transfert).
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================

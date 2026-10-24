@@ -3,6 +3,7 @@ import { createError, getHeader, type H3Event } from 'h3'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import type { Database } from '#shared/types/database'
 import type { UserRole } from '#shared/types'
+import { iatFromClaims } from './recentAuth'
 
 /**
  * Authentification côté serveur.
@@ -28,6 +29,8 @@ export interface AuthenticatedUser {
   email?: string
   /** Rôle lu dans le JWT (`user_role`), `undefined` si le claim est absent. */
   role?: UserRole
+  /** Claim `iat` du JWT (secondes depuis 1970) : date d'émission du jeton, `undefined` s'il est absent (voir `assertRecentAuth`). */
+  iat?: number
 }
 
 export interface AuthContext {
@@ -99,7 +102,7 @@ async function authFromBearer(event: H3Event, token: string): Promise<AuthContex
 
   return {
     supabase,
-    user: { id: data.user.id, email: data.user.email, role: roleFromClaims(decodeJwtPayload(token)) }
+    user: { id: data.user.id, email: data.user.email, role: roleFromClaims(decodeJwtPayload(token)), iat: iatFromClaims(decodeJwtPayload(token)) }
   }
 }
 
@@ -115,7 +118,7 @@ async function authFromCookies(event: H3Event): Promise<AuthContext> {
   }
 
   const email = typeof claims.email === 'string' ? claims.email : undefined
-  return { supabase, user: { id: claims.sub, email, role: roleFromClaims(claims) } }
+  return { supabase, user: { id: claims.sub, email, role: roleFromClaims(claims), iat: iatFromClaims(claims) } }
 }
 
 /**

@@ -9,7 +9,9 @@ import { throwSupabaseError, type SupabaseErrorLike } from './errors'
  * Déroulé :
  *  1. `account_deletion_blockers()` (avec la session de la personne) : tout groupe qu'elle CRÉE et qui a d'autres membres
  *     bloque la suppression → 409 avec la liste (à transférer ou supprimer d'abord) ;
- *  2. chemins des photos de ses recettes (service_role) : à retirer du bucket APRÈS la suppression ;
+ *  2. chemins des photos de ses recettes (service_role) : on liste le bucket par préfixe `<id de la recette>/`, avec pagination
+ *     (les recettes sont lues par pages de 1000, les dossiers par pages de 100), plutôt que de lire `recipes.photo_path` (une seule
+ *     requête PostgREST est plafonnée à 1000 lignes). À retirer du bucket APRÈS la suppression ;
  *  3. `prepare_account_deletion(user)` (service_role) : contrôle à nouveau sous verrou (personne n'a rejoint entre-temps)
  *     et supprime les groupes où elle est seule — sinon `groups.created_by on delete restrict` bloquerait ;
  *  4. `auth.admin.deleteUser` (service_role) : la cascade supprime profil, recettes, carnet, favoris, planning, courses,
@@ -30,8 +32,10 @@ export interface AccountBlockerRow {
 export interface AccountDeletionPorts {
   /** `rpc('account_deletion_blockers')` avec la session de la personne. */
   blockers: () => PromiseLike<Result<AccountBlockerRow[]>>
-  /** `recipes.photo_path` des recettes dont elle est l'auteur (service_role). */
-  photoPaths: () => PromiseLike<Result<Array<{ photo_path: string | null }>>>
+  /** Page d'identifiants de recettes dont elle est l'auteur (service_role) : lignes `from` à `to` incluses, triées par id. */
+  recipeIds: (from: number, to: number) => PromiseLike<Result<Array<{ id: string }>>>
+  /** `storage.from('recipe-photos').list(recipeId, { limit, offset })` (service_role) : fichiers du dossier de la recette. */
+  listPhotos: (recipeId: string, offset: number, limit: number) => PromiseLike<Result<Array<{ name: string, id?: string | null }>>>
   /** `rpc('prepare_account_deletion', { p_user })` (service_role) : nombre de groupes supprimés. */
   prepare: () => PromiseLike<Result<number>>
   /** `auth.admin.deleteUser(id)` (service_role). */
@@ -43,6 +47,41 @@ export interface AccountDeletionPorts {
 export interface AccountDeletionResult {
   deletedGroups: number
   removedPhotos: number
+}
+
+const RECIPE_PAGE = 1000
+const PHOTO_PAGE = 100
+const REMOVE_CHUNK = 100
+const LIST_CONCURRENCY = 10
+
+/** Tous les chemins `<recette>/<fichier>` du bucket pour les recettes de la personne (pagination des deux listes). */
+export async function collectPhotoPaths(ports: Pick<AccountDeletionPorts, 'recipeIds' | 'listPhotos'>): Promise<string[]> {
+  const paths: string[] = []
+  for (let from = 0; ; from += RECIPE_PAGE) {
+    const page = await ports.recipeIds(from, from + RECIPE_PAGE - 1)
+    if (page.error) throwSupabaseError(page.error, 'account-delete recipes')
+    const ids = (page.data ?? []).map(row => row.id)
+    for (let i = 0; i < ids.length; i += LIST_CONCURRENCY) {
+      const batch = ids.slice(i, i + LIST_CONCURRENCY)
+      const lists = await Promise.all(batch.map(async (recipeId) => {
+        const names: string[] = []
+        for (let offset = 0; ; offset += PHOTO_PAGE) {
+          const files = await ports.listPhotos(recipeId, offset, PHOTO_PAGE)
+          if (files.error) throwSupabaseError(files.error, 'account-delete photos')
+          const rows = files.data ?? []
+          // un « dossier » (sans `id`) ou le marqueur de dossier vide ne sont pas des photos
+          for (const file of rows) {
+            if (file.id !== null && file.name !== '.emptyFolderPlaceholder') names.push(`${recipeId}/${file.name}`)
+          }
+          if (rows.length < PHOTO_PAGE) break
+        }
+        return names
+      }))
+      for (const names of lists) paths.push(...names)
+    }
+    if (ids.length < RECIPE_PAGE) break
+  }
+  return paths
 }
 
 const BLOCKED_MESSAGE = 'Transférez ou supprimez vos groupes avant de supprimer le compte'
@@ -58,9 +97,7 @@ export async function deleteAccountFlow(ports: AccountDeletionPorts): Promise<Ac
     })
   }
 
-  const photos = await ports.photoPaths()
-  if (photos.error) throwSupabaseError(photos.error, 'account-delete photos')
-  const paths = (photos.data ?? []).map(row => row.photo_path).filter((p): p is string => typeof p === 'string' && p !== '')
+  const paths = await collectPhotoPaths(ports)
 
   const prepared = await ports.prepare()
   if (prepared.error) {
@@ -75,9 +112,12 @@ export async function deleteAccountFlow(ports: AccountDeletionPorts): Promise<Ac
   let removedPhotos = 0
   if (paths.length > 0) {
     try {
-      const removed = await ports.removePhotos(paths)
-      if (removed.error) throw new Error(removed.error.message ?? 'suppression des photos refusée')
-      removedPhotos = paths.length
+      for (let i = 0; i < paths.length; i += REMOVE_CHUNK) {
+        const chunk = paths.slice(i, i + REMOVE_CHUNK)
+        const removed = await ports.removePhotos(chunk)
+        if (removed.error) throw new Error(removed.error.message ?? 'suppression des photos refusée')
+        removedPhotos += chunk.length
+      }
     } catch (error) {
       // le compte est déjà supprimé : on journalise pour un nettoyage manuel, sans renvoyer d'erreur
       console.error('[api] account-delete photos', error)
