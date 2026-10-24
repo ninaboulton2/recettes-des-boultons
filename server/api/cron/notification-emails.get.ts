@@ -26,6 +26,10 @@ export default defineEventHandler(async (event): Promise<NotificationEmailReport
         if (error) throw error
         return (data ?? []) as ClaimedNotification[]
       },
+      confirm: async (ids) => {
+        const { error } = await admin!.rpc('confirm_notification_emails', { p_ids: ids })
+        if (error) throw error
+      },
       release: async (ids) => {
         const { error } = await admin!.rpc('release_notification_emails', { p_ids: ids })
         if (error) throw error

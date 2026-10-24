@@ -131,6 +131,17 @@ describe('journal ai_usage (trackAiCall / logAiUsage)', () => {
     expect(rows[0]).toMatchObject({ feature: 'extract', status: 'ok', estimated_cost_usd: 0.00188 })
   })
 
+  it('avec une réservation (v2) : la ligne réservée est terminée (ok puis error), aucune ligne n\'est insérée en plus', async () => {
+    const { rows, client } = fakeSupabase()
+    const finished: Array<Record<string, unknown>> = []
+    const reservation = { id: 'res-1', finish: async (entry: Record<string, unknown>) => { finished.push(entry); return true } }
+    await trackAiCall(client, call, async () => 'texte', () => ({ inputTokens: 3, outputTokens: 4, estimatedCostUsd: 0.5 }), reservation)
+    const failure = new Error('panne')
+    await expect(trackAiCall(client, call, async () => { throw failure }, () => ({}), reservation)).rejects.toBe(failure)
+    expect(rows).toHaveLength(0)
+    expect(finished).toMatchObject([{ status: 'ok', inputTokens: 3, outputTokens: 4, estimatedCostUsd: 0.5 }, { status: 'error' }])
+  })
+
   it('journalise une ligne error puis relance l\'erreur d\'origine', async () => {
     const { rows, client } = fakeSupabase()
     const failure = new Error('fournisseur en panne')

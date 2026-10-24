@@ -6,7 +6,7 @@ import type { TranslationFailureReason } from '#shared/schemas/translation'
 import { getAiConfig, getModel } from './ai/provider'
 import { translateRecipeTexts } from './ai/translate'
 import { trackAiCall } from './ai/usage'
-import { assertAiAllowed, throwAiFailure } from './ai/guard'
+import { reserveAiAllowed, throwAiFailure } from './ai/guard'
 import type { AuthContext } from './auth'
 import type { RecipeDetail } from './recipes'
 import { GENERIC_ERROR_MESSAGE } from './errors'
@@ -105,8 +105,8 @@ export async function translateRecipe(
 
   try {
     const config = getAiConfig(event)
-    await assertAiAllowed(event, supabase, config)
-    const model = getModel(config)
+    const model = getModel(config)   // avant la réservation : rien d'autre ne doit pouvoir échouer entre la réservation et l'appel
+    const reservation = await reserveAiAllowed(event, supabase, config, { userId: user.id, feature: TRANSLATE_FEATURE })
 
     let result
     try {
@@ -114,7 +114,8 @@ export async function translateRecipe(
         supabase,
         { userId: user.id, provider: config.provider, model: config.model, feature: TRANSLATE_FEATURE },
         () => translateRecipeTexts(model, texts),
-        ({ usage }) => usage
+        ({ usage }) => usage,
+        reservation
       )
     } catch (error: unknown) {
       await throwAiFailure(event, error, 'translate-recipe (traduction enregistrée)')

@@ -3,10 +3,10 @@ import { getRequestURL, type H3Event } from 'h3'
 import { AI_CODES, type AiLimits } from '#shared/utils/aiStatus'
 import { isV2Enabled } from '#shared/utils/v2'
 import type { AiConfig } from './provider'
-import { assertAiAvailable, aiHttpError } from './availability'
+import { reserveAiCall, aiHttpError } from './availability'
 import { reportBillingFailure } from './creditAlert'
 import { throwAiProviderError } from './errors'
-import { assertAiQuota } from './usage'
+import { assertAiQuota, type AiReservation } from './usage'
 import { readEmailConfig, sendAiCreditAlert } from '../email'
 import { serviceClient } from '../serviceClient'
 
@@ -14,7 +14,8 @@ import { serviceClient } from '../serviceClient'
  * Branchement Nuxt de la garde IA (phase 7) : lit l'interrupteur v2 et la configuration, appelle les fonctions pures de
  * `availability.ts` / `creditAlert.ts`.
  *
- *  - `assertAiAllowed` : v1 → `assertAiQuota` (inchangé) ; v2 → crédit, budget, plafond de CE compte.
+ *  - `reserveAiAllowed` : v1 → `assertAiQuota` (inchangé, pas de réservation) ; v2 → crédit, budget, plafond de CE compte, avec une
+ *    RÉSERVATION atomique (`reserve_ai_call`) prise avant l'appel au fournisseur, à passer à `trackAiCall`.
  *  - `throwAiFailure` : à appeler dans le `catch` des routes IA avant `handleApiError`. En v2, enregistre une panne de crédit
  *    (alerte, e-mail à Nina au plus une fois par 24 h) puis traduit l'erreur (503 `AI_UNAVAILABLE` / `AI_BUSY`) ; en v1,
  *    `throwAiProviderError` seul, comme avant.
@@ -32,12 +33,14 @@ export const aiLimitsOf = (config: AiConfig): AiLimits => ({
 
 const emailConfigOf = (event: H3Event) => readEmailConfig(useRuntimeConfig(event) as Record<string, unknown>, process.env, getRequestURL(event).origin)
 
-export async function assertAiAllowed(event: H3Event, supabase: SupabaseClient, config: AiConfig): Promise<void> {
+export async function reserveAiAllowed(
+  event: H3Event, supabase: SupabaseClient, config: AiConfig, input: { userId: string, feature: string }
+): Promise<AiReservation | null> {
   if (!isV2(event)) {
     await assertAiQuota(supabase, config.dailyQuota)
-    return
+    return null
   }
-  await assertAiAvailable(supabase, aiLimitsOf(config), {
+  return await reserveAiCall(serviceClient(event), input, aiLimitsOf(config), {
     onBudgetExceeded: async () => {
       const admin = serviceClient(event)
       const { data } = await admin.rpc('claim_ai_alert_email', { p_key: 'ai_budget' })

@@ -49,6 +49,8 @@
 #  15. 0024 (rôle 'user' en dur à l'inscription) est appliquée AVANT la boucle 0019 → 0023 (test_0024) : l'empreinte « avant 0023 » l'inclut.
 #      Relecture de sécurité n° 2 : test_0025_sec2_v1.sql (v1 non cassée), test_0025_sec2_security.sql (chaîne complète, deux fois) et
 #      une vraie concurrence à deux sessions psql (limites de débit, départ pendant un transfert).
+#  16. Relecture de sécurité n° 3 : test_0029_v1_photo_path.sql (v1 non cassée par la contrainte de photo), réservation atomique des appels
+#      IA (0028) avec dix sessions simultanées, photo d'autrui derrière un lien public (test_0029_private_photos.sql).
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
@@ -154,6 +156,7 @@ for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n == 19 )); then r
 run "$HERE/test_0021_v1_compat.sql"
 run "$HERE/test_0023_v1_compat.sql"
 run "$HERE/test_0025_sec2_v1.sql"
+run "$HERE/test_0029_v1_photo_path.sql"
 
 # ---------------------------------------------------------------- vraie concurrence (deux sessions psql, données validées puis nettoyées)
 # 1. limites de débit : deux demandes d'ami / deux signalements en parallèle à 19 / 9 actions : UNE SEULE passe (verrou consultatif) ;
@@ -335,9 +338,50 @@ RB28="$SUPA/rollback/0028_ai_credit_email_down.sql"
 run "$M28"
 "${PSQL[@]}" -f "$M28"
 run "$HERE/test_0028_ai_credit_email.sql"
+
+# Vraie concurrence (relecture de sécurité n° 3) : dix sessions réservent EN MÊME TEMPS un appel IA.
+#  (a) plafond du jour de 3 pour un compte : exactement 3 réservations passent ;
+#  (b) budget du mois de 4 appels, réparti sur 5 comptes (plafond personnel large) : exactement 4 passent.
+# Chaque session garde sa transaction ouverte 1 s après la réservation : sans verrou consultatif, aucune ne voit les réservations non
+# validées des autres et les dix passent.
+echo "▶ Concurrence : réservation d'appels IA (plafond du jour, budget du mois)"
+AU=(); for i in 1 2 3 4 5; do AU+=("00000000-0000-0000-0000-00000000c10$i"); done
+ai_cleanup() { "${PSQL[@]}" -c "delete from auth.users where id in ('${AU[0]}', '${AU[1]}', '${AU[2]}', '${AU[3]}', '${AU[4]}'); delete from public.ai_usage;" >/dev/null 2>&1 || true; }
+ai_session() {   # ai_session <uid> <plafond du jour> <budget d'appels> <fichier de sortie>
+  "$PGBIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -v ON_ERROR_STOP=1 -q -At -f - >"$4" 2>&1 <<SQL
+begin;
+select tests.login('$1', 'service_role');
+select 'RES:' || (public.reserve_ai_call('$1', 'translate', $2, $2, 30, $3, 0) ->> 'ok');
+select pg_sleep(1);
+commit;
+SQL
+}
+ai_burst() {     # ai_burst <plafond du jour> <budget d'appels> <nb de comptes concernés> : 10 sessions en parallèle ; compte les réponses « true »
+  local pids=() out="$WORKDIR/aiconc" i
+  rm -f "$out".*
+  # seuils déjà enregistrés : sinon la toute première écriture de private.app_settings sérialiserait les sessions (verrou de ligne) et masquerait l'absence de verrou consultatif
+  "${PSQL[@]}" -c "insert into private.app_settings (key, value) values ('ai_budget_calls', '$2'), ('ai_budget_usd', '0') on conflict (key) do update set value = excluded.value"
+  for i in $(seq 0 9); do ai_session "${AU[$(( i % $3 ))]}" "$1" "$2" "$out.$i" & pids+=($!); done
+  for i in "${pids[@]}"; do wait "$i" || { echo "❌ concurrence IA : une session a échoué"; cat "$out".*; exit 1; }; done
+  AI_OK="$(cat "$out".* | grep -c '^RES:true$' || true)"
+}
+ai_cleanup
+for u in "${AU[@]}"; do "${PSQL[@]}" -c "insert into auth.users (id, email, raw_user_meta_data) values ('$u', '${u: -4}@conc.test', '{}')"; done
+"${PSQL[@]}" -c "update public.profiles set created_at = now() - interval '90 days' where id in ('${AU[0]}', '${AU[1]}', '${AU[2]}', '${AU[3]}', '${AU[4]}'); delete from public.ai_usage;"
+ai_burst 3 0 1
+[[ "$AI_OK" == "3" && "$("${PSQL[@]}" -At -c "select count(*) from public.ai_usage where user_id = '${AU[0]}' and status = 'pending'")" == "3" ]] \
+  || { echo "❌ concurrence IA (plafond du jour) : $AI_OK réservations acceptées au lieu de 3"; exit 1; }
+echo "   ✓ plafond du jour à 3, 10 réservations simultanées : exactement 3"
+"${PSQL[@]}" -c "delete from public.ai_usage"
+ai_burst 50 4 5
+[[ "$AI_OK" == "4" && "$("${PSQL[@]}" -At -c "select count(*) from public.ai_usage where status = 'pending'")" == "4" ]] \
+  || { echo "❌ concurrence IA (budget du mois) : $AI_OK réservations acceptées au lieu de 4"; exit 1; }
+echo "   ✓ budget du mois à 4 appels sur 5 comptes, 10 réservations simultanées : exactement 4"
+ai_cleanup
+
 run "$RB28"
 "${PSQL[@]}" -f "$RB28"
-"${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.ai_quota_status(integer, integer, integer)') is null and to_regprocedure('public.claim_notification_emails(integer, interval)') is null, 'retour arrière de 0028 incomplet'; assert not exists (select 1 from information_schema.columns where table_schema = 'public' and column_name in ('ai_daily_quota', 'emailed_at')), 'colonnes de 0028 non retirées'; end \$\$;"
+"${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.ai_quota_status(integer, integer, integer)') is null and to_regprocedure('public.claim_notification_emails(integer, interval, interval)') is null and to_regprocedure('public.ai_service_status()') is null and to_regprocedure('public.reserve_ai_call(uuid, text, integer, integer, integer, integer, numeric)') is null and to_regclass('private.app_settings') is null, 'retour arrière de 0028 incomplet'; assert not exists (select 1 from information_schema.columns where table_schema = 'public' and column_name in ('ai_daily_quota', 'emailed_at', 'claimed_at')), 'colonnes de 0028 non retirées'; assert not exists (select 1 from pg_constraint where conrelid = 'public.ai_usage'::regclass and pg_get_constraintdef(oid) like '%pending%'), 'contrainte de ai_usage.status non rétablie'; end \$\$;"
 run "$M28"
 run "$HERE/test_0028_ai_credit_email.sql"
 run "$RB28"
@@ -369,6 +413,10 @@ run "$SW29_DOWN"
 run "$RB29"
 "${PSQL[@]}" -f "$RB29"
 "${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.shared_recipe_photo_path(uuid)') is null, 'retour arrière de 0029 incomplet'; end \$\$;"
+# la bascule 0020 est appliquée : la contrainte (commune à 0020 et 0029) doit survivre au retour arrière de 0029, et 0029 se rejoue par-dessus
+"${PSQL[@]}" -c "do \$\$ begin assert exists (select 1 from pg_constraint where conname = 'recipes_photo_path_in_own_folder' and conrelid = 'public.recipes'::regclass), 'le retour arrière de 0029 a retiré la contrainte de 0020'; end \$\$;"
+run "$M29"
+run "$RB29"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
@@ -377,6 +425,7 @@ run "$SWITCH_DOWN"
 FP_AFTER="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
 [[ "$FP_BEFORE" == "$FP_AFTER" ]] || { echo "❌ empreinte des politiques différente après le retour arrière ($FP_BEFORE ≠ $FP_AFTER)"; exit 1; }
 "${PSQL[@]}" -c "do \$\$ begin
+  assert not exists (select 1 from pg_constraint where conname = 'recipes_photo_path_in_own_folder' and conrelid = 'public.recipes'::regclass), 'contrainte de photo non retirée avec la bascule (0029 absente)';
   assert (select is_nullable = 'YES' and column_default is null from information_schema.columns where table_schema='public' and table_name='recipes' and column_name='owner_id'), 'owner_id : défaut / NOT NULL non retirés';
   assert not exists (select 1 from pg_trigger where tgname = 'recipes_guard_owner_fields'), 'déclencheur de garde non retiré';
 end \$\$;"

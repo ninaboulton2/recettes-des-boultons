@@ -10,7 +10,7 @@ import { getAiConfig } from '../utils/ai/provider'
 import { getTranscriptionModel, transcribeAudio } from '../utils/ai/media'
 import { estimateTranscriptionCostUsd } from '../utils/ai/pricing'
 import { trackAiCall } from '../utils/ai/usage'
-import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
+import { reserveAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { fileParts, readUploadParts, textField } from '../utils/ai/upload'
 
 /**
@@ -44,9 +44,8 @@ export default defineEventHandler(async (event): Promise<TranscribeRecipeRespons
     })
 
     const config = getAiConfig(event)
-    await assertAiAllowed(event, supabase, config)
-
-    const model = getTranscriptionModel(config)
+    const model = getTranscriptionModel(config)   // avant la réservation : rien d'autre ne doit pouvoir échouer entre la réservation et l'appel
+    const reservation = await reserveAiAllowed(event, supabase, config, { userId: user.id, feature: 'transcribe' })
     const { result, logged, durationMs } = await trackAiCall(
       supabase,
       { userId: user.id, provider: config.provider, model: config.transcriptionModel, feature: 'transcribe' },
@@ -54,7 +53,8 @@ export default defineEventHandler(async (event): Promise<TranscribeRecipeRespons
       (transcript) => {
         const seconds = audioSecondsOf(transcript.durationInSeconds, meta.durationSeconds, audio.byteLength)
         return { inputTokens: 0, outputTokens: 0, estimatedCostUsd: estimateTranscriptionCostUsd(config.transcriptionModel, seconds) }
-      }
+      },
+      reservation
     )
 
     return {

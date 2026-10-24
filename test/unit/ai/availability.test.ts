@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { APICallError } from 'ai'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { assertAiAvailable, aiHttpError, fetchAiStatus } from '../../../server/utils/ai/availability'
+import { aiHttpError, fetchAiStatus, parseReserveOutcome, reserveAiCall } from '../../../server/utils/ai/availability'
 import { AI_CODES, decideAiStatus, formatResetsAt, parseQuotaInfo, parseServiceInfo, type AiLimits } from '../../../shared/utils/aiStatus'
 
 const LIMITS: AiLimits = { dailyQuota: 50, newAccountQuota: 20, newAccountDays: 30, monthlyBudgetCalls: 0, monthlyBudgetUsd: 0 }
@@ -59,45 +59,20 @@ describe('état de l\'IA (décision pure)', () => {
   })
 })
 
-describe('garde des appels IA (v2)', () => {
-  it('passe quand tout va bien et transmet les limites à la base', async () => {
+/** Faux client service_role : `reserve_ai_call` répond ce qu'on lui dit, `finish_ai_call` est enregistrée. */
+function fakeAdmin(reserve: { data?: unknown, error?: unknown }) {
+  const rpc = vi.fn(async (name: string) => (name === 'reserve_ai_call' ? { data: reserve.data ?? null, error: reserve.error ?? null } : { data: true, error: null }))
+  return { client: { rpc } as unknown as SupabaseClient, rpc }
+}
+const INPUT = { userId: 'user-1', feature: 'translate' }
+
+describe('statut affiché (sans seuil passé par l\'appelant)', () => {
+  it('appelle ai_service_status SANS argument et ai_quota_status avec les plafonds du serveur', async () => {
     const { client, rpc } = fakeClient({ data: serviceRow() }, { data: quotaRow(1, 20) })
-    const status = await assertAiAvailable(client, { ...LIMITS, monthlyBudgetCalls: 500, monthlyBudgetUsd: 5 })
+    const status = await fetchAiStatus(client, { ...LIMITS, monthlyBudgetCalls: 500, monthlyBudgetUsd: 5 })
     expect(status.available).toBe(true)
-    expect(rpc).toHaveBeenCalledWith('ai_service_status', { p_budget_calls: 500, p_budget_usd: 5 })
+    expect(rpc).toHaveBeenCalledWith('ai_service_status')   // le budget n'est pas transmis : sinon on pourrait déduire les totaux du mois
     expect(rpc).toHaveBeenCalledWith('ai_quota_status', { p_default_quota: 50, p_new_quota: 20, p_new_days: 30 })
-  })
-
-  it('crédit épuisé : 503 AI_UNAVAILABLE, message clair pour tous', async () => {
-    const { client } = fakeClient({ data: serviceRow({ credit_exhausted: true }) }, { data: quotaRow(0, 20) })
-    const error = await thrown(assertAiAvailable(client, LIMITS))
-    expect(error.statusCode).toBe(503)
-    expect(error.statusMessage).toMatch(/momentanément indisponibles.*saisir la recette à la main/)
-    expect(error.data).toMatchObject({ code: AI_CODES.unavailable, reason: 'credit' })
-  })
-
-  it('budget du mois atteint : même message que le crédit, et prévient Nina une fois', async () => {
-    const { client } = fakeClient({ data: serviceRow({ budget_exceeded: true }) }, { data: quotaRow(0, 20) })
-    const onBudgetExceeded = vi.fn(async () => undefined)
-    const error = await thrown(assertAiAvailable(client, LIMITS, { onBudgetExceeded }))
-    expect(error.statusCode).toBe(503)
-    expect(error.statusMessage).toMatch(/momentanément indisponibles/)
-    expect(error.data).toMatchObject({ code: AI_CODES.unavailable, reason: 'budget' })
-    expect(onBudgetExceeded).toHaveBeenCalledTimes(1)
-  })
-
-  it('une alerte de budget qui échoue ne change pas la réponse', async () => {
-    const { client } = fakeClient({ data: serviceRow({ budget_exceeded: true }) }, { data: quotaRow(0, 20) })
-    const error = await thrown(assertAiAvailable(client, LIMITS, { onBudgetExceeded: async () => { throw new Error('Resend en panne') } }))
-    expect(error.statusCode).toBe(503)
-  })
-
-  it('plafond du jour atteint : 429 AI_QUOTA_REACHED avec l\'heure de remise à zéro', async () => {
-    const { client } = fakeClient({ data: serviceRow() }, { data: quotaRow(20, 20) })
-    const error = await thrown(assertAiAvailable(client, LIMITS))
-    expect(error.statusCode).toBe(429)
-    expect(error.statusMessage).toMatch(/Quota du jour atteint \(20 appels/)
-    expect(error.data).toEqual({ code: AI_CODES.quotaReached, quota: 20, resetsAt: RESETS })
   })
 
   it('RPC indisponible (migration non appliquée) : on laisse passer, en journalisant', async () => {
@@ -106,6 +81,70 @@ describe('garde des appels IA (v2)', () => {
     await expect(fetchAiStatus(client, LIMITS)).resolves.toMatchObject({ available: true, quota: null })
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
+  })
+})
+
+describe('réservation d\'un appel IA (v2)', () => {
+  it('passe quand tout va bien : identité et seuils donnés par le serveur, réservation terminable', async () => {
+    const { client, rpc } = fakeAdmin({ data: { ok: true, id: 'res-1', used: 1, quota: 20, resets_at: RESETS, is_new: true } })
+    const reservation = await reserveAiCall(client, INPUT, { ...LIMITS, monthlyBudgetCalls: 500, monthlyBudgetUsd: 5 })
+    expect(rpc).toHaveBeenCalledWith('reserve_ai_call', {
+      p_user: 'user-1', p_feature: 'translate', p_default_quota: 50, p_new_quota: 20, p_new_days: 30, p_budget_calls: 500, p_budget_usd: 5
+    })
+    expect(reservation?.id).toBe('res-1')
+    await expect(reservation!.finish({
+      userId: 'user-1', provider: 'mock', model: 'm', feature: 'translate', inputTokens: 10, outputTokens: 5, status: 'ok', durationMs: 120, estimatedCostUsd: 0.01
+    })).resolves.toBe(true)
+    expect(rpc).toHaveBeenCalledWith('finish_ai_call', {
+      p_id: 'res-1', p_provider: 'mock', p_model: 'm', p_input_tokens: 10, p_output_tokens: 5, p_estimated_cost_usd: 0.01, p_status: 'ok', p_duration_ms: 120
+    })
+  })
+
+  it('crédit épuisé : 503 AI_UNAVAILABLE, message clair pour tous', async () => {
+    const { client } = fakeAdmin({ data: { ok: false, reason: 'credit', since: '2026-10-24T08:00:00Z' } })
+    const error = await thrown(reserveAiCall(client, INPUT, LIMITS))
+    expect(error.statusCode).toBe(503)
+    expect(error.statusMessage).toMatch(/momentanément indisponibles.*saisir la recette à la main/)
+    expect(error.data).toMatchObject({ code: AI_CODES.unavailable, reason: 'credit' })
+  })
+
+  it('budget du mois atteint : même message que le crédit, et prévient Nina une fois', async () => {
+    const { client } = fakeAdmin({ data: { ok: false, reason: 'budget' } })
+    const onBudgetExceeded = vi.fn(async () => undefined)
+    const error = await thrown(reserveAiCall(client, INPUT, LIMITS, { onBudgetExceeded }))
+    expect(error.statusCode).toBe(503)
+    expect(error.statusMessage).toMatch(/momentanément indisponibles/)
+    expect(error.data).toMatchObject({ code: AI_CODES.unavailable, reason: 'budget' })
+    expect(onBudgetExceeded).toHaveBeenCalledTimes(1)
+  })
+
+  it('une alerte de budget qui échoue ne change pas la réponse', async () => {
+    const { client } = fakeAdmin({ data: { ok: false, reason: 'budget' } })
+    const error = await thrown(reserveAiCall(client, INPUT, LIMITS, { onBudgetExceeded: async () => { throw new Error('Resend en panne') } }))
+    expect(error.statusCode).toBe(503)
+  })
+
+  it('plafond du jour atteint : 429 AI_QUOTA_REACHED avec l\'heure de remise à zéro', async () => {
+    const { client } = fakeAdmin({ data: { ok: false, reason: 'quota', used: 20, quota: 20, resets_at: RESETS, is_new: true } })
+    const error = await thrown(reserveAiCall(client, INPUT, LIMITS))
+    expect(error.statusCode).toBe(429)
+    expect(error.statusMessage).toMatch(/Quota du jour atteint \(20 appels/)
+    expect(error.data).toEqual({ code: AI_CODES.quotaReached, quota: 20, resetsAt: RESETS })
+  })
+
+  it('RPC indisponible (migration non appliquée) ou réponse inattendue : on laisse passer, sans réservation, en journalisant', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await expect(reserveAiCall(fakeAdmin({ error: { message: 'absente' } }).client, INPUT, LIMITS)).resolves.toBeNull()
+    await expect(reserveAiCall(fakeAdmin({ data: 'oups' }).client, INPUT, LIMITS)).resolves.toBeNull()
+    expect(spy).toHaveBeenCalledTimes(2)
+    spy.mockRestore()
+  })
+
+  it('parseReserveOutcome refuse les formes inconnues', () => {
+    expect(parseReserveOutcome({ ok: true })).toBeNull()
+    expect(parseReserveOutcome({ ok: false, reason: 'autre' })).toBeNull()
+    expect(parseReserveOutcome(null)).toBeNull()
+    expect(parseReserveOutcome({ ok: true, id: 'x' })).toEqual({ ok: true, id: 'x' })
   })
 })
 

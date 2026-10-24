@@ -44,7 +44,7 @@ const sinceLabel = computed(() => (info.value?.since
   : ''))
 
 async function load(): Promise<void> {
-  const { data, error } = await supabase.rpc('ai_service_status', { p_budget_calls: 0, p_budget_usd: 0 })
+  const { data, error } = await supabase.rpc('ai_service_status')
   if (error || !data) {
     loadFailed.value = true
     return

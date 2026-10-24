@@ -3,7 +3,7 @@ import { translateRecipeBodySchema, type TranslateRecipeResponse } from '#shared
 import { getAiConfig, getModel } from '../utils/ai/provider'
 import { translateRecipeText } from '../utils/ai/translate'
 import { trackAiCall } from '../utils/ai/usage'
-import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
+import { reserveAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { buildRecipeResponse } from '../utils/ai/recipe-response'
 
 /**
@@ -24,7 +24,7 @@ import { buildRecipeResponse } from '../utils/ai/recipe-response'
  * `POST /api/transcribe-recipe` (dictée) partagent le quota et le journal.
  *
  * v1 : réservé aux administrateurs (`requireRecipeWriter`). v2 (phase 7) : tout compte connecté, avec crédit / budget / plafond
- * de CE compte vérifiés par `assertAiAllowed` (503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED`).
+ * de CE compte vérifiés par `reserveAiAllowed` (503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED`).
  */
 export default defineEventHandler(async (event): Promise<TranslateRecipeResponse> => {
   try {
@@ -32,14 +32,14 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     const { recipeText } = await validateBody(event, translateRecipeBodySchema)
 
     const config = getAiConfig(event)
-    await assertAiAllowed(event, supabase, config)
-
-    const model = getModel(config)
+    const model = getModel(config)   // avant la réservation : rien d'autre ne doit pouvoir échouer entre la réservation et l'appel
+    const reservation = await reserveAiAllowed(event, supabase, config, { userId: user.id, feature: 'translate' })
     const { result, logged, durationMs } = await trackAiCall(
       supabase,
       { userId: user.id, provider: config.provider, model: config.model, feature: 'translate' },
       () => translateRecipeText(model, recipeText),
-      ({ usage }) => usage
+      ({ usage }) => usage,
+      reservation
     )
 
     return await buildRecipeResponse(supabase, 'translate-recipe', config, result.recipe, logged, durationMs)

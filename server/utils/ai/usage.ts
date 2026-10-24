@@ -58,13 +58,55 @@ export async function assertAiQuota(supabase: SupabaseClient, maxPerDay: number)
   }
 }
 
-/** Insère une ligne `ai_usage` (coût estimé via `pricing.ts`). N'échoue jamais l'appel appelant. */
-export async function logAiUsage(supabase: SupabaseClient, entry: AiUsageEntry): Promise<AiUsageLogged> {
+/**
+ * Réservation d'un appel IA (v2, relecture de sécurité n° 3) : la place est prise AVANT l'appel au fournisseur, de façon atomique
+ * (`reserve_ai_call`, migration 0028 : verrou par compte, ligne `ai_usage` « pending »). Sans cela, N requêtes en parallèle passent
+ * toutes le contrôle du plafond avant que la première n'écrive sa ligne. `finish` passe la ligne à `ok` / `error`.
+ */
+export interface AiReservation {
+  id: string
+  finish: (entry: AiUsageEntry & { estimatedCostUsd: number | null }) => Promise<boolean>
+}
+
+/** Réservation terminée par la RPC `finish_ai_call` (client service_role). */
+export function reservationOf(admin: SupabaseClient, id: string): AiReservation {
+  return {
+    id,
+    async finish(entry) {
+      const { data, error } = await admin.rpc('finish_ai_call', {
+        p_id: id,
+        p_provider: entry.provider,
+        p_model: entry.model,
+        p_input_tokens: entry.inputTokens ?? 0,
+        p_output_tokens: entry.outputTokens ?? 0,
+        p_estimated_cost_usd: entry.estimatedCostUsd,
+        p_status: entry.status,
+        p_duration_ms: entry.durationMs
+      })
+      if (error) {
+        console.error('[api] ai usage : finish_ai_call échouée (la réservation reste « pending » et compte)', error)
+        return false
+      }
+      return data === true
+    }
+  }
+}
+
+/**
+ * Journalise un appel (coût estimé via `pricing.ts`) : termine la réservation si on en a une (v2), sinon insère une ligne `ai_usage`
+ * (v1, comportement inchangé). N'échoue jamais l'appel appelant.
+ */
+export async function logAiUsage(supabase: SupabaseClient, entry: AiUsageEntry, reservation?: AiReservation | null): Promise<AiUsageLogged> {
   const inputTokens = entry.inputTokens ?? 0
   const outputTokens = entry.outputTokens ?? 0
   const estimatedCostUsd = entry.estimatedCostUsd !== undefined
     ? entry.estimatedCostUsd
     : estimateCostUsd(entry.model, entry.inputTokens, entry.outputTokens)
+
+  if (reservation) {
+    await reservation.finish({ ...entry, estimatedCostUsd })
+    return { inputTokens, outputTokens, estimatedCostUsd }
+  }
 
   const { error } = await supabase.from('ai_usage').insert({
     user_id: entry.userId,
@@ -101,13 +143,15 @@ export interface TrackedAiUsage {
 /**
  * Exécute un appel IA et le journalise dans `ai_usage` : ligne `ok` avec les
  * consommations tirées du résultat (`usageOf`), ou ligne `error` si l'appel
- * échoue (l'erreur d'origine est alors relancée telle quelle).
+ * échoue (l'erreur d'origine est alors relancée telle quelle). Avec une `reservation` (v2), c'est la ligne réservée qui est terminée
+ * au lieu d'en insérer une.
  */
 export async function trackAiCall<T>(
   supabase: SupabaseClient,
   call: TrackedAiCall,
   run: () => Promise<T>,
-  usageOf: (result: T) => TrackedAiUsage
+  usageOf: (result: T) => TrackedAiUsage,
+  reservation?: AiReservation | null
 ): Promise<{ result: T, logged: AiUsageLogged, durationMs: number }> {
   const startedAt = Date.now()
   let result: T
@@ -120,7 +164,7 @@ export async function trackAiCall<T>(
       outputTokens: undefined,
       status: 'error',
       durationMs: Date.now() - startedAt
-    })
+    }, reservation)
     throw error
   }
   const durationMs = Date.now() - startedAt
@@ -132,6 +176,6 @@ export async function trackAiCall<T>(
     estimatedCostUsd: usage.estimatedCostUsd,
     status: 'ok',
     durationMs
-  })
+  }, reservation)
   return { result, logged, durationMs }
 }

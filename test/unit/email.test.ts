@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isEmailConfigured, readEmailConfig, RESEND_ENDPOINT, sendAiCreditAlert, sendEmail, type EmailConfig, type FetchLike } from '../../server/utils/email'
 import { appLink, cleanName, renderAiCreditAlert, renderFriendRequest, renderGroupInvitation, renderNotificationDigest } from '../../server/utils/emailTemplates'
-import { sendNotificationEmails, type ClaimedNotification } from '../../server/utils/notificationEmails'
+import { NOTIFICATION_EMAIL_BATCH, NOTIFICATION_EMAIL_BUDGET_MS, sendNotificationEmails, type ClaimedNotification } from '../../server/utils/notificationEmails'
 
 const CONFIG: EmailConfig = { apiKey: 're_test_123', from: 'Recettes <no-reply@example.test>', alertEmail: 'nina@example.test', siteUrl: 'https://recettes.example.test', appName: 'Recettes' }
 const CTX = { siteUrl: CONFIG.siteUrl, appName: CONFIG.appName }
@@ -134,6 +134,20 @@ describe('gabarits FR / EN', () => {
     expect(cleanName(42, 'repli')).toBe('repli')
   })
 
+  it('retire les caractères bidirectionnels et invisibles d\'un nom', () => {
+    const bidi = ['\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069']
+    const invisible = ['\u200B', '\u200C', '\u200D', '\u200E', '\u200F', '\uFEFF']
+    for (const char of [...bidi, ...invisible]) {
+      expect(cleanName(`Da${char}ve`, 'repli')).toBe('Dave')
+    }
+    expect(cleanName('\u202Eevad\u202C', 'repli')).toBe('evad')
+    expect(cleanName('\u200B\u200F\uFEFF', 'repli')).toBe('repli')   // ne reste rien : repli
+    expect(cleanName(' A \u200B B ', 'repli')).toBe('A B')
+    const mail = renderFriendRequest('fr', { fromName: '\u202Egro.live@nina' }, CTX)
+    expect(mail.subject).not.toMatch(/[\u202A-\u202E\u2066-\u2069]/)
+    expect(mail.html).not.toMatch(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/)
+  })
+
   it('aucune adresse e-mail dans les messages', () => {
     for (const mail of [
       renderGroupInvitation('fr', { fromName: 'Dave', groupName: 'G' }, CTX),
@@ -166,7 +180,7 @@ describe('envoi groupé des notifications (cron)', () => {
   it('sans Resend configuré : ne réclame rien, n\'envoie rien, ne plante pas', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const claim = vi.fn(async () => [])
-    const report = await sendNotificationEmails({ configured: false, context: CTX, claim, release: async () => undefined, send: async () => ({ status: 'sent', id: null }) })
+    const report = await sendNotificationEmails({ configured: false, context: CTX, claim, confirm: async () => undefined, release: async () => undefined, send: async () => ({ status: 'sent', id: null }) })
     expect(report).toMatchObject({ skipped: 'not_configured', claimed: 0, sent: 0 })
     expect(claim).not.toHaveBeenCalled()
   })
@@ -181,6 +195,7 @@ describe('envoi groupé des notifications (cron)', () => {
         row('2', 'eve', 'group_invitation', { from_name: 'Dave', group_name: 'G' }, 'en'),
         row('3', 'bob', 'friend_request', { from_name: 'Dave' }, 'fr')
       ],
+      confirm: async () => undefined,
       release: async () => undefined,
       send: async (to, rendered) => { sent.push({ to, subject: rendered.subject }); return { status: 'sent', id: 'x' } }
     })
@@ -194,14 +209,61 @@ describe('envoi groupé des notifications (cron)', () => {
   it('un envoi refusé remet les notifications en attente (réessai au prochain passage)', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const release = vi.fn(async () => undefined)
+    const confirm = vi.fn(async () => undefined)
     const report = await sendNotificationEmails({
       configured: true,
       context: CTX,
       claim: async () => [row('1', 'eve', 'friend_request', { from_name: 'D' }), row('2', 'bob', 'friend_request', { from_name: 'D' })],
+      confirm,
       release,
       send: async to => (to.startsWith('eve') ? { status: 'failed', reason: 'http_500' } : { status: 'sent', id: 'x' })
     })
     expect(report).toMatchObject({ sent: 1, failed: 1, released: 1 })
     expect(release).toHaveBeenCalledWith(['1'])
+    expect(confirm).toHaveBeenCalledWith(['2'])
+  })
+
+  it('une exception en plein lot rend à la file tout ce qui est réclamé et non envoyé (finally)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const release = vi.fn(async () => undefined)
+    const confirmed: string[] = []
+    const rows = [row('1', 'eve', 'friend_request', { from_name: 'D' }), row('2', 'bob', 'friend_request', { from_name: 'D' }), row('3', 'cleo', 'friend_request', { from_name: 'D' })]
+    await expect(sendNotificationEmails({
+      configured: true,
+      context: CTX,
+      claim: async () => rows,
+      confirm: async (ids) => { confirmed.push(...ids) },
+      release,
+      send: async (to) => {
+        if (to.startsWith('bob')) throw new Error('réseau coupé')
+        return { status: 'sent', id: 'x' }
+      }
+    })).rejects.toThrow('réseau coupé')
+    expect(confirmed).toEqual(['1'])
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledWith(['2', '3'])   // ni envoyées ni confirmées : rendues, aucune n'est perdue
+  })
+
+  it('le lot est petit et un budget de temps épuisé rend le reste à la file', async () => {
+    expect(NOTIFICATION_EMAIL_BATCH).toBeLessThanOrEqual(50)
+    expect(NOTIFICATION_EMAIL_BUDGET_MS).toBeLessThan(60_000)   // durée maximale d'une fonction Vercel Hobby
+    let clock = 0
+    const sent: string[] = []
+    const release = vi.fn(async () => undefined)
+    const report = await sendNotificationEmails({
+      configured: true,
+      context: CTX,
+      now: () => clock,
+      claim: async (limit) => {
+        expect(limit).toBe(NOTIFICATION_EMAIL_BATCH)
+        return [row('1', 'eve', 'friend_request', { from_name: 'D' }), row('2', 'bob', 'friend_request', { from_name: 'D' }), row('3', 'cleo', 'friend_request', { from_name: 'D' })]
+      },
+      confirm: async () => undefined,
+      release,
+      send: async (to) => { sent.push(to); clock += 30_000; return { status: 'sent', id: 'x' } }   // chaque envoi « dure » 30 s
+    })
+    expect(sent).toEqual(['eve@example.test', 'bob@example.test'])   // le 3e dépasse le budget de 40 s
+    expect(report).toMatchObject({ claimed: 3, sent: 2, deferred: 1, released: 1 })
+    expect(release).toHaveBeenCalledWith(['3'])
   })
 })

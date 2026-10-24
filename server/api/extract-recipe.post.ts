@@ -9,7 +9,7 @@ import { getAiConfig, getModel } from '../utils/ai/provider'
 import { extractRecipeFromFiles, type UploadedRecipeFile } from '../utils/ai/media'
 import { AI_ERROR_MESSAGES } from '../utils/ai/errors'
 import { trackAiCall } from '../utils/ai/usage'
-import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
+import { reserveAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { buildRecipeResponse, hasRecipeContent } from '../utils/ai/recipe-response'
 import { fileParts, readUploadParts } from '../utils/ai/upload'
 
@@ -50,14 +50,14 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     }))
 
     const config = getAiConfig(event)
-    await assertAiAllowed(event, supabase, config)
-
-    const model = getModel(config)
+    const model = getModel(config)   // avant la réservation : rien d'autre ne doit pouvoir échouer entre la réservation et l'appel
+    const reservation = await reserveAiAllowed(event, supabase, config, { userId: user.id, feature: 'extract' })
     const { result, logged, durationMs } = await trackAiCall(
       supabase,
       { userId: user.id, provider: config.provider, model: config.model, feature: 'extract' },
       () => extractRecipeFromFiles(model, files),
-      ({ usage }) => usage
+      ({ usage }) => usage,
+      reservation
     )
 
     if (!hasRecipeContent(result.recipe)) {
