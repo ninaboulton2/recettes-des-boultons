@@ -4,6 +4,7 @@ import type { JwtPayload } from '@supabase/supabase-js'
 import type { Database } from '#shared/types/database'
 import type { LoginCredentials, User, UserRole } from '#shared/types'
 import { translateKey } from '~/composables/useApiError'
+import { clearSignedPhotoUrls } from '~/composables/useRecipePhoto'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
@@ -160,6 +161,8 @@ export const useAuthStore = defineStore('auth', () => {
   // expiration, rechargement de page) sans écouteur manuel.
   if (import.meta.client) {
     watch(identity, () => { void checkAuth() }, { immediate: true })
+    // photos privées (v2) : les URL signées gardées en mémoire / dans l'onglet appartiennent à la personne précédente
+    watch(() => identity.value?.id, () => { clearSignedPhotoUrls() })
   }
 
   return {

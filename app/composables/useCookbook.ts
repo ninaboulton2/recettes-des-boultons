@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ZodTypeAny, z } from 'zod'
 import type { Database } from '#shared/types/database'
+import { apiFetch } from './useApi'
+import { apiErrorFromResponse } from './useApiError'
 import {
   addAuthorRecipesInputSchema,
   addToCookbookInputSchema,
@@ -141,12 +143,37 @@ export async function getEntryCategory(supabase: Client, recipeId: string): Prom
   return data ? (data.category_id ?? null) : undefined
 }
 
-/** Copie modifiable (droit « copy » requis). Renvoie l'id de la copie. La photo n'est pas copiée (phase 8). */
+/** Copie modifiable (droit « copy » requis), SANS photo (RPC seule). L'interface utilise `copyRecipeWithPhoto`. Renvoie l'id de la copie. */
 export async function copyRecipe(supabase: Client, input: z.input<typeof copyRecipeInputSchema>): Promise<string> {
   const { recipeId } = parseClientInput(copyRecipeInputSchema, input)
   const { data, error } = await supabase.rpc('copy_recipe', { p_source: recipeId })
   if (error) throw error
   return data
+}
+
+/** Code SQLSTATE équivalent d'un statut HTTP de la route de copie (les messages d'erreur de l'interface se basent sur ce code). */
+const SQLSTATE_BY_STATUS: Record<number, string> = { 400: '22023', 403: '42501', 404: 'P0002', 409: '53400', 429: '54000' }
+
+/**
+ * Copie modifiable d'une recette AVEC sa photo (phase 8, v2) : `POST /api/v2/recipes/<id>/copy` (le serveur appelle `copy_recipe`
+ * avec la session de la personne, puis copie l'objet Storage avec la clé service_role). Renvoie l'id de la copie et si la photo
+ * a pu être copiée. Les erreurs portent le `code` SQLSTATE attendu par `sharingErrorKey`.
+ */
+export async function copyRecipeWithPhoto(input: z.input<typeof copyRecipeInputSchema>): Promise<{ id: string, photoCopied: boolean }> {
+  const { recipeId } = parseClientInput(copyRecipeInputSchema, input)
+  let response: Response
+  try {
+    response = await apiFetch(`/api/v2/recipes/${recipeId}/copy`, { method: 'POST' })
+  } catch {
+    throw new Error('Connexion impossible, vérifiez votre réseau puis réessayez.')
+  }
+  if (!response.ok) {
+    const apiError = await apiErrorFromResponse(response)
+    throw Object.assign(apiError, { code: SQLSTATE_BY_STATUS[response.status] ?? apiError.code })
+  }
+  const body = await response.json() as { id?: unknown, photoCopied?: unknown }
+  if (typeof body.id !== 'string') throw new Error('Réponse inattendue du serveur')
+  return { id: body.id, photoCopied: body.photoCopied === true }
 }
 
 /** « Tout ajouter » (0019) : ajoute toutes les recettes lisibles d'un auteur, ferme sa bannière. Renvoie le nombre d'ajouts. */
@@ -184,6 +211,7 @@ export function useCookbook() {
     setEntryCategory: (input: z.input<typeof setEntryCategoryInputSchema>) => setEntryCategory(supabase, input),
     getEntryCategory: (recipeId: string) => getEntryCategory(supabase, recipeId),
     copyRecipe: (input: z.input<typeof copyRecipeInputSchema>) => copyRecipe(supabase, input),
+    copyRecipeWithPhoto,
     addAuthorRecipesToCookbook: (input: z.input<typeof addAuthorRecipesInputSchema>) => addAuthorRecipesToCookbook(supabase, input),
     pendingPrompts: (input?: z.input<typeof pendingPromptsQuerySchema>) => pendingPrompts(supabase, input),
     dismissPrompt: (input: z.input<typeof dismissPromptInputSchema>) => dismissPrompt(supabase, input)

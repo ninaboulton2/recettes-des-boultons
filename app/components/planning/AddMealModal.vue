@@ -49,16 +49,12 @@
                 @click="pickRecipe(recipe)"
               >
                 <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-                  <NuxtImg
+                  <RecipePhoto
                     v-if="recipe.photoPath"
-                    :src="publicUrl(recipe.photoPath) ?? undefined"
-                    alt=""
+                    :path="recipe.photoPath"
                     :width="40"
                     :height="40"
                     densities="x1 x2"
-                    fit="cover"
-                    format="webp"
-                    loading="lazy"
                     class="size-full object-cover"
                   />
                   <NuxtImg
@@ -147,7 +143,6 @@ const categoryImageSrc = (category: string) => {
   const visual = categoryVisual(category)
   return visual.type === 'image' ? visual.src : undefined
 }
-const { publicUrl } = useRecipePhoto()
 
 const tab = ref<'recipe' | 'custom'>('recipe')
 const tabs = computed(() => [

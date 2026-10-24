@@ -329,7 +329,8 @@ const onSubmit = async () => {
       if (pendingPhoto.value) photoPath = await uploadPhoto(props.recipe.id, pendingPhoto.value)
       saved = await recipesStore.updateRecipe(props.recipe.id, toRecipeInput(photoPath))
       noteTranslation()
-      if (previousPath && previousPath !== photoPath) await removePhoto(previousPath).catch(() => undefined)
+      // v1 : le navigateur supprime l'ancien objet ; v2 : c'est le serveur (/api/update-recipe), un éditeur n'a pas ce droit
+      if (!v2 && previousPath && previousPath !== photoPath) await removePhoto(previousPath).catch(() => undefined)
       toast.add({ title: t('editor.toasts.updated'), color: 'success', icon: 'i-lucide-check' })
     } else {
       // Création : la recette d'abord (pour son identifiant), puis la photo.

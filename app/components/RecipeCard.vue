@@ -2,7 +2,7 @@
   <article
     class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-default bg-default transition-colors hover:border-accented focus-within:border-accented"
   >
-    <!-- Visuel : photo (bucket Storage `recipe-photos`, optimisée par @nuxt/image),
+    <!-- Visuel : photo (bucket Storage `recipe-photos` : URL publique + @nuxt/image en v1, URL signée en v2),
          sinon repli de l'édition : illustration de catégorie (cadre blanc
          arrondi) ou icône Lucide. Hauteur : voir la prop `compactVisual`. -->
     <div
@@ -10,17 +10,12 @@
       :class="compactVisual ? 'h-20 md:h-24' : 'aspect-[4/3]'"
       data-recipe-visual
     >
-      <NuxtImg
+      <RecipePhoto
         v-if="photoUrl"
         :src="photoUrl"
-        alt=""
         sizes="xs:100vw sm:50vw lg:33vw xl:25vw"
         :width="400"
         :height="300"
-        fit="cover"
-        format="webp"
-        loading="lazy"
-        decoding="async"
         class="size-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
       />
       <div v-else-if="fallback.type === 'image'" class="size-full p-3">
@@ -153,7 +148,6 @@ const authStore = useAuthStore()
 const { $toast } = useNuxtApp()
 const { categoryVisual } = useCategories()
 const { localizeCard } = useRecipeLocale()
-const { publicUrl } = useRecipePhoto()
 
 /** Titre, description, tags dans la langue de l'interface (repli sur le texte d'origine). */
 const shown = computed(() => localizeCard(props.recipe))
@@ -165,8 +159,8 @@ const duration = computed(() => totalTime(props.recipe))
 const visibleTags = computed(() => shown.value.tags.slice(0, MAX_TAGS))
 const hiddenTagCount = computed(() => Math.max(0, shown.value.tags.length - MAX_TAGS))
 
-/** URL publique de la photo dans le bucket Storage `recipe-photos`. */
-const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
+/** Adresse de la photo : URL publique (v1) ou URL signée (v2, obtenue côté navigateur : voir `usePhotoSrc`). */
+const photoUrl = usePhotoSrc(() => props.recipe.photoPath)
 /** Repli sans photo : illustration ou icône de la catégorie selon l'édition. */
 // v2 : la recette du carnet porte l'identifiant de MA catégorie (`categoryId`) ; v1 : l'ancien texte.
 const fallback = computed(() => categoryVisual(('categoryId' in props.recipe && typeof props.recipe.categoryId === 'string' ? props.recipe.categoryId : null) ?? props.recipe.category))

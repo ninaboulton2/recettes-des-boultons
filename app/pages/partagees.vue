@@ -112,7 +112,7 @@ const add = (recipe: SharedWithMeRecipe) => run(recipe, 'add', async () => {
 })
 
 const copy = (recipe: SharedWithMeRecipe) => run(recipe, 'copy', async () => {
-  const copyId = await cookbook.copyRecipe({ recipeId: recipe.id })
+  const { id: copyId } = await cookbook.copyRecipeWithPhoto({ recipeId: recipe.id })
   $toast.success(t('shared.copied', { title: recipe.title }))
   recipesStore.refresh()
   await navigateTo(localePath(`/recettes/${copyId}`))

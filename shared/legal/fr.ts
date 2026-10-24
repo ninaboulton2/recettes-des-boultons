@@ -115,7 +115,15 @@ export const legalFr: LegalTexts = {
           id: 'photos',
           title: 'Photos des recettes',
           blocks: [
-            { type: 'p', text: 'Les photos sont stockées chez Supabase. Aujourd\'hui, une photo est accessible à toute personne qui connaît son adresse exacte (une adresse longue, non devinable et jamais publiée dans une liste), même si la recette elle-même est privée. Une évolution prévue rendra les photos privées : elles ne seront visibles que des personnes qui ont le droit de voir la recette. Cette page sera alors mise à jour.' }
+            { type: 'p', text: 'Les photos sont stockées chez Supabase et sont privées : une photo n\'est visible que des personnes qui ont le droit de voir la recette. Il n\'existe pas d\'adresse publique de photo. L\'application affiche chaque photo par un lien temporaire (valable environ une heure), délivré seulement si votre compte a accès à la recette.' },
+            {
+              type: 'ul',
+              items: [
+                'Lien public d\'une recette : si vous créez un lien de partage, la photo de la recette est visible par toute personne qui a ce lien, sans compte, tant que le lien est actif. Révoquer le lien (ou supprimer la recette) arrête l\'accès : les liens temporaires délivrés sont très courts (2 minutes).',
+                'Copie d\'une recette : la personne qui copie votre recette obtient sa propre copie de la photo, qui lui appartient ensuite et reste chez elle même si vous supprimez l\'original.',
+                'Remplacement ou suppression : l\'ancienne photo est effacée du stockage quand vous la remplacez ou la retirez, et toutes les photos d\'une recette sont effacées avec la recette (et avec votre compte).'
+              ]
+            }
           ]
         },
         {

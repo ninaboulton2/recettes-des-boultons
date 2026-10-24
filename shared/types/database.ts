@@ -857,6 +857,9 @@ isOneToOne: false
 "send_friend_request":
 { Args: { "p_user": string }; Returns: string
                            },
+"shared_recipe_photo_path":
+{ Args: { "p_token": string }; Returns: string
+                           },
 "transfer_group_ownership":
 { Args: { "p_group": string,"p_new_creator": string }; Returns: undefined
                            },
