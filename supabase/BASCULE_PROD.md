@@ -430,6 +430,56 @@ réenregistrant les recettes (ou en restaurant la page depuis git, voir l'étape
 l'IA échoue (quota, panne), la recette est enregistrée, sa traduction est « à mettre à jour » (le
 site montre le texte d'origine) et réenregistrer la recette dans l'éditeur relance la traduction.
 
+## 10. v2 — schéma social (migration 0017, phase 2)
+
+Branche `feat/v2-social-schema`. **Prérequis : 0016 appliquée.** C'est une migration « expand » :
+elle ne change **rien** pour le site actuel (aucune colonne supprimée ou renommée, aucune fonction
+ni politique modifiée), on peut donc l'appliquer à tout moment, avant ou après un déploiement, sans
+interruption. Elle prépare la v2 (groupes, amis, partage, carnets) ; les tables créées sont vides et
+**fermées à l'API** (RLS activée, aucune politique, aucun droit pour `anon` / `authenticated`) jusqu'à
+la phase 3.
+
+1. **Appliquer 0017** (`apply_migration`, nom `0017_social_schema`), uniquement sur le « go » de Nina.
+   Ajoute 11 tables (`categories`, `groups`, `group_members`, `friendships`, `invitations`,
+   `recipe_grants`, `recipe_share_links`, `cookbook_entries`, `notifications`, `reports`,
+   `system_alerts`), 4 colonnes nullables sur `recipes` (`owner_id`, `visibility`, `copied_from`,
+   `category_id`) et 6 sur `profiles` (`display_name`, `cookbook_title`, `theme_settings`,
+   `active_theme_group_id`, `discoverable`, `onboarded_at`).
+2. **NOTICE attendue** (dernière ligne) :
+   `[0017] schéma social en place : 11 tables fermées (RLS sans politique), recipes +4 colonnes, profiles +6 colonnes ; politiques et fonctions existantes inchangées`.
+   Un rejeu affiche en plus des « already exists, skipping » : normal.
+3. **Contrôles** (SQL Editor ou `execute_sql`, lecture seule) :
+
+   ```sql
+   -- 11 tables, toutes avec RLS, aucune politique, vides
+   select c.relname, c.relrowsecurity as rls,
+          (select count(*) from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname) as politiques
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname in ('categories','groups','group_members','friendships',
+          'invitations','recipe_grants','recipe_share_links','cookbook_entries','notifications','reports','system_alerts')
+    order by 1;                                         -- 11 lignes : rls = true, politiques = 0
+   -- aucun droit pour l'API
+   select count(*) from information_schema.role_table_grants
+    where table_schema = 'public' and grantee in ('anon','authenticated')
+      and table_name in ('categories','groups','group_members','friendships','invitations',
+          'recipe_grants','recipe_share_links','cookbook_entries','notifications','reports','system_alerts');   -- 0
+   -- recettes inchangées, aucun propriétaire encore
+   select count(*) as recettes, count(owner_id) as avec_proprietaire from public.recipes;   -- 181 / 0
+   select count(*) from public.profiles;                                                    -- 4
+   ```
+
+   Puis ouvrir le site : accueil, une recette, la recherche, le planning, les courses fonctionnent
+   comme avant (aucun redéploiement n'est nécessaire).
+4. **Retour arrière** : rien à faire côté code (il ignore ces objets). Pour retirer 0017 :
+   `supabase/rollback/0017_social_schema_down.sql` — ⚠️ supprime les 11 tables (et leurs données)
+   et les 10 colonnes ajoutées ; après le remplissage 0018, exporter d'abord. Le fichier affiche le
+   nombre de lignes supprimées par table.
+
+**À savoir pour la suite** (détail dans l'en-tête de la migration, bloc « CHOIX DE CONCEPTION ») :
+`save_recipe` n'écrit pas encore `owner_id` (les recettes créées entre 0017 et le remplissage 0018
+auront `owner_id` NULL, le remplissage les rattache) ; le rôle « support » et les politiques RLS
+arrivent en phase 3.
+
 ## Retour arrière
 
 **Code** : Vercel → **Deployments** → le déploiement de production **précédent** (ancien
@@ -447,6 +497,7 @@ code, noté à l'étape 3) → menu « … » → **Instant Rollback**. Effet en
 | Après 0013 et retour à l'ancien code | 1) `supabase/rollback/0013_contract_jsonb_down.sql` (recrée et recalcule les colonnes JSONB) ; 2) relancer `supabase/migrations/0011_save_recipe_photo.sql` ; 3) si besoin, `rollback/0005_restore_from_backup.sql` ; 4) Instant Rollback. |
 | Après 0015 | Requêtes de retour dans l'en-tête de `0015_data_cleanup.sql` (depuis les tables `*_backup_cleanup`). |
 | Après 0016 (§ 9) | L'ancien code fonctionne tel quel. Pour retirer 0016 : `supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions, `recipes.lang`, `units.abbr_en`, restaure `save_recipe`, `search_recipes`, `add_recipe_to_list`). |
+| Après 0017 (§ 10) | L'ancien code fonctionne tel quel. Pour retirer 0017 : `supabase/rollback/0017_social_schema_down.sql` (supprime les 11 tables sociales et les colonnes ajoutées à `recipes` et `profiles`). |
 | Après 0014 | Plus de sauvegarde en base : restaurer depuis l'export `pg_dump` (§ 0.1) avec `pg_restore` (à faire avec moi). |
 
 Toutes les migrations « ajout seulement » (0003, 0004, 0006 → 0012) sont réversibles sans

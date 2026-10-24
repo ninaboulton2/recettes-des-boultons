@@ -1,6 +1,6 @@
 // ============================================================================
 //  FICHIER GÉNÉRÉ — NE PAS ÉDITER À LA MAIN.
-//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0016) :
+//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0017) :
 //    npx supabase gen types typescript --local > shared/types/database.ts
 //  puis replacer cet en-tête. Après application des migrations en prod :
 //    npx supabase gen types typescript --project-id tzlkabxcmmbwhpyvmato --schema public
@@ -44,6 +44,48 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"categories": {
+                  Row: {
+                    "color": string | null,"created_at": string,"icon": string | null,"id": string,"name_en": string | null,"name_fr": string | null,"owner_id": string,"slug": string,"sort_order": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "color"?: string | null,"created_at"?: string,"icon"?: string | null,"id"?: string,"name_en"?: string | null,"name_fr"?: string | null,"owner_id": string,"slug": string,"sort_order"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "color"?: string | null,"created_at"?: string,"icon"?: string | null,"id"?: string,"name_en"?: string | null,"name_fr"?: string | null,"owner_id"?: string,"slug"?: string,"sort_order"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                    
+                  ]
+                },
+                "cookbook_entries": {
+                  Row: {
+                    "category_id": string | null,"created_at": string,"recipe_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category_id"?: string | null,"created_at"?: string,"recipe_id": string,"user_id": string
+                  }
+                  Update: {
+                    "category_id"?: string | null,"created_at"?: string,"recipe_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cookbook_entries_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cookbook_entries_recipe_id_fkey"
+      columns: ["recipe_id"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"favorites": {
                   Row: {
                     "created_at": string | null,"id": string,"recipe_id": string,"updated_at": string | null,"user_id": string
@@ -63,6 +105,58 @@ isOneToOne: false
       referencedRelation: "recipes"
       referencedColumns: ["id"]
     }
+                  ]
+                },"friendships": {
+                  Row: {
+                    "addressee_id": string,"created_at": string,"id": string,"requester_id": string,"responded_at": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "addressee_id": string,"created_at"?: string,"id"?: string,"requester_id": string,"responded_at"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "addressee_id"?: string,"created_at"?: string,"id"?: string,"requester_id"?: string,"responded_at"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    
+                    
+                  ]
+                },
+                "group_members": {
+                  Row: {
+                    "created_at": string,"group_id": string,"role": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"group_id": string,"role"?: string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"group_id"?: string,"role"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_members_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },
+                "groups": {
+                  Row: {
+                    "created_at": string,"created_by": string,"id": string,"name": string,"theme": NonNullable<Json>,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"id"?: string,"name": string,"theme"?: NonNullable<Json>,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"id"?: string,"name"?: string,"theme"?: NonNullable<Json>,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                    
                   ]
                 },"instructions": {
                   Row: {
@@ -104,6 +198,42 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"invitations": {
+                  Row: {
+                    "created_at": string,"expires_at": string,"group_id": string | null,"id": string,"inviter_id": string,"kind": string,"responded_at": string | null,"status": string,"target_email": string | null,"target_user_id": string | null,"token_hash": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"expires_at"?: string,"group_id"?: string | null,"id"?: string,"inviter_id": string,"kind": string,"responded_at"?: string | null,"status"?: string,"target_email"?: string | null,"target_user_id"?: string | null,"token_hash"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"expires_at"?: string,"group_id"?: string | null,"id"?: string,"inviter_id"?: string,"kind"?: string,"responded_at"?: string | null,"status"?: string,"target_email"?: string | null,"target_user_id"?: string | null,"token_hash"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invitations_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },
+                "notifications": {
+                  Row: {
+                    "created_at": string,"id": string,"payload": NonNullable<Json>,"read_at": string | null,"type": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"read_at"?: string | null,"type": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"read_at"?: string | null,"type"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                    
+                  ]
                 },"planning": {
                   Row: {
                     "created_at": string | null,"custom_title": string | null,"date_string": string,"id": string,"meal_type": string,"recipe_id": string | null,"updated_at": string | null,"user_id": string
@@ -140,17 +270,55 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string | null,"email": string,"id": string,"language": string | null,"name": string | null,"notifications": boolean | null,"role": string | null,"theme": string | null,"updated_at": string | null
+                    "active_theme_group_id": string | null,"cookbook_title": string | null,"created_at": string | null,"discoverable": boolean,"display_name": string | null,"email": string,"id": string,"language": string | null,"name": string | null,"notifications": boolean | null,"onboarded_at": string | null,"role": string | null,"theme": string | null,"theme_settings": Json | null,"updated_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string | null,"email": string,"id": string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"role"?: string | null,"theme"?: string | null,"updated_at"?: string | null
+                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email": string,"id": string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
                   }
                   Update: {
-                    "created_at"?: string | null,"email"?: string,"id"?: string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"role"?: string | null,"theme"?: string | null,"updated_at"?: string | null
+                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email"?: string,"id"?: string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "profiles_active_theme_group_id_fkey"
+      columns: ["active_theme_group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"recipe_grants": {
+                  Row: {
+                    "created_at": string,"granted_by": string,"grantee_group_id": string | null,"grantee_user_id": string | null,"id": string,"origin": string,"permission": string,"recipe_id": string,"source_grant_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"granted_by": string,"grantee_group_id"?: string | null,"grantee_user_id"?: string | null,"id"?: string,"origin"?: string,"permission": string,"recipe_id": string,"source_grant_id"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"granted_by"?: string,"grantee_group_id"?: string | null,"grantee_user_id"?: string | null,"id"?: string,"origin"?: string,"permission"?: string,"recipe_id"?: string,"source_grant_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recipe_grants_grantee_group_id_fkey"
+      columns: ["grantee_group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recipe_grants_recipe_id_fkey"
+      columns: ["recipe_id"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recipe_grants_source_grant_id_fkey"
+      columns: ["source_grant_id"]
+isOneToOne: false
+      referencedRelation: "recipe_grants"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"recipe_ingredients": {
                   Row: {
@@ -232,6 +400,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"recipe_share_links": {
+                  Row: {
+                    "created_at": string,"recipe_id": string,"token": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"recipe_id": string,"token"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"recipe_id"?: string,"token"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recipe_share_links_recipe_id_fkey"
+      columns: ["recipe_id"]
+isOneToOne: true
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recipe_translations": {
                   Row: {
                     "content": NonNullable<Json>,"description": string | null,"locale": string,"model": string | null,"notes": string | null,"recipe_id": string,"search": unknown,"source_hash": string,"stale": boolean,"tags": (string)[],"title": string,"translated_at": string
@@ -254,17 +442,49 @@ isOneToOne: false
                   ]
                 },"recipes": {
                   Row: {
-                    "category": string,"cook_time": number | null,"created_at": string | null,"description": string | null,"id": string,"image": string | null,"lang": string,"notes": string | null,"photo_path": string | null,"prep_time": number | null,"search": unknown,"servings": number | null,"tags": (string)[] | null,"title": string,"updated_at": string | null
+                    "category": string,"category_id": string | null,"cook_time": number | null,"copied_from": string | null,"created_at": string | null,"description": string | null,"id": string,"image": string | null,"lang": string,"notes": string | null,"owner_id": string | null,"photo_path": string | null,"prep_time": number | null,"search": unknown,"servings": number | null,"tags": (string)[] | null,"title": string,"updated_at": string | null,"visibility": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category": string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"lang"?: string,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title": string,"updated_at"?: string | null
+                    "category": string,"category_id"?: string | null,"cook_time"?: number | null,"copied_from"?: string | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"lang"?: string,"notes"?: string | null,"owner_id"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title": string,"updated_at"?: string | null,"visibility"?: string
                   }
                   Update: {
-                    "category"?: string,"cook_time"?: number | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"lang"?: string,"notes"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title"?: string,"updated_at"?: string | null
+                    "category"?: string,"category_id"?: string | null,"cook_time"?: number | null,"copied_from"?: string | null,"created_at"?: string | null,"description"?: string | null,"id"?: string,"image"?: string | null,"lang"?: string,"notes"?: string | null,"owner_id"?: string | null,"photo_path"?: string | null,"prep_time"?: number | null,"search"?: never,"servings"?: number | null,"tags"?: (string)[] | null,"title"?: string,"updated_at"?: string | null,"visibility"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "recipes_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recipes_copied_from_fkey"
+      columns: ["copied_from"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"reports": {
+                  Row: {
+                    "created_at": string,"details": string | null,"handled_at": string | null,"id": string,"reason": string,"recipe_id": string | null,"reporter_id": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"details"?: string | null,"handled_at"?: string | null,"id"?: string,"reason": string,"recipe_id"?: string | null,"reporter_id"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"details"?: string | null,"handled_at"?: string | null,"id"?: string,"reason"?: string,"recipe_id"?: string | null,"reporter_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reports_recipe_id_fkey"
+      columns: ["recipe_id"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"shopping_items": {
                   Row: {
@@ -310,6 +530,21 @@ isOneToOne: false
                     "created_at"?: string | null,"id"?: string,"name"?: string,"updated_at"?: string | null,"user_id"?: string
                   }
                   Relationships: [
+                    
+                  ]
+                },"system_alerts": {
+                  Row: {
+                    "count": number,"created_at": string,"first_seen": string | null,"key": string,"last_seen": string | null,"notified_at": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "count"?: number,"created_at"?: string,"first_seen"?: string | null,"key": string,"last_seen"?: string | null,"notified_at"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "count"?: number,"created_at"?: string,"first_seen"?: string | null,"key"?: string,"last_seen"?: string | null,"notified_at"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    
                     
                   ]
                 },"unit_aliases": {

@@ -19,6 +19,8 @@
 #    6. migrations/0003 → 0012 (« expand ») + rejeu, tests test_0003 → test_0012
 #    7. migrations/0013 → …   (« contract » : 0013, 0014, 0015) + rejeu,
 #       tests test_0013 → …   (assertions ; échec = exit 1)
+#    8. rollback/0017 (+ rejeu), vérification, ré-application de 0017 (+ rejeu),
+#       test_0017 relancé : « up, down, up » (voir le dossier v2, §4.4)
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
@@ -79,4 +81,19 @@ for f in "${CONTRACT[@]}"; do run "$f"; done
 echo "▶ Rejeu idempotence 0013 → …"
 for f in "${CONTRACT[@]}"; do "${PSQL[@]}" -f "$f"; done
 for f in "$HERE"/test_*.sql; do if (( $(num "${f#*test_}") >= 13 )); then run "$f"; fi; done
+
+# « Up, down, up » pour 0017 (expand-only) : retour arrière, rejeu du retour arrière,
+# état d'avant vérifié, ré-application, rejeu, mêmes tests.
+echo "▶ Rollback 0017, rejeu, ré-application"
+run "$SUPA/rollback/0017_social_schema_down.sql"
+"${PSQL[@]}" -f "$SUPA/rollback/0017_social_schema_down.sql"
+"${PSQL[@]}" -c "do \$\$ begin
+  assert to_regclass('public.groups') is null and to_regclass('public.recipe_grants') is null, 'tables 0017 encore présentes';
+  assert not exists (select 1 from information_schema.columns where table_schema='public' and table_name='recipes' and column_name='owner_id'), 'recipes.owner_id encore présente';
+  assert (select count(*) from public.recipes) > 0 and to_regclass('public.recipe_translations') is not null, 'données ou 0016 abîmées';
+  assert has_function_privilege('authenticated', 'public.save_recipe(jsonb)', 'execute'), 'save_recipe abîmée';
+end \$\$;"
+run "$SUPA/migrations/0017_social_schema.sql"
+"${PSQL[@]}" -f "$SUPA/migrations/0017_social_schema.sql"
+run "$HERE/test_0017_social_schema.sql"
 echo "✅ Toutes les migrations et tous les tests sont passés."

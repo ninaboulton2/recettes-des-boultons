@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import type { JwtPayload } from '@supabase/supabase-js'
 import type { Database } from '#shared/types/database'
 import type { LoginCredentials, User, UserRole } from '#shared/types'
@@ -56,7 +56,9 @@ export const useAuthStore = defineStore('auth', () => {
   const supabase = useSupabaseClient<Database>()
   const claims = useSupabaseUser()
 
-  const profile = ref<ProfileRow | null>(null)
+  // shallowRef : `profiles.theme_settings` est du `Json` récursif (0017) ; `ref` le déplierait
+  // à l'infini (TS2589). La ligne est toujours remplacée en bloc, jamais modifiée champ à champ.
+  const profile = shallowRef<ProfileRow | null>(null)
 
   const identity = computed<AuthIdentity | null>(() =>
     claims.value ? identityFromClaims(claims.value) : null

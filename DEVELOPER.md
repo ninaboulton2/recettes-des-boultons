@@ -84,8 +84,8 @@ recettes-des-boultons/
 │   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
 ├── i18n/locales/             # fr.json, en.json
 ├── supabase/
-│   ├── migrations/           # 0001 → 0016 (SQL, appliquées à la main, voir § 4)
-│   ├── rollback/             # retours arrière (0005, 0013, 0016)
+│   ├── migrations/           # 0001 → 0017 (SQL, appliquées à la main, voir § 4)
+│   ├── rollback/             # retours arrière (0005, 0013, 0016, 0017)
 │   ├── fixes/                # correctifs de données ponctuels
 │   ├── local/                # base de dev locale : up.sh, setup.sh, test.sh, comptes, snapshot
 │   ├── tests/                # tests SQL par migration + schéma de base
@@ -217,7 +217,7 @@ d'e-mail (Mailpit), inscription sans confirmation ; `max_rows = 1000` comme en p
 
 ## 4. Modèle de données
 
-### 4.1 Tables (état après la migration 0016)
+### 4.1 Tables (état après la migration 0016 ; 0017 ajoute les tables sociales v2, voir § 4.4)
 
 ```
 profiles            id (= auth.users.id), email, name, role 'user'|'admin', language, theme,
@@ -312,6 +312,7 @@ supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
 | 0014 | suppression des sauvegardes de 0005 (une semaine après la bascule) |
 | 0015 | nettoyage mécanique des ingrédients (optionnel, voir [docs/QUALITE_DONNEES.md](docs/QUALITE_DONNEES.md)) |
 | 0016 | recettes bilingues : `recipes.lang`, `recipe_translations`, `units.abbr_en`, `save_recipe_translation`, `save_recipe` / `search_recipes` / `add_recipe_to_list` étendues (§ 19) |
+| 0017 | v2, phase 2, « expand » seulement : 11 tables sociales fermées à l'API (RLS sans politique) — `categories`, `groups`, `group_members`, `friendships`, `invitations`, `recipe_grants`, `recipe_share_links`, `cookbook_entries`, `notifications`, `reports`, `system_alerts` — + colonnes nullables `recipes.owner_id / visibility / copied_from / category_id` et `profiles.display_name / cookbook_title / theme_settings / active_theme_group_id / discoverable / onboarded_at`. Aucun effet sur le code actuel ; choix de conception en tête du fichier. Retour arrière : `supabase/rollback/0017_social_schema_down.sql` |
 
 Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
 Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
