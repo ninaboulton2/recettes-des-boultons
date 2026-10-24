@@ -49,9 +49,17 @@ function logFailure(context: string, error: unknown): void {
 
 // ---------------------------------------------------------------------------- page publique
 
+export interface SharedPhotoRow {
+  recipe_id: string
+  photo_path: string | null
+}
+
 export interface SharedPhotoPorts {
-  /** `rpc('shared_recipe_photo_path', { p_token })` (service_role) : chemin, ou NULL (jeton inconnu / sans photo). */
-  photoPath: (token: string) => PromiseLike<{ data: string | null, error: Failure }>
+  /**
+   * `rpc('shared_recipe_photo_path', { p_token })` (service_role) : (id de la recette, chemin) ; aucune ligne (ou `null`) si le jeton
+   * est inconnu, révoqué, sans photo ou si le chemin sort du dossier de la recette.
+   */
+  photoPath: (token: string) => PromiseLike<{ data: SharedPhotoRow | SharedPhotoRow[] | null, error: Failure }>
   /** `storage.from('recipe-photos').createSignedUrl(path, seconds)` (service_role). */
   sign: (path: string, seconds: number) => PromiseLike<{ data: { signedUrl: string } | null, error: Failure }>
 }
@@ -65,8 +73,11 @@ export async function signSharedPhoto(ports: SharedPhotoPorts, token: unknown): 
   if (!parsed.success) return null
   const found = await ports.photoPath(parsed.data)
   if (found.error) throw found.error
-  if (!photoPathParts(found.data)) return null
-  const signed = await ports.sign(found.data as string, SHARED_PHOTO_SIGNED_SECONDS)
+  const row = Array.isArray(found.data) ? found.data[0] : found.data
+  // Défense en profondeur (la fonction SQL et la contrainte de `recipes` font déjà ce contrôle) : le chemin doit être un fichier du
+  // dossier de la recette du jeton, sinon on pourrait signer, avec la clé service_role, la photo d'une AUTRE recette.
+  if (!row || !isPhotoOfRecipe(row.photo_path, row.recipe_id)) return null
+  const signed = await ports.sign(row.photo_path as string, SHARED_PHOTO_SIGNED_SECONDS)
   if (signed.error || !signed.data?.signedUrl) return null
   return signed.data.signedUrl
 }

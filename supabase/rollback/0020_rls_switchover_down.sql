@@ -25,7 +25,13 @@ end $$;
 
 drop trigger if exists recipes_guard_owner_fields on public.recipes;
 drop function if exists private.recipes_guard_owner_fields();
-alter table public.recipes drop constraint if exists recipes_photo_path_in_own_folder;
+-- La contrainte est aussi posée par 0029 : on ne la retire que si 0029 n'est pas appliquée (le retour arrière de 0029 fait l'inverse).
+do $$
+begin
+  if to_regprocedure('public.shared_recipe_photo_path(uuid)') is null then
+    alter table public.recipes drop constraint if exists recipes_photo_path_in_own_folder;
+  end if;
+end $$;
 drop function if exists private.section_belongs_to(uuid, uuid);
 drop function if exists private.category_belongs_to(uuid, uuid);
 drop policy if exists "profiles_select_self" on public.profiles;

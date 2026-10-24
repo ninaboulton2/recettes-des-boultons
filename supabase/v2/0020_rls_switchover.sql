@@ -196,9 +196,14 @@ begin
 end $$;
 
 -- Photo : toujours dans le dossier de SA recette (<id>/<horodatage>.webp)
-alter table public.recipes drop constraint if exists recipes_photo_path_in_own_folder;
-alter table public.recipes add constraint recipes_photo_path_in_own_folder
-  check (photo_path is null or photo_path like id::text || '/%') not valid;
+-- (même contrainte que 0029, même nom : idempotente, l'ordre 0029 puis 0020 comme 0020 puis 0029 marche)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'recipes_photo_path_in_own_folder' and conrelid = 'public.recipes'::regclass) then
+    alter table public.recipes add constraint recipes_photo_path_in_own_folder
+      check (photo_path is null or photo_path like id::text || '/%') not valid;
+  end if;
+end $$;
 
 -- profiles : sa propre ligne seulement (le support ne lit plus les e-mails des autres)
 do $$

@@ -46,8 +46,8 @@ describe('chemins de photos', () => {
 })
 
 describe('page publique : URL signée à partir du jeton', () => {
-  const ports = (path: string | null, error: { message: string } | null = null) => {
-    const photoPath = vi.fn(async () => ({ data: path, error }))
+  const ports = (path: string | null, error: { message: string } | null = null, recipeId: string = SRC) => {
+    const photoPath = vi.fn(async () => ({ data: path === null ? [] : [{ recipe_id: recipeId, photo_path: path }], error }))
     const sign = vi.fn(async (p: string) => ({ data: { signedUrl: `https://s.test/${p}?token=abc` }, error: null }))
     return { photoPath, sign }
   }
@@ -79,6 +79,17 @@ describe('page publique : URL signée à partir du jeton', () => {
     const p = ports('../autre-bucket/secret.webp')
     expect(await signSharedPhoto(p, TOKEN)).toBeNull()
     expect(p.sign).not.toHaveBeenCalled()
+  })
+
+  it('le chemin d\'une AUTRE recette n\'est jamais signé, même si la base le renvoie', async () => {
+    const other = '33333333-3333-4333-8333-333333333333'
+    for (const path of [`${other}/a.webp`, `${SRC}x/a.webp`, `${other}/../${SRC}/a.webp`]) {
+      const p = ports(path)
+      expect(await signSharedPhoto(p, TOKEN)).toBeNull()
+      expect(p.sign).not.toHaveBeenCalled()
+    }
+    const single = { photoPath: vi.fn(async () => ({ data: { recipe_id: SRC, photo_path: `${SRC}/a.webp` }, error: null })), sign: vi.fn(async (p: string) => ({ data: { signedUrl: `https://s.test/${p}` }, error: null })) }
+    expect(await signSharedPhoto(single, TOKEN)).toBe(`https://s.test/${SRC}/a.webp`)   // forme « un seul objet » acceptée aussi
   })
 
   it('la signature échoue (objet absent) : null ; l\'erreur de la base est relancée (500 côté route)', async () => {

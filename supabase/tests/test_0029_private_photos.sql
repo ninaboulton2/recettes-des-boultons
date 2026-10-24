@@ -1,5 +1,5 @@
 -- Test 0029 — photos privées (phase 8), sous la chaîne COMPLÈTE (… → 0018 → 0020 → 0029 migration + v2/0029 bascule des photos).
---   * public.shared_recipe_photo_path(jeton) : service_role seulement, jeton inconnu / sans photo = NULL ;
+--   * public.shared_recipe_photo_path(jeton) : service_role seulement, jeton inconnu / sans photo / photo hors du dossier de la recette = aucune ligne ;
 --   * bucket recipe-photos privé ; politiques storage.objects : lecture = can_read_recipe, écriture = can_edit_recipe,
 --     suppression = AUTEUR seulement ; le public (anon) et un étranger ne voient rien.
 -- a = Nina (auteure du seed, propriétaire de la recette r1 du seed), b = membre du groupe (droit de groupe edit_original sur r1),
@@ -66,17 +66,34 @@ begin
   assert tests.try(format($q$select public.shared_recipe_photo_path(%L)$q$, tok)) = '42501', 'authenticated : refusé (le chemin contient l''id de la recette)';
   perform tests.logout();
   perform tests.login(d, 'service_role');
-  assert public.shared_recipe_photo_path(tok) = p_priv, 'service_role : chemin de la photo pour un jeton actif';
-  assert public.shared_recipe_photo_path(tok_nophoto) is null, 'recette sans photo : NULL';
-  assert public.shared_recipe_photo_path(gen_random_uuid()) is null, 'jeton inconnu : NULL';
-  assert public.shared_recipe_photo_path(null) is null, 'jeton NULL : NULL';
+  assert (select photo_path from public.shared_recipe_photo_path(tok)) = p_priv and (select recipe_id from public.shared_recipe_photo_path(tok)) = rp,
+    'service_role : id de la recette et chemin de la photo pour un jeton actif';
+  assert not exists (select 1 from public.shared_recipe_photo_path(tok_nophoto)), 'recette sans photo : aucune ligne';
+  assert not exists (select 1 from public.shared_recipe_photo_path(gen_random_uuid())), 'jeton inconnu : aucune ligne';
+  assert not exists (select 1 from public.shared_recipe_photo_path(null)), 'jeton NULL : aucune ligne';
+  perform tests.logout();
+
+  -- Photo d'AUTRUI derrière un lien public (relecture de sécurité n° 3) : la contrainte refuse l'écriture, et même si elle était
+  -- contournée (donnée ancienne), la fonction ne renvoie rien. Un lien public ne doit jamais faire signer la photo d'une autre recette.
+  assert tests.try(format($q$update public.recipes set photo_path = %L where id = %L$q$, p_r1, rp)) = '23514', 'contrainte : chemin de la recette d''une autre';
+  assert tests.try(format($q$update public.recipes set photo_path = %L where id = %L$q$, '../' || p_priv, rp)) = '23514', 'contrainte : chemin hors dossier';
+  alter table public.recipes drop constraint recipes_photo_path_in_own_folder;   -- simule une ligne ancienne hors contrainte
+  update public.recipes set photo_path = p_r1 where id = rp;
+  perform tests.login(d, 'service_role');
+  assert not exists (select 1 from public.shared_recipe_photo_path(tok)), 'chemin d''une autre recette : aucune ligne (rien à signer)';
+  perform tests.logout();
+  update public.recipes set photo_path = p_priv where id = rp;
+  alter table public.recipes add constraint recipes_photo_path_in_own_folder
+    check (photo_path is null or photo_path like id::text || '/%') not valid;
+  perform tests.login(d, 'service_role');
+  assert (select photo_path from public.shared_recipe_photo_path(tok)) = p_priv, 'chemin rétabli : de nouveau servi';
   perform tests.logout();
   -- lien révoqué : plus de photo
   perform tests.login(a, 'authenticated');
   perform public.revoke_share_link(rp);
   perform tests.logout();
   perform tests.login(d, 'service_role');
-  assert public.shared_recipe_photo_path(tok) is null, 'lien révoqué : NULL';
+  assert not exists (select 1 from public.shared_recipe_photo_path(tok)), 'lien révoqué : aucune ligne';
   perform tests.logout();
 
   -- ============================================================ politiques storage.objects
