@@ -1,8 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { expect, request as playwrightRequest, test, type Page } from '@playwright/test'
 import { gotoApp } from '../support/app'
-import { SUPABASE_SERVICE_KEY, SUPABASE_URL } from '../support/env'
-import { E2E_6B, cleanup6B, createRecipe, loginV2, prepareAmi, restoreAmi, signedIn } from './support'
+import { SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL } from '../support/env'
+import { V2_PASSWORD, createRecipe, loginV2, signedIn } from './support'
 
 /**
  * Photos privées (phase 8) : bucket `recipe-photos` privé, affichage par URL signée (co-membre), refus pour un étranger, page
@@ -10,6 +10,8 @@ import { E2E_6B, cleanup6B, createRecipe, loginV2, prepareAmi, restoreAmi, signe
  * Sur une base en état v2 APRÈS la bascule des photos (`npm run db:local:v2` applique v2/0029).
  */
 const BUCKET = 'recipe-photos'
+/** Préfixe propre à la phase 8 : ces parcours ne touchent jamais aux données `E2E_P8_*` des autres (la base locale est partagée). */
+const E2E_P8 = 'E2E_P8_'
 // PNG 1 × 1 valide (le bucket accepte jpeg / png / webp)
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
 
@@ -45,21 +47,39 @@ async function expectSignedPhoto(page: Page, selector: string): Promise<string> 
   return src
 }
 
-test.beforeAll(async () => { await cleanup6B() })
-test.afterAll(async () => {
-  const { client } = await signedIn('admin')
-  const { data } = await client.from('recipes').select('id').like('title', `${E2E_6B}%`)
+/** Étranger jetable (ni ami ni membre d'un groupe) : un compte à part, pour ne pas dépendre de l'état de `ami@`. */
+let stranger: { id: string, client: SupabaseClient } | null = null
+async function strangerClient(): Promise<SupabaseClient> {
+  if (stranger) return stranger.client
+  const email = `p8-etranger-${Date.now().toString(36)}@local.test`
+  const created = await service().auth.admin.createUser({ email, password: V2_PASSWORD, email_confirm: true })
+  if (created.error || !created.data.user) throw new Error(`Création de l'étranger impossible : ${created.error?.message}`)
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  const signed = await client.auth.signInWithPassword({ email, password: V2_PASSWORD })
+  if (signed.error) throw new Error(`Connexion de l'étranger impossible : ${signed.error.message}`)
+  stranger = { id: created.data.user.id, client }
+  return client
+}
+
+async function cleanupP8(): Promise<void> {
+  const admin = service()
+  const { data } = await admin.from('recipes').select('id').like('title', `${E2E_P8}%`)
   for (const row of data ?? []) {
     const names = await listFolder(row.id)
-    if (names.length > 0) await service().storage.from(BUCKET).remove(names.map(name => `${row.id}/${name}`))
+    if (names.length > 0) await admin.storage.from(BUCKET).remove(names.map(name => `${row.id}/${name}`))
   }
-  await cleanup6B()
-})
+  await admin.from('recipes').delete().like('title', `${E2E_P8}%`)
+  if (stranger) await admin.auth.admin.deleteUser(stranger.id)
+  stranger = null
+}
+
+test.beforeAll(async () => { await cleanupP8() })
+test.afterAll(async () => { await cleanupP8() })
 
 test('(p8-read) le bucket est privé ; un co-membre voit la photo (carte « partagées avec moi » et fiche), un étranger est refusé', async ({ page }) => {
   const admin = await signedIn('admin')
   const user = await signedIn('user')
-  const id = await createRecipe(admin.client, `${E2E_6B}Photo groupe`, 'groups')
+  const id = await createRecipe(admin.client, `${E2E_P8}Photo groupe`, 'groups')
   const path = await addPhoto(admin.client, id)
 
   // bucket privé : l'adresse publique ne répond plus
@@ -76,27 +96,25 @@ test('(p8-read) le bucket est privé ; un co-membre voit la photo (carte « part
   expect(signedBody.ok()).toBe(true)
   expect(signedBody.headers()['content-type']).toContain('image/png')
 
-  await prepareAmi()
-  const ami = await signedIn('ami')
-  const denied = await ami.client.storage.from(BUCKET).createSignedUrl(path, 60)
+  const outsider = await strangerClient()
+  const denied = await outsider.storage.from(BUCKET).createSignedUrl(path, 60)
   expect(denied.data?.signedUrl ?? null).toBeNull()
   expect(denied.error).not.toBeNull()
-  const batch = await ami.client.storage.from(BUCKET).createSignedUrls([path], 60)
+  const batch = await outsider.storage.from(BUCKET).createSignedUrls([path], 60)
   expect(batch.data?.[0]?.signedUrl ?? null).toBeNull()
-  expect((await ami.client.storage.from(BUCKET).download(path)).error).not.toBeNull()
+  expect((await outsider.storage.from(BUCKET).download(path)).error).not.toBeNull()
   // un jeton inventé sur l'adresse signée ne marche pas non plus
   const forged = await anon.get(signedOk.data!.signedUrl.replace(/token=[^&]+/, 'token=xxx'))
   expect(forged.ok()).toBe(false)
   // l'étranger ne peut ni téléverser dans le dossier de la recette ni supprimer la photo
-  expect((await ami.client.storage.from(BUCKET).upload(`${id}/intrus.png`, PNG, { contentType: 'image/png' })).error).not.toBeNull()
-  await ami.client.storage.from(BUCKET).remove([path])
+  expect((await outsider.storage.from(BUCKET).upload(`${id}/intrus.png`, PNG, { contentType: 'image/png' })).error).not.toBeNull()
+  await outsider.storage.from(BUCKET).remove([path])
   expect(await listFolder(id)).toHaveLength(1)
-  await restoreAmi()
 
   // interface : carte de « Partagées avec moi » et fiche pour le co-membre
   await loginV2(page, 'user')
   await gotoApp(page, '/partagees')
-  const card = page.getByTestId('shared-recipe').filter({ hasText: `${E2E_6B}Photo groupe` })
+  const card = page.getByTestId('shared-recipe').filter({ hasText: `${E2E_P8}Photo groupe` })
   await expect(card).toBeVisible()
   await expectSignedPhoto(page, `[data-testid="shared-recipe"][data-recipe-id="${id}"] [data-recipe-visual] img`)
   await gotoApp(page, `/recettes/${id}`)
@@ -106,8 +124,8 @@ test('(p8-read) le bucket est privé ; un co-membre voit la photo (carte « part
 
 test('(p8-public) page publique : la photo passe par la route serveur (jeton vérifié, jamais un chemin client)', async ({ browser }) => {
   const admin = await signedIn('admin')
-  const id = await createRecipe(admin.client, `${E2E_6B}Photo publique`, 'private')
-  const other = await createRecipe(admin.client, `${E2E_6B}Photo autre`, 'private')
+  const id = await createRecipe(admin.client, `${E2E_P8}Photo publique`, 'private')
+  const other = await createRecipe(admin.client, `${E2E_P8}Photo autre`, 'private')
   await addPhoto(admin.client, id, 'publique.png')
   await addPhoto(admin.client, other, 'secrete.png')
   const link = await admin.client.rpc('create_share_link', { p_recipe: id })
@@ -151,7 +169,7 @@ test('(p8-public) page publique : la photo passe par la route serveur (jeton vé
 test('(p8-copy) la copie a SA photo (objet distinct) ; supprimer l’original efface sa photo mais pas celle de la copie', async ({ page }) => {
   const admin = await signedIn('admin')
   const user = await signedIn('user')
-  const id = await createRecipe(admin.client, `${E2E_6B}Photo à copier`, 'private')
+  const id = await createRecipe(admin.client, `${E2E_P8}Photo à copier`, 'private')
   const path = await addPhoto(admin.client, id, 'origine.png')
   const granted = await admin.client.rpc('grant_recipe', { p_recipe: id, p_grantee_user: user.userId, p_permission: 'copy' })
   expect(granted.error).toBeNull()
@@ -159,6 +177,7 @@ test('(p8-copy) la copie a SA photo (objet distinct) ; supprimer l’original ef
   await loginV2(page, 'user')
   await gotoApp(page, `/recettes/${id}`)
   await page.getByTestId('action-copy').click()
+  await expect(page).not.toHaveURL(new RegExp(`/recettes/${id}$`))
   await expect(page).toHaveURL(/\/recettes\/[0-9a-f-]{36}$/)
   const copyId = page.url().split('/').pop()!
   expect(copyId).not.toBe(id)
@@ -188,7 +207,7 @@ test('(p8-copy) la copie a SA photo (objet distinct) ; supprimer l’original ef
   expect((await listFolder(copyId))).toHaveLength(1)
 
   // copie sans droit de copie : refusée (403), rien n'est copié
-  const sans = await createRecipe(admin.client, `${E2E_6B}Sans droit`, 'private')
+  const sans = await createRecipe(admin.client, `${E2E_P8}Sans droit`, 'private')
   await addPhoto(admin.client, sans, 'x.png')
   const userSession = (await user.client.auth.getSession()).data.session!
   const noRight = await api.post(`/api/v2/recipes/${sans}/copy`, { headers: { Authorization: `Bearer ${userSession.access_token}` } })
@@ -199,7 +218,7 @@ test('(p8-copy) la copie a SA photo (objet distinct) ; supprimer l’original ef
 test('(p8-replace) remplacer ou retirer la photo supprime l’ancien objet (serveur) ; un éditeur « modifier l’original » ne peut pas supprimer lui-même', async () => {
   const admin = await signedIn('admin')
   const user = await signedIn('user')
-  const id = await createRecipe(admin.client, `${E2E_6B}Photo remplacée`, 'private')
+  const id = await createRecipe(admin.client, `${E2E_P8}Photo remplacée`, 'private')
   const first = await addPhoto(admin.client, id, 'une.png')
   expect((await admin.client.rpc('grant_recipe', { p_recipe: id, p_grantee_user: user.userId, p_permission: 'edit_original' })).error).toBeNull()
 
@@ -215,7 +234,7 @@ test('(p8-replace) remplacer ou retirer la photo supprime l’ancien objet (serv
   const api = await playwrightRequest.newContext({ baseURL })
   const put = await api.put(`/api/update-recipe?id=${id}`, {
     headers: { Authorization: `Bearer ${session.access_token}` },
-    data: { updates: { title: `${E2E_6B}Photo remplacée`, category: 'plats', photoPath: second, sections: [] } }
+    data: { updates: { title: `${E2E_P8}Photo remplacée`, category: 'plats', photoPath: second, sections: [] } }
   })
   expect(put.ok()).toBe(true)
   expect(await listFolder(id)).toEqual(['deux.png'])
@@ -223,7 +242,7 @@ test('(p8-replace) remplacer ou retirer la photo supprime l’ancien objet (serv
   // retrait de la photo : l'objet est supprimé aussi
   const removed = await api.put(`/api/update-recipe?id=${id}`, {
     headers: { Authorization: `Bearer ${session.access_token}` },
-    data: { updates: { title: `${E2E_6B}Photo remplacée`, category: 'plats', photoPath: null, sections: [] } }
+    data: { updates: { title: `${E2E_P8}Photo remplacée`, category: 'plats', photoPath: null, sections: [] } }
   })
   expect(removed.ok()).toBe(true)
   expect(await listFolder(id)).toEqual([])
@@ -232,7 +251,7 @@ test('(p8-replace) remplacer ou retirer la photo supprime l’ancien objet (serv
 
 test('(p8-editor) l’éditeur téléverse une photo (fichier choisi) ; elle s’affiche sur la fiche par URL signée', async ({ page }) => {
   const user = await signedIn('user')
-  const id = await createRecipe(user.client, `${E2E_6B}Photo éditeur`, 'private')
+  const id = await createRecipe(user.client, `${E2E_P8}Photo éditeur`, 'private')
   await loginV2(page, 'user')
   await gotoApp(page, `/recettes/${id}`)
   await page.getByTestId('action-edit').click()
