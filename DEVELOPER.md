@@ -1238,7 +1238,7 @@ ne renvoient que `id`, `display_name`, `cookbook_title`, **jamais l'e-mail** ni 
 Lecture = `can_read_recipe`, écriture du contenu = `can_edit_recipe`, insertion = auteur, photos
 suivent la recette ; `recipes.owner_id` passe NOT NULL avec `DEFAULT auth.uid()` (`save_recipe` v1 continue
 de fonctionner, et n'est plus réservé aux admins : tout compte crée SES recettes). Reste à faire hors de ce
-fichier : bucket de photos **public** à passer en privé avec les liens signés (phase 8). `save_recipe_translation`
+fichier : bucket de photos **public**, rendu privé (liens signés) par `v2/0029_private_photos_switchover.sql` (phase 8, § 20.14). `save_recipe_translation`
 (garde `is_admin()` en v1) est remplacée par la migration 0021 : « admin OU peut modifier la recette ». Le 2ᵉ compte admin → `user` est fait par le remplissage 0018 (§ 20.6).
 
 ### 20.5 Points d'attention (relecture de sécurité)
@@ -1644,7 +1644,7 @@ Le jour de la bascule, les pages arrivent avec le reste.
 | Écran | Fichiers | Données |
 |---|---|---|
 | **Préférences** (`/reglages`) | `pages/reglages.vue`, `useProfileSettings().savePreferences`, `useAccount().updateMyPreferences` | **langue** (`profiles.language`, `fr` / `en`) et **notifications** (`profiles.notifications`, **booléen**, `true` par défaut) : écriture directe dans MA ligne (ces colonnes font partie des 11 que l'API autorise, § 20.9 ; `update_my_profile` ne les gère pas) ; **visible dans la recherche** : `update_my_profile(p_discoverable)`. Choisir l'autre langue bascule l'interface (`setLocale`). La préférence n'est PAS relue au chargement (ne pas imposer une langue à qui navigue en anglais) : elle servira aux e-mails (phase 7). « Notifications par e-mail » : le réglage est enregistré, **aucun e-mail n'est envoyé** (phase 7), l'écran le dit. Pseudonyme, titre du carnet et thème : 6A, inchangés |
-| **Export** | `AccountExport.vue`, `shared/utils/account.ts` (`buildExportFile`, `exportErrorKey`), `app/utils/download.ts` | RPC `export_my_data` ; fichier `mes-donnees-recettes-AAAA-MM-JJ.json`, JSON indenté `{ export: { generated_at, format_version, note }, data: <réponse de la RPC> }`, fabriqué dans le navigateur. 3 par jour : `54000` → « déjà fait 3 exports aujourd'hui ». **Les photos ne sont pas incluses** (reste à faire : zip des photos, phase 8) |
+| **Export** | `AccountExport.vue`, `shared/utils/account.ts` (`buildExportFile`, `exportErrorKey`), `app/utils/download.ts` | RPC `export_my_data` ; fichier `mes-donnees-recettes-AAAA-MM-JJ.json`, JSON indenté `{ export: { generated_at, format_version, note }, data: <réponse de la RPC> }`, fabriqué dans le navigateur. 3 par jour : `54000` → « déjà fait 3 exports aujourd'hui ». **Les photos ne sont pas incluses** (zip des photos non fait en phase 8 : voir § 20.14) |
 | **Suppression** | `AccountDeletion.vue`, `classifyDeletionError`, `emailMatches`, `hasPasswordLogin` | 1) `account_deletion_blockers()` : s'il y a des groupes, écran de blocage (nom, nombre d'autres membres, lien « Gérer ce groupe » → `/groupes/<id>`). 2) Sinon confirmation : ce qui disparaît, saisie de l'adresse e-mail du compte (bouton grisé tant qu'elle ne correspond pas, casse ignorée). 3) `POST /api/account/delete { confirmEmail }`. 401 `REAUTH_REQUIRED` → fenêtre de reconnexion (mot de passe : `signInWithPassword` donne un jeton neuf, puis la suppression est rejouée ; compte Google seul : message « déconnectez-vous et reconnectez-vous avec Google », `app_metadata.providers` sans `email`). 409 → relire les blocages. 400 → adresse différente. 4) Déconnexion puis `/compte-supprime` (page publique v2, `noindex`) |
 
 #### 6E : légal, pied de page, accueil visiteur, signalement
@@ -1666,9 +1666,62 @@ jeton inconnu ou révoqué `P0002`, motif inconnu ou détails > 2000 `22023`, li
 **Ce que disent les textes (vérifié dans le code).** Cookies : `sb-…-auth-token` (session Supabase), `i18n_redirected` (langue) ; stockage local `nuxt-color-mode`, `shopping:prefs`, `offline:shopping:v1` ; session `auth:redirect` ; service worker et caches (pages vidées à la déconnexion, aucune requête Supabase ni `/api/**` en cache) ;
 aucune mesure d'audience, aucune publicité, polices servies par le site (`@nuxt/fonts`) → **pas de bandeau** (stockages strictement nécessaires ou choisis par la personne). OpenAI reçoit le texte collé ou dicté (audio), les photos et PDF, et le texte d'une recette à traduire ; **jamais** l'e-mail ni l'identifiant (prompts, `translate.ts`, `media.ts`) ;
 `ai_usage` ne garde ni le contenu ni les prompts. Sentry : `dataCollection` à `false` partout (utilisateur, cookies, en-têtes, corps, paramètres d'URL, variables locales), traces 10 % en production ; **le réglage « Prevent Storing of IP Addresses » du projet Sentry reste à confirmer par Nina** (la page affirme que les adresses IP ne sont pas conservées).
-Photos : bucket `recipe-photos` public (lecture par adresse exacte), annoncé comme tel et comme « à rendre privé » (phase 8). Aucun e-mail de notification n'est envoyé (phase 7) ; seuls ceux de Supabase Auth (confirmation, réinitialisation) existent.
+Photos : bucket `recipe-photos` public (lecture par adresse exacte) à l'époque de 6E ; la phase 8 l'a rendu privé après la bascule et le texte a été mis à jour (§ 20.14). Aucun e-mail de notification n'est envoyé (phase 7) ; seuls ceux de Supabase Auth (confirmation, réinitialisation) existent.
 
 **Tests.** Vitest : `account.test.ts` (fichier d'export, erreurs, blocages, confirmation, reconnexion, préférences), `reports.test.ts` (schémas, erreurs, écran support, appels), `legal.test.ts` (parité FR / EN, contact), `i18n.test.ts` (parité des clés).
 SQL : `test_0027_report_shared_recipe.sql`. Playwright v2 (`npm run db:local:v2` puis `npm run test:e2e:v2`) : `account.spec.ts` (réglages, export téléchargé + limite, suppression bloquée puis réussie, reconnexion exigée simulée sur la 1re réponse puis vraie suppression, jeton récent accepté, Échap), `reports.spec.ts` (fiche, limite, page publique avec connexion, support : examiner, traiter, supprimer, accès refusé aux membres), `legal.spec.ts` (accueil visiteur, pages FR / EN, pied de page bureau et mobile) ; v1 : `e2e/legal-v1.spec.ts` (404).
 **Limite connue** : le 401 `REAUTH_REQUIRED` réel (jeton de plus de 10 minutes) ne peut pas être fabriqué en e2e (la pile locale signe en ES256) : la règle est testée en unitaire (`recentAuth.test.ts`) et le parcours d'interface avec une réponse simulée.
 Fin de travail : `npm run db:local:reset` pour revenir à l'état v1.
+
+### 20.14 Phase 8 : photos privées
+
+**Interrupteur.** Sans `NUXT_PUBLIC_V2=true` rien ne change : bucket public, `getPublicUrl`, `NuxtImg`, suppression des photos par le navigateur (admin). Rendre le bucket
+privé **casse la v1** (ses adresses publiques ne répondent plus) : ce changement est donc dans un fichier de **bascule**, appliqué le jour J **après 0020**, avec le déploiement du code v2.
+
+#### Base de données
+
+| Fichier | Rôle | Quand |
+|---|---|---|
+| `supabase/migrations/0029_shared_recipe_photo.sql` (+ `rollback/0029_shared_recipe_photo_down.sql`) | `public.shared_recipe_photo_path(p_token uuid) returns text` : chemin de la photo de la recette derrière un jeton de lien public actif, sinon NULL. `security definer`, `search_path` vide, **`service_role` seulement** (le chemin contient l'id de la recette, que `get_shared_recipe` cache exprès). Sans effet en v1 | tout de suite (avec 0026, 0027) |
+| `supabase/v2/0029_private_photos_switchover.sql` (+ `rollback/0029_private_photos_switchover_down.sql`) | `storage.buckets.public = false` pour `recipe-photos` ; politiques `storage.objects` : lecture `can_read_recipe(recipe_id_from_path(name))`, écriture et remplacement `can_edit_recipe(…)` (auteur ou `edit_original`, comme 0020), **suppression réservée à l'auteur** (`is_recipe_owner`, nouvelle politique `recipe_photos_delete_owner` ; 0020 permettait à tout éditeur). Aucune donnée touchée. Refuse de tourner si 0020 n'est pas appliquée | le jour J, après 0020 |
+
+Les chemins ne changent pas (`<id de la recette>/<horodatage>.webp`) : aucun fichier à déplacer. Aucune politique pour `anon`. Le retour arrière du jour J : **jouer `0029_private_photos_switchover_down` AVANT `0020_rls_switchover_down`**.
+Tests : `supabase/tests/test_0029_private_photos.sql` (branché dans `run_local.sh` sous la chaîne complète : rejeu, test, retour arrière avec empreinte des politiques vérifiée, ré-application). Ce que le harnais prouve : bucket privé, co-membre lit, étranger et `anon` ne voient rien,
+un lecteur ne téléverse pas, un éditeur `edit_original` téléverse mais ne supprime pas, l'auteur supprime, `service_role` contourne, fonction réservée à `service_role`. Ce qu'il ne peut pas prouver (pas de vrai Storage) : la signature des URL et le refus HTTP d'une adresse publique : couverts par l'e2e `photos.spec.ts` (vraie pile locale).
+`supabase/local/setup_v2.sh` applique désormais aussi `v2/0029` (la base locale v2 est celle d'après la bascule).
+
+#### Affichage (v2)
+
+* **`usePhotoSrc(path)`** (`useRecipePhoto.ts`) : v1 = `publicUrl` (synchrone, rendu serveur comme avant) ; v2 = URL signée **côté navigateur** avec le client de la personne (le RLS décide : `createSignedUrls`), l'illustration de repli reste visible le temps de la signature. Pas de signature pendant le rendu serveur.
+* **Résolveur** (`app/utils/signedPhotoUrls.ts`, testé) : les demandes d'une même courte fenêtre (10 ms : les cartes d'une liste) partent en **un seul** `createSignedUrls` (lots de 100) ; durée 1 h ; l'URL est **réutilisée tant qu'il lui reste plus de 5 minutes** (même adresse = le cache HTTP du navigateur resert l'image) ; mémorisée dans `sessionStorage` (le temps de l'onglet), vidée quand l'identité change (`auth.ts`) ; un chemin refusé donne `null` (illustration de repli), jamais d'erreur.
+* **`RecipePhoto.vue`** (cartes du carnet, « partagées avec moi », explorer, planning, choix d'une recette du planning) : v1 = `NuxtImg` (inchangé) ; v2 = `<img>` natif. **Choix : pas de `NuxtImg` pour les photos privées** : chaque signature change l'adresse, donc l'optimiseur d'images de Vercel (ou ipx) compterait une nouvelle image source à chaque fois, sans cache possible. La photo est déjà réduite au téléversement (1 600 px, WebP) ; coût : la carte charge la photo entière. Piste si l'egress inquiète : miniatures de 400 px produites au téléversement (un second fichier).
+* **Fiche** (`RecipeHero` : prop `photoSrc`) : la v2 affiche maintenant la photo en tête de la fiche (la v1 n'en avait pas, inchangée). **Éditeur** (`PhotoField`) : aperçu signé.
+* **Page publique `/r/<jeton>`** : `<img src="/api/v2/shared/<jeton>/photo">`. La route (`server/api/v2/shared/[token]/photo.get.ts`, 404 hors v2) valide le jeton (UUID), lit le chemin avec `shared_recipe_photo_path` (service_role), le revérifie (`photoPathParts` : `<uuid>/<fichier>` seulement), signe **2 minutes** avec la clé service_role et répond **302** (`Cache-Control: private, max-age=60`). **Elle ne lit ni la query, ni le corps, ni les en-têtes** (un test le garantit) : un chemin fourni par le client n'est jamais signé. Jeton mal formé, inconnu, révoqué ou recette sans photo : le même 404.
+
+#### Écritures serveur (v2)
+
+* **Copie** : `POST /api/v2/recipes/<id>/copy` (`server/api/v2/recipes/[id]/copy.post.ts`). `copy_recipe` avec la session de la personne (c'est lui qui vérifie le droit de copier : 42501 → 403), puis le chemin de la photo source est lu en base avec cette même session, l'objet est copié avec la clé service_role vers `<id de la copie>/<horodatage>.<ext>` et `recipes.photo_path` de la copie est renseigné (`where owner_id = la personne`). **Au mieux** : si la photo ne se copie pas, la recette est copiée quand même (`photoCopied: false`, échec journalisé). Logique dans `server/utils/photos.ts` (`copyRecipeWithPhoto`, testée avec de faux ports). Côté interface : `copyRecipeWithPhoto` dans `useCookbook.ts` (fiche et « partagées avec moi »), les erreurs portent le SQLSTATE attendu par `sharingErrorKey`. La RPC `copy_recipe` seule (sans photo) reste.
+* **Remplacement / retrait** : `PUT /api/update-recipe` lit l'ancien `photo_path` avant l'enregistrement et, **après** l'enregistrement réussi, supprime l'ancien objet (service_role, seulement s'il est dans le dossier de la recette et différent du nouveau) : un éditeur `edit_original` n'a pas le droit de supprimer. L'éditeur ne supprime plus lui-même en v2.
+* **Suppression d'une recette** : `DELETE /api/delete-recipe` vide le dossier `<id>/` (service_role) **après** la réussite de `delete_recipe` (une suppression refusée ne fait pas perdre la photo). En v1 le navigateur le fait avant, comme avant (`recipesStore.deleteRecipe`).
+* **Suppression de compte** : vérifiée, rien à changer : `collectPhotoPaths` liste par préfixe tout le dossier de chaque recette dont la personne est l'auteur (donc aussi les photos posées par un éditeur et les restes orphelins), les copies de la personne ont leur propre dossier. Test ajouté.
+
+#### PWA et hors ligne
+
+Les photos privées ne sont **jamais mises en cache** par le service worker : les URL signées sont sur le domaine Supabase (aucune règle ne les concerne, voir le commentaire de `nuxt.config.ts`), `/api/**` n'est pas en cache non plus, et le cache d'images (`/images/`, `/_ipx/`) ne reçoit plus de photo en v2. Raison : une photo privée ne doit pas survivre dans un cache après la déconnexion. **Hors ligne** : les cartes et la fiche gardent leur illustration de catégorie (les pages visitées restent lisibles), les photos n'apparaissent pas ; le cache HTTP du navigateur peut servir une photo déjà vue tant que l'adresse signée n'a pas changé (même onglet).
+
+#### Export des photos : non fait (décision)
+
+Un zip côté serveur ne tient pas sur Vercel Hobby : réponse non diffusée plafonnée à 4,5 Mo (50 photos de 200 Ko = 10 Mo), mémoire et durée limitées, jusqu'à 2000 recettes. **Alternative documentée, à faire plus tard** : un bouton « Télécharger mes photos » dans Réglages qui, dans le navigateur, demande les URL signées de MES recettes par lots (`createSignedUrls`, déjà là), télécharge chaque photo et assemble un zip avec `fflate` (déjà une dépendance), sans passer par le serveur. Les textes légaux et l'export JSON disent toujours que les photos n'y sont pas.
+
+#### Textes légaux
+
+`shared/legal/{fr,en}.ts`, section `photos` de la politique de confidentialité : décrit l'état d'après la bascule (photos privées, liens temporaires d'environ une heure, lien public = photo visible par qui a le lien, copie = photo propre à la copie, ancienne photo effacée au remplacement, photos effacées avec la recette et le compte). Parité FR / EN vérifiée par `legal.test.ts`. **À ne mettre en ligne qu'avec la bascule.**
+
+#### Limites connues
+
+1. Une photo téléversée puis jamais rattachée (l'enregistrement échoue après le téléversement) reste dans le dossier de la recette : elle est supprimée avec la recette ou le compte, pas avant. Pas de ménage planifié (cron limité à une fois par jour sur Hobby).
+2. Les objets d'une recette supprimée dont le nettoyage a échoué (journalisé, Sentry) restent orphelins : à vérifier à la main (`storage.objects` sans `recipes.id` correspondant).
+3. Une URL signée est un « porteur » : quiconque la reçoit la lit jusqu'à son expiration (1 h pour l'affichage connecté, 2 minutes pour la page publique).
+4. Le lien public d'une recette montre sa photo à toute personne qui a le lien, comme le reste de la recette.
+5. `copy_recipe` (SQL) ne copie toujours pas la photo : seule la route serveur le fait. Un appel direct à la RPC (hors interface) produit une copie sans photo.
+6. Les e2e de la phase 8 (`e2e/v2/photos.spec.ts`) ne tournent que sur la base v2 après `v2/0029`.

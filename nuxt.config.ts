@@ -276,6 +276,8 @@ export default defineNuxtConfig({
         }
         // Aucune règle pour Supabase (auth/v1, rest/v1, storage) ni les autres /api/** :
         // ces requêtes passent toujours par le réseau, jamais par le cache.
+        // Photos privées (v2, phase 8) : URL signées sur le domaine Supabase, donc jamais en cache ici (une photo privée ne
+        // doit pas survivre à la déconnexion) ; la page publique /r/<jeton> passe par /api/v2/shared/<jeton>/photo, exclue aussi.
       ]
     },
     client: {
