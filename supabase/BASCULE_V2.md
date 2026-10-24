@@ -101,9 +101,16 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
   jouer AVANT le retour arrière de 0019 (les fonctions de 0021 s'appuient sur `private.*`). Les clients v2 qui appellent les
   fonctions supprimées échouent : retirer d'abord le code v2.
 
+### Où s'insère 0026 (phase 6B)
+
+* `supabase/migrations/0026_recipe_access.sql` : une seule fonction de lecture, `recipe_access(uuid)` (droit de la personne sur une recette lisible, pour afficher les bons
+  boutons). Dépend de 0019 et 0021 seulement ; **aucune table, colonne, politique ni donnée touchée**, donc sans effet pour la v1, avant ou après 0018 / 0020. À appliquer **avant**
+  le déploiement du code v2 (la fiche l'appelle). Un seul Run dans le SQL Editor (ou `apply_migration` sur le « go » de Nina).
+* Retour arrière : `supabase/rollback/0026_recipe_access_down.sql` (supprime la fonction ; retirer d'abord le code v2).
+
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
-Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
+Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
 pas l'utiliser.)
 
 * **0023 s'applique tout de suite après 0021** : `supabase/migrations/0023_social_rpcs.sql`, un seul Run dans le SQL Editor (ou
