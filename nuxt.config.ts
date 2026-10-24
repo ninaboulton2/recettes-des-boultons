@@ -134,7 +134,7 @@ export default defineNuxtConfig({
     aiModel: process.env.AI_MODEL || '',
     aiTranscribeModel: process.env.AI_TRANSCRIBE_MODEL || '',
     aiDailyQuota: process.env.AI_DAILY_QUOTA || '50',
-    // v2 (phase 7, DEVELOPER.md § 20.14) : plafonds par compte et budget global (0 = aucun budget).
+    // v2 (phase 7, DEVELOPER.md § 20.15) : plafonds par compte et budget global (0 = aucun budget).
     aiNewAccountDailyQuota: process.env.AI_NEW_ACCOUNT_DAILY_QUOTA || '20',
     aiNewAccountDays: process.env.AI_NEW_ACCOUNT_DAYS || '30',
     aiMonthlyBudgetCalls: process.env.AI_MONTHLY_BUDGET_CALLS || '0',
@@ -289,6 +289,8 @@ export default defineNuxtConfig({
         }
         // Aucune règle pour Supabase (auth/v1, rest/v1, storage) ni les autres /api/** :
         // ces requêtes passent toujours par le réseau, jamais par le cache.
+        // Photos privées (v2, phase 8) : URL signées sur le domaine Supabase, donc jamais en cache ici (une photo privée ne
+        // doit pas survivre à la déconnexion) ; la page publique /r/<jeton> passe par /api/v2/shared/<jeton>/photo, exclue aussi.
       ]
     },
     client: {

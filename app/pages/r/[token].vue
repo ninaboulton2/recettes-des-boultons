@@ -40,6 +40,7 @@
         :base-servings="scaler.baseServings.value"
         :can-scale="scaler.canScale.value"
         :is-scaled="scaler.isScaled.value"
+        :photo-src="photoSrc"
         @update:servings="scaler.setServings"
       />
 
@@ -113,6 +114,8 @@ const { data: shared, status } = await useAsyncData(
 )
 
 const recipe = computed(() => (shared.value && token.value ? localizeFull(sharedToRecipe(shared.value, `shared:${token.value}`)) : null))
+// Photo : route serveur qui vérifie le jeton puis redirige vers une URL signée de 2 minutes (le bucket est privé).
+const photoSrc = computed(() => (shared.value?.has_photo && token.value ? `/api/v2/shared/${token.value}/photo` : null))
 const ingredientSections = computed(() => sectionsWithIngredients(recipe.value?.sections ?? []))
 const instructionSections = computed(() => sectionsWithInstructions(recipe.value?.sections ?? []))
 const hasSteps = computed(() => instructionSections.value.length > 0)

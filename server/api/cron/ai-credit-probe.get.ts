@@ -8,7 +8,7 @@ import { probeAiCredit, type ProbeOutcome } from '../../utils/ai/probe'
 /**
  * GET /api/cron/ai-credit-probe — tâche planifiée Vercel (une fois par jour sur Hobby) : si l'alerte de crédit IA est active,
  * un appel d'essai minimal (« ping », 16 jetons au plus, ~0,000003 $) vérifie si le fournisseur répond de nouveau et lève
- * l'alerte si oui. Sans alerte active : aucun appel. Protégée par `CRON_SECRET`. Détail : DEVELOPER.md § 20.14.
+ * l'alerte si oui. Sans alerte active : aucun appel. Protégée par `CRON_SECRET`. Détail : DEVELOPER.md § 20.15.
  */
 export default defineEventHandler(async (event): Promise<ProbeOutcome> => {
   try {

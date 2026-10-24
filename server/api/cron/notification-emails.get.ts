@@ -8,7 +8,7 @@ import { sendNotificationEmails, type ClaimedNotification, type NotificationEmai
  * GET /api/cron/notification-emails — tâche planifiée Vercel (`vercel.json`, une fois par jour sur le plan Hobby) : envoie un
  * e-mail de synthèse par personne pour ses demandes d'ami et invitations de groupe non lues des 48 dernières heures, si elle
  * accepte les e-mails (`profiles.notifications`). Protégée par `CRON_SECRET` (Authorization: Bearer). Sans Resend configuré :
- * ne réclame rien et répond `skipped`. Détail : DEVELOPER.md § 20.14.
+ * ne réclame rien et répond `skipped`. Détail : DEVELOPER.md § 20.15.
  */
 export default defineEventHandler(async (event): Promise<NotificationEmailReport> => {
   try {

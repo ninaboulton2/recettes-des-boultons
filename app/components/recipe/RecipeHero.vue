@@ -1,5 +1,19 @@
 <template>
   <header class="space-y-5">
+    <!-- v2 : photo de la recette (adresse signée, ou route serveur de la page publique) ; absente en v1 -->
+    <div v-if="photoSrc" class="overflow-hidden rounded-xl border border-default bg-muted print:break-inside-avoid">
+      <img
+        :src="photoSrc"
+        alt=""
+        width="1200"
+        height="675"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        class="aspect-video w-full object-cover"
+        data-testid="recipe-photo"
+      >
+    </div>
+
     <!-- Catégorie, tags, titre, description -->
     <div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2">
@@ -64,7 +78,7 @@ import { computed } from 'vue'
 import type { Recipe } from '#shared/types'
 import { categoryI18nKey, totalTime } from '#shared/utils/recipes'
 
-/** En-tête de la fiche (sans image) : catégorie, titre, temps, compteur de portions. */
+/** En-tête de la fiche (photo en v2 seulement) : catégorie, titre, temps, compteur de portions. */
 const props = withDefaults(defineProps<{
   recipe: Recipe
   /** Portions cibles (compteur) ; `null` si la recette n'en a pas. */
@@ -72,7 +86,10 @@ const props = withDefaults(defineProps<{
   baseServings?: number | null
   canScale?: boolean
   isScaled?: boolean
+  /** v2 : adresse de la photo (déjà signée) ; rien en v1. */
+  photoSrc?: string | null
 }>(), {
+  photoSrc: null,
   servings: null,
   baseServings: null,
   canScale: false,

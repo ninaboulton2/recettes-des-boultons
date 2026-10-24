@@ -56,7 +56,7 @@ const modelValue = defineModel<File | null>({ default: null })
 /** La photo actuelle doit être retirée à l'enregistrement. */
 const removed = defineModel<boolean>('removed', { default: false })
 
-const { publicUrl } = useRecipePhoto()
+const currentSrc = usePhotoSrc(() => props.currentPath)
 const invalid = ref(false)
 const objectUrl = ref<string | null>(null)
 
@@ -74,7 +74,7 @@ onBeforeUnmount(() => {
 const previewUrl = computed(() => {
   if (objectUrl.value) return objectUrl.value
   if (removed.value) return null
-  return publicUrl(props.currentPath)
+  return currentSrc.value
 })
 
 const onFile = (file: File | File[] | null | undefined) => {

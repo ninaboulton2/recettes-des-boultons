@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '#shared/types/database'
 import {
@@ -15,6 +15,7 @@ import {
 import {
   addToCookbook,
   copyRecipe,
+  copyRecipeWithPhoto,
   dismissPrompt,
   listAuthorRecipes,
   listCookbook,
@@ -124,6 +125,34 @@ describe('fonctions du carnet (RPC)', () => {
     await expect(addToCookbook(client, { recipeId: 'pas-un-uuid' })).rejects.toThrow(/Données invalides : recipeId/)
     await expect(copyRecipe(client, {} as never)).rejects.toThrow(/Données invalides/)
     expect(rpc).not.toHaveBeenCalled()
+  })
+
+  describe('copyRecipeWithPhoto (route serveur, phase 8)', () => {
+    afterEach(() => { vi.unstubAllGlobals() })
+    const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+
+    it('appelle POST /api/v2/recipes/<id>/copy et renvoie l\'id de la copie et photoCopied', async () => {
+      const fetchMock = vi.fn(async () => json(200, { success: true, id: B, photoCopied: true }))
+      vi.stubGlobal('fetch', fetchMock)
+      expect(await copyRecipeWithPhoto({ recipeId: A })).toEqual({ id: B, photoCopied: true })
+      expect(fetchMock).toHaveBeenCalledWith(`/api/v2/recipes/${A}/copy`, expect.objectContaining({ method: 'POST', credentials: 'same-origin' }))
+      vi.stubGlobal('fetch', vi.fn(async () => json(200, { success: true, id: B, photoCopied: false })))
+      expect((await copyRecipeWithPhoto({ recipeId: A })).photoCopied).toBe(false)
+    })
+
+    it('refus du serveur : l\'erreur porte le SQLSTATE attendu par sharingErrorKey (403 → 42501, 404 → P0002, 429 → 54000)', async () => {
+      for (const [status, code] of [[403, '42501'], [404, 'P0002'], [429, '54000']] as const) {
+        vi.stubGlobal('fetch', vi.fn(async () => json(status, { statusCode: status, statusMessage: 'x' })))
+        await expect(copyRecipeWithPhoto({ recipeId: A })).rejects.toMatchObject({ code })
+      }
+    })
+
+    it('identifiant invalide : le serveur n\'est pas appelé', async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      await expect(copyRecipeWithPhoto({ recipeId: 'pas-un-uuid' })).rejects.toThrow(/Données invalides/)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
   })
 
   it('bannières : pendingPrompts et dismissPrompt', async () => {

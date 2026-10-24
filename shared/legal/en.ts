@@ -110,7 +110,15 @@ export const legalEn: LegalTexts = {
           id: 'photos',
           title: 'Recipe photos',
           blocks: [
-            { type: 'p', text: 'Photos are stored at Supabase. Today, a photo can be reached by anyone who knows its exact address (a long address that cannot be guessed and is never published in a list), even if the recipe itself is private. A planned change will make photos private: they will only be visible to people allowed to see the recipe. This page will then be updated.' }
+            { type: 'p', text: 'Photos are stored at Supabase and are private: a photo is only visible to people who are allowed to see the recipe. There is no public address for a photo. The application shows each photo through a temporary link (valid for about an hour), issued only if your account has access to the recipe.' },
+            {
+              type: 'ul',
+              items: [
+                'Public link to a recipe: if you create a sharing link, the recipe photo is visible to anyone who has that link, without an account, as long as the link is active. Revoking the link (or deleting the recipe) stops access: the temporary links issued are very short (2 minutes).',
+                'Copying a recipe: the person who copies your recipe gets their own copy of the photo, which then belongs to them and stays with them even if you delete the original.',
+                'Replacing or deleting: the old photo is erased from storage when you replace or remove it, and all photos of a recipe are erased along with the recipe (and with your account).'
+              ]
+            }
           ]
         },
         {

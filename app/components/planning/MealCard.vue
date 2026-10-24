@@ -11,16 +11,12 @@
       class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted print:hidden"
       :class="photoUrl ? 'lg:size-7' : 'lg:hidden'"
     >
-      <NuxtImg
+      <RecipePhoto
         v-if="photoUrl"
         :src="photoUrl"
-        alt=""
         :width="32"
         :height="32"
         densities="x1 x2"
-        fit="cover"
-        format="webp"
-        loading="lazy"
         class="size-full object-cover"
       />
       <UIcon
@@ -80,13 +76,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const localePath = useLocalePath()
-const { publicUrl } = useRecipePhoto()
 
 const { lang } = useRecipeLocale()
 const title = computed(() => mealTitle(props.meal, t('planning.meal.untitled'), lang.value))
 
-/** URL publique de la photo (bucket `recipe-photos`), `null` sans photo. */
-const photoUrl = computed(() => publicUrl(props.meal.recipe?.photoPath))
+/** Adresse de la photo (URL publique en v1, signée en v2), `null` sans photo. */
+const photoUrl = usePhotoSrc(() => props.meal.recipe?.photoPath)
 
 const menuItems = computed(() => [
   [

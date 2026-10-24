@@ -45,7 +45,7 @@ Les politiques de la v1 ne sont pas touchées : tout le monde lit encore tout, s
 | **Compte neuf créé dans la v1** (inscription par e-mail ou Google, toujours ouverte) | **Casse** : il n'est dans aucun groupe, donc il ne voit **aucune recette**. |
 | Recette **créée par Nina après** 0020 | Lisible par les membres du groupe, mais **pas modifiable** par eux : le droit `edit_original` n'est posé par 0018 que sur les recettes existantes (voir « Choix de conception » n° 3). |
 | 2ᵉ admin, jeton périmé (≤ 1 h) | Voit encore les boutons d'édition ; ses écritures passent quand même sur les 181 recettes (droit du groupe), **pas** la suppression. |
-| Photos | Le bucket `recipe-photos` reste **public** (0020, point 4) : l'adresse d'une photo marche encore sans compte. Privé en phase 8. |
+| Photos | Le bucket `recipe-photos` reste **public** (0020, point 4) : l'adresse d'une photo marche encore sans compte. Il devient privé avec `v2/0029_private_photos_switchover.sql` (étape 6 bis), qui doit suivre le déploiement du code v2. |
 | `profiles` | Chacun ne lit que sa ligne (la v1 ne lit que la sienne) : sans conséquence. |
 | `save_recipe_translation` | Garde-fou `is_admin()` conservé : Nina seule, comme avant. |
 
@@ -112,9 +112,18 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
 
 * `supabase/migrations/0028_ai_credit_email.sql` : deux colonnes **nullables** (`profiles.ai_daily_quota`, `notifications.emailed_at`), un index partiel, 10 fonctions (quota du jour, état du service, alertes de crédit, e-mails de notification ; celles du serveur sont réservées à `service_role`).
   Dépend de 0012 (`ai_usage`), 0017 (`system_alerts`, `notifications`) et 0019 (`private.is_support`, droits de colonnes de `profiles`). **Aucune politique, déclencheur ni donnée existante modifiés : sans effet pour la v1**, avant ou après 0018 / 0020 ; `check_ai_quota` (0012), utilisée par la v1, est inchangée. Compatible avec le SQL Editor (aucune table temporaire). Un seul Run (ou `apply_migration` sur le « go » de Nina), **avant** le déploiement du code v2.
-* **Variables à poser dans Vercel avant de promouvoir le code v2** (détail et valeurs : `DEVELOPER.md` § 20.14) : `SUPABASE_SECRET_KEY` (déjà posée pour la suppression de compte), **`CRON_SECRET`** (32 caractères aléatoires ou plus ; sans lui les deux tâches planifiées de `vercel.json` répondent 503), `ALERT_EMAIL`, et, quand le domaine est prêt, `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`. Facultatives : `AI_NEW_ACCOUNT_DAILY_QUOTA` (20), `AI_NEW_ACCOUNT_DAYS` (30), `AI_MONTHLY_BUDGET_USD` (5 suggéré). **Sans Resend, aucun e-mail n'est envoyé et rien ne casse.**
-* Après le déploiement : Vercel → Settings → Cron Jobs doit lister `/api/cron/ai-credit-probe` et `/api/cron/notification-emails` ; le SMTP d'authentification de Supabase se branche à part (procédure en § 20.14, rien d'automatisé).
+* **Variables à poser dans Vercel avant de promouvoir le code v2** (détail et valeurs : `DEVELOPER.md` § 20.15) : `SUPABASE_SECRET_KEY` (déjà posée pour la suppression de compte), **`CRON_SECRET`** (32 caractères aléatoires ou plus ; sans lui les deux tâches planifiées de `vercel.json` répondent 503), `ALERT_EMAIL`, et, quand le domaine est prêt, `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`. Facultatives : `AI_NEW_ACCOUNT_DAILY_QUOTA` (20), `AI_NEW_ACCOUNT_DAYS` (30), `AI_MONTHLY_BUDGET_USD` (5 suggéré). **Sans Resend, aucun e-mail n'est envoyé et rien ne casse.**
+* Après le déploiement : Vercel → Settings → Cron Jobs doit lister `/api/cron/ai-credit-probe` et `/api/cron/notification-emails` ; le SMTP d'authentification de Supabase se branche à part (procédure en § 20.15, rien d'automatisé).
 * **Retour arrière** : `supabase/rollback/0028_ai_credit_email_down.sql` (supprime fonctions, index et les deux colonnes ; les notifications et `system_alerts` restent). À jouer **après** avoir retiré le code v2 (ou repassé `NUXT_PUBLIC_V2` à false) : le serveur v2 appelle ces fonctions. Indépendant de 0018 / 0020.
+
+### Où s'insèrent 0029 et la bascule des photos (phase 8)
+
+Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres → **0018** → **0020** → **`v2/0029_private_photos_switchover.sql`** → code v2.
+
+* **`supabase/migrations/0029_shared_recipe_photo.sql` s'applique tout de suite** (avec 0026 et 0027) : une seule fonction, `shared_recipe_photo_path(uuid)`, réservée à `service_role`. Aucune table, colonne, politique ni donnée : sans effet pour la v1. À appliquer **avant** le déploiement du code v2 (la photo de la page publique l'appelle).
+* **`supabase/v2/0029_private_photos_switchover.sql` fait partie de la bascule** (étape 6 bis, juste après 0020) : le bucket `recipe-photos` devient **privé**. **À ne jamais appliquer avant le déploiement du code v2** : la v1 affiche les photos par leur adresse publique ; bucket privé = photos cassées en v1. Il refuse de tourner si 0020 n'est pas appliquée. Les chemins ne changent pas, aucun fichier n'est déplacé.
+* **Variable Vercel** : `SUPABASE_SECRET_KEY` (clé service_role, côté serveur seulement), déjà demandée pour la suppression de compte, sert aussi à signer la photo de la page publique, copier une photo, et nettoyer le stockage. Sans elle, ces routes répondent 500 (le reste marche).
+* **Retour arrière** : `supabase/rollback/0029_private_photos_switchover_down.sql` (bucket redevient public, suppression de photo de nouveau permise aux éditeurs) **AVANT** `0020_rls_switchover_down`. Puis `0029_shared_recipe_photo_down.sql` (indépendant de 0018 / 0020, après avoir retiré le code v2).
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
@@ -143,6 +152,7 @@ pas l'utiliser.)
 | 4 | Remplissage `v2/0018_v2_data_fill.sql` | Claude, sur le « go » |
 | 5 | Contrôles 0018 | Claude |
 | 6 | Bascule `v2/0020_rls_switchover.sql` | Claude, sur le « go » |
+| 6 bis | Bascule des photos `v2/0029_private_photos_switchover.sql` (juste après 0020) | Claude, sur le « go » |
 | 7 | Promotion du code v2 (déjà construit) | Nina / Claude |
 | 8 | Vérification d'accès des comptes (§ 4.3, phase 11) | Nina |
 | 9 | Nettoyage | Claude |
@@ -268,6 +278,22 @@ select count(*) from pg_policies where schemaname = 'public' and tablename in
   and (roles <> '{authenticated}' or qual ~ 'is_admin' or with_check ~ 'is_admin');                      -- 0
 ```
 
+### Étape 6 bis — Photos privées (`v2/0029_private_photos_switchover.sql`)
+
+Tout de suite après 0020, dans la même fenêtre sensible. NOTICE : `[v2/0029] bucket recipe-photos privé ; lecture = can_read_recipe, écriture = can_edit_recipe, suppression = auteur`.
+
+Contrôles :
+
+```sql
+select public from storage.buckets where id = 'recipe-photos';                                           -- false
+select policyname, cmd, roles from pg_policies where schemaname = 'storage' and tablename = 'objects'
+ and policyname like 'recipe_photos_%' order by 1;           -- 4 lignes, toutes {authenticated} : delete_owner, insert_editor, select_readable, update_editor
+select has_function_privilege('anon', 'public.shared_recipe_photo_path(uuid)', 'execute');              -- false
+```
+
+Après la promotion (étape 7), à la main : (1) une adresse `…/storage/v1/object/public/recipe-photos/<id>/<fichier>` copiée avant la bascule répond une erreur ; (2) connecté, les cartes et la fiche affichent les photos (l'adresse de l'image contient `/object/sign/` et `token=`) ;
+(3) une recette partagée par lien : la page `/r/<jeton>` en navigation privée affiche la photo ; (4) copier une recette qui a une photo : la copie a sa photo.
+
 ### Étape 7 — Promotion du code v2
 
 Vercel → le déploiement v2 déjà construit → **Promote to Production**. Contrôler tout de suite l'accueil et la
@@ -302,6 +328,7 @@ permettent le retour arrière). Elles seront retirées avec le « contract » (0
 
 À faire **vite** (avant que la v2 serve) : voir l'avertissement en bas.
 
+0. **Photos d'abord** — `supabase/rollback/0029_private_photos_switchover_down.sql` (si la bascule des photos a été appliquée) : le bucket redevient public et la suppression de photo redevient permise aux éditeurs. Contrôle : `select public from storage.buckets where id = 'recipe-photos'` → `true`. Sans cela, la v1 afficherait des photos cassées.
 1. **0020 down** — `supabase/rollback/0020_rls_switchover_down.sql` : le site redevient « tout le monde lit »
    (la v1 refonctionne). Contrôle : le nombre de politiques sur `recipes` est de nouveau 4 (`recipes_read_public`…).
 2. **0018 down** — `supabase/rollback/0018_v2_data_fill_down.sql` (refuse tant que 0020 est appliquée) : `owner_id`

@@ -1,7 +1,9 @@
+import { toValue, watch, ref, type MaybeRefOrGetter, type Ref } from 'vue'
 import { translateKey } from './useApiError'
 import type { Database } from '#shared/types/database'
+import { createSignedUrlResolver } from '~/utils/signedPhotoUrls'
 
-/** Bucket Storage public des photos de recettes (migration 0010). */
+/** Bucket Storage des photos de recettes (migration 0010) : public en v1, PRIVÉ en v2 après la bascule `v2/0029` (URL signées). */
 export const RECIPE_PHOTO_BUCKET = 'recipe-photos'
 /** Plus grand côté après redimensionnement (le plan Supabase gratuit n'a pas de transformation d'images). */
 export const RECIPE_PHOTO_MAX_DIMENSION = 1600
@@ -78,8 +80,34 @@ export async function resizeRecipeImage(file: File): Promise<ResizedImage> {
   return { blob: jpeg, contentType: 'image/jpeg', extension: 'jpg', width, height }
 }
 
+type PhotoClient = ReturnType<typeof useSupabaseClient<Database>>
+
+/** Un résolveur par onglet (cache partagé entre toutes les cartes) ; `null` côté serveur (rien n'est signé pendant le rendu serveur). */
+let resolver: ReturnType<typeof createSignedUrlResolver> | null = null
+function signedResolver(supabase: PhotoClient) {
+  if (!resolver) {
+    resolver = createSignedUrlResolver({
+      sign: (paths, ttl) => supabase.storage.from(RECIPE_PHOTO_BUCKET).createSignedUrls(paths, ttl),
+      store: (() => {
+        try {
+          return window.sessionStorage
+        } catch {
+          return null
+        }
+      })()
+    })
+  }
+  return resolver
+}
+
+/** Oublie les URL signées (déconnexion) : une photo privée ne doit pas rester accessible après la session. */
+export function clearSignedPhotoUrls(): void {
+  resolver?.clear()
+  resolver = null
+}
+
 /**
- * Photos de recettes : URL publique, redimensionnement client, téléversement
+ * Photos de recettes : URL publique (v1) ou signée (v2), redimensionnement client, téléversement
  * dans `recipe-photos/<recipeId>/<timestamp>.webp` et suppression. Les
  * écritures passent par le client Supabase de l'utilisateur (RLS : admin).
  */
@@ -121,5 +149,35 @@ export function useRecipePhoto() {
     if (removeError) throw removeError
   }
 
-  return { publicUrl, uploadPhoto, removePhoto, removeRecipePhotos, resizeImage: resizeRecipeImage }
+  /**
+   * v2 : URL signée (1 h) d'un chemin, via le client de la personne (le RLS décide : droit de lecture de la recette). Les demandes
+   * de la même courte fenêtre partent en un seul `createSignedUrls`. `null` si refusée ou sans chemin. Navigateur seulement.
+   */
+  const signedUrl = async (path: string | null | undefined): Promise<string | null> =>
+    path && import.meta.client ? signedResolver(supabase).resolve(path) : null
+
+  return { publicUrl, signedUrl, uploadPhoto, removePhoto, removeRecipePhotos, resizeImage: resizeRecipeImage }
+}
+
+/**
+ * Adresse d'affichage d'une photo de recette, réactive.
+ *  - v1 : URL publique du bucket (synchrone, rendue côté serveur comme avant) ;
+ *  - v2 : URL signée, obtenue côté navigateur (sans photo affichée avant : l'illustration de repli reste visible, puis la photo
+ *    apparaît). Les cartes d'une même liste sont regroupées en un seul appel (`createSignedUrls`).
+ */
+export function usePhotoSrc(path: MaybeRefOrGetter<string | null | undefined>): Ref<string | null> {
+  const { publicUrl, signedUrl } = useRecipePhoto()
+  const src = ref<string | null>(null)
+  if (!useV2()) {
+    watch(() => toValue(path), (value) => { src.value = publicUrl(value) }, { immediate: true })
+    return src
+  }
+  watch(() => toValue(path), async (value) => {
+    if (!import.meta.client) return
+    src.value = null
+    if (!value) return
+    const url = await signedUrl(value)
+    if (toValue(path) === value) src.value = url
+  }, { immediate: true })
+  return src
 }

@@ -37,6 +37,7 @@ interface DeleteResponse {
  */
 export const useRecipesStore = defineStore('recipes', () => {
   const { removeRecipePhotos } = useRecipePhoto()
+  const v2 = useV2()
   const currentCategory = ref<string | null>(null)
   const searchQuery = ref('')
   const selectedTags = ref<string[]>([])
@@ -132,15 +133,19 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
-  /** Supprime la recette ; ses photos (bucket `recipe-photos`) sont retirées d'abord. */
+  /** Supprime la recette ; ses photos (bucket `recipe-photos`) sont retirées d'abord (v1) ou par le serveur après coup (v2). */
   const deleteRecipe = async (id: string) => {
     try {
       isLoading.value = true
 
-      try {
-        await removeRecipePhotos(id)
-      } catch (photoError) {
-        console.warn('[recettes] photos non supprimées du bucket', photoError)
+      // v1 : photos retirées par le navigateur, avant la suppression. v2 : par le serveur (/api/delete-recipe), APRÈS la
+      // suppression réussie (une suppression refusée ne doit pas faire perdre la photo).
+      if (!v2) {
+        try {
+          await removeRecipePhotos(id)
+        } catch (photoError) {
+          console.warn('[recettes] photos non supprimées du bucket', photoError)
+        }
       }
 
       // Appeler l'API pour supprimer la recette

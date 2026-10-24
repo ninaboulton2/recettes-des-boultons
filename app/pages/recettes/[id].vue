@@ -28,6 +28,7 @@
         :base-servings="scaler.baseServings.value"
         :can-scale="scaler.canScale.value"
         :is-scaled="scaler.isScaled.value"
+        :photo-src="heroPhoto"
         @update:servings="scaler.setServings"
       />
 
@@ -201,6 +202,8 @@ const { data: entryCategory } = await useAsyncData<string | null>(
 // L'éditeur, lui, reçoit toujours la version d'origine (`sourceRecipe`).
 const { lang, localizeFull } = useRecipeLocale()
 const recipe = computed(() => (sourceRecipe.value ? localizeFull(sourceRecipe.value) : null))
+// v2 : photo (URL signée, obtenue dans le navigateur) en tête de la fiche ; la v1 n'affiche pas de photo sur la fiche
+const heroPhoto = usePhotoSrc(() => (v2 ? sourceRecipe.value?.photoPath : null))
 
 // Discret : dit d'où vient le texte quand ce n'est pas du texte écrit dans la langue de l'interface.
 const languageHint = computed(() => {
@@ -277,7 +280,7 @@ const removeFromCookbook = async () => {
 const copyRecipe = async () => {
   cookbookBusy.value = 'copy'
   try {
-    const copyId = await cookbookApi.copyRecipe({ recipeId: recipeId.value })
+    const { id: copyId } = await cookbookApi.copyRecipeWithPhoto({ recipeId: recipeId.value })
     recipesStore.refresh()
     toast.add({ title: t('recipeDetail.v2.copied'), color: 'success', icon: 'i-lucide-check' })
     await navigateTo(localePath(`/recettes/${copyId}`))

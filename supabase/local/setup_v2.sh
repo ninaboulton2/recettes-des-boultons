@@ -7,6 +7,7 @@
 #    → v2/0018_params.sql + supabase/local/v2_params.sql (propriétaire, pseudonymes factices)
 #    → v2/0018_v2_data_fill.sql          (groupe « Les Boultons » au thème {"preset":"boultons",…}, propriétaire, catégories)
 #    → v2/0020_rls_switchover.sql        (lecture privée : politiques v2)
+#    → v2/0029_private_photos_switchover.sql (bucket recipe-photos privé, suppression par l'auteur : phase 8)
 #    → supabase/local/v2_accounts.sql    (nouveau@local.test : accueil en 3 écrans ; ami@local.test)
 #
 #  Pré-requis : la stack tourne (`npm run db:local:up`) ; sinon ce script la démarre via up.sh.
@@ -59,6 +60,7 @@ run "$SUPA/v2/0018_params.sql"
 run "$HERE/v2_params.sql"
 run "$SUPA/v2/0018_v2_data_fill.sql"
 run "$SUPA/v2/0020_rls_switchover.sql"
+run "$SUPA/v2/0029_private_photos_switchover.sql"   # phase 8 : bucket recipe-photos privé (URL signées)
 
 # 4. Comptes neufs (après la bascule : ils ne sont pas dans le groupe)
 run "$HERE/v2_accounts.sql"
