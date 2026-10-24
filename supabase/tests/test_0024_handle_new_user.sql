@@ -20,5 +20,24 @@ begin
   assert position('raw_user_meta_data->>''role''' in pg_get_functiondef('public.handle_new_user'::regproc)) = 0, '0024 : la fonction ne lit pas le rôle';
 end $$;
 
+-- un compte sans profil ne peut s'insérer qu'un profil role='user'
+do $$
+declare d constant uuid := '00000000-0000-0000-0000-0000000024a4'; ok boolean;
+begin
+  insert into auth.users (id, email) values (d, 'sans-profil-24@test.local');
+  delete from public.profiles where id = d;
+  perform tests.login(d);
+  begin
+    insert into public.profiles (id, email, name, role) values (d, 'sans-profil-24@test.local', 'X', 'admin');
+    ok := true;
+  exception when insufficient_privilege then ok := false;
+  end;
+  assert not ok, '0024 : insertion directe d''un profil admin refusée';
+  insert into public.profiles (id, email, name, role) values (d, 'sans-profil-24@test.local', 'X', 'user');
+  perform tests.logout();
+  reset role;
+  assert (select role from public.profiles where id = d) = 'user', '0024 : insertion directe role=user permise';
+end $$;
+
 rollback;
 do $$ begin raise notice '[test_0024] OK'; end $$;
