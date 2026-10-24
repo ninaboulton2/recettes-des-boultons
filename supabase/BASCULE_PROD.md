@@ -489,7 +489,7 @@ de 0017, la table `dismissed_prompts` (bannières fermées) et 3 RPC. Applicable
 uniquement sur le « go » de Nina.
 
 1. **Appliquer 0019** (`apply_migration`, nom `0019_rls_helpers_social`). La numérotation saute 0018, réservé
-   au remplissage (phase 4).
+   au remplissage (phase 4) : il se trouve dans `supabase/v2/` et passe APRÈS 0019 (procédure : `BASCULE_V2.md`).
 2. **NOTICE attendue** (dernière ligne) :
    `[0019] helpers + 39 politiques sur 12 tables sociales ; politiques et fonctions existantes inchangées`.
    Un rejeu affiche en plus des « already exists, skipping » : normal.
@@ -528,7 +528,7 @@ uniquement sur le « go » de Nina.
 ### Bascule des politiques des recettes (fichier préparé : `supabase/v2/0020_rls_switchover.sql`)
 
 **Ne fait pas partie de la mise en production de 0019.** À appliquer à l'étape 5 du dossier (§4.2), après
-le remplissage 0018 (phase 4), avec le code v2 déployé en même temps : c'est ici que le site cesse d'être
+le remplissage 0018 (`supabase/v2/0018_v2_data_fill.sql`, procédure complète dans `BASCULE_V2.md`), avec le code v2 déployé en même temps : c'est ici que le site cesse d'être
 public. Le fichier est hors de `supabase/migrations/` exprès (aucun outil ne l'applique par erreur) et
 refuse de tourner si une recette n'a pas de `owner_id`.
 
@@ -571,6 +571,7 @@ code, noté à l'étape 3) → menu « … » → **Instant Rollback**. Effet en
 | Après 0015 | Requêtes de retour dans l'en-tête de `0015_data_cleanup.sql` (depuis les tables `*_backup_cleanup`). |
 | Après 0016 (§ 9) | L'ancien code fonctionne tel quel. Pour retirer 0016 : `supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions, `recipes.lang`, `units.abbr_en`, restaure `save_recipe`, `search_recipes`, `add_recipe_to_list`). |
 | Après 0017 (§ 10) | L'ancien code fonctionne tel quel. Pour retirer 0017 : `supabase/rollback/0017_social_schema_down.sql` (supprime les 11 tables sociales et les colonnes ajoutées à `recipes` et `profiles`). |
+| Après le remplissage 0018 (`BASCULE_V2.md`) | L'ancien code fonctionne tel quel (le 2ᵉ admin perd seulement l'édition). Retirer 0020 d'abord s'il est passée, puis `supabase/rollback/0018_v2_data_fill_down.sql`. |
 | Après 0019 (§ 11) | L'ancien code fonctionne tel quel. Pour retirer 0019 : `supabase/rollback/0019_rls_helpers_social_down.sql` (retirer d'abord la bascule 0020 si elle a été appliquée : `rollback/0020_rls_switchover_down.sql`). |
 | Après 0014 | Plus de sauvegarde en base : restaurer depuis l'export `pg_dump` (§ 0.1) avec `pg_restore` (à faire avec moi). |
 
