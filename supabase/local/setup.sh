@@ -111,7 +111,8 @@ if has_table public.recipes && [[ "$(sql "select count(*) from information_schem
   CONTRACTED=1
   echo "• 0013 déjà appliquée : 0003 → 0012 ne sont pas rejouées"
 fi
-if has_table public.groups; then echo "• Schéma social (0017+) déjà présent : 0003 → 0023 ne sont pas rejouées"; fi
+SOCIAL_PRESENT=0   # évalué AVANT la boucle : 0017 le rend vrai pendant le même passage
+if has_table public.groups; then SOCIAL_PRESENT=1; echo "• Schéma social (0017+) déjà présent : 0003 → 0023 ne sont pas rejouées"; fi
 for f in "$SUPA"/migrations/0*_*.sql; do
   b="$(basename "$f")"; n=$((10#${b:0:4}))
   (( n < 3 )) && continue
@@ -120,7 +121,7 @@ for f in "$SUPA"/migrations/0*_*.sql; do
   # Schéma social (0017+) déjà posé : 0003 → 0023 ne sont pas rejouées. 0016 et 0017 vérifient l'état d'avant (4 politiques,
   # aucune politique sociale) et 0020 (bascule v2) les change ; 0023 et 0025 ne se rejouent pas l'une sur l'autre
   # (surcharge de update_my_profile). 0024 et suivantes sont idempotentes.
-  if (( n < 24 )) && has_table public.groups; then continue; fi
+  if (( n < 24 && SOCIAL_PRESENT == 1 )); then continue; fi
   run "$f"
 done
 
