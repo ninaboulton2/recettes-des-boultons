@@ -1,6 +1,6 @@
 -- Tests de la BASCULE v2/0020 : les nouvelles politiques de recipes, recipe_sections,
 -- recipe_ingredients, instructions, recipe_translations, favorites (insertion) et du bucket recipe-photos.
--- Exécuté par run_local.sh APRÈS fill_simulated.sql (owner_id = compte admin du seed partout) et
+-- Exécuté par run_local.sh APRÈS le remplissage réel v2/0018 (owner_id = compte admin du seed partout) et
 -- APRÈS l'application de supabase/v2/0020_rls_switchover.sql. Transaction annulée à la fin.
 --
 -- Personnes : A auteur · B membre du groupe de A · C amie de A (hors groupe) · D étranger ·

@@ -4,8 +4,8 @@
 --  ⚠️  NE PAS APPLIQUER AVANT LA BASCULE v2 (phase 11 du plan). Ce fichier est
 --  volontairement HORS de `supabase/migrations/` : ni `setup.sh`, ni un outil
 --  qui applique « tout le dossier migrations » ne doit pouvoir le lancer par
---  erreur. Le harnais (supabase/tests/run_local.sh) l'applique, avec un
---  remplissage simulé de `owner_id`, et le teste.
+--  erreur. Le harnais (supabase/tests/run_local.sh) l'applique APRÈS le
+--  remplissage réel v2/0018_v2_data_fill.sql, et le teste.
 --
 --  QUAND : étape 5 du dossier (§4.2, « verrouillage »), APRÈS 0019 et APRÈS le
 --  remplissage 0018 (phase 4), le code v2 déployé en même temps. C'est ici que le

@@ -140,3 +140,25 @@ create or replace function tests.policy_fp() returns text language sql stable as
       or (schemaname = 'storage' and tablename = 'objects')
 $$;
 grant execute on function tests.policy_fp() to anon, authenticated, service_role, supabase_auth_admin;
+
+-- Empreinte des DONNÉES touchées par le remplissage v2/0018 (recettes, profils, tables sociales) :
+-- identique avant 0018 et après son retour arrière (sans les identifiants aléatoires : slug, nom du groupe) (voir run_local.sh). plpgsql : les tables sociales
+-- n'existent pas encore au moment où ce fichier est chargé.
+create or replace function tests.data_fp() returns text language plpgsql stable as $$
+declare r text;
+begin
+  select md5(
+    (select coalesce(string_agg(concat_ws('|', r.id, r.title, r.category, r.owner_id, c.slug, r.visibility, r.updated_at), E'\n' order by r.id), '') from public.recipes r left join public.categories c on c.id = r.category_id)
+    || '#' ||
+    (select coalesce(string_agg(concat_ws('|', p.id, p.role, p.display_name, p.cookbook_title, g.name, p.onboarded_at is not null), E'\n' order by p.id), '') from public.profiles p left join public.groups g on g.id = p.active_theme_group_id)
+    || '#' ||
+    (select concat_ws('|', (select count(*) from public.groups), (select count(*) from public.group_members),
+                           (select count(*) from public.recipe_grants), (select count(*) from public.categories),
+                           (select count(*) from public.cookbook_entries), (select count(*) from public.favorites),
+                           (select count(*) from public.planning), (select count(*) from public.shopping_items),
+                           (select count(*) from public.recipe_sections), (select count(*) from public.recipe_ingredients),
+                           (select count(*) from public.instructions)))
+  ) into r;
+  return r;
+end $$;
+grant execute on function tests.data_fp() to anon, authenticated, service_role, supabase_auth_admin;
