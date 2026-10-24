@@ -89,6 +89,9 @@ les tokens émis en local portent le claim `user_role` (`admin` / `user`), exact
 `nouveau@local.test` / `ami@local.test`. Puis `NUXT_PUBLIC_V2=true` dans `.env.local` et `npm run dev:local`. Cette base n'est plus compatible v1 :
 retour à la v1 par `npm run db:local:reset`. Parcours e2e v2 : `npm run test:e2e:v2`.
 
+**Répétition complète de la bascule** (phase 10) : `npm run db:local:rehearsal` (`rehearsal.sh`, ≈ 30 s) rejoue `BASCULE_V2.md` sur le snapshot réel, avec contrôles
+(`rehearsal_checks.sql`), mesures (`rehearsal_perf.sql`) et retour arrière vérifié par empreinte (`rehearsal_fingerprint.sql`) ; voir `DEVELOPER.md` § 20.17 et `REPETITION_V2.md`.
+
 ## Basculer l'app entre prod et local
 
 Le module `@nuxtjs/supabase` lit `SUPABASE_URL` / `SUPABASE_KEY` ; `nuxt.config.ts` mappe

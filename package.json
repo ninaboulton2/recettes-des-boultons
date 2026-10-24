@@ -20,6 +20,7 @@
     "db:local:up": "bash supabase/local/up.sh",
     "db:local:reset": "npx supabase db reset && bash supabase/local/setup.sh",
     "db:local:v2": "bash supabase/local/up.sh && bash supabase/local/setup_v2.sh",
+    "db:local:rehearsal": "bash supabase/local/rehearsal.sh",
     "db:local:down": "npx supabase stop",
     "db:local:status": "npx supabase status",
     "db:local:test": "bash supabase/local/test.sh",
