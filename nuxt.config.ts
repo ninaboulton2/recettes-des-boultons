@@ -313,6 +313,25 @@ export default defineNuxtConfig({
     // useSupabaseClient() / serverSupabaseClient() deviennent typés.
     types: '~~/shared/types/database.ts'
   },
+  // --- En-têtes de sécurité (v1 et v2 : sans risque, voir DEVELOPER.md § 20.16) ---
+  // - X-Frame-Options + frame-ancestors : personne ne peut encadrer l'application (clickjacking). Le Picker Google Drive est une iframe
+  //   de Google DANS notre page : c'est Google qui est encadré, pas nous.
+  // - Permissions-Policy : le micro (dictée) est réservé à notre origine ; caméra, position, paiement et USB ne sont pas utilisés.
+  // - Referrer-Policy : jamais d'URL complète vers un autre site ; `no-referrer` sur les liens publics /r/<jeton> (le jeton est dans l'URL).
+  // La CSP complète n'est PAS posée (scripts en ligne de Nuxt sans nonce, Google Picker, Sentry, PWA) : voir DEVELOPER.md § 20.16.
+  routeRules: {
+    '/**': {
+      headers: {
+        'X-Frame-Options': 'DENY',
+        'Content-Security-Policy': 'frame-ancestors \'none\'',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
+      }
+    },
+    '/r/**': { headers: { 'Referrer-Policy': 'no-referrer' } },
+    '/en/r/**': { headers: { 'Referrer-Policy': 'no-referrer' } }
+  },
   nitro: {
     // Déploiement Vercel (anciennement dans nitro.config.ts, non supporté par Nuxt 4)
     preset: 'vercel',

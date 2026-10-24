@@ -120,7 +120,7 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
 
 Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres → **0018** → **0020** → **`v2/0029_private_photos_switchover.sql`** → code v2.
 
-* **`supabase/migrations/0029_shared_recipe_photo.sql` s'applique tout de suite** (avec 0026 et 0027) : une seule fonction, `shared_recipe_photo_path(uuid)`, réservée à `service_role`. Aucune table, colonne, politique ni donnée : sans effet pour la v1. À appliquer **avant** le déploiement du code v2 (la photo de la page publique l'appelle).
+* **`supabase/migrations/0029_shared_recipe_photo.sql` s'applique tout de suite** (avec 0026 et 0027) : une fonction, `shared_recipe_photo_path(uuid)` (renvoie l'id et le chemin, seulement si le chemin est `<id de la recette>/…`), réservée à `service_role`, et la contrainte `recipes_photo_path_in_own_folder` sur `recipes` (NOT VALID, puis validée si aucune ligne existante ne la viole ; un avis le dit sinon). Aucune politique ni donnée modifiée : **sans effet pour la v1**, dont l'éditeur n'écrit que `<id de la recette>/<horodatage>.webp`. `v2/0020` pose la même contrainte (même nom, idempotente) ; chaque retour arrière ne la retire que si l'autre n'est pas appliqué. À appliquer **avant** le déploiement du code v2 (la photo de la page publique l'appelle).
 * **`supabase/v2/0029_private_photos_switchover.sql` fait partie de la bascule** (étape 6 bis, juste après 0020) : le bucket `recipe-photos` devient **privé**. **À ne jamais appliquer avant le déploiement du code v2** : la v1 affiche les photos par leur adresse publique ; bucket privé = photos cassées en v1. Il refuse de tourner si 0020 n'est pas appliquée. Les chemins ne changent pas, aucun fichier n'est déplacé.
 * **Variable Vercel** : `SUPABASE_SECRET_KEY` (clé service_role, côté serveur seulement), déjà demandée pour la suppression de compte, sert aussi à signer la photo de la page publique, copier une photo, et nettoyer le stockage. Sans elle, ces routes répondent 500 (le reste marche).
 * **Retour arrière** : `supabase/rollback/0029_private_photos_switchover_down.sql` (bucket redevient public, suppression de photo de nouveau permise aux éditeurs) **AVANT** `0020_rls_switchover_down`. Puis `0029_shared_recipe_photo_down.sql` (indépendant de 0018 / 0020, après avoir retiré le code v2).
@@ -293,6 +293,10 @@ select has_function_privilege('anon', 'public.shared_recipe_photo_path(uuid)', '
 
 Après la promotion (étape 7), à la main : (1) une adresse `…/storage/v1/object/public/recipe-photos/<id>/<fichier>` copiée avant la bascule répond une erreur ; (2) connecté, les cartes et la fiche affichent les photos (l'adresse de l'image contient `/object/sign/` et `token=`) ;
 (3) une recette partagée par lien : la page `/r/<jeton>` en navigation privée affiche la photo ; (4) copier une recette qui a une photo : la copie a sa photo.
+
+**Purger les caches d'images (juste après la promotion, étape 7).** L'optimiseur d'images de Vercel (`/_vercel/image?url=…` en production, `/_ipx/…` en développement) a pu garder des copies des photos qui étaient publiques : tableau de bord Vercel → le projet → *Settings* → *Caches* → purger le cache CDN (*Purge CDN Cache*), ou invalider par image source (API Vercel « invalidate by src images » ; l'intitulé exact peut varier, à vérifier dans le tableau de bord). **Prévenir aussi** : le cache `images` du service worker (PWA) de chaque appareil n'est pas purgeable à distance ; ses entrées expirent seules (30 jours au plus, 120 entrées) et ne contiennent que ce que l'appareil avait déjà vu.
+
+**Avant la bascule 0028 (production) : régler `AI_MONTHLY_BUDGET_USD` (suggéré 5) ou `AI_MONTHLY_BUDGET_CALLS` dans Vercel** — sans budget, l'IA ouverte à tous n'a que le plafond par compte (`DEVELOPER.md` § 20.16).
 
 ### Étape 7 — Promotion du code v2
 
