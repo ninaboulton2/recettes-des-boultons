@@ -28,6 +28,8 @@ function parseEnv(file: string): Record<string, string> {
 
 export const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? ''
+/** Clé service_role LOCALE (publique et fixe de la CLI Supabase), lue de `.env.local` : création de comptes jetables. Vide = tests concernés ignorés. */
+export const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SECRET_KEY ?? ''
 
 export function assertLocalSupabase(): void {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {

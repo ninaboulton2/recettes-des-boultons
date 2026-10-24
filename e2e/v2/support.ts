@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { expect, type Page } from '@playwright/test'
-import { SUPABASE_ANON_KEY, SUPABASE_URL, assertLocalSupabase } from '../support/env'
+import { SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL, assertLocalSupabase } from '../support/env'
 import { waitForHydration } from '../support/app'
 
 /** Comptes créés par supabase/local/setup_v2.sh (mot de passe commun). */
@@ -182,4 +182,62 @@ export async function createGroupWith(creator: V2Account, name: string, members:
   }
   await owner.client.auth.signOut({ scope: 'local' })
   return groupId as string
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Phase 6D / 6E : comptes jetables, réglages, signalements
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Préfixe des données créées par les parcours 6D / 6E (groupes, recettes, comptes jetables). */
+export const E2E_6D = 'E2E_6D_'
+export const E2E_6E = 'E2E_6E_'
+
+export interface Disposable { email: string, userId: string, client: SupabaseClient }
+
+/** Connexion par la modale avec une adresse quelconque (compte jetable). */
+export async function loginAs(page: Page, email: string): Promise<void> {
+  await page.goto('/')
+  await waitForHydration(page)
+  await page.getByRole('banner').getByRole('button', { name: 'Connexion' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Connexion' })
+  await dialog.getByRole('textbox', { name: 'Email' }).fill(email)
+  await dialog.getByRole('textbox', { name: 'Mot de passe' }).fill(V2_PASSWORD)
+  await dialog.getByRole('button', { name: 'Se connecter' }).click()
+  await expect(dialog).toBeHidden()
+}
+
+/** Crée un compte jetable ACCUEILLI (pseudonyme + accueil terminé) par l'API d'administration locale. */
+export async function createDisposableUser(label: string): Promise<Disposable> {
+  assertLocalSupabase()
+  if (!SUPABASE_SERVICE_KEY) throw new Error('SUPABASE_SECRET_KEY absente de .env.local (clé service_role LOCALE)')
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  const email = `e2e-${label}-${Date.now().toString(36)}@local.test`
+  const created = await admin.auth.admin.createUser({ email, password: V2_PASSWORD, email_confirm: true, user_metadata: { name: label } })
+  if (created.error || !created.data.user) throw new Error(`Création du compte jetable impossible : ${created.error?.message}`)
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  const signed = await client.auth.signInWithPassword({ email, password: V2_PASSWORD })
+  if (signed.error) throw new Error(`Connexion du compte jetable impossible : ${signed.error.message}`)
+  const profile = await client.rpc('update_my_profile', { p_display_name: `Jetable ${label} ${Date.now().toString(36)}`, p_complete_onboarding: true })
+  if (profile.error) throw new Error(`Profil du compte jetable impossible : ${profile.error.message}`)
+  return { email, userId: created.data.user.id, client }
+}
+
+/** Le compte existe-t-il encore côté Auth ? */
+export async function userExists(userId: string): Promise<boolean> {
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  const { data } = await admin.auth.admin.getUserById(userId)
+  return !!data.user
+}
+
+/** Retire les comptes jetables restants et les données 6D / 6E (signalements, recettes, groupes, limites de débit). */
+export function cleanup6DE(): void {
+  sqlLocal(`
+    delete from public.reports;
+    delete from public.recipes where title like '${E2E_6E}%';
+    delete from public.groups where name like '${E2E_6D}%' or name like '${E2E_6E}%';
+    delete from auth.users where email like 'e2e-%@local.test';
+    delete from public.notifications;
+    delete from private.rate_events;
+    delete from public.friendships;
+  `)
 }

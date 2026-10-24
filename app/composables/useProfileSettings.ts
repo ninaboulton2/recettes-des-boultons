@@ -3,7 +3,7 @@ import type { updateMyProfileInputSchema } from '#shared/schemas/social'
 import type { Database } from '#shared/types/database'
 import { profileErrorKey } from '#shared/utils/profileErrors'
 import type { ProfileSettings } from '#shared/utils/social'
-import { updateMyProfile } from './useAccount'
+import { updateMyPreferences, updateMyProfile, type MyPreferences } from './useAccount'
 
 /**
  * Enregistre MON profil (RPC `update_my_profile`) et met à jour le profil du store `auth`, d'où viennent le
@@ -31,8 +31,21 @@ export function useProfileSettings() {
     return settings
   }
 
+  /**
+   * Langue préférée, notifications (colonnes de `profiles`, écriture directe) et visibilité dans la recherche (`update_my_profile`).
+   * Deux appels, pas une transaction : en cas d'échec du second, le premier reste enregistré (rien de grave : ce sont des préférences).
+   */
+  async function savePreferences(input: MyPreferences & { discoverable: boolean }): Promise<void> {
+    const me = authStore.currentUser?.id
+    if (!me) throw Object.assign(new Error('Connexion requise'), { code: '42501' })
+    const prefs = await updateMyPreferences(supabase, me, { language: input.language, notifications: input.notifications })
+    const current = authStore.profile
+    if (current) authStore.profile = { ...current, language: prefs.language, notifications: prefs.notifications }
+    await save({ discoverable: input.discoverable })
+  }
+
   /** Message d'erreur dans la langue courante. */
   const errorMessage = (error: unknown): string => t(`profile.errors.${profileErrorKey(error)}`)
 
-  return { save, errorMessage }
+  return { save, savePreferences, errorMessage }
 }

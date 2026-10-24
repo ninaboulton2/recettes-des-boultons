@@ -24,6 +24,28 @@
       </form>
     </section>
 
+    <!-- Préférences -->
+    <section class="space-y-4" aria-labelledby="prefs-heading" data-testid="settings-preferences">
+      <h2 id="prefs-heading" class="font-serif text-xl font-semibold text-highlighted">{{ $t('settings.preferences.title') }}</h2>
+      <form class="space-y-5 rounded-xl border border-default p-4 md:p-5" novalidate @submit.prevent="savePrefs">
+        <fieldset class="space-y-2">
+          <legend class="text-sm font-medium text-default">{{ $t('settings.preferences.language') }}</legend>
+          <div class="flex flex-wrap gap-x-6 gap-y-2">
+            <label v-for="code in LANGUAGES" :key="code" class="flex cursor-pointer items-center gap-2 text-sm">
+              <input v-model="language" type="radio" name="settings-language" :value="code" :data-testid="`settings-language-${code}`"> {{ $t(`settings.preferences.languages.${code}`) }}
+            </label>
+          </div>
+          <p class="text-sm text-muted">{{ $t('settings.preferences.languageHelp') }}</p>
+        </fieldset>
+        <USwitch v-model="notifications" :label="$t('settings.preferences.notifications')" :description="$t('settings.preferences.notificationsHelp')" data-testid="settings-notifications" />
+        <USwitch v-model="discoverable" :label="$t('settings.preferences.discoverable')" :description="$t('settings.preferences.discoverableHelp')" data-testid="settings-discoverable" />
+        <div class="flex items-center justify-end gap-3">
+          <p v-if="prefsError" class="text-sm text-error" role="alert" data-testid="prefs-error">{{ prefsError }}</p>
+          <UButton type="submit" :loading="saving === 'prefs'" :label="$t('ui.common.save')" data-testid="prefs-save" />
+        </div>
+      </form>
+    </section>
+
     <!-- Thème -->
     <section class="space-y-4" aria-labelledby="theme-heading" data-testid="settings-theme">
       <h2 id="theme-heading" class="font-serif text-xl font-semibold text-highlighted">{{ $t('settings.theme.title') }}</h2>
@@ -52,6 +74,9 @@
     </section>
 
     <CategoryManager />
+
+    <AccountExport />
+    <AccountDeletion />
   </div>
 </template>
 
@@ -62,21 +87,21 @@ import { COOKBOOK_TITLE_MAX, validateDisplayName } from '#shared/utils/profileEr
 import type { MyGroup } from '#shared/utils/social'
 
 /**
- * Réglages (v2) : profil, thème (personnel ou d'un de mes groupes), catégories. La phase 6D y ajoute la langue,
- * les notifications, la visibilité dans la recherche, l'export et la suppression du compte.
+ * Réglages (v2) : profil, préférences (langue, notifications, visibilité dans la recherche), thème (personnel ou d'un de mes
+ * groupes), catégories, export de mes données et suppression du compte (phase 6D).
  */
 definePageMeta({ middleware: 'v2-only' })
 
-const { t } = useI18n()
+const { t, locale, setLocale } = useI18n()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
-const { save, errorMessage } = useProfileSettings()
+const { save, savePreferences, errorMessage } = useProfileSettings()
 const { listMyGroups } = useGroups()
 const { $toast } = useNuxtApp()
 
 useHead({ title: () => t('settings.title') })
 
-const saving = ref<null | 'profile' | 'theme'>(null)
+const saving = ref<null | 'profile' | 'theme' | 'prefs'>(null)
 
 // ---- profil
 const displayName = ref(authStore.profile?.display_name ?? '')
@@ -95,6 +120,28 @@ async function saveProfile(): Promise<void> {
     $toast.success(t('settings.saved'))
   } catch (error) {
     nameError.value = errorMessage(error)
+  } finally {
+    saving.value = null
+  }
+}
+
+// ---- préférences (langue, notifications par e-mail, visibilité dans la recherche)
+const LANGUAGES = ['fr', 'en'] as const
+const language = ref<'fr' | 'en'>(locale.value === 'en' ? 'en' : 'fr')
+const notifications = ref(authStore.profile?.notifications !== false)
+const discoverable = ref(authStore.profile?.discoverable !== false)
+const prefsError = ref<string | null>(null)
+
+async function savePrefs(): Promise<void> {
+  prefsError.value = null
+  saving.value = 'prefs'
+  try {
+    await savePreferences({ language: language.value, notifications: notifications.value, discoverable: discoverable.value })
+    $toast.success(t('settings.saved'))
+    // L'interface suit la langue choisie (la préférence est aussi enregistrée pour les futurs e-mails).
+    if (language.value !== locale.value) await setLocale(language.value)
+  } catch (error) {
+    prefsError.value = errorMessage(error)
   } finally {
     saving.value = null
   }

@@ -127,6 +127,12 @@ export const updateMyProfileInputSchema = z.object({
   completeOnboarding: z.boolean().optional()
 })
 
+/** Langue préférée et notifications (colonnes `profiles.language` et `profiles.notifications`, écriture directe). */
+export const myPreferencesInputSchema = z.object({
+  language: z.enum(['fr', 'en'], { errorMap: () => ({ message: 'langue inconnue' }) }),
+  notifications: z.boolean({ required_error: 'requis', invalid_type_error: 'doit être vrai ou faux' })
+})
+
 /** `POST /api/account/delete` : saisie de confirmation = l'adresse e-mail du compte. */
 export const deleteAccountInputSchema = z.object({
   confirmEmail: z.string({ required_error: 'requis' }).trim().email('adresse e-mail invalide')

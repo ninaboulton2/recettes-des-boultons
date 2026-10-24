@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { z } from 'zod'
 import type { Database, Json } from '#shared/types/database'
-import { deleteAccountInputSchema, updateMyProfileInputSchema } from '#shared/schemas/social'
+import { deleteAccountInputSchema, myPreferencesInputSchema, updateMyProfileInputSchema } from '#shared/schemas/social'
 import {
   toDeletionBlocker,
   toProfileSettings,
@@ -15,7 +15,7 @@ import { parseClientInput } from './useCookbook'
 /**
  * Profil et compte v2 (migration 0023, dossier §7.4) — profil : appel direct à la RPC `update_my_profile` avec la session ;
  * export : RPC `export_my_data` (3 par jour) ; suppression : route serveur `POST /api/account/delete` (clé service_role
- * côté serveur, jamais dans le navigateur). Aucune interface ici (phase 6D).
+ * côté serveur, jamais dans le navigateur). Interface : page `/reglages` (phase 6D).
  */
 
 type Client = SupabaseClient<Database>
@@ -43,6 +43,29 @@ export async function updateMyProfile(supabase: Client, input: z.input<typeof up
   const row = data?.[0]
   if (!row) throw new Error('Profil introuvable')
   return toProfileSettings(row)
+}
+
+export interface MyPreferences {
+  language: 'fr' | 'en'
+  /** Notifications par e-mail (colonne booléenne `profiles.notifications`, `true` par défaut). */
+  notifications: boolean
+}
+
+/**
+ * Langue préférée et notifications : écriture directe dans MA ligne de `profiles` (les colonnes `language` et `notifications`
+ * font partie des 11 que l'API autorise, 0019 ; `update_my_profile` ne les gère pas). `.select()` : 0 ligne = profil introuvable.
+ */
+export async function updateMyPreferences(supabase: Client, userId: string, input: MyPreferences): Promise<MyPreferences> {
+  const parsed = parseClientInput(myPreferencesInputSchema, input)
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ language: parsed.language, notifications: parsed.notifications })
+    .eq('id', userId)
+    .select('language, notifications')
+  if (error) throw error
+  const row = data?.[0]
+  if (!row) throw new Error('Profil introuvable')
+  return { language: row.language === 'en' ? 'en' : 'fr', notifications: row.notifications !== false }
 }
 
 /** Toutes mes données en JSON (« Télécharger mes données »). Les autres personnes n'y figurent que par pseudonyme. */
@@ -79,6 +102,7 @@ export function useAccount() {
   const supabase = useSupabaseClient<Database>()
   return {
     updateMyProfile: (input: z.input<typeof updateMyProfileInputSchema>) => updateMyProfile(supabase, input),
+    updateMyPreferences: (userId: string, input: MyPreferences) => updateMyPreferences(supabase, userId, input),
     exportMyData: () => exportMyData(supabase),
     accountDeletionBlockers: () => accountDeletionBlockers(supabase),
     deleteAccount: (input: z.input<typeof deleteAccountInputSchema>) => deleteAccount(input)
