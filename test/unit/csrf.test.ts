@@ -2,7 +2,7 @@ import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { createEvent } from 'h3'
 import { describe, expect, it } from 'vitest'
-import { csrfGuard, csrfRejection } from '../../server/utils/csrf'
+import { CSRF_EXEMPT_PATHS, csrfGuard, csrfRejection, normalizeCsrfPath } from '../../server/utils/csrf'
 import middleware from '../../server/middleware/csrf'
 
 const HOST = 'recettes.example.fr'
@@ -36,17 +36,34 @@ describe('garde CSRF (logique)', () => {
   it('accepte Origin absent (tests serveur, scripts, Playwright request) et les valeurs same-site / none', () => {
     expect(ok()).toBeNull()
     expect(ok({ secFetchSite: 'same-origin' })).toBeNull()
-    expect(ok({ secFetchSite: 'same-site' })).toBeNull()
     expect(ok({ secFetchSite: 'none' })).toBeNull()
+    expect(ok({ secFetchSite: 'same-site', origin: `https://${HOST}` })).toBeNull()   // même origine exacte
   })
 
-  it('ne touche ni les lectures ni les routes hors /api', () => {
+  it('same-site (autre sous-domaine) est refusé, sauf même origine exacte', () => {
+    expect(ok({ secFetchSite: 'same-site', origin: 'https://autre.example.fr' })).not.toBeNull()
+    expect(ok({ secFetchSite: 'same-site', origin: 'https://evil.recettes.example.fr' })).not.toBeNull()
+    expect(ok({ secFetchSite: 'same-site' })).not.toBeNull()   // pas d'Origin : on ne peut pas prouver la même origine
+  })
+
+  it('contrôle toute écriture, quel que soit le chemin (plus de test sur /api)', () => {
+    expect(ok({ path: '/login', secFetchSite: 'cross-site' })).not.toBeNull()
+    expect(ok({ path: '/apiary', secFetchSite: 'cross-site' })).not.toBeNull()
+    expect(ok({ path: '/%61pi/x', secFetchSite: 'cross-site' })).not.toBeNull()
+    expect(ok({ path: '/api', secFetchSite: 'cross-site' })).not.toBeNull()
+  })
+
+  it('ne touche pas les lectures', () => {
     expect(ok({ method: 'GET', secFetchSite: 'cross-site', origin: 'https://evil.example' })).toBeNull()
     expect(ok({ method: 'HEAD', secFetchSite: 'cross-site' })).toBeNull()
     expect(ok({ method: 'OPTIONS', secFetchSite: 'cross-site' })).toBeNull()
-    expect(ok({ path: '/login', secFetchSite: 'cross-site' })).toBeNull()
-    expect(ok({ path: '/apiary', secFetchSite: 'cross-site' })).toBeNull()
-    expect(ok({ path: '/api', secFetchSite: 'cross-site' })).not.toBeNull()
+  })
+
+  it('la liste blanche compare des chemins décodés', () => {
+    expect(normalizeCsrfPath('/%61pi/X/')).toBe('/api/x')
+    expect(normalizeCsrfPath('/%2561pi/x')).toBe('/api/x')   // double encodage
+    expect(normalizeCsrfPath('/%E0%A4%A')).toBe('/%e0%a4%a')   // séquence invalide : laissée telle quelle
+    expect(CSRF_EXEMPT_PATHS).toEqual([])
   })
 
   it('les routes IA et Drive existantes passent en même origine', () => {
@@ -79,5 +96,28 @@ describe('middleware server/middleware/csrf.ts', () => {
 
     const read = makeEvent('GET', '/api/recipes', { 'sec-fetch-site': 'cross-site' })
     expect(() => csrfGuard(read)).not.toThrow()
+  })
+
+  it.each([
+    ['/%61pi/x'],
+    ['/ap%69/x'],
+    ['/api/%78'],
+    ['/%2561pi/x'],
+    ['/login'],
+    ['/__nuxt_island/x']
+  ])('403 sur un vrai événement h3, chemin encodé ou hors /api : POST %s cross-site', (url) => {
+    expect(() => csrfGuard(makeEvent('POST', url, { 'sec-fetch-site': 'cross-site' }))).toThrowError(expect.objectContaining({ statusCode: 403 }))
+    expect(() => csrfGuard(makeEvent('DELETE', url, { origin: 'https://evil.example' }))).toThrowError(expect.objectContaining({ statusCode: 403 }))
+  })
+
+  it('403 pour Origin: null, 403 pour same-site d\'un autre sous-domaine', () => {
+    expect(() => csrfGuard(makeEvent('POST', '/%61pi/x', { origin: 'null' }))).toThrowError(expect.objectContaining({ statusCode: 403 }))
+    expect(() => csrfGuard(makeEvent('POST', '/api/x', { origin: 'https://autre.example.fr', 'sec-fetch-site': 'same-site' }))).toThrowError(expect.objectContaining({ statusCode: 403 }))
+  })
+
+  it('accepte la même origine et l\'absence de Origin / Sec-Fetch-Site, sur un chemin encodé aussi', () => {
+    expect(() => csrfGuard(makeEvent('POST', '/%61pi/x', { origin: `https://${HOST}`, 'sec-fetch-site': 'same-origin' }))).not.toThrow()
+    expect(() => csrfGuard(makeEvent('POST', '/api/%78', { origin: `https://${HOST}`, 'sec-fetch-site': 'same-site' }))).not.toThrow()
+    expect(() => csrfGuard(makeEvent('POST', '/ap%69/x', {}))).not.toThrow()
   })
 })

@@ -1,17 +1,43 @@
 import { createError, getHeader, getMethod, getRequestURL, type H3Event } from 'h3'
 
 /**
- * Garde CSRF des routes d'écriture de l'API (middleware `server/middleware/csrf.ts`).
+ * Garde CSRF des routes d'écriture (middleware `server/middleware/csrf.ts`).
  *
- * Refuse (403) tout POST / PUT / PATCH / DELETE sur `/api/**` quand :
+ * Refuse (403) toute requête dont la méthode n'est pas GET, HEAD ou OPTIONS, **quel que soit le chemin** (un test sur
+ * `startsWith('/api/')` du chemin brut se contourne par encodage : `POST /%61pi/x` atteint la route, car h3 décode avant de
+ * router), quand :
  *  - `Sec-Fetch-Site` vaut `cross-site` (envoyé par tous les navigateurs actuels), ou
+ *  - `Sec-Fetch-Site` vaut `same-site` (autre sous-domaine du même site) sans `Origin` strictement égal à l'hôte, ou
  *  - `Origin` est présent et son hôte diffère de celui de la requête (`Host`, ou `X-Forwarded-Host` derrière un proxy).
- * Laisse passer : même origine, `Sec-Fetch-Site: same-origin | same-site | none`, `Origin` absent (clients serveur, scripts, tests,
- * Playwright `request`), et les lectures (GET / HEAD / OPTIONS). Les routes IA et Drive, appelées par l'application en même origine,
- * ne sont donc pas touchées. Complète le cookie de session `SameSite=Lax`.
+ * Laisse passer : même origine, `Sec-Fetch-Site: same-origin | none`, `Origin` et `Sec-Fetch-Site` tous deux absents (clients
+ * serveur, scripts, tests, Playwright `request`) et les lectures. Complète le cookie de session `SameSite=Lax`.
+ *
+ * Exceptions : `CSRF_EXEMPT_PATHS` (liste blanche explicite, chemins DÉCODÉS), vide aujourd'hui. Vérifiées : aucune route
+ * d'écriture hors `/api`, les routes cron sont en GET, Nuxt / Nitro n'exposent pas de POST utile (`/__nuxt_island`, `/_ipx`,
+ * `/__nuxt_error` sont des GET), pas de webhook entrant, pas de tunnel Sentry.
  */
 
-const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+/** Chemins (décodés, en minuscules, sans `/` final) dispensés du contrôle. Vide : ajouter ici, jamais par préfixe. */
+export const CSRF_EXEMPT_PATHS: readonly string[] = []
+
+/** Chemin tel que le routeur le voit : décodé (en répétant, contre le double encodage), minuscules, sans `/` final. */
+export function normalizeCsrfPath(path: string): string {
+  let current = path
+  for (let i = 0; i < 3; i++) {
+    let decoded: string
+    try {
+      decoded = decodeURIComponent(current)
+    } catch {
+      break
+    }
+    if (decoded === current) break
+    current = decoded
+  }
+  const trimmed = current.toLowerCase().replace(/\/+$/, '')
+  return trimmed === '' ? '/' : trimmed
+}
 
 export interface CsrfInput {
   method: string
@@ -24,10 +50,12 @@ export interface CsrfInput {
 
 /** Motif du refus, ou `null` si la requête est acceptée. */
 export function csrfRejection(input: CsrfInput): string | null {
-  if (!WRITE_METHODS.has(input.method.toUpperCase())) return null
-  if (!(input.path === '/api' || input.path.startsWith('/api/'))) return null
-  if (input.secFetchSite?.trim().toLowerCase() === 'cross-site') return 'requête inter-sites'
+  if (SAFE_METHODS.has(input.method.toUpperCase())) return null
+  if (CSRF_EXEMPT_PATHS.includes(normalizeCsrfPath(input.path))) return null
+  const site = input.secFetchSite?.trim().toLowerCase()
+  if (site === 'cross-site') return 'requête inter-sites'
   const origin = input.origin?.trim()
+  if (site === 'same-site' && !origin) return 'même site sans origine'
   if (origin) {
     let originHost: string | null
     try {
