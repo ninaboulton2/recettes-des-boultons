@@ -64,6 +64,10 @@ export const recipeInputSchema = z.object({
   image: optionalText(500),
   /** Chemin dans le bucket storage `recipe-photos` (0010) ; `null` retire la photo. */
   photoPath: optionalText(500),
+  /** v2 (0021) : réglage « partager par défaut avec mes groupes ». Absent = inchangé. Ignoré pour un éditeur qui n'est pas l'auteur. */
+  visibility: z.enum(['private', 'groups'], { errorMap: () => ({ message: 'doit être private ou groups' }) }).optional(),
+  /** v2 (0021) : catégorie PERSONNELLE de l'auteur ; `null` la retire, absent = inchangée. */
+  categoryId: uuidSchema.nullish(),
   tags: z.array(z.string().trim().min(1, 'tag vide').max(50, 'trop long (max 50 caractères)')).nullish(),
   sections: z.array(recipeSectionInputSchema).max(50, 'trop de sections (max 50)').nullish()
 })
@@ -101,6 +105,9 @@ export interface SaveRecipePayload {
   image: string | null
   photo_path: string | null
   tags: string[]
+  /** v2 (0021) : omis tant que l'appelant ne le fournit pas (payload v1 identique). */
+  visibility?: 'private' | 'groups'
+  category_id?: string | null
   /** Langue du texte saisi (0016) ; absente = inchangée. */
   lang?: 'fr' | 'en'
   /** Traduction écrite dans la même transaction (0016) : `{ title, description, notes, tags, content, source_hash, model }`. */
@@ -163,6 +170,8 @@ export function toSaveRecipePayload(
     image: textOrNull(input.image),
     photo_path: textOrNull(input.photoPath),
     tags: input.tags ?? [],
+    ...(input.visibility ? { visibility: input.visibility } : {}),
+    ...(input.categoryId !== undefined ? { category_id: input.categoryId } : {}),
     ...(extra.lang ? { lang: extra.lang } : {}),
     ...(extra.translation ? { translation: extra.translation } : {}),
     sections

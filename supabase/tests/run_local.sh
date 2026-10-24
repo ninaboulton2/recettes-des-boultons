@@ -33,6 +33,10 @@
 #       arrière (empreinte des politiques identique à l'avant), ré-application + tests, retour final.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
+#  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
+#      (test_0021_v1_compat.sql : 0021 seule, avant 0018 / 0020), puis test_0021_recipe_rpcs.sql sous la chaîne
+#      complète 0017 → 0019 → 0021 → 0018 → 0020 (deux fois : avant et après le retour arrière de la bascule), et
+#      « up, down, up » de 0021 (save_recipe / save_recipe_translation restaurées à l'identique).
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
@@ -111,10 +115,14 @@ run "$HERE/test_0017_social_schema.sql"
 
 # ---------------------------------------------------------------- 0019 : fonctions d'aide + politiques sociales
 # (0018, le remplissage, est dans supabase/v2/ : il passe APRÈS 0019, voir plus bas)
+# 0021 (fonctions métier côté recettes) suit 0019 dans la même boucle (LATE = 0019, 0021).
+FN_SQL="select md5(string_agg(pg_get_functiondef(p.oid), E'\\n' order by p.oid::regprocedure::text)) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('save_recipe', 'save_recipe_translation')"
+FN_BEFORE="$("${PSQL[@]}" -At -c "$FN_SQL")"
 for f in "${LATE[@]}"; do run "$f"; done
 echo "▶ Rejeu idempotence 0019"
 for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n == 19 )); then run "$f"; fi; done
+run "$HERE/test_0021_v1_compat.sql"
 
 # Réussit si la commande ÉCHOUE avec un message contenant le motif : expect_fail <fichier> <motif> <description>
 expect_fail() {
@@ -197,6 +205,7 @@ run "$SWITCH"
 "${PSQL[@]}" -f "$SWITCH"
 run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
+run "$HERE/test_0021_recipe_rpcs.sql"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
@@ -212,6 +221,7 @@ echo "▶ Ré-application de la bascule, tests, retour arrière final"
 run "$SWITCH"
 run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
+run "$HERE/test_0021_recipe_rpcs.sql"
 run "$SWITCH_DOWN"
 [[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_BEFORE" ]] || { echo "❌ empreinte des politiques différente (2e retour arrière)"; exit 1; }
 
@@ -240,8 +250,25 @@ run "$FILL_DOWN"
 run "$HERE/fixtures_0018_down.sql"
 sql "drop table private.v2_fill_params"
 
+# ---------------------------------------------------------------- « up, down, up » pour 0021 (avant 0019 : elle en dépend)
+echo "▶ Rollback 0021, rejeu, état d'avant vérifié, ré-application"
+RB21="$SUPA/rollback/0021_recipe_rpcs_down.sql"
+run "$RB21"
+"${PSQL[@]}" -f "$RB21"
+[[ "$("${PSQL[@]}" -At -c "$FN_SQL")" == "$FN_BEFORE" ]] || { echo "❌ save_recipe / save_recipe_translation ne sont pas revenues à leur définition d'avant 0021"; exit 1; }
+"${PSQL[@]}" -c "do \$\$ begin
+  assert to_regprocedure('public.list_cookbook(uuid, text, int, int)') is null and to_regprocedure('public.get_shared_recipe(uuid, text)') is null
+     and to_regprocedure('private.translation_card(uuid)') is null, 'fonctions 0021 encore présentes';
+  assert to_regclass('public.recipe_grants') is not null and to_regprocedure('private.can_read_recipe(uuid)') is not null, '0017 / 0019 abîmées';
+end \$\$;"
+run "$HERE/test_0016_translations.sql"
+run "$SUPA/migrations/0021_recipe_rpcs.sql"
+"${PSQL[@]}" -f "$SUPA/migrations/0021_recipe_rpcs.sql"
+run "$HERE/test_0021_v1_compat.sql"
+
 # ---------------------------------------------------------------- « up, down, up » pour 0019
 echo "▶ Rollback 0019, rejeu, ré-application"
+run "$RB21"   # 0021 dépend de 0019 : retirée d'abord (ré-appliquée avec 0019 par la boucle LATE plus bas)
 run "$SUPA/rollback/0019_rls_helpers_social_down.sql"
 "${PSQL[@]}" -f "$SUPA/rollback/0019_rls_helpers_social_down.sql"
 "${PSQL[@]}" -c "do \$\$ begin
@@ -254,4 +281,5 @@ run "$HERE/test_0017_social_schema.sql"
 for f in "${LATE[@]}"; do run "$f"; done
 for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 run "$HERE/test_0019_rls.sql"
+run "$HERE/test_0021_v1_compat.sql"
 echo "✅ Toutes les migrations et tous les tests sont passés."

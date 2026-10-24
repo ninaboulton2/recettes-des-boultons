@@ -136,6 +136,10 @@ create or replace function private.recipes_guard_owner_fields()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if (select auth.uid()) is null then return new; end if;   -- serveur / migrations (service_role, postgres)
+  -- Mise à jour faite par une clé étrangère (profondeur > 1) : supprimer l'original met `copied_from` des copies des
+  -- AUTRES à NULL (`on delete set null`) ; ce n'est pas l'auteur de la copie qui le fait, et ça ne doit pas bloquer
+  -- la suppression (corrigé en 0021 : sans cela, supprimer une recette copiée par quelqu'un échouait).
+  if pg_trigger_depth() > 1 then return new; end if;
   if new.owner_id is distinct from old.owner_id then
     raise exception 'Le propriétaire d''une recette ne se change pas' using errcode = '42501';
   end if;
