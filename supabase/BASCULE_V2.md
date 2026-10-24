@@ -9,7 +9,11 @@ entrent dans le groupe « Les Boultons » (qui garde le look actuel), chacun re�
 pseudonyme, et **le site cesse d'être public** (il faut un compte pour voir les recettes).
 
 Durée : environ 30 minutes, dont **une fenêtre sensible de 2 à 5 minutes** entre 0020 et la fin du
-déploiement du code v2 (étapes 6 → 7).
+déploiement du code v2 (étapes 6 → 7). Le SQL lui-même est quasi instantané (**moins de 2 secondes en tout** en local, 0018 en
+0,5 s : durées mesurées au § 2, « Durées mesurées »), le reste est du temps humain (lecture des contrôles, déploiement).
+
+**Répétée de bout en bout le 2026-10-25 sur une copie des vraies données** : voir `supabase/REPETITION_V2.md` et la **checklist
+du jour J au § 6**. Rejouable à volonté : `bash supabase/local/rehearsal.sh` (ou `npm run db:local:rehearsal`).
 
 > **Rien de ce qui suit n'est appliqué sans le « go » de Nina.** Claude prépare, relit, et n'écrit en
 > production qu'après ce « go » (outils `apply_migration` / `execute_sql`). Plan B : le SQL Editor du
@@ -70,15 +74,21 @@ Les politiques de la v1 ne sont pas touchées : tout le monde lit encore tout, s
           to_regprocedure('private.can_read_recipe(uuid)') is not null  as f0019,
           to_regprocedure('public.copy_recipe(uuid)') is not null       as f0021,
           to_regprocedure('public.send_friend_request(uuid)') is not null as f0023,
-          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true / true / true / true / 0
+          to_regprocedure('public.recipe_access(uuid)') is not null     as f0026,
+          to_regprocedure('public.shared_recipe_photo_path(uuid)') is not null as f0029,
+          (select prolang = (select oid from pg_language where lanname = 'plpgsql')
+             from pg_proc where oid = 'private.can_read_recipe(uuid)'::regprocedure) as f0030,
+          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true ×7 / 0
    ```
+   (0025, 0027 et 0028 ne laissent pas de trace aussi simple à tester : `select to_regprocedure('public.report_shared_recipe(uuid, text, text)') is not null, to_regprocedure('public.ai_service_status()') is not null;` → true / true.)
 3. **Code v2 prêt** : branche fusionnable, CI verte, **déployé en préproduction et non promu** (Vercel :
    déploiement « staged », à promouvoir à l'étape 7). Noter l'identifiant du déploiement de production actuel
    (celui de l'*Instant Rollback*). Les « previews » Vercel ne doivent pas pointer sur la base de production.
 4. **Prévenir les autres comptes** : ils devront se connecter ; fenêtre de quelques minutes.
 5. **Relever les comptes** (service pour l'étape 3) : `select id, email, role, created_at, display_name from public.profiles order by created_at;`
-   Attendu d'après le dossier (§ 4.3) : 4 comptes dont 2 admins. Repérer **l'adresse de Nina** et celle de chaque
-   autre compte.
+   Attendu d'après le dossier (§ 4.3) : 4 comptes dont 2 admins. **Le snapshot local en compte 5 (dont 2 admins)** : le nombre réel du jour J fait foi.
+   Repérer **l'adresse de Nina** et celle de chaque autre compte. **Chaque ligne de cette liste doit recevoir un pseudonyme à l'étape 3** (y compris un compte
+   inutilisé ou de test) : sinon 0018 s'arrête (sans rien modifier, vérifié) avec « pseudonyme manquant pour : … ».
 6. Un onglet SQL Editor ouvert, un onglet Vercel → Deployments, un onglet Authentication → Users.
 
 ## 2. L'ordre exact
@@ -125,6 +135,20 @@ Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres �
 * **Variable Vercel** : `SUPABASE_SECRET_KEY` (clé service_role, côté serveur seulement), déjà demandée pour la suppression de compte, sert aussi à signer la photo de la page publique, copier une photo, et nettoyer le stockage. Sans elle, ces routes répondent 500 (le reste marche).
 * **Retour arrière** : `supabase/rollback/0029_private_photos_switchover_down.sql` (bucket redevient public, suppression de photo de nouveau permise aux éditeurs) **AVANT** `0020_rls_switchover_down`. Puis `0029_shared_recipe_photo_down.sql` (indépendant de 0018 / 0020, après avoir retiré le code v2).
 
+### Où s'insèrent 0024, 0025, 0027 et 0030 (petites migrations « sans effet pour la v1 »)
+
+Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030**
+(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0030 d'un coup, avant le jour J**, un fichier = un Run).
+
+* **0024** (déjà en production) : rôle `user` en dur à l'inscription. Rien à refaire.
+* **0025** `0025_profile_onboarding.sql` : remplace `update_my_profile` par une version à 7 paramètres (fin de l'accueil). Elle **supprime l'ancienne
+  signature à 6 paramètres** (aucun code déployé ne l'appelle). Aucune table, politique ni donnée touchée. Retour : `rollback/0025_profile_onboarding_down.sql`.
+* **0027** `0027_report_shared_recipe.sql` : une fonction de signalement depuis la page publique `/r/<jeton>`. Sans effet v1. Retour : `rollback/0027_report_shared_recipe_down.sql`.
+* **0030** `0030_can_read_recipe_perf.sql` (ajoutée par la répétition, phase 10) : réécrit `private.can_read_recipe` en plpgsql avec retour anticipé.
+  **Même résultat, ~10 fois plus rapide** : `select * from recipes` d'un membre 77 → 7 ms, `search_recipes` 150 → 15 ms, une fiche 29 → 3 ms (181 recettes,
+  linéaire en nombre de recettes : sans elle ~0,5 s par liste à 1 000 recettes). Aucune table, colonne, politique ni donnée touchée : sans effet v1. Un Run.
+  Retour : `rollback/0030_can_read_recipe_perf_down.sql` (remet la version SQL de 0019), **à jouer avant le retour arrière de 0019**.
+
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
 Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
@@ -156,6 +180,24 @@ pas l'utiliser.)
 | 7 | Promotion du code v2 (déjà construit) | Nina / Claude |
 | 8 | Vérification d'accès des comptes (§ 4.3, phase 11) | Nina |
 | 9 | Nettoyage | Claude |
+
+#### Durées mesurées (répétition locale du 2026-10-25, copie des vraies données : 181 recettes, 1 546 ingrédients, 5 comptes)
+
+Temps d'exécution du fichier par `psql` en local, sans latence réseau : en production (SQL Editor, `apply_migration`), compter quelques secondes de plus,
+pas davantage. La **durée réelle du jour J est dominée par le temps humain** (lire les contrôles, déployer le code v2).
+
+| Étape | Fichier | Durée |
+|---|---|---|
+| Migrations 0025 → 0030 (6 Runs) | `migrations/0025…0030` | 0,03 à 0,06 s chacune |
+| 2 | `v2/0018_params.sql` | 0,03 s |
+| 4 | `v2/0018_v2_data_fill.sql` | **0,5 à 0,7 s** (181 recettes, 36 à 45 catégories, 181 droits) |
+| 5 | contrôles A à F | < 0,1 s |
+| 6 | `v2/0020_rls_switchover.sql` | 0,05 à 0,10 s |
+| 6 bis | `v2/0029_private_photos_switchover.sql` | 0,04 s |
+| Retour 0 / 1 / 2 | `0029` down / `0020` down / `0018` down | 0,07 / 0,08 / 0,08 s |
+| Contrôles fonctionnels | `local/rehearsal_checks.sql` (68 contrôles) | ~1 s |
+
+La fenêtre sensible (0020 → code v2 promu) ne dépend donc que de la promotion Vercel (quelques secondes à 2 minutes), pas de la base.
 
 ### Étape 1 — Photographie de départ
 
@@ -200,8 +242,8 @@ on conflict (key) do update set value = excluded.value;
 
 * `owner_email` : le compte qui reçoit **toutes** les recettes et crée le groupe. Absent, 0018 retient le compte
   `admin` le plus ancien (et s'arrête s'il y en a deux de même date) : **vérifier alors le NOTICE**.
-* `display_name:<e-mail>` : **obligatoire** pour chaque compte (c'est le nom que les autres verront ; sans lui, le
-  compte est introuvable). Jamais d'e-mail ni de « @ ». Le champ `profiles.name` contient l'e-mail : il n'est
+* `display_name:<e-mail>` : **obligatoire pour CHAQUE compte** du relevé de l'étape 1.5 — pas seulement les 3 ou 4 qui servent — (c'est le nom que les autres verront ; sans lui, le
+  compte est introuvable). Compter les lignes : `select count(*) from private.v2_fill_params where key like 'display_name:%'` doit égaler le nombre de profils. Jamais d'e-mail ni de « @ ». Le champ `profiles.name` contient l'e-mail : il n'est
   volontairement **jamais** utilisé en repli.
 * Une faute de frappe (e-mail inconnu, clé inconnue, pseudonyme en double) arrête 0018 avec un message : rien n'est
   modifié, corriger la ligne et relancer.
@@ -211,7 +253,7 @@ on conflict (key) do update set value = excluded.value;
 Exécuter `supabase/v2/0018_v2_data_fill.sql` (un Run). Tout est dans une transaction : s'il y a une erreur, **rien**
 n'est appliqué ; lire le message, corriger le paramètre, relancer. Le fichier est rejouable.
 
-**NOTICE attendue** (dernière ligne, exemple avec 4 comptes ; le SQL Editor ne les affiche pas toujours, les
+**NOTICE attendue** (dernière ligne, exemple avec 4 comptes ; la répétition locale en donne 5 membres et « 1 entrée(s) de carnet » ; le SQL Editor ne les affiche pas toujours, les
 contrôles de l'étape 5 font foi) :
 
 ```
@@ -345,6 +387,13 @@ permettent le retour arrière). Elles seront retirées avec le « contract » (0
 
 Ensuite : `drop table private.v2_fill_params;` si ce n'est pas déjà fait.
 
+**Vérifié à la répétition (2026-10-25)** : après photos → 0020 → 0018 (en moins de 0,3 s au total), l'empreinte des données (`local/rehearsal_fingerprint.sql` : nombre de
+lignes et md5 des colonnes v1 de 12 tables, recettes avec `updated_at`) est **identique** à celle d'avant ; le bucket redevient public, les 4 politiques
+`recipes_read_public`… reviennent, la v1 repasse ses 117 parcours e2e. Ce qui **reste** après un retour arrière : les comptes créés entre-temps (ils
+gardent leur profil), `recipes.visibility = 'groups'` (valeur par défaut posée par 0017, sans effet en v1) et la table `private.v2_fill_params` si on ne la supprime pas.
+Les migrations 0025 → 0030 n'ont **pas** à être retirées pour revenir à la v1 (sans effet v1) ; si on le veut quand même : 0030 down → 0029 down (`0029_shared_recipe_photo_down.sql`)
+→ 0028 → 0027 → 0026 → 0025, **avant** les retours arrière de 0023 / 0021 / 0019 (qui supprimeraient les fonctions dont elles dépendent).
+
 ⚠️ **Avertissements du retour arrière**
 
 * Une fois 0020 retirée, **toutes** les recettes redeviennent lisibles par tout le monde, sans compte — y compris
@@ -399,11 +448,52 @@ Ensuite : `drop table private.v2_fill_params;` si ce n'est pas déjà fait.
 | Recettes | 181 | 181, toutes à Nina, `visibility = groups` |
 | Sections / ingrédients / étapes | 358 / 1 546 / 1 538 | identiques |
 | Traductions | 181 | identiques |
-| Comptes (`profiles`) | 4 | 4 |
+| Comptes (`profiles`) | 4 (5 sur le snapshot local : relever le nombre réel à l'étape 1.5) | identique |
 | Groupes | 0 | 1 (« Les Boultons ») |
 | Membres du groupe | 0 | 4 (Nina `creator`, 3 `member`) |
 | Droits (`recipe_grants`) | 0 | 181 (groupe Boultons, `edit_original`, un par recette) |
 | Catégories | 9 (texte) | 36 (9 par compte) ; 181 recettes reliées |
-| Entrées de carnet | 0 | favoris des 3 autres comptes sur recettes de Nina |
+| Entrées de carnet | 0 | favoris des autres comptes sur des recettes de Nina (1 sur le snapshot de la répétition, selon les favoris réels) |
 | Favoris / repas / articles | 5 / 70 / 43 | identiques, même propriétaire |
 | Admins | 2 | 1 (Nina, rôle « support ») |
+
+## 6. Checklist du jour J (à cocher)
+
+Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suivante qu'une fois la case cochée. Les `[ ]` se cochent dans une copie de ce fichier ou dans l'Obsidian de Nina.
+
+**Avant (J-1 ou le matin)**
+
+- [ ] Sauvegarde : export JSON des tables + `pg_dump` (`BASCULE_PROD.md` § 0.1) **hors du dépôt**, liste des fichiers du bucket `recipe-photos`.
+- [ ] Prérequis 1.2 : 0017, 0019, 0021, 0023, 0024 présentes (requête du § 1, `recettes_avec_proprietaire = 0`).
+- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
+- [ ] Variables Vercel posées : `SUPABASE_SECRET_KEY`, `CRON_SECRET` (≥ 16 caractères), `ALERT_EMAIL`, `AI_MONTHLY_BUDGET_USD` (suggéré 5) ; `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL` si le domaine est prêt (`DEVELOPER.md` § 20.15).
+- [ ] Supabase → Settings → API → *Exposed schemas* : `private` **absent** (§ 4).
+- [ ] Code v2 construit, CI verte, **déployé en préproduction et non promu** ; identifiant du déploiement actuel noté (Instant Rollback). Les « previews » ne pointent pas sur la prod.
+- [ ] Autres comptes prévenus (fenêtre de quelques minutes, ils devront se reconnecter).
+- [ ] Onglets ouverts : SQL Editor, Vercel → Deployments, Authentication → Users.
+
+**Jour J**
+
+- [ ] Étape 1 : photographie de départ lancée et **chiffres notés** (recettes, sections, ingrédients, étapes, traductions, profils, admins, favoris, repas, articles, `derniere_modif`).
+- [ ] Étape 1.5 : relevé des comptes (`select id, email, role, created_at, display_name from public.profiles order by created_at`) ; l'adresse de Nina repérée.
+- [ ] Étape 2 : `v2/0018_params.sql` → NOTICE `table private.v2_fill_params prête (0 ligne(s))`.
+- [ ] Étape 3 : paramètres saisis, `owner_email` = Nina, **un `display_name:` pour CHAQUE compte du relevé** (comptage = nombre de profils).
+- [ ] Étape 4 : `v2/0018_v2_data_fill.sql` → NOTICE `[0018] groupe « Les Boultons » …` (ou contrôles de l'étape 5 si le SQL Editor n'affiche pas les NOTICE).
+- [ ] Étape 5 : contrôles A à F ; D identique à l'étape 1 ; F = `0 / 0` ; un seul admin ; 9 catégories par compte.
+- [ ] Le site fonctionne encore comme avant (0020 pas passée), sauf l'édition du 2ᵉ admin.
+- [ ] **Go de Nina** pour la fenêtre sensible.
+- [ ] Étape 6 : `v2/0020_rls_switchover.sql` → NOTICE `[0020] bascule appliquée` ; contrôles : `4`, `NO`, `0`.
+- [ ] Étape 6 bis : `v2/0029_private_photos_switchover.sql` → NOTICE `[v2/0029] bucket recipe-photos privé` ; contrôles : `false`, 4 politiques `{authenticated}`, `false`.
+- [ ] Étape 7 : **Promote to Production** du déploiement v2 ; accueil et connexion de Nina contrôlés tout de suite (fin de la fenêtre sensible).
+- [ ] Purge du cache CDN Vercel (images) faite ; autres comptes prévenus pour le cache du service worker.
+- [ ] Étape 8 pour **chaque compte** : se connecter, voir les recettes (même nombre qu'à l'étape 1) et leurs photos, favoris / planning / courses inchangés, look Boultons et pseudonyme, modifier puis remettre une note (autres membres), ajouter une recette (Nina) et la voir en lecture seule chez les autres.
+- [ ] Tests négatifs : visiteur sans compte (fenêtre privée) = aucune recette ; compte neuf = connecté mais aucune recette.
+- [ ] Photos : adresse publique ancienne en erreur ; `/object/sign/` + `token=` connecté ; `/r/<jeton>` en navigation privée avec photo ; copie d'une recette avec photo.
+- [ ] Vercel → Settings → Cron Jobs : `/api/cron/ai-credit-probe` et `/api/cron/notification-emails` listées (réponse 401 sans le secret).
+- [ ] Authentication → Users : chaque compte s'est connecté.
+
+**Après (semaine de surveillance)**
+
+- [ ] Étape 9 : `drop table private.v2_fill_params;` (supprime e-mails et pseudonymes saisis).
+- [ ] Garder `private.backup_0018_profiles` et `private.backup_0018_created` une semaine (retour arrière), puis les retirer avec le « contract » (0022) ou par le retour arrière.
+- [ ] En cas de problème : retour arrière du § 3 **dans l'ordre** (photos, 0020, 0018, puis Instant Rollback Vercel) ; le contrôle d'identité des données est `local/rehearsal_fingerprint.sql` (à jouer avant et après).

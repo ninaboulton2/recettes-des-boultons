@@ -1828,3 +1828,23 @@ Corrections sur `fix/v2-security-review-3`. Migrations 0025 à 0029 non encore e
 `default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; frame-src https://accounts.google.com https://docs.google.com https://content.googleapis.com; connect-src 'self' https://<projet>.supabase.co wss://<projet>.supabase.co https://*.ingest.sentry.io https://www.googleapis.com https://accounts.google.com; img-src 'self' data: blob: https://<projet>.supabase.co https://*.googleusercontent.com https://*.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` (à compléter par ce que le mode rapport remontera). Ne pas ajouter `Cross-Origin-Opener-Policy: same-origin` (casse la pop-up Google).
 
 **Dépendances.** `npm audit fix` (sans `--force`) : `nuxt` 4.5.2 → 4.6.2 (`package.json` : `^4.6.2`), `@nuxt/*` 4.6.2, `nitropack` 2.13.5, `vite` 8.3.5, `undici` 8.12.3, `serialize-javascript` 7.1.4, `happy-dom` 20.14.6, `@nuxt/cli` 4.0.1. Restent signalés : `zod` (3.25.76, dernier 3.x ; la correction n'existe qu'en 4.6.6+, changement majeur, hors périmètre ici), `happy-dom` (correction seulement en 21.0.4+, majeur, dépendance de test uniquement), et la chaîne `node-forge` ← `listhen` ← `nitropack` / `@nuxt/cli` (npm propose un « correctif » qui rétrograde `nuxt` en 4.1.3 : refusé). À reprendre avec une montée de `zod` en 4 et de `nitropack`.
+
+### 20.17 Phase 10 : répétition de la bascule sur les vraies données
+
+Compte rendu : [supabase/REPETITION_V2.md](supabase/REPETITION_V2.md) ; procédure et **checklist du jour J** : [supabase/BASCULE_V2.md](supabase/BASCULE_V2.md) § 6.
+
+- **Rejouer la répétition** : `npm run db:local:up` puis `bash supabase/local/rehearsal.sh` (`npm run db:local:rehearsal`). Elle remet la base à zéro, charge le snapshot
+  (gitignoré), pose l'état « comme la prod » (0001 → 0017, 0019, 0021, 0023, 0024) puis 0025 → 0030, joue le jour J avec des paramètres factices (pseudonymes inventés, propriétaire =
+  l'admin le plus ancien), les contrôles, les mesures, puis le retour arrière complet et compare l'empreinte des données (`local/rehearsal_fingerprint.sql`). Options : `--keep-v2` (s'arrête en état
+  v2, pour les e2e v2 ou la navigation à la main ; revenir ensuite par `npm run db:local:reset`), `--no-reset`, `--skip-perf`. Environ 30 s.
+- **Contrôles fonctionnels** (`local/rehearsal_checks.sql`, 68 contrôles) : par membre du groupe, via `set local role authenticated` + `request.jwt.claims` : voit toutes les recettes, peut les
+  modifier (RLS), favoris / planning / courses conservés, catégories personnelles cohérentes avec l'ancien texte, traductions, recherche FR et EN ; compte neuf et visiteur : rien. Transaction annulée.
+- **Mesures** (`local/rehearsal_perf.sql`) : `explain analyze` sous `authenticated`, 5 passes. Le snapshot n'a pas de traductions : `local/rehearsal_seed_translations.sql` en fabrique une anglaise par recette
+  (dictionnaire, sans IA) pour que la recherche bilingue et les compteurs soient représentatifs.
+- **0030** (`can_read_recipe` en plpgsql, retour anticipé) : la fonction était appelée une fois par ligne par toutes les politiques de lecture et coûtait ~0,5 ms l'appel (SQL SECURITY DEFINER non « inliné »,
+  sous-plan `reports` évalué à chaque fois). Même résultat (`test_0030_can_read_recipe_perf.sql` compare l'ancienne expression, 60 cas), 10 fois plus rapide.
+- **Test d'intégration** `save-recipe.local.test.ts` : dépend du mode (marqueur v2 : un visiteur ne lit plus aucune recette). v1 : `save_recipe` refusé à un non-admin (42501) ; v2 : accepté pour ses propres recettes
+  (propriétaire = l'appelant), refusé sur la recette d'autrui.
+- **Corrigés au passage** : les routes `/api/cron/*` répondaient 500 (et alertaient Sentry) au lieu de 503 tant que `CRON_SECRET` manquait (`handleApiError` n'épargne que les erreurs < 500) ; `e2e/v2/categories.spec.ts`
+  échouait sur une base v2 fraîche (deux `option` « Soupes » : la liste déroulante et le `<select>` natif de la bannière « Explorer »).
+
