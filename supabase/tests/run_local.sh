@@ -37,6 +37,11 @@
 #      (test_0021_v1_compat.sql : 0021 seule, avant 0018 / 0020), puis test_0021_recipe_rpcs.sql sous la chaîne
 #      complète 0017 → 0019 → 0021 → 0018 → 0020 (deux fois : avant et après le retour arrière de la bascule), et
 #      « up, down, up » de 0021 (save_recipe / save_recipe_translation restaurées à l'identique).
+#  14. Migration 0023 (fonctions métier côté social : amis, groupes, invitations, notifications, profil, compte) : appliquée
+#      avec 0019 et 0021 (+ rejeu), test_0023_v1_compat.sql (v1 non cassée), test_0023_social_rpcs.sql sous la chaîne
+#      complète (deux fois, comme 0021), « up, down, up » de 0023 (empreinte de toutes les fonctions, déclencheurs,
+#      politiques et tables private identique à l'avant), et 0023 SEULE sans 0021 (indépendance). Les tests de 0019 sont
+#      adaptés à 0023 (relance après refus : délai de 7 jours ; notifications créées par les déclencheurs).
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
@@ -118,11 +123,24 @@ run "$HERE/test_0017_social_schema.sql"
 # 0021 (fonctions métier côté recettes) suit 0019 dans la même boucle (LATE = 0019, 0021).
 FN_SQL="select md5(string_agg(pg_get_functiondef(p.oid), E'\\n' order by p.oid::regprocedure::text)) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('save_recipe', 'save_recipe_translation')"
 FN_BEFORE="$("${PSQL[@]}" -At -c "$FN_SQL")"
-for f in "${LATE[@]}"; do run "$f"; done
+# Empreinte de TOUT ce que 0023 ne doit pas changer : fonctions publiques (corps), fonctions private (signatures),
+# déclencheurs (définitions), politiques, tables du schéma private. Prise avant 0023, rejouée après son retour arrière.
+ALL_FP_SQL="select md5(
+  coalesce((select string_agg(pg_get_functiondef(p.oid), E'\\n' order by p.oid::regprocedure::text) from pg_proc p where p.pronamespace = 'public'::regnamespace), '') || '#' ||
+  coalesce((select string_agg(p.oid::regprocedure::text, E'\\n' order by p.oid::regprocedure::text) from pg_proc p where p.pronamespace = 'private'::regnamespace), '') || '#' ||
+  coalesce((select string_agg(pg_get_triggerdef(t.oid), E'\\n' order by t.tgrelid::regclass::text, t.tgname) from pg_trigger t where not t.tgisinternal), '') || '#' ||
+  coalesce((select string_agg(concat_ws('|', schemaname, tablename, policyname, cmd, roles::text, qual, with_check), E'\\n' order by schemaname, tablename, policyname) from pg_policies where schemaname in ('public', 'storage')), '') || '#' ||
+  coalesce((select string_agg(c.relname, ',' order by c.relname) from pg_class c where c.relnamespace = 'private'::regnamespace and c.relkind = 'r'), ''))"
+FP23_BEFORE=""
+for f in "${LATE[@]}"; do
+  if (( $(num "$f") == 23 )); then FP23_BEFORE="$("${PSQL[@]}" -At -c "$ALL_FP_SQL")"; fi
+  run "$f"
+done
 echo "▶ Rejeu idempotence 0019"
 for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n == 19 )); then run "$f"; fi; done
 run "$HERE/test_0021_v1_compat.sql"
+run "$HERE/test_0023_v1_compat.sql"
 
 # Réussit si la commande ÉCHOUE avec un message contenant le motif : expect_fail <fichier> <motif> <description>
 expect_fail() {
@@ -206,6 +224,7 @@ run "$SWITCH"
 run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
 run "$HERE/test_0021_recipe_rpcs.sql"
+run "$HERE/test_0023_social_rpcs.sql"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
@@ -222,6 +241,7 @@ run "$SWITCH"
 run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
 run "$HERE/test_0021_recipe_rpcs.sql"
+run "$HERE/test_0023_social_rpcs.sql"
 run "$SWITCH_DOWN"
 [[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_BEFORE" ]] || { echo "❌ empreinte des politiques différente (2e retour arrière)"; exit 1; }
 
@@ -250,9 +270,36 @@ run "$FILL_DOWN"
 run "$HERE/fixtures_0018_down.sql"
 sql "drop table private.v2_fill_params"
 
+# ---------------------------------------------------------------- « up, down, up » pour 0023 (indépendante de 0021)
+echo "▶ Rollback 0023, rejeu, état d'avant vérifié (empreinte), ré-application"
+RB21="$SUPA/rollback/0021_recipe_rpcs_down.sql"
+RB23="$SUPA/rollback/0023_social_rpcs_down.sql"
+M21="$SUPA/migrations/0021_recipe_rpcs.sql"
+M23="$SUPA/migrations/0023_social_rpcs.sql"
+run "$RB23"
+"${PSQL[@]}" -f "$RB23"
+[[ "$("${PSQL[@]}" -At -c "$ALL_FP_SQL")" == "$FP23_BEFORE" ]] || { echo "❌ l'état après le retour arrière de 0023 diffère de l'état d'avant (fonctions, déclencheurs, politiques ou tables private)"; exit 1; }
+"${PSQL[@]}" -c "do \$\$ begin
+  assert to_regprocedure('public.send_friend_request(uuid)') is null and to_regprocedure('public.export_my_data()') is null
+     and to_regclass('private.rate_events') is null and to_regprocedure('private.notify(uuid, text, jsonb)') is null, 'objets 0023 encore présents';
+  assert not exists (select 1 from pg_trigger where tgname like 'trg_0023_%'), 'déclencheurs 0023 encore présents';
+  assert to_regprocedure('public.copy_recipe(uuid)') is not null and to_regclass('public.groups') is not null, '0017 / 0019 / 0021 abîmées';
+end \$\$;"
+run "$HERE/test_0021_v1_compat.sql"
+# 0023 SEULE (sans 0021) : la v1 n'est pas cassée et rien n'appelle les fonctions de 0021
+run "$RB21"
+run "$M23"
+"${PSQL[@]}" -f "$M23"
+run "$HERE/test_0023_v1_compat.sql"
+run "$RB23"
+run "$M21"
+run "$M23"
+"${PSQL[@]}" -f "$M23"
+run "$HERE/test_0021_v1_compat.sql"
+run "$HERE/test_0023_v1_compat.sql"
+
 # ---------------------------------------------------------------- « up, down, up » pour 0021 (avant 0019 : elle en dépend)
 echo "▶ Rollback 0021, rejeu, état d'avant vérifié, ré-application"
-RB21="$SUPA/rollback/0021_recipe_rpcs_down.sql"
 run "$RB21"
 "${PSQL[@]}" -f "$RB21"
 [[ "$("${PSQL[@]}" -At -c "$FN_SQL")" == "$FN_BEFORE" ]] || { echo "❌ save_recipe / save_recipe_translation ne sont pas revenues à leur définition d'avant 0021"; exit 1; }
@@ -268,7 +315,8 @@ run "$HERE/test_0021_v1_compat.sql"
 
 # ---------------------------------------------------------------- « up, down, up » pour 0019
 echo "▶ Rollback 0019, rejeu, ré-application"
-run "$RB21"   # 0021 dépend de 0019 : retirée d'abord (ré-appliquée avec 0019 par la boucle LATE plus bas)
+run "$RB23"   # 0021 et 0023 dépendent de 0019 : retirées d'abord (ré-appliquées avec 0019 par la boucle LATE plus bas)
+run "$RB21"
 run "$SUPA/rollback/0019_rls_helpers_social_down.sql"
 "${PSQL[@]}" -f "$SUPA/rollback/0019_rls_helpers_social_down.sql"
 "${PSQL[@]}" -c "do \$\$ begin
@@ -282,4 +330,5 @@ for f in "${LATE[@]}"; do run "$f"; done
 for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 run "$HERE/test_0019_rls.sql"
 run "$HERE/test_0021_v1_compat.sql"
+run "$HERE/test_0023_v1_compat.sql"
 echo "✅ Toutes les migrations et tous les tests sont passés."

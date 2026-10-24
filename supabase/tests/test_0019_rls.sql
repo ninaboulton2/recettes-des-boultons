@@ -249,6 +249,8 @@ begin
   assert tests.rows_affected(format($q$update public.friendships set status = 'declined', responded_at = now() where id = %L$q$, fr_ae)) = 1, 'E refuse';
   assert tests.rows_affected(format($q$update public.friendships set status = 'pending', responded_at = null where id = %L$q$, fr_ae)) = 0, 'le destinataire relance à sa place';
   perform tests.logout();
+  -- (0023 impose 7 jours entre deux demandes du même demandeur : on recule la date de la dernière demande, sans effet sans 0023)
+  update public.friendships set created_at = now() - interval '8 days' where id = fr_ae;
   perform tests.login(ua, 'authenticated');
   assert tests.rows_affected(format($q$update public.friendships set status = 'pending', responded_at = null where id = %L$q$, fr_ae)) = 1, 'A relance après refus';
   perform tests.logout();
@@ -440,6 +442,7 @@ begin
   perform tests.logout();
 
   -- ============================================================ notifications : les siennes
+  delete from public.notifications;     -- (0023 en crée aussi : demandes d'ami, droits, invitations ; sans effet sans 0023)
   insert into public.notifications (user_id, type) values (ua, 'x'), (ub, 'y');
   perform tests.login(ub, 'authenticated');
   assert tests.visible('select 1 from public.notifications') = 1;
