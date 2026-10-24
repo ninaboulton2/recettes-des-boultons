@@ -17,10 +17,17 @@
 #    4. migrations/0001, 0002          (déjà appliquées en prod)
 #    5. seed_test.sql                  (données jetables façon prod)
 #    6. migrations/0003 → 0012 (« expand ») + rejeu, tests test_0003 → test_0012
-#    7. migrations/0013 → …   (« contract » : 0013, 0014, 0015) + rejeu,
-#       tests test_0013 → …   (assertions ; échec = exit 1)
+#    7. migrations/0013 → 0017 (« contract » + schéma social) + rejeu,
+#       tests test_0013 → test_0017   (assertions ; échec = exit 1)
 #    8. rollback/0017 (+ rejeu), vérification, ré-application de 0017 (+ rejeu),
 #       test_0017 relancé : « up, down, up » (voir le dossier v2, §4.4)
+#    9. migrations ≥ 0018 (0019 : fonctions d'aide RLS + politiques sociales) + rejeu,
+#       test_0019_rls.sql
+#   10. Bascule v2 (supabase/v2/0020_rls_switchover.sql, NON appliquée en prod avec les
+#       migrations) : remplissage simulé d'owner_id, application + rejeu,
+#       switchover_0020_rls.sql, retour arrière (empreinte des politiques identique à
+#       l'avant), ré-application + rejeu + tests, retour arrière final.
+#   11. « Up, down, up » de 0019 (rollback/0019_… + rejeu, ré-application + rejeu, test_0019).
 #  Les tests de 0003 → 0012 vérifient l'état intermédiaire (colonnes JSONB et
 #  sauvegardes encore présentes) : ils tournent AVANT 0013/0014.
 # ============================================================================
@@ -65,10 +72,10 @@ run "$SUPA/migrations/0002_drop_unused_secdef_functions.sql"
 run "$SUPA/seed_test.sql"
 # Migrations numérotées ≥ 0003, en deux phases (voir en-tête).
 num() { local b; b="$(basename "$1")"; echo $((10#${b:0:4})); }
-EXPAND=(); CONTRACT=()
+EXPAND=(); CONTRACT=(); LATE=()
 for f in "$SUPA"/migrations/0*_*.sql; do
   n=$(num "$f")
-  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 )); then CONTRACT+=("$f"); fi
+  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 && n <= 17 )); then CONTRACT+=("$f"); elif (( n >= 18 )); then LATE+=("$f"); fi
 done
 
 for f in "${EXPAND[@]}"; do run "$f"; done
@@ -80,7 +87,7 @@ for f in "$HERE"/test_*.sql; do if (( $(num "${f#*test_}") <= 12 )); then run "$
 for f in "${CONTRACT[@]}"; do run "$f"; done
 echo "▶ Rejeu idempotence 0013 → …"
 for f in "${CONTRACT[@]}"; do "${PSQL[@]}" -f "$f"; done
-for f in "$HERE"/test_*.sql; do if (( $(num "${f#*test_}") >= 13 )); then run "$f"; fi; done
+for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n >= 13 && n <= 17 )); then run "$f"; fi; done
 
 # « Up, down, up » pour 0017 (expand-only) : retour arrière, rejeu du retour arrière,
 # état d'avant vérifié, ré-application, rejeu, mêmes tests.
@@ -96,4 +103,51 @@ end \$\$;"
 run "$SUPA/migrations/0017_social_schema.sql"
 "${PSQL[@]}" -f "$SUPA/migrations/0017_social_schema.sql"
 run "$HERE/test_0017_social_schema.sql"
+
+# ---------------------------------------------------------------- 0019 : fonctions d'aide + politiques sociales
+for f in "${LATE[@]}"; do run "$f"; done
+echo "▶ Rejeu idempotence 0018 → …"
+for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
+for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n >= 18 && n <= 19 )); then run "$f"; fi; done
+
+# ---------------------------------------------------------------- bascule v2/0020 (hors migrations/)
+SWITCH="$SUPA/v2/0020_rls_switchover.sql"
+SWITCH_DOWN="$SUPA/rollback/0020_rls_switchover_down.sql"
+echo "▶ Bascule 0020 : refusée tant que owner_id est NULL (garde-fou)"
+if "${PSQL[@]}" -f "$SWITCH" >/dev/null 2>&1; then echo "❌ la bascule aurait dû refuser (recettes sans propriétaire)"; exit 1; fi
+FP_BEFORE="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
+run "$HERE/fill_simulated.sql"
+run "$SWITCH"
+"${PSQL[@]}" -f "$SWITCH"
+run "$HERE/switchover_0020_rls.sql"
+echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
+run "$SWITCH_DOWN"
+"${PSQL[@]}" -f "$SWITCH_DOWN"
+FP_AFTER="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
+[[ "$FP_BEFORE" == "$FP_AFTER" ]] || { echo "❌ empreinte des politiques différente après le retour arrière ($FP_BEFORE ≠ $FP_AFTER)"; exit 1; }
+"${PSQL[@]}" -c "do \$\$ begin
+  assert (select is_nullable = 'YES' and column_default is null from information_schema.columns where table_schema='public' and table_name='recipes' and column_name='owner_id'), 'owner_id : défaut / NOT NULL non retirés';
+  assert not exists (select 1 from pg_trigger where tgname = 'recipes_guard_owner_fields'), 'déclencheur de garde non retiré';
+end \$\$;"
+echo "▶ Ré-application de la bascule, tests, retour arrière final"
+run "$SWITCH"
+run "$HERE/switchover_0020_rls.sql"
+run "$SWITCH_DOWN"
+run "$HERE/unfill_simulated.sql"
+[[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_BEFORE" ]] || { echo "❌ empreinte des politiques différente (2e retour arrière)"; exit 1; }
+
+# ---------------------------------------------------------------- « up, down, up » pour 0019
+echo "▶ Rollback 0019, rejeu, ré-application"
+run "$SUPA/rollback/0019_rls_helpers_social_down.sql"
+"${PSQL[@]}" -f "$SUPA/rollback/0019_rls_helpers_social_down.sql"
+"${PSQL[@]}" -c "do \$\$ begin
+  assert to_regclass('public.dismissed_prompts') is null and to_regprocedure('private.can_read_recipe(uuid)') is null, 'objets 0019 encore présents';
+  assert to_regclass('public.groups') is not null and to_regprocedure('private.is_admin()') is not null, '0017 / 0009 abîmées';
+  assert not has_table_privilege('authenticated', 'public.groups', 'select'), 'tables sociales de nouveau ouvertes';
+  assert has_function_privilege('authenticated', 'public.save_recipe(jsonb)', 'execute'), 'save_recipe abîmée';
+end \$\$;"
+run "$HERE/test_0017_social_schema.sql"
+for f in "${LATE[@]}"; do run "$f"; done
+for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
+run "$HERE/test_0019_rls.sql"
 echo "✅ Toutes les migrations et tous les tests sont passés."

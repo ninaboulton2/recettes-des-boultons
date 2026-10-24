@@ -127,3 +127,16 @@ begin
   reset role;
 end $$;
 grant execute on function tests.login(uuid, text, jsonb), tests.logout() to anon, authenticated, service_role, supabase_auth_admin;
+
+-- Empreinte des politiques RLS (public + storage.objects) : sert à vérifier qu'un retour arrière
+-- rétablit EXACTEMENT les politiques d'avant (voir run_local.sh, bascule v2/0020).
+create or replace function tests.policy_fp() returns text language sql stable as $$
+  select md5(coalesce(string_agg(
+           concat_ws('|', schemaname, tablename, policyname, cmd, roles::text, qual, with_check),
+           E'\n' order by schemaname, tablename, policyname), ''))
+    from pg_policies
+   where (schemaname = 'public' and tablename in ('recipes', 'recipe_sections', 'recipe_ingredients', 'instructions',
+                                                  'recipe_translations', 'favorites'))
+      or (schemaname = 'storage' and tablename = 'objects')
+$$;
+grant execute on function tests.policy_fp() to anon, authenticated, service_role, supabase_auth_admin;

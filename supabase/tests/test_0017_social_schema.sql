@@ -25,7 +25,9 @@ begin
   foreach t in array tables loop
     assert to_regclass(format('public.%I', t)) is not null, format('table %s absente', t);
     assert (select relrowsecurity from pg_class where oid = format('public.%I', t)::regclass), format('RLS off sur %s', t);
-    assert not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t), format('politique inattendue sur %s', t);
+    -- (après 0019, les tables ont leurs politiques : ce contrôle ne vaut que pour l'état « 0017 seule »)
+    assert to_regprocedure('private.can_read_recipe(uuid)') is not null
+        or not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t), format('politique inattendue sur %s', t);
     assert exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = t and column_name = 'created_at'),
       format('created_at manquant sur %s', t);
   end loop;
@@ -239,6 +241,11 @@ declare
                                   'recipe_grants', 'recipe_share_links', 'cookbook_entries',
                                   'notifications', 'reports', 'system_alerts'];
 begin
+  -- Cette section décrit l'état « 0017 seule » ; après 0019 les tables ont des politiques (voir test_0019_rls.sql).
+  if to_regprocedure('private.can_read_recipe(uuid)') is not null then
+    raise notice '[test 0017] API fermée : ignoré (0019 appliquée)';
+    return;
+  end if;
   -- Aucune autorisation d'aucune sorte pour anon / authenticated (avant tout grant de test ci-dessous)
   foreach t in array tables loop
     assert not has_any_column_privilege('anon', format('public.%I', t), 'select, insert, update, references')
