@@ -2,7 +2,9 @@
   <div>
     <!-- v2, connecté : bannières « Explorer les recettes de X » / « nouvelle recette » (pending_prompts) -->
     <PromptBanners v-if="v2 && authStore.isAuthenticated" class="mb-6" />
-    <HomeBoultons v-if="edition.config.home.variant === 'boultons'" />
+    <!-- v2, visiteur sans compte : présentation générique du produit, aucune recette -->
+    <HomeVisitor v-if="v2 && !authStore.isAuthenticated" />
+    <HomeBoultons v-else-if="edition.config.home.variant === 'boultons'" />
     <HomeGeneric v-else />
   </div>
 </template>

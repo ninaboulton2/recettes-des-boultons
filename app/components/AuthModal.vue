@@ -73,6 +73,18 @@
             <UInput v-model="signup.confirmPassword" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" icon="i-lucide-key-round" class="w-full" />
           </UFormField>
 
+          <!-- v2 : conditions d'utilisation et confidentialité accessibles depuis l'inscription -->
+          <p v-if="v2" class="text-xs text-muted" data-testid="signup-legal">
+            <i18n-t keypath="auth.signup.legal" scope="global">
+              <template #terms>
+                <NuxtLink :to="localePath('/conditions')" target="_blank" class="underline underline-offset-2 hover:text-primary">{{ $t('legal.links.terms') }}</NuxtLink>
+              </template>
+              <template #privacy>
+                <NuxtLink :to="localePath('/confidentialite')" target="_blank" class="underline underline-offset-2 hover:text-primary">{{ $t('legal.links.privacy') }}</NuxtLink>
+              </template>
+            </i18n-t>
+          </p>
+
           <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" :description="error" />
           <UAlert v-if="info" color="success" variant="soft" icon="i-lucide-circle-check" :description="info" />
 
@@ -104,11 +116,12 @@ import type { FormSubmitEvent } from '@nuxt/ui'
  * Modale d'authentification unique : connexion, inscription et OAuth.
  * API conservée pour les pages : prop `isOpen`, émet `close` et `success`.
  */
-const props = defineProps<{ isOpen: boolean }>()
+const props = withDefaults(defineProps<{ isOpen: boolean, initialMode?: 'login' | 'signup' }>(), { initialMode: 'login' })
 const emit = defineEmits<{ close: [], success: [] }>()
 
 const { t } = useI18n()
 const localePath = useLocalePath()
+const v2 = useV2()
 const authStore = useAuthStore()
 const supabase = useSupabaseClient()
 const hasProviders = useAuthProviders().length > 0
@@ -239,10 +252,10 @@ const onSignup = async (event: FormSubmitEvent<SignupSchema>) => {
   }
 }
 
-// Toujours rouvrir sur la connexion, formulaire vierge
+// Rouvre sur la connexion (ou l'inscription si demandé), formulaire vierge
 watch(() => props.isOpen, (open) => {
   if (open) {
-    mode.value = 'login'
+    mode.value = props.initialMode
     reset()
   }
 })

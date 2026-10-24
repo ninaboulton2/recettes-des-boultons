@@ -40,14 +40,16 @@
 
     <!-- `overflow-x-clip` : sections pleine largeur (héros de l'accueil Boultons)
          sans défilement horizontal dû à la barre de défilement. -->
-    <main class="w-full min-w-0 flex-1 overflow-x-clip pb-20 md:pb-0">
+    <main class="w-full min-w-0 flex-1 overflow-x-clip md:pb-0" :class="v2 ? 'pb-4' : 'pb-20'">
       <UContainer class="py-6 md:py-8">
         <OfflineBanner />
         <slot />
       </UContainer>
     </main>
 
-    <footer class="mt-auto hidden border-t border-default md:block">
+    <!-- v2 : pied de page avec les liens légaux, aussi sur mobile (AppFooter dégage la barre du bas) ; v1 : pied d'origine, bureau seulement -->
+    <AppFooter v-if="v2" />
+    <footer v-else class="mt-auto hidden border-t border-default md:block">
       <UContainer class="flex flex-col items-center justify-between gap-2 py-6 text-sm text-muted sm:flex-row">
         <p>{{ $t('footer.copyright', { year: new Date().getFullYear(), site: siteName }) }}</p>
         <p class="font-lobster text-base text-muted">{{ siteName }}</p>

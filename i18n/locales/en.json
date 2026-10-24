@@ -10,7 +10,8 @@
     "friends": "Friends",
     "groups": "Groups",
     "settings": "Settings",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "supportReports": "Reports"
   },
   "ui": {
     "_agent": "3A",
@@ -716,7 +717,8 @@
       "success": "Signed up",
       "checkEmail": "Signed up! Check your inbox to confirm your account.",
       "hasAccount": "Already have an account?",
-      "alreadyExists": "An account already exists with this email."
+      "alreadyExists": "An account already exists with this email.",
+      "legal": "By creating an account, you accept the {terms} and the {privacy}."
     },
     "password": {
       "show": "Show password",
@@ -787,6 +789,12 @@
       "invitationGone": "This invitation is no longer valid (expired or already answered).",
       "self": "You cannot add yourself.",
       "invalidLink": "This invitation link is invalid, expired or already used."
+    },
+    "report": {
+      "rate": "You have reached the limit of {n} reports per day. Try again tomorrow.",
+      "notFound": "This recipe is no longer available: the link may have been turned off.",
+      "forbidden": "You cannot report this recipe. Sign in and try again.",
+      "invalid": "This report is not valid. Check the reason and the length of the details."
     }
   },
   "translator": {
@@ -1060,6 +1068,68 @@
       "group": "Theme of the group \"{name}\"",
       "groupInfo": "This group's theme is managed by its creator.",
       "save": "Save theme"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "language": "Preferred language",
+      "languages": {
+        "fr": "Français",
+        "en": "English"
+      },
+      "languageHelp": "Saved in your profile; the interface switches to this language right away.",
+      "notifications": "E-mail notifications",
+      "notificationsHelp": "No notification e-mail is sent for the moment; your choice is saved for later. Your notifications remain visible in the app (bell).",
+      "discoverable": "Visible in search",
+      "discoverableHelp": "Other people can find you by your nickname (never by your e-mail) to send you a friend request."
+    },
+    "export": {
+      "title": "My data",
+      "description": "Download a readable JSON file with your data: profile, recipes, sharing permissions, cookbook, categories, groups, friends (by nickname), favorites, planner, shopping lists, notifications, reports and AI usage log.",
+      "note": "Photos are not included. Limit: {n} exports per day.",
+      "button": "Download my data",
+      "done": "File downloaded.",
+      "errors": {
+        "rate": "You have already made {n} exports today. Try again tomorrow."
+      }
+    },
+    "deletion": {
+      "title": "Delete my account",
+      "description": "Permanently deletes your account and your data. Remember to download your data first.",
+      "button": "Delete my account…",
+      "blocked": {
+        "title": "The account cannot be deleted yet",
+        "intro": "You are the creator of groups that have other members.",
+        "members": "{n} other member | {n} other members",
+        "manage": "Manage this group",
+        "hint": "Transfer the creator role to a member, or delete the group, then come back here."
+      },
+      "confirm": {
+        "title": "Permanently delete my account?",
+        "intro": "Here is what will disappear.",
+        "consequences": {
+          "recipes": "Your recipes are deleted, photos included: they are removed from the cookbooks of people who had added them as is (they are notified). Copies others made of them stay with them.",
+          "groups": "Groups where you are the only member are deleted; you leave the others.",
+          "social": "Your friends, requests, invitations, sharing permissions, public links and notifications disappear.",
+          "personal": "Your profile, categories, favorites, planner, shopping lists and AI usage log are deleted.",
+          "reports": "Reports you sent are kept, with no link to you."
+        },
+        "irreversible": "This cannot be undone.",
+        "emailLabel": "To confirm, type your account's e-mail address ({email})",
+        "emailPlaceholder": "your e-mail address",
+        "submit": "Delete permanently",
+        "mismatch": "This address does not match your account's."
+      },
+      "reauth": {
+        "title": "Confirm it's you",
+        "description": "For security, sign in again before deleting your account.",
+        "password": "Password",
+        "submit": "Sign in again and delete",
+        "wrong": "Wrong password.",
+        "oauth": "Your account uses Google sign-in. Sign out, sign in again with Google, then come back here within 10 minutes."
+      },
+      "errors": {
+        "generic": "Deletion failed. Please try again in a moment."
+      }
     }
   },
   "categoriesManager": {
@@ -1462,5 +1532,113 @@
     "none": "No category",
     "saved": "Recipe filed.",
     "error": "Could not file the recipe, try again."
+  },
+  "accountDeleted": {
+    "title": "Account deleted",
+    "message": "Your account and your data have been deleted. Thanks for stopping by.",
+    "home": "Back to home"
+  },
+  "report": {
+    "link": "Report",
+    "title": "Report this recipe",
+    "description": "Tell us what is wrong. Your report is reviewed by the site's publisher.",
+    "reason": "Reason",
+    "details": "Details (optional)",
+    "detailsPlaceholder": "Where is the problem? Add a link or a useful detail.",
+    "submit": "Send report",
+    "sent": "Thank you, your report has been sent.",
+    "reasons": {
+      "illegal": {
+        "label": "Unlawful content",
+        "hint": "Hateful, violent or illegal content."
+      },
+      "copyright": {
+        "label": "Copyright",
+        "hint": "Recipe or text copied without permission."
+      },
+      "spam": {
+        "label": "Spam",
+        "hint": "Advertising, repetitive or unrelated content."
+      },
+      "other": {
+        "label": "Other",
+        "hint": "Another problem."
+      },
+      "unknown": {
+        "label": "Unknown reason"
+      }
+    }
+  },
+  "support": {
+    "title": "Reports",
+    "subtitle": "Reports that are open or under review.",
+    "loadError": "Could not load",
+    "empty": {
+      "title": "No reports to handle",
+      "description": "Everything is up to date."
+    },
+    "status": {
+      "open": "Open",
+      "reviewed": "Reviewed",
+      "actioned": "Actioned",
+      "dismissed": "Dismissed"
+    },
+    "recipeUnreadable": "Recipe (title unavailable)",
+    "recipeDeleted": "Recipe deleted",
+    "open": "Open the recipe",
+    "actions": {
+      "reviewed": "Mark reviewed",
+      "actioned": "Mark actioned",
+      "dismissed": "Dismiss"
+    },
+    "delete": "Delete the recipe",
+    "deleteConfirm": {
+      "title": "Delete the reported recipe?",
+      "description": "\"{title}\" will be deleted for everyone. The report will be marked as actioned.",
+      "confirm": "Delete"
+    },
+    "updated": "Report updated.",
+    "deleted": "Recipe deleted."
+  },
+  "legal": {
+    "nav": "Legal pages",
+    "footerNav": "Legal information",
+    "links": {
+      "terms": "terms of use",
+      "privacy": "privacy policy"
+    },
+    "footer": {
+      "mentions": "Legal notice",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "cookies": "Cookies",
+      "contact": "Contact"
+    }
+  },
+  "visitor": {
+    "title": "Your recipe book, shared with the people you love",
+    "subtitle": "Gather your recipes, share them with family and friends, and cook without losing a crumb.",
+    "signup": "Create an account",
+    "login": "Sign in",
+    "free": "Free, no advertising. Sign in with e-mail or Google.",
+    "features": {
+      "title": "What you will find here",
+      "cookbook": {
+        "title": "A cookbook of your own",
+        "description": "Your recipes, your categories, your meal planner and your shopping lists in one place."
+      },
+      "sharing": {
+        "title": "Sharing with family and friends",
+        "description": "Share a recipe with a friend, a group or a link, and choose what others can do with it."
+      },
+      "ai": {
+        "title": "AI import",
+        "description": "Paste a text, drop a photo or a PDF, or dictate a recipe: it is formatted for you."
+      },
+      "bilingual": {
+        "title": "Bilingual",
+        "description": "Every recipe can be read in French and in English, thanks to automatic translation."
+      }
+    }
   }
 }

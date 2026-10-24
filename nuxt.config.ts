@@ -150,6 +150,9 @@ export default defineNuxtConfig({
       // (navigation, accueil en 3 écrans, thèmes par personne / groupe, catégories personnelles).
       // Absent = l'application v1, strictement. Lu à l'exécution (pas besoin de rebuild).
       v2: false,
+      // Adresse de contact des pages légales et du pied de page (v2). Vide = texte de repli, aucun lien.
+      // Variable d'exécution : NUXT_PUBLIC_CONTACT_EMAIL (à poser une fois le domaine acheté).
+      contactEmail: '',
       // --- Import depuis Google Drive (composables/useGoogleDrivePicker.ts) ---
       // Trois valeurs publiques (aucun secret) ; l'une d'elles vide = bouton
       // masqué. Surchargeables à l'exécution par NUXT_PUBLIC_GOOGLE_CLIENT_ID,

@@ -60,9 +60,15 @@
           <p class="whitespace-pre-wrap leading-7 text-default">{{ recipe.notes }}</p>
         </div>
       </section>
+      <!-- Signaler : connexion requise (le visiteur se connecte d'abord, puis la fenêtre s'ouvre) -->
+      <p class="border-t border-default pt-4 text-center print:hidden">
+        <UButton icon="i-lucide-flag" color="neutral" variant="link" size="xs" :label="$t('report.link')" data-testid="public-report-link" @click="onReport" />
+      </p>
     </article>
 
     <RecipeCookingMode v-if="recipe" v-model:open="cookingOpen" :recipe="recipe" :factor="scaler.factor.value" />
+
+    <ReportModal v-if="token" v-model:open="showReport" :share-token="token" />
 
     <AuthModal :is-open="showLogin" @close="showLogin = false" @success="onLoggedIn" />
   </div>
@@ -124,6 +130,9 @@ if (import.meta.server && !shared.value) {
 // « Ajouter à mon carnet » : connexion d'abord si besoin, puis claim_shared_recipe.
 const showLogin = ref(false)
 const claiming = ref(false)
+const showReport = ref(false)
+// Ce que la connexion en cours doit faire ensuite : ajouter la recette, ou ouvrir la fenêtre « Signaler ».
+const afterLogin = ref<'add' | 'report'>('add')
 
 async function claim(): Promise<void> {
   if (!token.value) return
@@ -142,16 +151,27 @@ async function claim(): Promise<void> {
 
 function onAdd(): void {
   if (!authStore.isAuthenticated) {
+    afterLogin.value = 'add'
     showLogin.value = true
     return
   }
   void claim()
 }
 
+function onReport(): void {
+  if (!authStore.isAuthenticated) {
+    afterLogin.value = 'report'
+    showLogin.value = true
+    return
+  }
+  showReport.value = true
+}
+
 async function onLoggedIn(): Promise<void> {
   showLogin.value = false
   await nextTick()
-  await claim()
+  if (afterLogin.value === 'report') showReport.value = true
+  else await claim()
 }
 
 useHead({

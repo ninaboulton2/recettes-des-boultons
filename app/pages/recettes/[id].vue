@@ -93,6 +93,11 @@
         </div>
       </section>
 
+      <!-- v2 : signaler une recette qui n'est pas la mienne (lien discret) -->
+      <p v-if="canReport" class="border-t border-default pt-4 text-center print:hidden">
+        <UButton icon="i-lucide-flag" color="neutral" variant="link" size="xs" :label="$t('report.link')" data-testid="report-link" @click="showReport = true" />
+      </p>
+
       <p class="hidden text-center text-xs text-muted print:block">
         {{ siteName }}
       </p>
@@ -112,6 +117,8 @@
       @close="closeRecipeEditor"
       @save="onEditorSaved"
     />
+
+    <ReportModal v-if="canReport" v-model:open="showReport" :recipe-id="recipeId" />
 
     <RecipeShareModal v-if="v2 && access && rights?.canShare" v-model:open="showShare" :recipe-id="recipeId" :access="access" @changed="refreshAccess" />
 
@@ -235,6 +242,9 @@ const onEditorSaved = () => {
 
 // v2 : carnet, copie modifiable, partage
 const showShare = ref(false)
+// v2 : « Signaler » sur une recette qui n'est pas la mienne
+const showReport = ref(false)
+const canReport = computed(() => v2 && authStore.isAuthenticated && !!access.value && access.value.permission !== 'author')
 const cookbookBusy = ref<'add' | 'remove' | 'copy' | null>(null)
 const failToast = (cause: unknown, fallbackKey: string) => {
   const key = sharingErrorKey(cause)

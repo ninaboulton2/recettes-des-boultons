@@ -5,7 +5,7 @@ export interface NavLink { to: string, icon: string, label: string }
  *
  * - v1 (défaut) : Recettes · Planning · Courses · Favoris (inchangé).
  * - v2, connecté : Mon carnet · Partagées avec moi · Amis · Groupes dans l'en-tête et la barre du bas ;
- *   Réglages, Favoris, Planning, Courses (et le traducteur pour les admins) dans le menu de la personne.
+ *   Réglages, Favoris, Planning, Courses (et le traducteur et les signalements pour les admins) dans le menu de la personne.
  * - v2, visiteur : aucune entrée (accueil générique et connexion).
  */
 export function useNav() {
@@ -38,7 +38,9 @@ export function useNav() {
       { to: '/reglages', icon: 'i-lucide-settings', label: t('navigation.settings') },
       { to: '/favoris', icon: 'i-lucide-heart', label: t('navigation.favorites') },
       { to: '/planning', icon: 'i-lucide-calendar-days', label: t('navigation.planning') },
-      { to: '/courses', icon: 'i-lucide-shopping-cart', label: t('navigation.shopping') }
+      { to: '/courses', icon: 'i-lucide-shopping-cart', label: t('navigation.shopping') },
+      // Support (Nina) : écran des signalements, visible du rôle support/admin seulement (la base reste juge)
+      ...(authStore.isAdmin ? [{ to: '/support/signalements', icon: 'i-lucide-flag', label: t('navigation.supportReports') }] : [])
     ]
   })
 

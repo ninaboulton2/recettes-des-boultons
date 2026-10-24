@@ -10,7 +10,8 @@
     "friends": "Amis",
     "groups": "Groupes",
     "settings": "Réglages",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "supportReports": "Signalements"
   },
   "ui": {
     "_agent": "3A",
@@ -841,7 +842,8 @@
       "success": "Inscription réussie",
       "checkEmail": "Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre compte.",
       "hasAccount": "Déjà un compte ?",
-      "alreadyExists": "Un compte existe déjà avec cet e-mail."
+      "alreadyExists": "Un compte existe déjà avec cet e-mail.",
+      "legal": "En créant un compte, vous acceptez les {terms} et la {privacy}."
     },
     "password": {
       "show": "Afficher le mot de passe",
@@ -909,6 +911,12 @@
       "invitationGone": "Cette invitation n’est plus valable (expirée ou déjà traitée).",
       "self": "Vous ne pouvez pas vous ajouter vous-même.",
       "invalidLink": "Ce lien d’invitation est invalide, expiré ou déjà utilisé."
+    },
+    "report": {
+      "rate": "Vous avez atteint la limite de {n} signalements par jour. Réessayez demain.",
+      "notFound": "Cette recette n'est plus disponible : le lien a peut-être été désactivé.",
+      "forbidden": "Vous ne pouvez pas signaler cette recette. Connectez-vous et réessayez.",
+      "invalid": "Ce signalement n'est pas valide. Vérifiez le motif et la longueur des détails."
     }
   },
   "pwa": {
@@ -1060,6 +1068,68 @@
       "group": "Thème du groupe « {name} »",
       "groupInfo": "Le thème de ce groupe est géré par son créateur.",
       "save": "Enregistrer le thème"
+    },
+    "preferences": {
+      "title": "Préférences",
+      "language": "Langue préférée",
+      "languages": {
+        "fr": "Français",
+        "en": "English"
+      },
+      "languageHelp": "Enregistrée dans votre profil ; l'interface passe aussitôt dans cette langue.",
+      "notifications": "Notifications par e-mail",
+      "notificationsHelp": "Aucun e-mail de notification n'est envoyé pour le moment ; votre choix est enregistré pour plus tard. Vos notifications restent visibles dans l'application (cloche).",
+      "discoverable": "Visible dans la recherche",
+      "discoverableHelp": "Les autres personnes peuvent vous trouver par votre pseudonyme (jamais par votre e-mail) pour vous demander en ami."
+    },
+    "export": {
+      "title": "Mes données",
+      "description": "Téléchargez un fichier JSON lisible avec vos données : profil, recettes, droits de partage, carnet, catégories, groupes, amis (par pseudonyme), favoris, planning, listes de courses, notifications, signalements et journal d'usage de l'IA.",
+      "note": "Les photos ne sont pas incluses. Limite : {n} exports par jour.",
+      "button": "Télécharger mes données",
+      "done": "Fichier téléchargé.",
+      "errors": {
+        "rate": "Vous avez déjà fait {n} exports aujourd'hui. Réessayez demain."
+      }
+    },
+    "deletion": {
+      "title": "Supprimer mon compte",
+      "description": "Supprime définitivement votre compte et vos données. Pensez à télécharger vos données avant.",
+      "button": "Supprimer mon compte…",
+      "blocked": {
+        "title": "Impossible de supprimer le compte pour l'instant",
+        "intro": "Vous êtes le créateur de groupes qui ont d'autres membres.",
+        "members": "{n} autre membre | {n} autres membres",
+        "manage": "Gérer ce groupe",
+        "hint": "Transférez le rôle de créateur à un membre, ou supprimez le groupe, puis revenez ici."
+      },
+      "confirm": {
+        "title": "Supprimer définitivement mon compte ?",
+        "intro": "Voici ce qui va disparaître.",
+        "consequences": {
+          "recipes": "Vos recettes sont supprimées, y compris leurs photos : elles sont retirées des carnets des personnes qui les avaient ajoutées telles quelles (elles en sont averties). Les copies que d'autres en ont faites leur restent.",
+          "groups": "Les groupes dont vous êtes le seul membre sont supprimés ; vous quittez les autres.",
+          "social": "Vos amis, demandes, invitations, droits de partage, liens publics et notifications disparaissent.",
+          "personal": "Votre profil, vos catégories, favoris, planning, listes de courses et votre journal d'usage de l'IA sont supprimés.",
+          "reports": "Les signalements que vous avez envoyés sont conservés, sans lien avec vous."
+        },
+        "irreversible": "Cette action est irréversible.",
+        "emailLabel": "Pour confirmer, saisissez l'adresse e-mail de votre compte ({email})",
+        "emailPlaceholder": "votre adresse e-mail",
+        "submit": "Supprimer définitivement",
+        "mismatch": "Cette adresse ne correspond pas à celle de votre compte."
+      },
+      "reauth": {
+        "title": "Confirmez que c'est bien vous",
+        "description": "Par sécurité, reconnectez-vous avant de supprimer votre compte.",
+        "password": "Mot de passe",
+        "submit": "Se reconnecter et supprimer",
+        "wrong": "Mot de passe incorrect.",
+        "oauth": "Votre compte utilise la connexion Google. Déconnectez-vous, reconnectez-vous avec Google, puis revenez ici dans les 10 minutes."
+      },
+      "errors": {
+        "generic": "La suppression a échoué. Réessayez dans un instant."
+      }
     }
   },
   "categoriesManager": {
@@ -1462,5 +1532,113 @@
     "none": "Sans catégorie",
     "saved": "Recette rangée.",
     "error": "Impossible de ranger la recette, réessayez."
+  },
+  "accountDeleted": {
+    "title": "Compte supprimé",
+    "message": "Votre compte et vos données ont été supprimés. Merci d'être passé·e par ici.",
+    "home": "Retour à l'accueil"
+  },
+  "report": {
+    "link": "Signaler",
+    "title": "Signaler cette recette",
+    "description": "Dites-nous ce qui ne va pas. Votre signalement est examiné par l'éditrice du site.",
+    "reason": "Motif",
+    "details": "Détails (facultatif)",
+    "detailsPlaceholder": "Où est le problème ? Ajoutez un lien ou une précision utile.",
+    "submit": "Envoyer le signalement",
+    "sent": "Merci, votre signalement a été envoyé.",
+    "reasons": {
+      "illegal": {
+        "label": "Contenu illicite",
+        "hint": "Contenu haineux, violent ou contraire à la loi."
+      },
+      "copyright": {
+        "label": "Droit d'auteur",
+        "hint": "Recette ou texte copié sans autorisation."
+      },
+      "spam": {
+        "label": "Spam",
+        "hint": "Publicité, contenu répétitif ou sans rapport."
+      },
+      "other": {
+        "label": "Autre",
+        "hint": "Un autre problème."
+      },
+      "unknown": {
+        "label": "Motif inconnu"
+      }
+    }
+  },
+  "support": {
+    "title": "Signalements",
+    "subtitle": "Les signalements ouverts ou en cours d'examen.",
+    "loadError": "Chargement impossible",
+    "empty": {
+      "title": "Aucun signalement à traiter",
+      "description": "Tout est à jour."
+    },
+    "status": {
+      "open": "Ouvert",
+      "reviewed": "Examiné",
+      "actioned": "Traité",
+      "dismissed": "Rejeté"
+    },
+    "recipeUnreadable": "Recette (titre indisponible)",
+    "recipeDeleted": "Recette supprimée",
+    "open": "Ouvrir la recette",
+    "actions": {
+      "reviewed": "Marquer examiné",
+      "actioned": "Marquer traité",
+      "dismissed": "Rejeter"
+    },
+    "delete": "Supprimer la recette",
+    "deleteConfirm": {
+      "title": "Supprimer la recette signalée ?",
+      "description": "« {title} » sera supprimée pour tout le monde. Le signalement sera marqué comme traité.",
+      "confirm": "Supprimer"
+    },
+    "updated": "Signalement mis à jour.",
+    "deleted": "Recette supprimée."
+  },
+  "legal": {
+    "nav": "Pages légales",
+    "footerNav": "Informations légales",
+    "links": {
+      "terms": "conditions d'utilisation",
+      "privacy": "politique de confidentialité"
+    },
+    "footer": {
+      "mentions": "Mentions légales",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "cookies": "Cookies",
+      "contact": "Contact"
+    }
+  },
+  "visitor": {
+    "title": "Votre carnet de recettes, partagé avec ceux que vous aimez",
+    "subtitle": "Rassemblez vos recettes, partagez-les en famille et entre amis, et cuisinez sans perdre une miette.",
+    "signup": "Créer un compte",
+    "login": "Se connecter",
+    "free": "Gratuit, sans publicité. Connexion par e-mail ou avec Google.",
+    "features": {
+      "title": "Ce que vous trouverez ici",
+      "cookbook": {
+        "title": "Un carnet à vous",
+        "description": "Vos recettes, vos catégories, votre planning de repas et vos listes de courses au même endroit."
+      },
+      "sharing": {
+        "title": "Partage en famille et entre amis",
+        "description": "Partagez une recette avec un ami, un groupe ou un lien, et choisissez ce que les autres peuvent en faire."
+      },
+      "ai": {
+        "title": "Import par IA",
+        "description": "Collez un texte, déposez une photo ou un PDF, ou dictez une recette : elle est mise en forme pour vous."
+      },
+      "bilingual": {
+        "title": "Bilingue",
+        "description": "Chaque recette se lit en français et en anglais, grâce à la traduction automatique."
+      }
+    }
   }
 }
