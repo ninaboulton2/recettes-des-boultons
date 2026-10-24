@@ -1,7 +1,7 @@
 # Bascule v2 — remplissage des données et passage au multi-comptes
 
 Pour : **Nina** et **Claude**, sur le projet Supabase `recettes-boultons` (`tzlkabxcmmbwhpyvmato`) et dans Vercel.
-Complète `BASCULE_PROD.md` (§ 10 et § 11 : 0017 et 0019, déjà passées) ; correspond à la phase 11 du dossier
+Complète `BASCULE_PROD.md` (§ 10 et § 11 : 0017 et 0019, déjà passées ; **0021 se pose aussi tout de suite**, voir § 2) ; correspond à la phase 11 du dossier
 « Recettes v2 » (§ 4.2 étapes 3 à 6, § 4.3, § 9).
 
 Ce que fait la bascule : les recettes Boultons reçoivent une propriétaire (Nina), les comptes actuels
@@ -62,12 +62,14 @@ Les politiques de la v1 ne sont pas touchées : tout le monde lit encore tout, s
    `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites`, `planning`, `planning_notes`,
    `shopping_lists`, `shopping_items`, `ai_usage`, et les 11 tables de 0017) + le `pg_dump` du § 0.1 de
    `BASCULE_PROD.md`, **hors du dépôt Git**, + la liste des fichiers du bucket `recipe-photos`.
-2. **0017 et 0019 appliquées en production** (`BASCULE_PROD.md` § 10 et § 11). Vérification :
+2. **0017, 0019 et 0021 appliquées en production** (`BASCULE_PROD.md` § 10 et § 11 pour 0017 et 0019 ; 0021 : voir
+   « Où s'insère 0021 » au § 2). Vérification :
 
    ```sql
    select to_regclass('public.groups') is not null                      as t0017,
           to_regprocedure('private.can_read_recipe(uuid)') is not null  as f0019,
-          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true / true / 0
+          to_regprocedure('public.copy_recipe(uuid)') is not null       as f0021,
+          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true / true / true / 0
    ```
 3. **Code v2 prêt** : branche fusionnable, CI verte, **déployé en préproduction et non promu** (Vercel :
    déploiement « staged », à promouvoir à l'étape 7). Noter l'identifiant du déploiement de production actuel
@@ -79,6 +81,24 @@ Les politiques de la v1 ne sont pas touchées : tout le monde lit encore tout, s
 6. Un onglet SQL Editor ouvert, un onglet Vercel → Deployments, un onglet Authentication → Users.
 
 ## 2. L'ordre exact
+
+### Où s'insère 0021 (fonctions métier côté recettes, phase 5A)
+
+Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **0020** → code v2.
+
+* **0021 s'applique tout de suite, comme 0019** : `supabase/migrations/0021_recipe_rpcs.sql`, un seul Run dans le SQL Editor (ou
+  `apply_migration` sur le « go » de Nina). Elle ne change **rien pour la v1** : aucune table, colonne, politique ni donnée ;
+  elle ajoute 17 fonctions et remplace deux fonctions par des versions de même signature (`save_recipe`,
+  `save_recipe_translation`). La migration vérifie elle-même, en fin de fichier, que les empreintes md5 des politiques et des
+  autres fonctions n'ont pas bougé. Tant que 0020 n'est pas appliquée, `save_recipe` n'écrit pas `owner_id` (le remplissage 0018
+  l'attribuera à Nina) : une recette créée en v1 entre 0021 et 0018 reste donc sans propriétaire, comme aujourd'hui.
+* **Avant le déploiement du code v2** : le code v2 appelle ces fonctions, et sans 0021 un éditeur « modifier l'original » ne
+  pourrait pas enregistrer la traduction de sa modification (`save_recipe_translation` resterait réservée aux admins).
+* **Après 0020**, rien à refaire : `save_recipe` fonctionne alors pour l'auteur et pour un éditeur `edit_original` (le RLS de 0020
+  décide ; `visibility` et `category_id` ne sont pris en compte que pour l'auteur).
+* **Retour arrière** : indépendant de 0018 / 0020 (`supabase/rollback/0021_recipe_rpcs_down.sql`, n'écrit aucune donnée). À
+  jouer AVANT le retour arrière de 0019 (les fonctions de 0021 s'appuient sur `private.*`). Les clients v2 qui appellent les
+  fonctions supprimées échouent : retirer d'abord le code v2.
 
 | # | Étape | Qui |
 |---|---|---|
@@ -241,7 +261,7 @@ drop table private.v2_fill_params;      -- supprime les e-mails et pseudonymes s
 ```
 
 Garder `private.backup_0018_profiles` et `private.backup_0018_created` pendant la semaine de surveillance (elles
-permettent le retour arrière). Elles seront retirées avec le « contract » (0021) ou par le retour arrière.
+permettent le retour arrière). Elles seront retirées avec le « contract » (0022) ou par le retour arrière.
 
 ## 3. Retour arrière, pas à pas
 

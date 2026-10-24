@@ -10,7 +10,7 @@
 --   0017 expand (fait) · 0018 remplissage (phase 4, à venir) · 0019 = CETTE
 --   migration · 0020 = bascule des politiques des recettes, PRÉPARÉE mais non
 --   appliquée : supabase/v2/0020_rls_switchover.sql (voir CHOIX n° 1) · 0021 =
---   « contract » (ancien 0020 du dossier). Le dossier mettait « fonctions +
+--   fonctions métier côté recettes · 0022 = « contract » (ancien 0020 du dossier). Le dossier mettait « fonctions +
 --   remplacement des politiques » dans un seul 0019 ; on le scinde en deux pour
 --   que la partie sans risque puisse partir en production tout de suite.
 --

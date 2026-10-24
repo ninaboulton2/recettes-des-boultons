@@ -1,8 +1,8 @@
 // ============================================================================
 //  FICHIER GÉNÉRÉ — NE PAS ÉDITER À LA MAIN.
-//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0019) :
+//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0021) :
 //    npx supabase gen types typescript --local > shared/types/database.ts
-//  puis replacer cet en-tête. Après application des migrations en prod :
+//  puis replacer cet en-tête. (Les fonctions de 0021 ont été ajoutées à la main : à revérifier à la régénération.) Après application des migrations en prod :
 //    npx supabase gen types typescript --project-id tzlkabxcmmbwhpyvmato --schema public
 // ============================================================================
 
@@ -625,14 +625,29 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"add_to_cookbook":
+{ Args: { "p_category"?: string,"p_recipe": string }; Returns: boolean
+                           },
 "check_ai_quota":
 { Args: { "p_max_per_day": number }; Returns: boolean
+                           },
+"claim_shared_recipe":
+{ Args: { "p_token": string }; Returns: string
+                           },
+"copy_recipe":
+{ Args: { "p_source": string }; Returns: string
+                           },
+"create_share_link":
+{ Args: { "p_recipe": string }; Returns: string
                            },
 "custom_access_token_hook":
 { Args: { "event": Json }; Returns: Json
                            },
 "delete_recipe":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"dismiss_prompt":
+{ Args: { "p_kind": string,"p_target": string }; Returns: undefined
                            },
 "fold_text":
 { Args: { "p": string }; Returns: string
@@ -645,11 +660,37 @@ isOneToOne: false
               "cookbook_title": string,"display_name": string,"id": string
             }[]
                            },
+"get_shared_recipe":
+{ Args: { "p_locale"?: string,"p_token": string }; Returns: Json
+                           },
+"grant_recipe":
+{ Args: { "p_grantee_group"?: string,"p_grantee_user"?: string,"p_permission"?: string,"p_recipe": string }; Returns: string
+                           },
 "immutable_array_to_string":
 { Args: { "p": (string)[] }; Returns: string
                            },
 "immutable_unaccent":
 { Args: { "p": string }; Returns: string
+                           },
+"list_author_recipes":
+{ Args: { "p_author": string,"p_limit"?: number,"p_offset"?: number }; Returns: {
+              "author_id": string,"author_name": string,"category": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"in_cookbook": boolean,"lang": string,"notes": string,"permission": string,"photo_path": string,"prep_time": number,"servings": number,"tags": (string)[],"title": string,"total_count": number,"translation": Json,"updated_at": string
+            }[]
+                           },
+"list_cookbook":
+{ Args: { "p_category"?: string,"p_limit"?: number,"p_offset"?: number,"p_query"?: string }; Returns: {
+              "added_at": string,"author_id": string,"author_name": string,"category": string,"category_id": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"lang": string,"notes": string,"permission": string,"photo_path": string,"prep_time": number,"relation": string,"servings": number,"tags": (string)[],"title": string,"total_count": number,"translation": Json,"updated_at": string
+            }[]
+                           },
+"list_recipe_grants":
+{ Args: { "p_recipe": string }; Returns: {
+              "created_at": string,"grant_id": string,"granted_by": string,"granted_by_name": string,"grantee_group_id": string,"grantee_name": string,"grantee_user_id": string,"origin": string,"permission": string,"source_grant_id": string
+            }[]
+                           },
+"list_shared_with_me":
+{ Args: { "p_limit"?: number,"p_offset"?: number }; Returns: {
+              "author_id": string,"author_name": string,"category": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"lang": string,"notes": string,"permission": string,"photo_path": string,"prep_time": number,"servings": number,"tags": (string)[],"title": string,"total_count": number,"translation": Json,"updated_at": string,"via": string
+            }[]
                            },
 "merge_shopping_item":
 { Args: { "p_amount_num": number,"p_list_id": string,"p_name": string,"p_recipe_id"?: string,"p_unit_code": string }; Returns: {
@@ -676,6 +717,28 @@ isOneToOne: false
                            },
 "parse_amount":
 { Args: { "p": string }; Returns: number
+                           },
+"pending_prompts":
+{ Args: { "p_limit"?: number,"p_since"?: string }; Returns: {
+              "author_id": string,"author_name": string,"created_at": string,"kind": string,"recipe_count": number,"recipe_id": string,"target_id": string,"title": string
+            }[]
+                           },
+"recipe_usage":
+{ Args: { "p_recipe": string }; Returns: {
+              "cookbook_count": number,"copy_count": number
+            }[]
+                           },
+"remove_from_cookbook":
+{ Args: { "p_recipe": string }; Returns: boolean
+                           },
+"reshare_recipe":
+{ Args: { "p_grantee_group"?: string,"p_grantee_user"?: string,"p_permission"?: string,"p_recipe": string }; Returns: string
+                           },
+"revoke_recipe_grant":
+{ Args: { "p_grant_id": string }; Returns: boolean
+                           },
+"revoke_share_link":
+{ Args: { "p_recipe": string }; Returns: boolean
                            },
 "save_recipe":
 { Args: { "payload": Json }; Returns: string

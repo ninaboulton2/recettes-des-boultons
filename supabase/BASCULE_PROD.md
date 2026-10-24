@@ -544,7 +544,7 @@ refuse de tourner si une recette n'a pas de `owner_id`.
 - Effets de bord à connaître : `profiles` ne se lit et ne se modifie plus que pour SA ligne (support compris ;
   le code actuel ne lit que son propre profil) ; le support ne lit plus que les recettes signalées ; le fichier
   refuse aussi de tourner si un propriétaire n'a pas de profil. Contenu : une section ne peut référencer que sa
-  recette ; le « contract » (0021) ajoutera `unique (id, recipe_id)` + clé étrangère composite. `photo_path` doit
+  recette ; le « contract » (0022) ajoutera `unique (id, recipe_id)` + clé étrangère composite. `photo_path` doit
   commencer par `<id de la recette>/` (contrainte `not valid`).
 - À noter : jeton JWT `user_role` périmé jusqu'à 1 h après un changement de rôle ; un créateur de groupe ne peut pas
   supprimer son compte avant la RPC de transfert (phase 5) ; `can_read_recipe` est évalué ligne par ligne ; pas de

@@ -85,9 +85,9 @@ recettes-des-boultons/
 │   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
 ├── i18n/locales/             # fr.json, en.json
 ├── supabase/
-│   ├── migrations/           # 0001 → 0017, 0019 (SQL, appliquées à la main, voir § 4)
+│   ├── migrations/           # 0001 → 0017, 0019, 0021 (SQL, appliquées à la main, voir § 4)
 │   ├── v2/                   # bascule RLS 0020 (PRÉPARÉE, jamais appliquée avec les migrations, voir § 20)
-│   ├── rollback/             # retours arrière (0005, 0013, 0016, 0017, 0019, 0020)
+│   ├── rollback/             # retours arrière (0005, 0013, 0016, 0017, 0018, 0019, 0020, 0021)
 │   ├── fixes/                # correctifs de données ponctuels
 │   ├── local/                # base de dev locale : up.sh, setup.sh, test.sh, comptes, snapshot
 │   ├── tests/                # tests SQL par migration + schéma de base
@@ -317,7 +317,8 @@ supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
 | 0017 | v2, phase 2, « expand » seulement : 11 tables sociales fermées à l'API (RLS sans politique) — `categories`, `groups`, `group_members`, `friendships`, `invitations`, `recipe_grants`, `recipe_share_links`, `cookbook_entries`, `notifications`, `reports`, `system_alerts` — + colonnes nullables `recipes.owner_id / visibility / copied_from / category_id` et `profiles.display_name / cookbook_title / theme_settings / active_theme_group_id / discoverable / onboarded_at`. Aucun effet sur le code actuel ; choix de conception en tête du fichier. Retour arrière : `supabase/rollback/0017_social_schema_down.sql` |
 | 0019 | v2, phase 3 : fonctions d'aide RLS `private.*` (`can_read_recipe`, `can_copy_recipe`, `can_edit_recipe`, `is_group_member`, `shares_group_with`, `are_friends`, `is_support`, …), politiques + `grant` ciblés (colonnes comprises) sur les 11 tables de 0017 et sur la nouvelle table `dismissed_prompts` (bannières fermées), RPC `search_users`, `get_public_profiles`, `add_author_recipes_to_cookbook`, 4 déclencheurs d'intégrité. **Aucun effet sur le code actuel** : les politiques de `recipes` & co ne sont pas touchées (empreinte md5 vérifiée). Voir § 20. Retour arrière : `supabase/rollback/0019_rls_helpers_social_down.sql` |
 | 0018 (`supabase/v2/`) | **Remplissage v2, phase 4, NON appliqué** (jour de la bascule, avec des paramètres saisis par Nina : `v2/0018_params.sql`) : groupe « Les Boultons » (thème `boultons`), tous les comptes membres, `recipes.owner_id` = Nina, un droit `edit_original` du groupe par recette, catégories personnelles (9 par compte) et `recipes.category_id`, favoris des autres comptes → leur carnet, `display_name` / thème actif / rôles (le 2ᵉ admin repasse `user`). Idempotent, assertions, sauvegarde `private.backup_0018_*` pour le retour arrière `supabase/rollback/0018_v2_data_fill_down.sql`. Procédure : [supabase/BASCULE_V2.md](supabase/BASCULE_V2.md). Voir § 20.6 |
-| 0020 (`supabase/v2/`) | **Bascule PRÉPARÉE, non appliquée** : remplace les politiques de `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites` (insertion) et du bucket `recipe-photos`. Refuse de tourner tant qu'une recette n'a pas de `owner_id`. Retour arrière : `supabase/rollback/0020_rls_switchover_down.sql`. Numérotation : 0018 = remplissage (phase 4, appliqué AVANT 0020 mais APRÈS 0019), 0021 = « contract » (ancien 0020 du dossier) |
+| 0020 (`supabase/v2/`) | **Bascule PRÉPARÉE, non appliquée** : remplace les politiques de `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites` (insertion) et du bucket `recipe-photos`. Refuse de tourner tant qu'une recette n'a pas de `owner_id`. Retour arrière : `supabase/rollback/0020_rls_switchover_down.sql`. Numérotation : 0018 = remplissage (phase 4, appliqué AVANT 0020 mais APRÈS 0019), 0021 = fonctions métier côté recettes (ci-dessous), 0022 = « contract » (ancien 0020 du dossier) |
+| 0021 | v2, phase 5A : fonctions métier côté recettes, **sans effet sur le code actuel** (aucune table, colonne, politique ni donnée ; empreintes md5 vérifiées). 17 fonctions nouvelles (`security definer`, `search_path` vide, `authenticated` seulement ; `get_shared_recipe` aussi `anon`) : `copy_recipe`, `add_to_cookbook`, `remove_from_cookbook`, `list_cookbook`, `list_author_recipes`, `list_shared_with_me`, `grant_recipe`, `revoke_recipe_grant`, `reshare_recipe`, `list_recipe_grants`, `create_share_link`, `revoke_share_link`, `claim_shared_recipe`, `get_shared_recipe`, `recipe_usage`, `pending_prompts`, `dismiss_prompt`. Deux fonctions remplacées à signature identique : `save_recipe` (écrit `owner_id`, `category_id`, `visibility` ; inchangée sans ces clés) et `save_recipe_translation` (garde « admin OU peut modifier la recette »). S'applique **tout de suite après 0019**. Voir § 20.7. Retour arrière : `supabase/rollback/0021_recipe_rpcs_down.sql` |
 
 Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
 Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
@@ -965,6 +966,10 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   rien) et vérifie que ses retours arrière rétablissent les politiques (empreinte md5) et les données
   (`tests.data_fp()`) à l'identique : « up, down, up » de 0018 et de 0020. `npm run db:local:test` (Docker)
   ne joue ni le remplissage ni la bascule.
+  0021 : `test_0021_v1_compat.sql` (0021 SEULE, avant le remplissage : la v1 n'est pas cassée), puis
+  `test_0021_recipe_rpcs.sql` sous la chaîne complète 0019 → 0021 → 0018 → 0020 (pour chaque fonction : le « oui », et
+  le « non » pour un étranger, un membre de groupe et une amie), et « up, down, up » de 0021 (`save_recipe` /
+  `save_recipe_translation` restaurées à l'identique).
 - Ces tests SQL ne tournent pas en CI.
 
 - Nuxt 4.5 refuse deux `nuxt dev` dans le même dossier : si un serveur de dev tourne déjà,
@@ -1170,10 +1175,10 @@ les lectures (colonnes `lang`, `recipe_translations` absentes).
 
 ## 20. v2 : partage, groupes et RLS
 
-État : phases 2 (0017), 3 (0019) et 4 (remplissage `supabase/v2/0018_v2_data_fill.sql`) écrites ; le remplissage et la
-bascule des politiques des recettes (`supabase/v2/0020_rls_switchover.sql`) sont préparés mais **pas appliqués** (le site
-actuel suppose que tout compte connecté lit toutes les recettes). Ordre : 0017 → 0019 → 0018 → 0020 → code v2
-(procédure : `supabase/BASCULE_V2.md`). Détail et choix de conception : en-têtes de `0017`, `0019`, `v2/0018` et `v2/0020`.
+État : phases 2 (0017), 3 (0019), 4 (remplissage `supabase/v2/0018_v2_data_fill.sql`) et 5A (0021, § 20.7) écrites ; le
+remplissage et la bascule des politiques des recettes (`supabase/v2/0020_rls_switchover.sql`) sont préparés mais **pas
+appliqués** (le site actuel suppose que tout compte connecté lit toutes les recettes). Ordre : 0017 → 0019 → **0021**
+→ 0018 → 0020 → code v2 (procédure : `supabase/BASCULE_V2.md`). Détail et choix de conception : en-têtes de `0017`, `0019`, `v2/0018` et `v2/0020`.
 
 ### 20.1 Qui peut quoi sur une recette (`private.recipe_level(r)`)
 
@@ -1216,8 +1221,8 @@ ne renvoient que `id`, `display_name`, `cookbook_title`, **jamais l'e-mail** ni 
 Lecture = `can_read_recipe`, écriture du contenu = `can_edit_recipe`, insertion = auteur, photos
 suivent la recette ; `recipes.owner_id` passe NOT NULL avec `DEFAULT auth.uid()` (`save_recipe` v1 continue
 de fonctionner, et n'est plus réservé aux admins : tout compte crée SES recettes). Reste à faire hors de ce
-fichier : `save_recipe_translation` (garde `is_admin()` à remplacer), bucket de photos **public** à passer
-en privé avec les liens signés (phase 8). Le 2ᵉ compte admin → `user` est fait par le remplissage 0018 (§ 20.6).
+fichier : bucket de photos **public** à passer en privé avec les liens signés (phase 8). `save_recipe_translation`
+(garde `is_admin()` en v1) est remplacée par la migration 0021 : « admin OU peut modifier la recette ». Le 2ᵉ compte admin → `user` est fait par le remplissage 0018 (§ 20.6).
 
 ### 20.5 Points d'attention (relecture de sécurité)
 
@@ -1230,7 +1235,7 @@ en privé avec les liens signés (phase 8). Le 2ᵉ compte admin → `user` est 
   sa politique dédiée. Ce qui casserait : tout écran ou requête qui listerait les profils des autres ou modifierait
   le profil / le rôle d'un autre compte via l'API (il n'y en a pas dans le dépôt) ; passer par le service role ou une RPC.
 - **Section d'une autre recette** : 0020 refuse qu'un ingrédient / une étape référence une section d'une autre
-  recette (fonction `private.section_belongs_to`). Pour le « contract » (0021) : ajouter `unique (id, recipe_id)` sur
+  recette (fonction `private.section_belongs_to`). Pour le « contract » (0022) : ajouter `unique (id, recipe_id)` sur
   `recipe_sections` et une clé étrangère composite `(section_id, recipe_id)` depuis `recipe_ingredients` et `instructions`.
 - **Jeton JWT périmé** : le claim `user_role` (et donc `private.is_support()`) peut rester périmé jusqu'à 1 h après un
   changement de rôle (durée de vie du jeton).
@@ -1262,3 +1267,79 @@ Procédure complète, compatibilité du code actuel (ce qui casse / ne casse pas
 - Idempotent ; sauvegarde dans `private.backup_0018_profiles` / `private.backup_0018_created` ; retour arrière
   `rollback/0018_v2_data_fill_down.sql` (après celui de 0020). Le fichier est dans `supabase/v2/` : il passe APRÈS 0019
   (son numéro est avant) et exige des paramètres, donc `setup.sh` / `db push` ne doivent jamais l'appliquer.
+
+### 20.7 API v2 côté recettes (migration 0021), phase 5A
+
+**Convention.** Comme `search_recipes` (lecture directe depuis le navigateur), les fonctions ci-dessous s'appellent
+**directement avec supabase-js et la session de la personne** : pas de route `server/api/v2/…`, pas de service role. Chaque
+fonction est `security definer` avec `search_path` vide et lit `(select auth.uid())` : elle ne prend jamais « qui je suis »
+en paramètre. Les droits sont décidés en base (fonctions `private.*` de 0019). Côté application :
+`app/composables/useCookbook.ts` et `useSharing.ts` (fonctions pures `fn(supabase, …)` + `useCookbook()` / `useSharing()`),
+schémas Zod `shared/schemas/cookbook.ts` et `sharing.ts`, conversions `shared/utils/cookbook.ts` (snake_case → camelCase),
+types de `shared/types/database.ts` (ajoutés à la main, à revérifier à la prochaine régénération). Aucune interface (phase 6).
+Erreurs : refus de droit = SQLSTATE `42501` (message français), introuvable = `P0002`, entrée invalide = `22023`.
+
+| Fonction | Qui peut l'appeler | Rôle / retour |
+|---|---|---|
+| `save_recipe(payload)` | `authenticated` (le RLS décide : admin en v1 ; auteur ou `edit_original` en v2) | Inchangée sans `visibility` / `category_id`. À la création : `owner_id = auth.uid()` (une fois la bascule 0020 appliquée), `visibility` (défaut `groups`), `category_id` (doit être à soi). Pour un éditeur qui n'est pas l'auteur, ces deux clés sont ignorées. **`SECURITY INVOKER`** (exception voulue). |
+| `save_recipe_translation(recipe, lang, tr)` | `authenticated` | Garde : admin OU `can_edit_recipe`. Invoker. |
+| `copy_recipe(p_source)` | `authenticated` ayant le droit `copy` ou plus | Copie modifiable à soi (`visibility = private`, `copied_from`), sections / ingrédients / étapes / traductions copiés, **photo non copiée (phase 8)**. Renvoie l'id. |
+| `add_to_cookbook(p_recipe, p_category?)` | lecteur de la recette | Idempotente ; `true` la 1ʳᵉ fois ; sans effet sur ses propres recettes ; catégorie = une des siennes. |
+| `remove_from_cookbook(p_recipe)` | connecté | Idempotente ; `true` si une entrée a été retirée. |
+| `list_cookbook(p_category?, p_query?, p_limit, p_offset)` | connecté | Mes recettes (`owned`) + celles ajoutées et encore lisibles (`added`) ; `permission` (`author` / `edit_original` / `copy` / `read`), `category_id`, auteur, `lang` + `translation` (comme `search_recipes`), `total_count`. |
+| `list_author_recipes(p_author, p_limit, p_offset)` | connecté | « Explorer les recettes de X » : ses recettes que je peux lire, `in_cookbook`. Vide pour soi-même. |
+| `list_shared_with_me(p_limit, p_offset)` | connecté | Lisibles par moi (droit direct, de groupe, ou partage implicite « groupes »), pas encore dans mon carnet ; `via` = `user` / `group`. |
+| `grant_recipe(p_recipe, p_grantee_user?, p_grantee_group?, p_permission)` | **auteur** | Ami ou personne d'un groupe commun, ou groupe dont l'auteur est membre (`private.can_create_grant`) ; le plus récent remplace. Renvoie l'id du droit. |
+| `revoke_recipe_grant(p_grant_id)` | auteur ; auteur d'un repartage ; bénéficiaire qui renonce | `true` si retiré, `false` sinon (inconnu ou non permis, sans distinction). Les repartages issus de ce droit disparaissent. |
+| `reshare_recipe(p_recipe, p_grantee_user?, p_grantee_group?, p_permission)` | détenteur d'un droit **explicite** | `read` ou `copy` seulement (**jamais `edit_original`**), au plus son niveau ; ne remplace jamais un droit qui n'est pas le sien (renvoie `NULL`). |
+| `list_recipe_grants(p_recipe)` | **auteur** | Droits donnés (personnes, groupes, repartages) avec noms d'affichage, jamais d'e-mail. |
+| `create_share_link(p_recipe)` / `revoke_share_link(p_recipe)` | **auteur** | Jeton du lien public (le même s'il existe) / désactivation. |
+| `get_shared_recipe(p_token, p_locale?)` | **`anon`** et `authenticated` | Recette complète en JSON pour un jeton actif, sinon `NULL`. Ni id de recette, ni `owner_id`, ni e-mail, ni `photo_path` (`has_photo`) ; seulement `author_name` (pseudonyme). |
+| `claim_shared_recipe(p_token)` | connecté | Depuis la page publique : droit `copy` (`origin = link`, ne rétrograde jamais) + ajout au carnet. Renvoie l'id de la recette. |
+| `recipe_usage(p_recipe)` | **auteur** | `cookbook_count` (carnets d'AUTRES personnes) et `copy_count` : à appeler avant `delete_recipe` pour avertir. |
+| `pending_prompts(p_since?, p_limit)` | connecté | Bannières `author_recipes` / `new_recipe` (voir ci-dessous). |
+| `dismiss_prompt(p_kind, p_target)` | connecté | Ferme une bannière pour de bon (idempotente). |
+| `add_author_recipes_to_cookbook(p_author)` (0019) | connecté, `security invoker` | « Tout ajouter » ; ferme aussi la bannière de l'auteur. |
+
+**Bannières (`pending_prompts`).** Calculées **à la volée** à partir des groupes communs et de `dismissed_prompts`, sans table
+`notifications` ni déclencheur : rien à écrire ni à nettoyer. `author_recipes` = un co-membre de l'un de mes groupes a au moins
+une recette lisible pas encore dans mon carnet (`target_id` = l'auteur ; disparaît après « tout ajouter » ou fermeture).
+`new_recipe` = recette lisible créée **après** que l'auteur et moi soyons tous deux dans un groupe commun (`target_id` = la
+recette ; disparaît quand elle est ajoutée au carnet ou fermée). Les recettes d'avant l'arrivée ne donnent donc que la bannière
+« Explorer ».
+
+**Exemples** (client supabase-js de la session ; `useCookbook()` / `useSharing()` font la même chose en validant les entrées) :
+
+```ts
+const { listCookbook, addToCookbook, copyRecipe, pendingPrompts, dismissPrompt } = useCookbook()
+const { items, totalCount } = await listCookbook({ categoryId, query: 'tarte', page: 1 })   // list_cookbook
+await addToCookbook({ recipeId, categoryId })              // true la 1re fois
+const mine = await copyRecipe({ recipeId })                 // id de la copie (droit copy requis)
+const banners = await pendingPrompts()                      // [{ kind: 'author_recipes', targetId, authorName, recipeCount }, …]
+await dismissPrompt({ kind: 'new_recipe', targetId: banners[0].targetId })
+
+const { grantRecipe, reshareRecipe, createShareLink, getSharedRecipe, recipeUsage } = useSharing()
+await grantRecipe({ recipeId, granteeUserId, permission: 'edit_original' })   // auteur seulement
+await reshareRecipe({ recipeId, granteeGroupId, permission: 'copy' })         // jamais edit_original
+const { path } = await createShareLink({ recipeId })        // '/r/<jeton>'
+const page = await getSharedRecipe({ token, locale: 'en' }) // sans compte ; null si le lien est inconnu ou révoqué
+const { cookbookCount, copyCount } = await recipeUsage({ recipeId })   // avant de supprimer
+```
+
+```sql
+-- appel brut (même résultat) : select * from public.list_cookbook(p_query => 'tarte', p_limit => 24, p_offset => 0);
+select public.get_shared_recipe('<jeton>'::uuid, 'fr');   -- exécutable sans compte (rôle anon)
+```
+
+**À savoir.**
+
+- `owner_id` n'est écrit par `save_recipe` qu'**après la bascule 0020** (colonne NOT NULL) : avant le remplissage 0018 une
+  recette créée en v1 reste sans propriétaire, pour que 0018 l'attribue à Nina.
+- Les routes `add-recipe`, `update-recipe`, `delete-recipe` et les endpoints IA restent réservés aux admins (`requireAdmin`) :
+  les ouvrir à tout compte (le RLS décide) relève des phases 6 et 7. Le schéma `recipeInputSchema` accepte déjà `visibility` et
+  `categoryId` (transmis à `save_recipe` seulement s'ils sont fournis).
+- Les notifications « recette supprimée » (réponse n° 4 du dossier, § 10) et celles d'amis / groupes relèvent de la phase 5B.
+- La copie ne duplique pas la photo (phase 8) ; `get_shared_recipe` ne renvoie pas d'URL de photo (liens signés, phase 8).
+- Correction apportée à `v2/0020` pendant cette phase : le déclencheur de garde `recipes_guard_owner_fields` bloquait la
+  suppression, par son auteur, d'une recette copiée par quelqu'un d'autre (`copied_from` des copies passe à NULL par clé
+  étrangère). Les mises à jour faites par clé étrangère (`pg_trigger_depth() > 1`) sont désormais exemptées.
