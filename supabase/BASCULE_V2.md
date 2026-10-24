@@ -108,9 +108,17 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
   le déploiement du code v2 (la fiche l'appelle). Un seul Run dans le SQL Editor (ou `apply_migration` sur le « go » de Nina).
 * Retour arrière : `supabase/rollback/0026_recipe_access_down.sql` (supprime la fonction ; retirer d'abord le code v2).
 
+### Où s'insère 0028 (phase 7 : IA ouverte à tous, crédit épuisé, e-mails)
+
+* `supabase/migrations/0028_ai_credit_email.sql` : deux colonnes **nullables** (`profiles.ai_daily_quota`, `notifications.emailed_at`), un index partiel, 10 fonctions (quota du jour, état du service, alertes de crédit, e-mails de notification ; celles du serveur sont réservées à `service_role`).
+  Dépend de 0012 (`ai_usage`), 0017 (`system_alerts`, `notifications`) et 0019 (`private.is_support`, droits de colonnes de `profiles`). **Aucune politique, déclencheur ni donnée existante modifiés : sans effet pour la v1**, avant ou après 0018 / 0020 ; `check_ai_quota` (0012), utilisée par la v1, est inchangée. Compatible avec le SQL Editor (aucune table temporaire). Un seul Run (ou `apply_migration` sur le « go » de Nina), **avant** le déploiement du code v2.
+* **Variables à poser dans Vercel avant de promouvoir le code v2** (détail et valeurs : `DEVELOPER.md` § 20.14) : `SUPABASE_SECRET_KEY` (déjà posée pour la suppression de compte), **`CRON_SECRET`** (32 caractères aléatoires ou plus ; sans lui les deux tâches planifiées de `vercel.json` répondent 503), `ALERT_EMAIL`, et, quand le domaine est prêt, `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`. Facultatives : `AI_NEW_ACCOUNT_DAILY_QUOTA` (20), `AI_NEW_ACCOUNT_DAYS` (30), `AI_MONTHLY_BUDGET_USD` (5 suggéré). **Sans Resend, aucun e-mail n'est envoyé et rien ne casse.**
+* Après le déploiement : Vercel → Settings → Cron Jobs doit lister `/api/cron/ai-credit-probe` et `/api/cron/notification-emails` ; le SMTP d'authentification de Supabase se branche à part (procédure en § 20.14, rien d'automatisé).
+* **Retour arrière** : `supabase/rollback/0028_ai_credit_email_down.sql` (supprime fonctions, index et les deux colonnes ; les notifications et `system_alerts` restent). À jouer **après** avoir retiré le code v2 (ou repassé `NUXT_PUBLIC_V2` à false) : le serveur v2 appelle ces fonctions. Indépendant de 0018 / 0020.
+
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
-Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
+Ordre complet : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
 pas l'utiliser.)
 
 * **0023 s'applique tout de suite après 0021** : `supabase/migrations/0023_social_rpcs.sql`, un seul Run dans le SQL Editor (ou

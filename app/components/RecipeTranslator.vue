@@ -3,17 +3,19 @@
     <!-- Étape 1 : saisie -->
     <UCard v-if="step === 'input'">
       <form class="space-y-5" @submit.prevent="translate">
+        <!-- v2 : crédit IA épuisé / budget atteint / plafond du jour (boutons IA désactivés, avec la raison) -->
+        <AiStatusNotice />
         <!-- Entrées alternatives au collage : fichier (PDF, photo, Word, texte) ou dictée -->
         <UFormField :label="$t('translator.files.title')" name="files">
           <TranslatorFileDrop
             v-model:files="pendingFiles"
-            :disabled="isBusy"
+            :disabled="isBusy || aiBlocked"
             @add="addFiles"
           />
           <!-- Import depuis Google Drive : même flux que le dépôt d'un fichier (masqué sans config) -->
           <TranslatorDriveButton
             class="mt-3"
-            :disabled="isBusy"
+            :disabled="isBusy || aiBlocked"
             @add="addFiles"
             @error="setMediaError"
           />
@@ -23,7 +25,7 @@
         <div role="group" aria-labelledby="translator-audio-title" class="space-y-2">
           <p id="translator-audio-title" class="text-sm font-medium text-highlighted">{{ $t('translator.audio.title') }}</p>
           <TranslatorAudioRecorder
-            :disabled="isBusy"
+            :disabled="isBusy || aiBlocked"
             :transcribing="isTranscribing"
             @recorded="transcribe"
           />
@@ -69,7 +71,7 @@
             size="lg"
             icon="i-lucide-sparkles"
             :loading="isTranslating"
-            :disabled="!canTranslate"
+            :disabled="!canTranslate || aiBlocked"
             :label="isTranslating ? $t('translator.form.loading') : $t('translator.form.submit')"
           />
         </div>
@@ -186,6 +188,8 @@ const localePath = useLocalePath()
 const toast = useToast()
 
 const v2 = useV2()
+const { blocked: aiBlocked, refresh: refreshAiStatus } = useAiStatus()
+onMounted(() => { void refreshAiStatus() })
 const {
   categoryId,
   visibility,
@@ -219,6 +223,8 @@ const {
   editText,
   reset
 } = useTranslator()
+// le nombre d'appels restants change après chaque appel IA (aperçu produit, recette ajoutée)
+watch(step, () => { void refreshAiStatus() })
 
 const languageOptions = computed(() =>
   (['fr', 'en'] as const).map(value => ({ value, label: t(`translator.preview.languages.${value}`) }))

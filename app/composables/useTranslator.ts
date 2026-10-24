@@ -1,6 +1,7 @@
 import type { Recipe, RecipeInput, RecipeLang } from '#shared/types'
 import type { TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
 import { categoryLabel } from '#shared/utils/categories'
+import { AI_CODES } from '#shared/utils/aiStatus'
 import { translatedInput, type TranslationDraft } from '#shared/utils/translation'
 import type { SimilarRecipesResponse } from '#shared/schemas/similar'
 import type { SimilarRecipe } from '#shared/utils/similarRecipes'
@@ -120,8 +121,20 @@ export function useTranslator() {
     !isBusy.value
     && (hasFiles.value || (textLength.value >= RECIPE_TEXT_MIN && textLength.value <= RECIPE_TEXT_MAX)))
 
+  const aiStatus = useAiStatus()
+
   function describeError(err: unknown): string {
     if (isApiError(err)) {
+      // v2 : crédit / budget coupé pour tous (503), plafond du jour (429), fournisseur très sollicité (503) : messages dédiés
+      if (err.code === AI_CODES.unavailable) {
+        aiStatus.noteError(err.code)
+        return t('ai.unavailable.message')
+      }
+      if (err.code === AI_CODES.quotaReached) {
+        aiStatus.noteError(err.code)
+        return aiStatus.message.value || err.statusMessage
+      }
+      if (err.code === AI_CODES.busy) return t('ai.busy')
       if (err.statusCode === 502) return t('translator.errors.unavailable')
       if (err.statusCode === 504) return t('translator.errors.timeout')
       // Refus de la plateforme (corps > 4,5 Mo) : pas de JSON, donc pas de message du serveur.

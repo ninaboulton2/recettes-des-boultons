@@ -3,6 +3,7 @@
 -- Avant de l'appliquer : retirer le code phase 7 (le serveur v2 appelle ces fonctions) ou repasser NUXT_PUBLIC_V2 à false. Rejouable.
 begin;
 drop function if exists public.support_reset_ai_credit();
+drop function if exists public.ai_credit_alert_active();
 drop function if exists public.reset_ai_credit_alert();
 drop function if exists public.claim_ai_alert_email(text);
 drop function if exists public.report_ai_billing_error();

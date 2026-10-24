@@ -7,8 +7,9 @@ import {
 } from '#shared/schemas/media'
 import { getAiConfig, getModel } from '../utils/ai/provider'
 import { extractRecipeFromFiles, type UploadedRecipeFile } from '../utils/ai/media'
-import { AI_ERROR_MESSAGES, throwAiProviderError } from '../utils/ai/errors'
-import { assertAiQuota, trackAiCall } from '../utils/ai/usage'
+import { AI_ERROR_MESSAGES } from '../utils/ai/errors'
+import { trackAiCall } from '../utils/ai/usage'
+import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { buildRecipeResponse, hasRecipeContent } from '../utils/ai/recipe-response'
 import { fileParts, readUploadParts } from '../utils/ai/upload'
 
@@ -49,7 +50,7 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     }))
 
     const config = getAiConfig(event)
-    await assertAiQuota(supabase, config.dailyQuota)
+    await assertAiAllowed(event, supabase, config)
 
     const model = getModel(config)
     const { result, logged, durationMs } = await trackAiCall(
@@ -65,7 +66,7 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
 
     return await buildRecipeResponse(supabase, 'extract-recipe', config, result.recipe, logged, durationMs)
   } catch (error: unknown) {
-    throwAiProviderError(error, 'extract-recipe')
+    await throwAiFailure(event, error, 'extract-recipe')
     handleApiError(error, 'extract-recipe')
   }
 })

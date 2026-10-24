@@ -5,6 +5,9 @@
       <p class="mt-2 text-muted">{{ $t('support.subtitle') }}</p>
     </header>
 
+    <!-- Phase 7 : état de l'IA et bouton « Réactiver l'IA » -->
+    <SupportAiStatus />
+
     <LoadingState v-if="status === 'pending' && !reports.length" :message="$t('ui.common.loading')" />
     <ErrorState v-else-if="error" :message="$t('errors.generic')" :retry-action="() => refresh()" :title="$t('support.loadError')" :retry-text="$t('recipes.loadError.retry')" />
     <EmptyState v-else-if="reports.length === 0" icon="i-lucide-flag-off" :title="$t('support.empty.title')" :message="$t('support.empty.description')" data-testid="support-empty" />

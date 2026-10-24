@@ -8,9 +8,9 @@ import {
 } from '#shared/schemas/media'
 import { getAiConfig } from '../utils/ai/provider'
 import { getTranscriptionModel, transcribeAudio } from '../utils/ai/media'
-import { throwAiProviderError } from '../utils/ai/errors'
 import { estimateTranscriptionCostUsd } from '../utils/ai/pricing'
-import { assertAiQuota, trackAiCall } from '../utils/ai/usage'
+import { trackAiCall } from '../utils/ai/usage'
+import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { fileParts, readUploadParts, textField } from '../utils/ai/upload'
 
 /**
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event): Promise<TranscribeRecipeRespons
     })
 
     const config = getAiConfig(event)
-    await assertAiQuota(supabase, config.dailyQuota)
+    await assertAiAllowed(event, supabase, config)
 
     const model = getTranscriptionModel(config)
     const { result, logged, durationMs } = await trackAiCall(
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event): Promise<TranscribeRecipeRespons
       }
     }
   } catch (error: unknown) {
-    throwAiProviderError(error, 'transcribe-recipe')
+    await throwAiFailure(event, error, 'transcribe-recipe')
     handleApiError(error, 'transcribe-recipe')
   }
 })

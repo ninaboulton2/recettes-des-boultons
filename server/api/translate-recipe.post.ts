@@ -2,8 +2,8 @@ import { defineEventHandler } from 'h3'
 import { translateRecipeBodySchema, type TranslateRecipeResponse } from '#shared/schemas/ai'
 import { getAiConfig, getModel } from '../utils/ai/provider'
 import { translateRecipeText } from '../utils/ai/translate'
-import { throwAiProviderError } from '../utils/ai/errors'
-import { assertAiQuota, trackAiCall } from '../utils/ai/usage'
+import { trackAiCall } from '../utils/ai/usage'
+import { assertAiAllowed, throwAiFailure } from '../utils/ai/guard'
 import { buildRecipeResponse } from '../utils/ai/recipe-response'
 
 /**
@@ -23,9 +23,8 @@ import { buildRecipeResponse } from '../utils/ai/recipe-response'
  * Variantes : `POST /api/extract-recipe` (photo, PDF) et
  * `POST /api/transcribe-recipe` (dictée) partagent le quota et le journal.
  *
- * Réservé aux administrateurs pour l'instant (facturation). Pour l'ouvrir
- * à tous les utilisateurs : remplacer `requireAdmin` par `requireUser` ;
- * le quota par personne et la journalisation sont déjà par utilisateur.
+ * v1 : réservé aux administrateurs (`requireRecipeWriter`). v2 (phase 7) : tout compte connecté, avec crédit / budget / plafond
+ * de CE compte vérifiés par `assertAiAllowed` (503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED`).
  */
 export default defineEventHandler(async (event): Promise<TranslateRecipeResponse> => {
   try {
@@ -33,7 +32,7 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
     const { recipeText } = await validateBody(event, translateRecipeBodySchema)
 
     const config = getAiConfig(event)
-    await assertAiQuota(supabase, config.dailyQuota)
+    await assertAiAllowed(event, supabase, config)
 
     const model = getModel(config)
     const { result, logged, durationMs } = await trackAiCall(
@@ -45,7 +44,7 @@ export default defineEventHandler(async (event): Promise<TranslateRecipeResponse
 
     return await buildRecipeResponse(supabase, 'translate-recipe', config, result.recipe, logged, durationMs)
   } catch (error: unknown) {
-    throwAiProviderError(error, 'translate-recipe')
+    await throwAiFailure(event, error, 'translate-recipe')
     handleApiError(error, 'translate-recipe')
   }
 })

@@ -14,6 +14,8 @@ import { createMockRecipeModel, MOCK_MODEL_ID, MOCK_TRANSCRIPTION_MODEL_ID } fro
  *  - `AI_MODEL`     : identifiant du modèle chez le fournisseur (défaut par fournisseur ci-dessous)
  *  - `AI_TRANSCRIBE_MODEL` : modèle de transcription audio (défaut : gpt-4o-mini-transcribe, OpenAI uniquement)
  *  - `AI_DAILY_QUOTA` : appels max par utilisateur et par jour (défaut : 50)
+ *  - v2 : `AI_NEW_ACCOUNT_DAILY_QUOTA` (défaut 20) et `AI_NEW_ACCOUNT_DAYS` (défaut 30) pour les comptes neufs ;
+ *    `AI_MONTHLY_BUDGET_CALLS` / `AI_MONTHLY_BUDGET_USD` (défaut 0 = aucun budget), tous comptes
  *  - clés : `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`
  *
  * Le fournisseur `mock` ne fait aucun appel réseau : il renvoie une recette
@@ -39,6 +41,9 @@ export const DEFAULT_MODELS: Readonly<Record<AiProvider, string>> = {
 export const DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
 
 export const DEFAULT_DAILY_QUOTA = 50
+/** v2 : appels IA par jour d'un compte neuf (décision de Nina, dossier §10 question 7). */
+export const DEFAULT_NEW_ACCOUNT_QUOTA = 20
+export const DEFAULT_NEW_ACCOUNT_DAYS = 30
 
 export interface AiConfig {
   provider: AiProvider
@@ -46,6 +51,14 @@ export interface AiConfig {
   /** Modèle de transcription audio (dictée) ; ignoré par les fournisseurs autres qu'OpenAI et `mock`. */
   transcriptionModel: string
   dailyQuota: number
+  /** v2 : plafond du jour d'un compte neuf. */
+  newAccountDailyQuota: number
+  /** v2 : durée pendant laquelle un compte est « neuf ». */
+  newAccountDays: number
+  /** v2 : budget d'appels du mois, tous comptes (0 = aucun). */
+  monthlyBudgetCalls: number
+  /** v2 : budget de dollars estimés du mois, tous comptes (0 = aucun). */
+  monthlyBudgetUsd: number
   apiKey: string | null
 }
 
@@ -83,6 +96,19 @@ export function getAiConfig(event?: H3Event): AiConfig {
   const quotaRaw = Number.parseInt(asString(config.aiDailyQuota) || asString(process.env.AI_DAILY_QUOTA), 10)
   const dailyQuota = Number.isFinite(quotaRaw) && quotaRaw >= 0 ? quotaRaw : DEFAULT_DAILY_QUOTA
 
+  const intOf = (primary: unknown, env: string | undefined, fallback: number): number => {
+    const parsed = Number.parseInt(asString(primary) || asString(env), 10)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
+  }
+  const numberOf = (primary: unknown, env: string | undefined): number => {
+    const parsed = Number.parseFloat(asString(primary) || asString(env))
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+  }
+  const newAccountDailyQuota = intOf(config.aiNewAccountDailyQuota, process.env.AI_NEW_ACCOUNT_DAILY_QUOTA, DEFAULT_NEW_ACCOUNT_QUOTA)
+  const newAccountDays = intOf(config.aiNewAccountDays, process.env.AI_NEW_ACCOUNT_DAYS, DEFAULT_NEW_ACCOUNT_DAYS)
+  const monthlyBudgetCalls = intOf(config.aiMonthlyBudgetCalls, process.env.AI_MONTHLY_BUDGET_CALLS, 0)
+  const monthlyBudgetUsd = numberOf(config.aiMonthlyBudgetUsd, process.env.AI_MONTHLY_BUDGET_USD)
+
   const keyByProvider: Record<AiProvider, string> = {
     openai: asString(config.openaiApiKey) || asString(process.env.OPENAI_API_KEY),
     anthropic: asString(config.anthropicApiKey) || asString(process.env.ANTHROPIC_API_KEY),
@@ -92,7 +118,7 @@ export function getAiConfig(event?: H3Event): AiConfig {
   }
   const apiKey = keyByProvider[provider]
 
-  return { provider, model, transcriptionModel, dailyQuota, apiKey: apiKey || null }
+  return { provider, model, transcriptionModel, dailyQuota, newAccountDailyQuota, newAccountDays, monthlyBudgetCalls, monthlyBudgetUsd, apiKey: apiKey || null }
 }
 
 const PLACEHOLDER_KEYS = new Set(['your_openai_api_key_here', 'your-api-key', 'changeme'])

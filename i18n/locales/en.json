@@ -1598,7 +1598,19 @@
       "confirm": "Delete"
     },
     "updated": "Report updated.",
-    "deleted": "Recipe deleted."
+    "deleted": "Recipe deleted.",
+    "ai": {
+      "title": "AI service",
+      "stateOk": "AI is working.",
+      "stateExhausted": "AI credit exhausted since {since}. Automatic import and translation are turned off for everyone.",
+      "stateBudget": "Monthly budget reached: AI is turned off for everyone until next month.",
+      "month": "This month: {calls} calls, about ${cost} (estimate).",
+      "reactivate": "Turn AI back on",
+      "reactivated": "AI turned back on.",
+      "reactivateHint": "Do this after topping up the credit with the provider. If the credit is still empty, the alert will come back on the next call.",
+      "nothingToDo": "AI was already on.",
+      "error": "Could not read the AI status."
+    }
   },
   "legal": {
     "nav": "Legal pages",
@@ -1640,5 +1652,18 @@
         "description": "Every recipe can be read in French and in English, thanks to automatic translation."
       }
     }
+  },
+  "ai": {
+    "unavailable": {
+      "title": "AI is temporarily unavailable",
+      "message": "Automatic import and translation are temporarily unavailable. You can type the recipe in by hand: it will be translated as soon as possible."
+    },
+    "quota": {
+      "title": "Daily limit reached",
+      "message": "You have used your {quota} AI calls for today. They will reset on {time} (Paris time).",
+      "remaining": "You have {remaining} AI call left today out of {quota}. | You have {remaining} AI calls left today out of {quota}."
+    },
+    "busy": "The AI service is very busy right now. Please try again in a minute.",
+    "manual": "Type it in by hand"
   }
 }

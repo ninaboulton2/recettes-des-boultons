@@ -16,6 +16,7 @@
 --                                      (au plus UN par 24 h, opération atomique : pas de doublon même en parallèle) ;
 --        `claim_ai_alert_email(key)`   même limitation pour une autre alerte (`ai_budget`) sans changer d'état ;
 --        `reset_ai_credit_alert()`     repasse `ai_credit` à « ok » (cron de rattrapage) ;
+--        `ai_credit_alert_active()`     l'alerte est-elle active ? (le cron n'appelle le fournisseur que si oui) ;
 --      et pour le support (connecté, `private.is_support()`) : `support_reset_ai_credit()` (bouton « Réactiver l'IA »).
 --   E. `notifications.emailed_at` + deux fonctions service_role pour l'envoi groupé par le cron :
 --        `claim_notification_emails(limit, max_age)` marque et renvoie (destinataire, langue, e-mail du COMPTE, type, données)
@@ -202,6 +203,18 @@ end $$;
 comment on function public.reset_ai_credit_alert() is
   'Repasse l''alerte de crédit IA à « ok » (cron de rattrapage). Réservée au serveur (service_role).';
 
+create or replace function public.ai_credit_alert_active()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.system_alerts a where a.key = 'ai_credit' and a.status = 'alert')
+$$;
+comment on function public.ai_credit_alert_active() is
+  'L''alerte de crédit IA est-elle active ? Pour le cron de rattrapage (n''appelle le fournisseur que si oui). Réservée au serveur (service_role).';
+
 create or replace function public.support_reset_ai_credit()
 returns boolean
 language plpgsql
@@ -218,9 +231,9 @@ end $$;
 comment on function public.support_reset_ai_credit() is
   'Bouton « Réactiver l''IA » de l''écran support : repasse l''alerte de crédit IA à « ok ». Support seulement.';
 
-revoke execute on function public.report_ai_billing_error(), public.claim_ai_alert_email(text), public.reset_ai_credit_alert()
+revoke execute on function public.report_ai_billing_error(), public.claim_ai_alert_email(text), public.reset_ai_credit_alert(), public.ai_credit_alert_active()
   from public, anon, authenticated;
-grant execute on function public.report_ai_billing_error(), public.claim_ai_alert_email(text), public.reset_ai_credit_alert() to service_role;
+grant execute on function public.report_ai_billing_error(), public.claim_ai_alert_email(text), public.reset_ai_credit_alert(), public.ai_credit_alert_active() to service_role;
 revoke execute on function public.support_reset_ai_credit() from public, anon;
 grant execute on function public.support_reset_ai_credit() to authenticated;
 

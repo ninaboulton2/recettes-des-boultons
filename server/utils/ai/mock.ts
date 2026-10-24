@@ -191,6 +191,37 @@ function schemaNameOf(options: LanguageModelV4CallOptions): string | undefined {
  */
 export const MOCK_FAILURE_MARKER = '__MOCK_AI_FAILURE__'
 
+/**
+ * Marqueurs de pannes de FACTURATION simulées (phase 7), pour tester sans IA ni coût toute la chaîne « crédit épuisé » :
+ *  - `__MOCK_AI_NO_CREDIT__`   : 429 `insufficient_quota` (crédit épuisé : l'alerte se déclenche) ;
+ *  - `__MOCK_AI_RATE_LIMIT__`  : 429 `rate_limit_exceeded` (simple débit : AUCUNE alerte).
+ */
+export const MOCK_NO_CREDIT_MARKER = '__MOCK_AI_NO_CREDIT__'
+export const MOCK_RATE_LIMIT_MARKER = '__MOCK_AI_RATE_LIMIT__'
+
+function simulateBillingFailure(body: string): void {
+  if (body.includes(MOCK_NO_CREDIT_MARKER)) {
+    throw new APICallError({
+      message: 'You exceeded your current quota, please check your plan and billing details.',
+      url: 'mock://ai',
+      requestBodyValues: {},
+      statusCode: 429,
+      data: { error: { message: 'You exceeded your current quota, please check your plan and billing details.', type: 'insufficient_quota', code: 'insufficient_quota' } },
+      isRetryable: false
+    })
+  }
+  if (body.includes(MOCK_RATE_LIMIT_MARKER)) {
+    throw new APICallError({
+      message: 'Rate limit reached for mock-recipe on tokens per min. Please try again in 6s.',
+      url: 'mock://ai',
+      requestBodyValues: {},
+      statusCode: 429,
+      data: { error: { message: 'Rate limit reached for mock-recipe on tokens per min. Please try again in 6s.', type: 'tokens', code: 'rate_limit_exceeded' } },
+      isRetryable: false
+    })
+  }
+}
+
 /** Réponse simulée à une demande de traduction d'une recette existante. */
 function mockTranslateExisting(options: LanguageModelV4CallOptions): AiTranslateExisting {
   const body = recipeBodyOfPrompt(options) ?? '{}'
@@ -207,6 +238,7 @@ export function createMockRecipeModel(): MockLanguageModelV4 {
     provider: 'mock',
     modelId: MOCK_MODEL_ID,
     doGenerate: async (options) => {
+      simulateBillingFailure(recipeBodyOfPrompt(options) ?? '')
       const files = countFileParts(options)
       let text: string
       if (schemaNameOf(options) === 'traduction') {

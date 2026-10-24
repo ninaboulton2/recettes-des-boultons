@@ -1598,7 +1598,19 @@
       "confirm": "Supprimer"
     },
     "updated": "Signalement mis à jour.",
-    "deleted": "Recette supprimée."
+    "deleted": "Recette supprimée.",
+    "ai": {
+      "title": "Service IA",
+      "stateOk": "L'IA fonctionne.",
+      "stateExhausted": "Crédit IA épuisé depuis le {since}. L'import automatique et la traduction sont coupés pour tout le monde.",
+      "stateBudget": "Budget du mois atteint : l'IA est coupée pour tout le monde jusqu'au mois prochain.",
+      "month": "Ce mois-ci : {calls} appels, environ {cost} $ (estimation).",
+      "reactivate": "Réactiver l'IA",
+      "reactivated": "IA réactivée.",
+      "reactivateHint": "Après avoir rechargé le crédit chez le fournisseur. Si le crédit est toujours vide, l'alerte reviendra au prochain appel.",
+      "nothingToDo": "L'IA était déjà active.",
+      "error": "Impossible de lire l'état de l'IA."
+    }
   },
   "legal": {
     "nav": "Pages légales",
@@ -1640,5 +1652,18 @@
         "description": "Chaque recette se lit en français et en anglais, grâce à la traduction automatique."
       }
     }
+  },
+  "ai": {
+    "unavailable": {
+      "title": "L'IA est momentanément indisponible",
+      "message": "L'import automatique et la traduction sont momentanément indisponibles. Vous pouvez saisir la recette à la main : elle sera traduite dès que possible."
+    },
+    "quota": {
+      "title": "Quota du jour atteint",
+      "message": "Vous avez utilisé vos {quota} appels IA du jour. Ils seront remis à zéro le {time} (heure de Paris).",
+      "remaining": "Il vous reste {remaining} appel IA aujourd'hui sur {quota}. | Il vous reste {remaining} appels IA aujourd'hui sur {quota}."
+    },
+    "busy": "Le service d'IA est très sollicité en ce moment. Réessayez dans une minute.",
+    "manual": "Saisir à la main"
   }
 }

@@ -64,6 +64,7 @@ begin
   assert tests.try('select public.report_ai_billing_error()') = '42501', 'un membre ne peut pas déclarer une panne';
   assert tests.try('select public.reset_ai_credit_alert()') = '42501', 'un membre ne peut pas lever l''alerte';
   assert tests.try('select public.support_reset_ai_credit()') = '42501', 'un membre n''est pas le support';
+  assert tests.try('select public.ai_credit_alert_active()') = '42501', 'un membre ne lit pas l''état par cette fonction';
   assert tests.try('select public.claim_ai_alert_email(''ai_credit'')') = '42501', 'un membre ne prend pas l''e-mail d''alerte';
   assert (select count(*) from public.system_alerts) = 0, 'system_alerts invisible pour un membre';
   assert tests.try('update public.system_alerts set status = ''ok''') = '42501', 'system_alerts non modifiable par l''API';
@@ -115,7 +116,9 @@ begin
   select count, first_seen into r from public.system_alerts where key = 'ai_credit';
   assert r.count = 1 and r.first_seen >= first_seen_1, 'nouvel épisode : compteur remis à 1';
   perform tests.login(a, 'service_role');
+  assert public.ai_credit_alert_active(), 'alerte active (service_role)';
   assert public.reset_ai_credit_alert(), 'le serveur lève l''alerte (cron)';
+  assert not public.ai_credit_alert_active(), 'alerte levée';
   assert not public.reset_ai_credit_alert(), 'idempotent';
   perform tests.logout();
 

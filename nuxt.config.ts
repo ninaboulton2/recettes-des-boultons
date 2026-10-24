@@ -134,6 +134,19 @@ export default defineNuxtConfig({
     aiModel: process.env.AI_MODEL || '',
     aiTranscribeModel: process.env.AI_TRANSCRIBE_MODEL || '',
     aiDailyQuota: process.env.AI_DAILY_QUOTA || '50',
+    // v2 (phase 7, DEVELOPER.md § 20.14) : plafonds par compte et budget global (0 = aucun budget).
+    aiNewAccountDailyQuota: process.env.AI_NEW_ACCOUNT_DAILY_QUOTA || '20',
+    aiNewAccountDays: process.env.AI_NEW_ACCOUNT_DAYS || '30',
+    aiMonthlyBudgetCalls: process.env.AI_MONTHLY_BUDGET_CALLS || '0',
+    aiMonthlyBudgetUsd: process.env.AI_MONTHLY_BUDGET_USD || '0',
+    // --- E-mails (server/utils/email.ts) : tout vide = aucun envoi, journal seulement ---
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    emailFrom: process.env.EMAIL_FROM || '',
+    alertEmail: process.env.ALERT_EMAIL || '',
+    siteUrl: process.env.SITE_URL || '',
+    emailAppName: process.env.EMAIL_APP_NAME || '',
+    // Secret des tâches planifiées Vercel (en-tête Authorization: Bearer). Vide = les routes /api/cron/* refusent tout.
+    cronSecret: process.env.CRON_SECRET || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
     googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',

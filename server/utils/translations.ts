@@ -5,8 +5,8 @@ import { recipeTexts, sourceHash, type TranslationDraft } from '#shared/utils/tr
 import type { TranslationFailureReason } from '#shared/schemas/translation'
 import { getAiConfig, getModel } from './ai/provider'
 import { translateRecipeTexts } from './ai/translate'
-import { throwAiProviderError } from './ai/errors'
-import { assertAiQuota, trackAiCall } from './ai/usage'
+import { trackAiCall } from './ai/usage'
+import { assertAiAllowed, throwAiFailure } from './ai/guard'
 import type { AuthContext } from './auth'
 import type { RecipeDetail } from './recipes'
 import { GENERIC_ERROR_MESSAGE } from './errors'
@@ -20,6 +20,8 @@ import { GENERIC_ERROR_MESSAGE } from './errors'
  *    compté dans le quota journalier comme les autres appels) ;
  *  - la traduction est écrite par la RPC `save_recipe_translation` (langue
  *    source, traduction vers l'autre langue, `stale = false`) ;
+ *  - le coût est compté sur le quota de l'AUTEUR de l'enregistrement (v2 : `ai_quota_status`, comme l'import ; crédit coupé
+ *    ou budget du mois atteint : pas d'appel, la traduction reste en attente) ;
  *  - un échec n'est jamais une erreur HTTP pour l'appelant : il devient un
  *    `TranslationOutcome` `failed` (l'enregistrement de la recette, lui, a
  *    réussi) ; la traduction reste « périmée » jusqu'au prochain
@@ -66,7 +68,7 @@ function failureOf(error: unknown): { reason: FailureReason, message: string } {
     : GENERIC_ERROR_MESSAGE
   if (status === 429) return { reason: 'quota', message }
   if (status === 401) return { reason: 'config', message }
-  if (status === 402) return { reason: 'provider', message }
+  if (status === 402 || status === 503) return { reason: 'provider', message }   // 503 : crédit / budget coupé (v2) ou fournisseur très sollicité
   return { reason: 'ai', message }
 }
 
@@ -103,7 +105,7 @@ export async function translateRecipe(
 
   try {
     const config = getAiConfig(event)
-    await assertAiQuota(supabase, config.dailyQuota)
+    await assertAiAllowed(event, supabase, config)
     const model = getModel(config)
 
     let result
@@ -115,7 +117,7 @@ export async function translateRecipe(
         ({ usage }) => usage
       )
     } catch (error: unknown) {
-      throwAiProviderError(error, 'translate-recipe (traduction enregistrée)')
+      await throwAiFailure(event, error, 'translate-recipe (traduction enregistrée)')
       throw error
     }
 
