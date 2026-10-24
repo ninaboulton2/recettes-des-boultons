@@ -24,6 +24,14 @@ begin
   assert (s ->> 'quota')::int = 20 and (s ->> 'used')::int = 0 and (s ->> 'is_new')::boolean and not (s ->> 'has_override')::boolean, 'compte neuf : 20';
   assert (s ->> 'resets_at')::timestamptz > now() and (s ->> 'resets_at')::timestamptz <= now() + interval '25 hours', 'remise à zéro dans moins de 25 h';
   assert ((s ->> 'resets_at')::timestamptz at time zone 'Europe/Paris')::time = '00:00', 'remise à zéro à minuit, heure de Paris';
+  -- la base de production est en UTC : le résultat ne doit pas dépendre du fuseau de la session (jour de changement d'heure : 25 h)
+  set local timezone = 'UTC';
+  s := public.ai_quota_status(50, 20, 30);
+  assert ((s ->> 'resets_at')::timestamptz at time zone 'Europe/Paris')::time = '00:00', 'remise à zéro à minuit de Paris, session en UTC';
+  assert position('v_start + interval' in pg_get_functiondef('public.ai_quota_status(integer, integer, integer)'::regprocedure)) = 0
+     and position('v_day + interval' in pg_get_functiondef('public.reserve_ai_call(uuid, text, integer, integer, integer, integer, numeric)'::regprocedure)) = 0,
+    'minuit suivant calculé sur l''heure locale de Paris, pas en ajoutant 24 h';
+  reset timezone;
   perform tests.logout();
 
   -- d : compte ancien → quota général ; l'API ne peut pas modifier son propre plafond

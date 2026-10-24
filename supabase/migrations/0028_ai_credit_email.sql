@@ -84,6 +84,8 @@ declare
   v_quota    integer;
   v_used     integer;
   v_start    timestamptz := (date_trunc('day', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris');
+  -- minuit suivant, calculé sur l'heure LOCALE de Paris (ajouter 24 h à un timestamptz se trompe d'une heure le jour du changement d'heure)
+  v_reset    timestamptz := ((date_trunc('day', now() at time zone 'Europe/Paris') + interval '1 day') at time zone 'Europe/Paris');
 begin
   select p.ai_daily_quota, p.created_at into v_override, v_created from public.profiles p where p.id = v_me;
   v_is_new := v_created is not null and v_created > now() - make_interval(days => greatest(coalesce(p_new_days, 0), 0));
@@ -92,7 +94,7 @@ begin
   return jsonb_build_object(
     'used', v_used,
     'quota', v_quota,
-    'resets_at', (v_start + interval '1 day'),
+    'resets_at', v_reset,
     'is_new', v_is_new,
     'has_override', v_override is not null
   );
@@ -379,6 +381,7 @@ declare
   v_calls    bigint;
   v_cost     numeric;
   v_day      timestamptz := (date_trunc('day', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris');
+  v_reset    timestamptz := ((date_trunc('day', now() at time zone 'Europe/Paris') + interval '1 day') at time zone 'Europe/Paris');
   v_month    timestamptz := (date_trunc('month', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris');
   v_id       uuid;
 begin
@@ -416,13 +419,13 @@ begin
   v_quota  := coalesce(v_override, case when v_is_new then p_new_quota else p_default_quota end, 0);
   select count(*)::integer into v_used from public.ai_usage u where u.user_id = p_user and u.created_at >= v_day;
   if v_used >= v_quota then
-    return jsonb_build_object('ok', false, 'reason', 'quota', 'used', v_used, 'quota', v_quota, 'resets_at', v_day + interval '1 day', 'is_new', v_is_new);
+    return jsonb_build_object('ok', false, 'reason', 'quota', 'used', v_used, 'quota', v_quota, 'resets_at', v_reset, 'is_new', v_is_new);
   end if;
 
   insert into public.ai_usage (user_id, provider, model, feature, status)
     values (p_user, 'pending', 'pending', coalesce(nullif(btrim(p_feature), ''), 'translate'), 'pending')
     returning id into v_id;
-  return jsonb_build_object('ok', true, 'id', v_id, 'used', v_used + 1, 'quota', v_quota, 'resets_at', v_day + interval '1 day', 'is_new', v_is_new);
+  return jsonb_build_object('ok', true, 'id', v_id, 'used', v_used + 1, 'quota', v_quota, 'resets_at', v_reset, 'is_new', v_is_new);
 end $$;
 comment on function public.reserve_ai_call(uuid, text, integer, integer, integer, integer, numeric) is
   'Réserve atomiquement un appel IA : verrou par compte, contrôle crédit / budget du mois / plafond du jour, insertion d''une ligne ai_usage « pending ». Renvoie {ok, id | reason, …}. Réservée au serveur (service_role), qui donne l''identité et les seuils.';
