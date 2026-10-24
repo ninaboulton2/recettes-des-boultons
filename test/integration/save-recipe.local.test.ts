@@ -52,6 +52,9 @@ describe.skipIf(!reachable)('save_recipe / delete_recipe / merge_shopping_item (
   let user: SupabaseClient
   let recipeId: string | null = null
   let listId: string | null = null
+  // v1 : seuls les admins écrivent ; v2 (bascule 0020 appliquée) : tout compte écrit ses propres recettes.
+  // Marqueur : la v2 ferme la lecture aux visiteurs (plus de politique publique sur recipes).
+  let isV2 = false
 
   const login = async (credentials: { email: string, password: string }) => {
     const client = createClient(env!.url, env!.key, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -63,6 +66,9 @@ describe.skipIf(!reachable)('save_recipe / delete_recipe / merge_shopping_item (
   beforeAll(async () => {
     admin = await login(ADMIN)
     user = await login(USER)
+    const anon = createClient(env!.url, env!.key, { auth: { persistSession: false, autoRefreshToken: false } })
+    const { data: visible } = await anon.from('recipes').select('id').limit(1)
+    isV2 = (visible ?? []).length === 0
   })
 
   afterAll(async () => {
@@ -146,9 +152,21 @@ describe.skipIf(!reachable)('save_recipe / delete_recipe / merge_shopping_item (
     expect(instructionCount).toBe(2)
   })
 
-  it('refuse save_recipe à un utilisateur non admin (42501)', async () => {
-    const { error } = await user.rpc('save_recipe', { payload: toSaveRecipePayload({ ...input, title: `${PREFIX}interdit` }) })
-    expect(error?.code).toBe('42501')
+  it('save_recipe : refusé à un non-admin en v1 (42501) ; en v2, accepté pour ses propres recettes', async () => {
+    const { error, data } = await user.rpc('save_recipe', { payload: toSaveRecipePayload({ ...input, title: `${PREFIX}interdit` }) })
+    if (!isV2) {
+      expect(error?.code).toBe('42501')
+      return
+    }
+    expect(error).toBeNull()
+    expect(data).toBeTruthy()
+    const { data: me } = await user.auth.getUser()
+    const { data: row } = await user.from('recipes').select('owner_id').eq('id', data as string).single()
+    expect(row?.owner_id).toBe(me.user?.id)
+    // La recette d'une autre personne (créée après 0020, donc sans droit de groupe) reste refusée.
+    const { error: foreign } = await user.rpc('save_recipe', { payload: toSaveRecipePayload({ ...input, title: `${PREFIX}étranger` }, recipeId!) })
+    expect(foreign).not.toBeNull()
+    await user.rpc('delete_recipe', { p_id: data as string })
   })
 
   it('fusionne « Farine 100 g » ajoutée deux fois en une ligne 200 g', async () => {

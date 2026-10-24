@@ -11,9 +11,11 @@ import { sendNotificationEmails, type ClaimedNotification, type NotificationEmai
  * ne réclame rien et répond `skipped`. Détail : DEVELOPER.md § 20.15.
  */
 export default defineEventHandler(async (event): Promise<NotificationEmailReport> => {
+  // Hors du try : 401 (mauvais secret) et 503 (secret absent, route désactivée) restent tels quels. Dans le try, handleApiError
+  // transformerait le 503 en 500 journalisé (et envoyé à Sentry) à chaque passage de la tâche planifiée tant que CRON_SECRET manque.
+  const config = useRuntimeConfig(event)
+  assertCronSecret(getHeader(event, 'authorization'), String(config.cronSecret ?? process.env.CRON_SECRET ?? ''))
   try {
-    const config = useRuntimeConfig(event)
-    assertCronSecret(getHeader(event, 'authorization'), String(config.cronSecret ?? process.env.CRON_SECRET ?? ''))
     setResponseHeader(event, 'Cache-Control', 'no-store')
 
     const email = readEmailConfig(config as Record<string, unknown>, process.env, getRequestURL(event).origin)

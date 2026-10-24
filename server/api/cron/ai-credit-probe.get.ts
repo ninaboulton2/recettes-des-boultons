@@ -11,9 +11,11 @@ import { probeAiCredit, type ProbeOutcome } from '../../utils/ai/probe'
  * l'alerte si oui. Sans alerte active : aucun appel. Protégée par `CRON_SECRET`. Détail : DEVELOPER.md § 20.15.
  */
 export default defineEventHandler(async (event): Promise<ProbeOutcome> => {
+  // Hors du try : 401 (mauvais secret) et 503 (secret absent, route désactivée) restent tels quels. Dans le try, handleApiError
+  // transformerait le 503 en 500 journalisé (et envoyé à Sentry) à chaque passage de la tâche planifiée tant que CRON_SECRET manque.
+  const config = useRuntimeConfig(event)
+  assertCronSecret(getHeader(event, 'authorization'), String(config.cronSecret ?? process.env.CRON_SECRET ?? ''))
   try {
-    const config = useRuntimeConfig(event)
-    assertCronSecret(getHeader(event, 'authorization'), String(config.cronSecret ?? process.env.CRON_SECRET ?? ''))
     setResponseHeader(event, 'Cache-Control', 'no-store')
 
     const admin = serviceClient(event)

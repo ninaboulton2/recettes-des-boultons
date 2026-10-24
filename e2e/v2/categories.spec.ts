@@ -59,5 +59,7 @@ test('(v2-cat1) créer, renommer, déplacer, supprimer une catégorie', async ({
   // Les filtres de /recettes utilisent mes catégories
   await gotoApp(page, '/recettes')
   await page.getByRole('main').getByText('Toutes les catégories').first().click()
-  await expect(page.getByRole('option', { name: 'Soupes' })).toBeVisible()
+  // `div[role="option"]` : la liste déroulante. Sur une base fraîche, la bannière « Explorer les recettes » est aussi affichée et son
+  // <select> natif (data-testid entry-category) porte lui aussi une <option> « Soupes » (violation du mode strict de Playwright).
+  await expect(page.locator('div[role="option"]', { hasText: 'Soupes' })).toBeVisible()
 })
