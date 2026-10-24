@@ -296,7 +296,11 @@
       "confirm": "Supprimer",
       "cancel": "Annuler",
       "success": "Recette supprimée",
-      "error": "Impossible de supprimer la recette."
+      "error": "Impossible de supprimer la recette.",
+      "usageSentence": "Cette recette {parts}. Elle disparaîtra de ces carnets ; les copies resteront à leurs auteurs.",
+      "usageCookbooks": "est dans le carnet d’une personne | est dans le carnet de {n} personnes",
+      "usageCopies": "a été copiée une fois | a été copiée {n} fois",
+      "usageAnd": " et "
     },
     "cooking": {
       "title": "Mode cuisine",
@@ -340,6 +344,20 @@
       "original": "Texte d'origine ({lang}) : pas encore traduit.",
       "fr": "français",
       "en": "anglais"
+    },
+    "v2": {
+      "addToCookbook": "Ajouter à mon carnet",
+      "removeFromCookbook": "Retirer de mon carnet",
+      "copy": "Faire une copie modifiable",
+      "share": "Partager",
+      "by": "Recette de {author}",
+      "inspiredBy": "Inspirée de {title}",
+      "added": "Recette ajoutée à votre carnet",
+      "removed": "Recette retirée de votre carnet",
+      "copied": "Copie créée dans votre carnet",
+      "addError": "Impossible d’ajouter la recette",
+      "removeError": "Impossible de retirer la recette",
+      "copyError": "Impossible de copier la recette"
     }
   },
   "editor": {
@@ -359,7 +377,8 @@
       "tags": "Tags",
       "tagsPlaceholder": "végétarien, rapide… (Entrée pour ajouter)",
       "notes": "Notes et conseils",
-      "notesPlaceholder": "Conseils, variantes, notes personnelles…"
+      "notesPlaceholder": "Conseils, variantes, notes personnelles…",
+      "noCategoryText": "divers"
     },
     "photo": {
       "label": "Photo",
@@ -418,7 +437,8 @@
     "validation": {
       "needIngredients": "Ajoutez au moins un ingrédient.",
       "needSteps": "Ajoutez au moins une étape.",
-      "fixErrors": "Corrigez les champs en erreur."
+      "fixErrors": "Corrigez les champs en erreur.",
+      "needCategory": "Choisissez une catégorie."
     },
     "toasts": {
       "created": "Recette créée",
@@ -864,7 +884,15 @@
     "network": "Connexion impossible, vérifiez votre réseau puis réessayez.",
     "invalidRecipe": "Données de recette invalides.",
     "loginRequired": "Vous devez être connecté.",
-    "noListSelected": "Aucune liste sélectionnée."
+    "noListSelected": "Aucune liste sélectionnée.",
+    "sharing": {
+      "quota": "Limite atteinte : vous ne pouvez pas créer plus de recettes pour l’instant.",
+      "rate": "Trop de demandes en peu de temps, réessayez plus tard.",
+      "forbidden": "Action non autorisée sur cette recette.",
+      "notFound": "Recette introuvable ou plus accessible.",
+      "invalid": "Cette demande n’est pas valide (par exemple, la personne ou le groupe n’est pas dans votre entourage).",
+      "duplicate": "Cet élément existe déjà."
+    }
   },
   "pwa": {
     "offline": {
@@ -1038,5 +1066,151 @@
       "delete": "Suppression impossible, réessayez.",
       "move": "Déplacement impossible, réessayez."
     }
+  },
+  "cookbook": {
+    "subtitle": "Vos recettes, celles que vous avez ajoutées et vos copies.",
+    "provenance": {
+      "mine": "À moi",
+      "added": "Ajoutée — de {author}",
+      "copyOf": "Copie de {title}",
+      "copy": "Copie"
+    },
+    "empty": {
+      "title": "Votre carnet est vide pour l’instant",
+      "description": "Trois façons de commencer : écrire une recette, en importer une depuis une photo, un texte ou une dictée, ou découvrir ce que d’autres ont partagé avec vous.",
+      "create": {
+        "title": "Créer une recette",
+        "description": "Saisissez-la à la main."
+      },
+      "import": {
+        "title": "Importer",
+        "description": "Photo, PDF, texte ou dictée, avec l’IA."
+      },
+      "explore": {
+        "title": "Explorer",
+        "description": "Les recettes partagées avec vous."
+      }
+    },
+    "options": {
+      "category": "Catégorie",
+      "categoryPlaceholder": "Choisir une de mes catégories",
+      "visibility": "Qui peut la voir ?",
+      "visibilityGroups": "Visible par mes groupes",
+      "visibilityGroupsHint": "Les membres de vos groupes peuvent la lire et la copier.",
+      "visibilityPrivate": "Privée",
+      "visibilityPrivateHint": "Vous seul·e, plus les personnes à qui vous donnez un accès."
+    }
+  },
+  "shared": {
+    "title": "Partagées avec moi",
+    "subtitle": "Les recettes que d’autres vous ont ouvertes et qui ne sont pas encore dans votre carnet.",
+    "add": "Ajouter à mon carnet",
+    "copy": "Faire une copie",
+    "noteUser": "De {author}, partagée avec vous",
+    "noteGroup": "De {author}, via un groupe",
+    "added": "« {title} » est dans votre carnet.",
+    "copied": "Copie de « {title} » créée.",
+    "error": "Action impossible, réessayez.",
+    "empty": {
+      "title": "Rien de nouveau pour l’instant",
+      "description": "Quand quelqu’un partagera une recette avec vous ou avec un de vos groupes, elle apparaîtra ici.",
+      "action": "Voir mon carnet"
+    }
+  },
+  "explore": {
+    "back": "Retour à mon carnet",
+    "loading": "Chargement…",
+    "notFound": {
+      "title": "Personne à explorer ici",
+      "description": "Ce lien ne mène à aucun carnet que vous puissiez consulter.",
+      "action": "Retour à mon carnet"
+    },
+    "eyebrow": "Explorer les recettes de {author}",
+    "defaultTitle": "Recettes de {author}",
+    "subtitle": "Les recettes de {author} que vous pouvez lire. Ajoutez celles qui vous plaisent à votre carnet : elles resteront à jour si {author} les modifie.",
+    "addAll": "Tout ajouter",
+    "allAdded": "Tout est dans votre carnet",
+    "inCookbook": "Déjà dans mon carnet",
+    "add": "Ajouter",
+    "addedAll": "Aucune recette ajoutée | Une recette ajoutée à votre carnet | {n} recettes ajoutées à votre carnet",
+    "error": "Action impossible, réessayez.",
+    "empty": {
+      "title": "Rien à découvrir",
+      "description": "{author} n’a pas encore de recette que vous puissiez lire."
+    }
+  },
+  "share": {
+    "title": "Partager cette recette",
+    "description": "Choisissez qui peut la voir, la copier ou la modifier.",
+    "loading": "Chargement…",
+    "unnamed": "Sans nom",
+    "error": "Action impossible, réessayez.",
+    "visibility": {
+      "title": "Visibilité",
+      "saved": "Visibilité enregistrée"
+    },
+    "grants": {
+      "title": "Personnes et groupes ayant accès",
+      "empty": "Pour l’instant, personne n’a d’accès particulier.",
+      "reshared": "repartagé par {by}",
+      "viaLink": "ajouté par le lien public",
+      "remove": "Retirer l’accès de {name}",
+      "removed": "Accès retiré"
+    },
+    "add": {
+      "title": "Donner un accès",
+      "who": "À qui ?",
+      "whoPerson": "À qui ? (une personne)",
+      "placeholder": "Un ami, un membre d’un groupe, un groupe…",
+      "search": "Chercher par nom (3 lettres au moins)",
+      "level": "Ce qu’elle pourra faire",
+      "submit": "Donner l’accès",
+      "done": "Accès donné",
+      "friend": "ami·e",
+      "found": "trouvé·e par son nom",
+      "groupHint": "Groupe de {n} personnes"
+    },
+    "permission": {
+      "read": "Lire",
+      "copy": "Lire et copier",
+      "edit_original": "Modifier l’original"
+    },
+    "permissionHint": {
+      "read": "Voir la recette, la mettre en favori, la planifier et l’ajouter à son carnet telle quelle.",
+      "copy": "Tout ce qui précède, plus une copie modifiable à soi.",
+      "edit_original": "Tout ce qui précède, plus la modification de votre recette. Elle ne pourra ni la supprimer ni la repartager à ce niveau."
+    },
+    "link": {
+      "title": "Lien public",
+      "description": "Une adresse secrète pour lire la recette sans compte. Après connexion, on peut l’ajouter à son carnet.",
+      "create": "Créer un lien public",
+      "copy": "Copier",
+      "copied": "Lien copié",
+      "copyError": "Copie impossible : sélectionnez le lien à la main.",
+      "nativeShare": "Partager le lien",
+      "revoke": "Désactiver le lien",
+      "revokeNote": "Si vous désactivez le lien, les personnes qui ont déjà ajouté la recette peuvent la garder.",
+      "revoked": "Lien désactivé"
+    },
+    "reshare": {
+      "title": "Repartager cette recette",
+      "description": "Vous pouvez la faire connaître à une personne de votre entourage.",
+      "rules": "Vous pouvez donner au plus le droit « {level} », à une personne seulement (un·e ami·e ou un membre de l’un de vos groupes), jamais à un groupe.",
+      "submit": "Repartager",
+      "done": "Recette repartagée",
+      "alreadyHas": "Cette personne y a déjà accès par un autre droit."
+    }
+  },
+  "publicRecipe": {
+    "notFound": {
+      "title": "Cette recette n’est pas disponible",
+      "description": "Le lien est incorrect ou a été désactivé par son auteur.",
+      "action": "Aller à l’accueil"
+    },
+    "sharedBy": "Recette partagée par {author}.",
+    "add": "Ajouter à mon carnet",
+    "added": "Recette ajoutée à votre carnet.",
+    "addError": "Impossible d’ajouter cette recette, le lien n’est peut-être plus valide.",
+    "documentDescription": "Une recette partagée"
   }
 }

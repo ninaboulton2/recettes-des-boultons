@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 /**
- * Page /traducteur (administrateurs) : ajout d'une recette depuis un texte
+ * Page /traducteur (administrateurs en v1, tout compte connecté en v2) : ajout d'une recette depuis un texte
  * brut via l'IA. La garde `requiresAdmin` n'est qu'un confort d'affichage :
  * le serveur revérifie (`requireAdmin`).
  */

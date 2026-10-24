@@ -37,13 +37,40 @@
         {{ languageHint }}
       </p>
 
+      <!-- v2 : auteur et, pour une copie, l'original (« Inspirée de … ») quand il m'est lisible -->
+      <div v-if="v2 && access" class="-mt-4 space-y-1 text-sm text-muted print:hidden" data-testid="recipe-origin">
+        <p v-if="!rights?.isOwner && access.ownerName" data-testid="recipe-author">
+          <UIcon name="i-lucide-user" class="mr-1 inline size-3.5 align-text-bottom" aria-hidden="true" />
+          <i18n-t keypath="recipeDetail.v2.by" scope="global">
+            <template #author>
+              <NuxtLink v-if="access.ownerId" :to="localePath(`/explorer/${access.ownerId}`)" class="font-medium text-default underline underline-offset-2 hover:text-primary">{{ access.ownerName }}</NuxtLink>
+              <span v-else class="font-medium text-default">{{ access.ownerName }}</span>
+            </template>
+          </i18n-t>
+        </p>
+        <p v-if="access.copiedFrom" data-testid="recipe-inspired">
+          <UIcon name="i-lucide-copy" class="mr-1 inline size-3.5 align-text-bottom" aria-hidden="true" />
+          <i18n-t keypath="recipeDetail.v2.inspiredBy" scope="global">
+            <template #title>
+              <NuxtLink :to="localePath(`/recettes/${access.copiedFrom}`)" class="font-medium text-default underline underline-offset-2 hover:text-primary">{{ access.copiedFromTitle }}</NuxtLink>
+            </template>
+          </i18n-t>
+        </p>
+      </div>
+
       <RecipeActions
         :recipe="recipe"
         :factor="scaler.factor.value"
         :servings="scaler.servings.value"
+        :rights="rights"
+        :busy="cookbookBusy"
         @cook="cookingOpen = true"
         @edit="openEditor"
-        @delete="showDeleteModal = true"
+        @delete="askDelete"
+        @add="addToCookbook"
+        @remove="removeFromCookbook"
+        @copy="copyRecipe"
+        @share="showShare = true"
       />
 
       <div class="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-12">
@@ -76,9 +103,12 @@
     <RecipeEditor
       :show="showRecipeEditor"
       :recipe="editingRecipe"
+      :access="access"
       @close="closeRecipeEditor"
-      @save="closeRecipeEditor"
+      @save="onEditorSaved"
     />
+
+    <RecipeShareModal v-if="v2 && access && rights?.canShare" v-model:open="showShare" :recipe-id="recipeId" :access="access" @changed="refreshAccess" />
 
     <UModal
       v-model:open="showDeleteModal"
@@ -86,6 +116,10 @@
       :description="recipe ? $t('recipeDetail.delete.message', { title: recipe.title }) : ''"
       :ui="{ footer: 'justify-end' }"
     >
+      <!-- v2 : combien de personnes l'ont dans leur carnet ou en ont fait une copie (recipe_usage) -->
+      <template v-if="usageMessage" #body>
+        <UAlert color="warning" variant="subtle" icon="i-lucide-triangle-alert" :description="usageMessage" data-testid="delete-usage" />
+      </template>
       <template #footer>
         <UButton :label="$t('recipeDetail.delete.cancel')" color="neutral" variant="ghost" @click="showDeleteModal = false" />
         <UButton
@@ -104,6 +138,7 @@
 import { computed, ref } from 'vue'
 import type { Recipe } from '#shared/types'
 import { sectionsWithIngredients, sectionsWithInstructions } from '#shared/utils/recipes'
+import { hasUsage, recipeRights, sharingErrorKey, type RecipeAccess } from '#shared/utils/recipeRights'
 
 // Nuxt 4 ordonne les routes dynamiques différemment de Nuxt 3 : sans ceci,
 // `/recettes/:category` capturait aussi les identifiants de recettes. On
@@ -113,6 +148,7 @@ definePageMeta({
 })
 
 const recipesStore = useRecipesStore()
+const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -120,6 +156,9 @@ const { t } = useI18n()
 const { siteName } = useEdition()
 const localePath = useLocalePath()
 const notesId = useId()
+const v2 = useV2()
+const sharing = useSharing()
+const cookbookApi = useCookbook()
 
 const recipeId = computed(() => {
   const value = route.params.id
@@ -128,6 +167,14 @@ const recipeId = computed(() => {
 
 // Fiche : une requête ciblée (recette + sections imbriquées), rendue côté serveur
 const { data: sourceRecipe, status, error, refresh } = await useRecipe(recipeId)
+
+// v2 : mon niveau de droit sur cette recette (RPC `recipe_access`, 0026) → boutons affichés. Les droits sont décidés en base.
+const { data: access, refresh: refreshAccess } = await useAsyncData<RecipeAccess | null>(
+  () => `recipe-access:${recipeId.value}`,
+  async () => (v2 && authStore.isAuthenticated ? await sharing.getRecipeAccess({ recipeId: recipeId.value }).catch(() => null) : null),
+  { default: () => null, watch: [recipeId, () => recipesStore.revision] }
+)
+const rights = computed(() => (access.value ? recipeRights(access.value) : null))
 
 // Texte dans la langue de l'interface (traduction si elle existe, sinon texte d'origine).
 // L'éditeur, lui, reçoit toujours la version d'origine (`sourceRecipe`).
@@ -167,10 +214,81 @@ const closeRecipeEditor = () => {
   showRecipeEditor.value = false
   editingRecipe.value = null
 }
+const onEditorSaved = () => {
+  closeRecipeEditor()
+  if (v2) void refreshAccess()
+}
+
+// v2 : carnet, copie modifiable, partage
+const showShare = ref(false)
+const cookbookBusy = ref<'add' | 'remove' | 'copy' | null>(null)
+const failToast = (cause: unknown, fallbackKey: string) => {
+  const key = sharingErrorKey(cause)
+  toast.add({ title: t(key === 'errors.generic' ? fallbackKey : key), color: 'error', icon: 'i-lucide-circle-alert' })
+}
+const addToCookbook = async () => {
+  cookbookBusy.value = 'add'
+  try {
+    await cookbookApi.addToCookbook({ recipeId: recipeId.value })
+    recipesStore.refresh()
+    toast.add({ title: t('recipeDetail.v2.added'), color: 'success', icon: 'i-lucide-check' })
+  } catch (cause) {
+    failToast(cause, 'recipeDetail.v2.addError')
+  } finally {
+    cookbookBusy.value = null
+  }
+}
+const removeFromCookbook = async () => {
+  cookbookBusy.value = 'remove'
+  try {
+    await cookbookApi.removeFromCookbook({ recipeId: recipeId.value })
+    recipesStore.refresh()
+    toast.add({ title: t('recipeDetail.v2.removed'), color: 'success', icon: 'i-lucide-check' })
+  } catch (cause) {
+    failToast(cause, 'recipeDetail.v2.removeError')
+  } finally {
+    cookbookBusy.value = null
+  }
+}
+const copyRecipe = async () => {
+  cookbookBusy.value = 'copy'
+  try {
+    const copyId = await cookbookApi.copyRecipe({ recipeId: recipeId.value })
+    recipesStore.refresh()
+    toast.add({ title: t('recipeDetail.v2.copied'), color: 'success', icon: 'i-lucide-check' })
+    await navigateTo(localePath(`/recettes/${copyId}`))
+  } catch (cause) {
+    failToast(cause, 'recipeDetail.v2.copyError')
+  } finally {
+    cookbookBusy.value = null
+  }
+}
 
 // Suppression (admin) : photos du bucket retirées par recipesStore.deleteRecipe
 const showDeleteModal = ref(false)
 const deleting = ref(false)
+
+// v2 : avant de supprimer, on prévient si d'autres personnes l'ont dans leur carnet ou en ont fait une copie.
+const usage = ref<{ cookbookCount: number, copyCount: number } | null>(null)
+const askDelete = async () => {
+  usage.value = null
+  if (v2) {
+    try {
+      usage.value = await sharing.recipeUsage({ recipeId: recipeId.value })
+    } catch {
+      usage.value = null   // l'avertissement est un confort : la suppression reste possible
+    }
+  }
+  showDeleteModal.value = true
+}
+const usageMessage = computed(() => {
+  const value = usage.value
+  if (!value || !hasUsage(value)) return ''
+  const parts: string[] = []
+  if (value.cookbookCount > 0) parts.push(t('recipeDetail.delete.usageCookbooks', { n: value.cookbookCount }, value.cookbookCount))
+  if (value.copyCount > 0) parts.push(t('recipeDetail.delete.usageCopies', { n: value.copyCount }, value.copyCount))
+  return t('recipeDetail.delete.usageSentence', { parts: parts.join(t('recipeDetail.delete.usageAnd')) })
+})
 const deleteRecipe = async () => {
   const current = recipe.value
   if (!current || deleting.value) return

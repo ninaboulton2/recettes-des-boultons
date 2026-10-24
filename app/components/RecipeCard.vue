@@ -44,6 +44,11 @@
         <UIcon :name="fallback.name" class="text-dimmed" :class="compactVisual ? 'size-8' : 'size-10'" aria-hidden="true" />
       </div>
 
+      <!-- v2 : provenance (à moi / ajoutée de X / copie de …), seulement sur les cartes du carnet -->
+      <div v-if="provenance" class="absolute bottom-2 left-2 z-10 max-w-[75%]">
+        <RecipeProvenance :provenance="provenance" />
+      </div>
+
       <div class="absolute right-2 top-2 z-10 flex gap-1" :class="compactVisual ? 'flex-row' : 'flex-col'">
         <UButton
           icon="i-lucide-heart"
@@ -112,6 +117,8 @@
 <script setup lang="ts">
 import type { Recipe, RecipeSummary } from '#shared/types'
 import { totalTime } from '#shared/utils/recipes'
+import { provenanceOf } from '#shared/utils/recipeRights'
+import type { CookbookRecipe } from '#shared/utils/cookbook'
 
 const MAX_TAGS = 3
 
@@ -158,6 +165,15 @@ const photoUrl = computed(() => publicUrl(props.recipe.photoPath))
 /** Repli sans photo : illustration ou icône de la catégorie selon l'édition. */
 // v2 : la recette du carnet porte l'identifiant de MA catégorie (`categoryId`) ; v1 : l'ancien texte.
 const fallback = computed(() => categoryVisual(('categoryId' in props.recipe && typeof props.recipe.categoryId === 'string' ? props.recipe.categoryId : null) ?? props.recipe.category))
+
+// v2 : badge de provenance des cartes du carnet (`relation` vient de `list_cookbook`) ; v1 : rien.
+const v2 = useV2()
+const provenance = computed(() => {
+  if (!v2) return null
+  const cookbook = props.recipe as Partial<CookbookRecipe>
+  if (cookbook.relation !== 'owned' && cookbook.relation !== 'added') return null
+  return provenanceOf({ relation: cookbook.relation, authorName: cookbook.authorName ?? null }, cookbook.copiedFrom)
+})
 
 const showPlanningModal = ref(false)
 const showShoppingModal = ref(false)

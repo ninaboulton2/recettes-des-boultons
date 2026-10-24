@@ -24,7 +24,7 @@
       <RecipeGrid
         v-else-if="favoritesWithRecipes.length > 0"
         :recipes="favoriteRecipes"
-        :show-admin-actions="authStore.isAdmin"
+        :show-admin-actions="authStore.isAdmin && !v2"
       />
 
       <EmptyState v-else icon="i-lucide-heart" :title="$t('favorites.empty.title')" :message="$t('favorites.empty.description')">
@@ -45,6 +45,7 @@ const { t, locale } = useI18n()
 const { localizeCard } = useRecipeLocale()
 const localePath = useLocalePath()
 const authStore = useAuthStore()
+const v2 = useV2()
 const favoritesStore = useFavoritesStore()
 
 const showLoginModal = ref(false)

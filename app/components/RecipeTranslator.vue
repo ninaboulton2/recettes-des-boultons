@@ -112,6 +112,14 @@
 
       <TranslatorRecipePreview :recipe="previewRecipe" :lang="previewLang" :usage="usage" :similar="similar" />
 
+      <!-- v2 : MA catégorie et la visibilité de la recette importée -->
+      <RecipeV2Options
+        v-if="v2"
+        v-model:category-id="categoryId"
+        v-model:visibility="visibility"
+        class="mt-6 border-t border-default pt-6"
+      />
+
       <template #footer>
         <div class="space-y-3">
           <UAlert
@@ -177,7 +185,10 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const toast = useToast()
 
+const v2 = useV2()
 const {
+  categoryId,
+  visibility,
   recipeText,
   lang,
   translation,

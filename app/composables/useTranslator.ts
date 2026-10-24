@@ -1,5 +1,6 @@
 import type { Recipe, RecipeInput, RecipeLang } from '#shared/types'
 import type { TranslateRecipeResponse, TranslateUsageInfo } from '#shared/schemas/ai'
+import { categoryLabel } from '#shared/utils/categories'
 import { translatedInput, type TranslationDraft } from '#shared/utils/translation'
 import type { SimilarRecipesResponse } from '#shared/schemas/similar'
 import type { SimilarRecipe } from '#shared/utils/similarRecipes'
@@ -58,6 +59,11 @@ export function useTranslator() {
   const { t, locale } = useI18n()
   const recipesStore = useRecipesStore()
   const { toUserMessage, apiErrorFromResponse, isApiError } = useApiError()
+  // v2 : la recette importée va dans MA catégorie et a la visibilité choisie (auteur = moi).
+  const v2 = useV2()
+  const categoriesStore = v2 ? useCategoriesStore() : null
+  const categoryId = ref('')
+  const visibility = ref<'private' | 'groups'>('groups')
 
   const recipeText = ref('')
   /** Langue de l'interface : version montrée en premier dans l'aperçu. */
@@ -290,6 +296,8 @@ export function useTranslator() {
       // Avant d'afficher l'aperçu : l'avertissement n'apparaît pas après coup.
       await findSimilar(data.recipe)
       preview.value = data.recipe
+      // v2 : l'IA propose l'une des 9 catégories historiques ; on retient la mienne de même clé, sinon aucune (à choisir).
+      if (categoriesStore) categoryId.value = categoriesStore.resolveId(data.recipe.category) ?? ''
       lang.value = data.lang
       translation.value = data.translation
       previewLang.value = uiLanguage()
@@ -306,7 +314,16 @@ export function useTranslator() {
     isAdding.value = true
     error.value = null
     try {
-      added.value = await recipesStore.addRecipe(preview.value, translation.value ? { lang: lang.value, translation: translation.value } : undefined)
+      const chosen = categoriesStore?.byId.get(categoryId.value)
+      const input: RecipeInput = v2
+        ? {
+            ...preview.value,
+            categoryId: categoryId.value || null,
+            visibility: visibility.value,
+            category: chosen ? categoryLabel(chosen, locale.value) : preview.value.category
+          }
+        : preview.value
+      added.value = await recipesStore.addRecipe(input, translation.value ? { lang: lang.value, translation: translation.value } : undefined)
     } catch (err: unknown) {
       error.value = describeError(err)
     } finally {
@@ -339,6 +356,8 @@ export function useTranslator() {
   }
 
   return {
+    categoryId,
+    visibility,
     recipeText,
     lang,
     translation,

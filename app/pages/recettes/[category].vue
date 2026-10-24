@@ -12,6 +12,7 @@
       :category="categoryParam"
       :locked-category="categoryName"
       :available-tags="availableTags"
+      :hide-tags="v2"
       :total-count="totalCount"
       @clear="clearFilters"
     />
@@ -45,6 +46,7 @@ const { t } = useI18n()
 const route = useRoute()
 const localePath = useLocalePath()
 const { categoryName: nameOf } = useCategories()
+const v2 = useV2()
 
 const categoryParam = computed(() => {
   const value = route.params.category

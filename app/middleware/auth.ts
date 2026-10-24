@@ -1,5 +1,5 @@
 /**
- * Protège les routes déclarant `definePageMeta({ requiresAdmin: true })`.
+ * Protège les routes déclarant `definePageMeta({ requiresAdmin: true })` (v2 : tout compte connecté).
  *
  * Aucune requête réseau : la session vient du cookie (@nuxtjs/supabase) et le
  * rôle du claim `user_role` du JWT (store `auth`). Cette garde ne sert qu'à
@@ -10,7 +10,9 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!to.meta.requiresAdmin) return
 
   const authStore = useAuthStore()
-  if (!authStore.isAuthenticated || !authStore.isAdmin) {
+  // v2 : l'éditeur et le traducteur sont ouverts à tout compte connecté (le RLS décide pour chaque recette) ; v1 : admins.
+  const allowed = authStore.isAuthenticated && (useV2() || authStore.isAdmin)
+  if (!allowed) {
     return navigateTo(useLocalePath()('/'))
   }
 })

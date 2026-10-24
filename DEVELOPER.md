@@ -1352,8 +1352,8 @@ select public.get_shared_recipe('<jeton>'::uuid, 'fr');   -- exécutable sans co
 
 - `owner_id` n'est écrit par `save_recipe` qu'**après la bascule 0020** (colonne NOT NULL) : avant le remplissage 0018 une
   recette créée en v1 reste sans propriétaire, pour que 0018 l'attribue à Nina.
-- Les routes `add-recipe`, `update-recipe`, `delete-recipe` et les endpoints IA restent réservés aux admins (`requireAdmin`) :
-  les ouvrir à tout compte (le RLS décide) relève des phases 6 et 7. Le schéma `recipeInputSchema` accepte déjà `visibility` et
+- Les routes `add-recipe`, `update-recipe`, `delete-recipe` et les endpoints IA restent réservés aux admins (`requireAdmin`) en v1 ;
+  la phase 6B (§ 20.11) les ouvre à tout compte connecté **quand l'interrupteur v2 est allumé** (le RLS décide). Le schéma `recipeInputSchema` accepte déjà `visibility` et
   `categoryId` (transmis à `save_recipe` seulement s'ils sont fournis).
 - Les notifications « recette supprimée » (réponse n° 4 du dossier, § 10) et celles d'amis / groupes sont faites par la migration 0023 (§ 20.8).
 - La copie ne duplique pas la photo (phase 8) ; `get_shared_recipe` ne renvoie pas d'URL de photo (liens signés, phase 8).
@@ -1559,3 +1559,49 @@ utilisées (aucune licence, voir le rapport) ; les icônes Lucide restent.
 de départ ; chaque « Suivant » enregistre son écran ; « Terminer » passe `completeOnboarding`. **Fondations pour 6B à 6E** : `useNav()` (entrées, v1 inchangé), `PromptBanner.vue` /
 `PromptBanners.vue` (`pending_prompts`, `dismiss_prompt`), `NotificationBell.vue` (compteur seul ; liste = 6C), `ComingSoon.vue` + pages `/partagees`, `/amis`, `/groupes`, `/notifications`,
 `/explorer/[authorId]` (à remplacer), middleware `v2-only`.
+
+### 20.11 Interface v2, phase 6B : carnet, partage, page publique, éditeur ouvert
+
+Tout est derrière `NUXT_PUBLIC_V2=true` : sans l'interrupteur, `/recettes` est la liste d'origine (`components/RecipesListV1.vue`, le code de l'ancienne page
+déplacé tel quel), la fiche, l'éditeur et le serveur se comportent comme en v1, et `/partagees`, `/explorer/…`, `/r/…` répondent 404.
+
+**Migration 0026** (`0026_recipe_access.sql`, rollback, `test_0026_recipe_access.sql`, branchée dans `run_local.sh` sous la chaîne complète 0018 + 0020, avec rejeu
+et retour arrière) : une seule fonction de lecture, `recipe_access(p_recipe)`. Une ligne, ou aucune si la recette est inconnue ou illisible (même réponse : pas
+d'oracle d'existence) : `permission` (`author` / `edit_original` / `copy` / `read`), `explicit_permission` (le droit EXPLICITE le plus haut ; `NULL` quand l'accès ne
+vient que du partage implicite « mes groupes » : seul un droit explicite se repartage), `in_cookbook`, `owner_id` + `owner_name` (pseudonyme), `visibility`, `category_id`
+(auteur seulement), `copied_from` + `copied_from_title` (seulement si l'original m'est lisible), `has_share_link` (auteur seulement). Pourquoi : `private.recipe_level`
+n'est pas exposé et les listes de 0021 ne renvoient le droit que pour les recettes qu'elles listent ; une fiche ouverte par une bannière ou un lien devait pouvoir
+afficher les bons boutons. Elle ne DÉCIDE rien : la base continue de refuser (42501). Aucune table, politique ni donnée touchée : sans effet en v1. Ordre :
+… → 0025 → **0026** → 0018 → 0020 (indifférent, elle ne dépend que de 0019 et 0021).
+
+| Écran | Fichiers | Données |
+|---|---|---|
+| **Mon carnet** `/recettes` | `components/CookbookPage.vue`, `RecipeProvenance.vue`, `RecipeCard.vue` (badge), `RecipeFilters.vue` (`hide-tags`) | `list_cookbook` via `useRecipeSearch` (+ `attachCopyOrigins` : `copied_from` lu sur `recipes`, titre de l'original s'il est lisible). Recherche, catégorie personnelle, pagination 24 comme en v1 ; **pas de filtre par tag** (la base n'en a pas, la recherche couvre les tags). État vide à trois entrées (créer, importer, explorer) |
+| **Partagées avec moi** `/partagees` | `pages/partagees.vue`, `SharedRecipeCard.vue` | `list_shared_with_me` ; « Ajouter à mon carnet » (`add_to_cookbook`), « Faire une copie » (`copy_recipe`, absent si lecture seule) |
+| **Explorer** `/explorer/[authorId]` | `pages/explorer/[authorId].vue` | `get_user_profile` (pseudonyme, titre du carnet ; page neutre si la personne n'est pas visible), `list_author_recipes`, « Ajouter », « Tout ajouter » (`add_author_recipes_to_cookbook`, ferme la bannière) |
+| **Fiche** `/recettes/[id]` | `pages/recettes/[id].vue`, `recipe/RecipeActions.vue` | `recipe_access` → `recipeRights()` (`shared/utils/recipeRights.ts`) : Ajouter / Retirer, Faire une copie modifiable (puis redirection vers la copie), Partager, Modifier (auteur ou `edit_original`), Supprimer (auteur seulement) ; « Recette de X », « Inspirée de … » (lien si l'original est lisible) ; avant de supprimer, `recipe_usage` → « Cette recette est dans le carnet de N personnes et a été copiée N fois » (si N > 0) |
+| **Partager** | `RecipeShareModal.vue`, `useShareRecipients.ts`, `shared/utils/recipients.ts` | Auteur : visibilité (`recipes.visibility`), droits (`list_recipe_grants`, `grant_recipe`, `revoke_recipe_grant`), lien public (`create_share_link` renvoie le jeton existant : c'est aussi la façon de le relire ; `revoke_share_link`). Non-auteur avec un droit explicite : `reshare_recipe` vers **une personne**, au plus son niveau, jamais `edit_original`, jamais un groupe. Destinataires : `list_friends`, `list_my_groups` + `list_group_members`, ou `search_users` (3 lettres). Échap ferme |
+| **Page publique** `/r/[token]` | `pages/r/[token].vue`, `shared/utils/sharedRecipe.ts` | `get_shared_recipe` (client sans compte), lecture seule, portions, mode cuisine, auteur par son pseudonyme, `noindex` (balise **et** en-tête `X-Robots-Tag`), vrai 404 pour un jeton inconnu / révoqué / mal formé (même page neutre). « Ajouter à mon carnet » : connexion (modale) puis `claim_shared_recipe` puis la fiche |
+| **Éditeur et traducteur** | `RecipeEditorForm.vue`, `RecipeV2Options.vue`, `useTranslator.ts`, `middleware/auth.ts` | Ouverts à tout compte connecté. L'auteur choisit **sa** catégorie (`categoryId`, obligatoire pour une recette neuve s'il en a) et la visibilité ; un détenteur d'`edit_original` ne voit ni l'une ni l'autre (la base les ignore pour lui). Le texte `category` (champ historique) suit le nom de la catégorie choisie |
+
+**Serveur.** `requireRecipeWriter(event)` (`server/utils/auth.ts`, règle pure `recipeWriterRequirement` dans `shared/utils/v2.ts`) : `requireAdmin` en v1, `requireUser` en v2. Utilisé par
+`add-recipe`, `update-recipe`, `delete-recipe`, `extract-recipe`, `transcribe-recipe`, `translate-recipe` et `recipes/similar`. Le quota IA reste celui de la phase 5 (`check_ai_quota` sous RLS : par
+compte) ; le crédit et les 20 appels par jour des nouveaux comptes (phase 7) ne sont pas touchés. `recipes/similar` lit avec le client de la session (RLS), jamais le service role : elle ne
+propose que des recettes lisibles (test e2e : une recette privée d'un autre n'apparaît pas). `throwSupabaseError` traduit maintenant `53400` (plafond de volume) en 409 `QUOTA_REACHED` et
+`54000` (limite de débit) en 429 `RATE_LIMITED` (jamais un 500) ; `toUserMessage` les affiche traduits (`errors.sharing.*`).
+
+**Messages d'erreur** (`sharingErrorKey`, `shared/utils/recipeRights.ts`) : `53400` quota, `54000` débit, `42501` refus, `P0002` introuvable, `22023` entrée refusée, `23505` doublon ; tout le reste = message générique
+(jamais le texte technique de la base).
+
+**À savoir.**
+- Les compteurs par catégorie de l'accueil (`useRecipeFacets`) comptent maintenant le carnet complet : mes recettes (`category_id`) + les entrées `cookbook_entries` dont la recette m'est encore lisible
+  (`recipes!inner`). Pas de tags en v2.
+- Un lien public n'est relisible que par `create_share_link` : la fenêtre « Partager » l'appelle à l'ouverture si le lien est actif (idempotent) ; ne jamais l'appeler pour « voir l'état » d'un lien inactif (il le créerait) : l'état vient de `has_share_link`.
+- Rejoindre un groupe n'ajoute rien au carnet : seules la bannière, « Ajouter » et « Tout ajouter » le font.
+- `cookbook_entries.category_id` (rangement d'une recette ajoutée) n'a pas d'écran : une recette ajoutée est « sans catégorie » (reste pour 6C / 6D).
+- Notifications (`NotificationBell`), amis, groupes : toujours « bientôt » (6C / 6D).
+
+**Tests.** Vitest : `recipeRights.test.ts` (droits affichés par niveau, repartage plafonné, provenance, messages d'erreur, destinataires, page publique), `recipeWriter.test.ts`, `errors.test.ts`,
+`useApiError.test.ts`. SQL : `test_0026_recipe_access.sql`. Playwright v2 (`npm run db:local:v2` puis `npm run test:e2e:v2`) : `cookbook.spec.ts` (copie, ajout / retrait, Explorer, « Partagées »),
+`sharing.spec.ts` (lecture à un ami + vérification avec l'autre compte, repartage, retrait en chaîne, lien public en navigation sans compte puis ajout après connexion, révocation, carnet vide),
+`editor.spec.ts` (éditeur ouvert à un compte non admin, `edit_original`, suppression avec avertissement d'usage, doublons limités aux recettes lisibles, IA ouverte).

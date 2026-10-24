@@ -71,7 +71,7 @@
             :label="link.label"
             @click="showMobileMenu = false"
           />
-          <UButton v-if="authStore.isAdmin" :to="localePath('/traducteur')" color="neutral" variant="ghost" icon="i-lucide-sparkles" :label="$t('ui.user.translator')" @click="showMobileMenu = false" />
+          <UButton v-if="authStore.isAdmin || v2" :to="localePath('/traducteur')" color="neutral" variant="ghost" icon="i-lucide-sparkles" :label="$t('ui.user.translator')" @click="showMobileMenu = false" />
           <UButton color="error" variant="soft" icon="i-lucide-log-out" :label="$t('ui.user.logout')" @click="handleLogout" />
         </nav>
       </template>

@@ -296,7 +296,11 @@
       "confirm": "Delete",
       "cancel": "Cancel",
       "success": "Recipe deleted",
-      "error": "Could not delete the recipe."
+      "error": "Could not delete the recipe.",
+      "usageSentence": "This recipe {parts}. It will disappear from those cookbooks; the copies stay with their owners.",
+      "usageCookbooks": "is in one person’s cookbook | is in {n} people’s cookbooks",
+      "usageCopies": "has been copied once | has been copied {n} times",
+      "usageAnd": " and "
     },
     "cooking": {
       "title": "Cooking mode",
@@ -340,6 +344,20 @@
       "original": "Original text ({lang}): not translated yet.",
       "fr": "French",
       "en": "English"
+    },
+    "v2": {
+      "addToCookbook": "Add to my cookbook",
+      "removeFromCookbook": "Remove from my cookbook",
+      "copy": "Make an editable copy",
+      "share": "Share",
+      "by": "Recipe by {author}",
+      "inspiredBy": "Inspired by {title}",
+      "added": "Recipe added to your cookbook",
+      "removed": "Recipe removed from your cookbook",
+      "copied": "Copy created in your cookbook",
+      "addError": "Couldn’t add the recipe",
+      "removeError": "Couldn’t remove the recipe",
+      "copyError": "Couldn’t copy the recipe"
     }
   },
   "editor": {
@@ -359,7 +377,8 @@
       "tags": "Tags",
       "tagsPlaceholder": "vegetarian, quick… (Enter to add)",
       "notes": "Notes and tips",
-      "notesPlaceholder": "Tips, variations, personal notes…"
+      "notesPlaceholder": "Tips, variations, personal notes…",
+      "noCategoryText": "misc"
     },
     "photo": {
       "label": "Photo",
@@ -418,7 +437,8 @@
     "validation": {
       "needIngredients": "Add at least one ingredient.",
       "needSteps": "Add at least one step.",
-      "fixErrors": "Fix the highlighted fields."
+      "fixErrors": "Fix the highlighted fields.",
+      "needCategory": "Choose a category."
     },
     "toasts": {
       "created": "Recipe created",
@@ -742,7 +762,15 @@
     "network": "Unable to connect, check your network and try again.",
     "invalidRecipe": "Invalid recipe data.",
     "loginRequired": "You need to be signed in.",
-    "noListSelected": "No list selected."
+    "noListSelected": "No list selected.",
+    "sharing": {
+      "quota": "Limit reached: you can’t create more recipes for now.",
+      "rate": "Too many requests in a short time, please try again later.",
+      "forbidden": "You’re not allowed to do that on this recipe.",
+      "notFound": "Recipe not found or no longer accessible.",
+      "invalid": "That request isn’t valid (for example, the person or group isn’t among your contacts).",
+      "duplicate": "That already exists."
+    }
   },
   "translator": {
     "title": "Add a recipe with AI",
@@ -1038,5 +1066,151 @@
       "delete": "Could not delete, please try again.",
       "move": "Could not move, please try again."
     }
+  },
+  "cookbook": {
+    "subtitle": "Your recipes, the ones you’ve added and your copies.",
+    "provenance": {
+      "mine": "Mine",
+      "added": "Added — from {author}",
+      "copyOf": "Copy of {title}",
+      "copy": "Copy"
+    },
+    "empty": {
+      "title": "Your cookbook is empty for now",
+      "description": "Three ways to start: write a recipe, import one from a photo, a text or a voice note, or discover what others have shared with you.",
+      "create": {
+        "title": "Create a recipe",
+        "description": "Type it in by hand."
+      },
+      "import": {
+        "title": "Import",
+        "description": "Photo, PDF, text or voice, with AI."
+      },
+      "explore": {
+        "title": "Explore",
+        "description": "Recipes shared with you."
+      }
+    },
+    "options": {
+      "category": "Category",
+      "categoryPlaceholder": "Choose one of my categories",
+      "visibility": "Who can see it?",
+      "visibilityGroups": "Visible to my groups",
+      "visibilityGroupsHint": "Members of your groups can read and copy it.",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateHint": "Only you, plus the people you give access to."
+    }
+  },
+  "shared": {
+    "title": "Shared with me",
+    "subtitle": "Recipes others have opened to you that aren’t in your cookbook yet.",
+    "add": "Add to my cookbook",
+    "copy": "Make a copy",
+    "noteUser": "From {author}, shared with you",
+    "noteGroup": "From {author}, through a group",
+    "added": "“{title}” is in your cookbook.",
+    "copied": "Copy of “{title}” created.",
+    "error": "Couldn’t do that, please try again.",
+    "empty": {
+      "title": "Nothing new for now",
+      "description": "When someone shares a recipe with you or one of your groups, it will show up here.",
+      "action": "See my cookbook"
+    }
+  },
+  "explore": {
+    "back": "Back to my cookbook",
+    "loading": "Loading…",
+    "notFound": {
+      "title": "Nobody to explore here",
+      "description": "This link doesn’t lead to a cookbook you can view.",
+      "action": "Back to my cookbook"
+    },
+    "eyebrow": "Explore {author}’s recipes",
+    "defaultTitle": "{author}’s recipes",
+    "subtitle": "The recipes by {author} that you can read. Add the ones you like to your cookbook: they stay up to date if {author} edits them.",
+    "addAll": "Add all",
+    "allAdded": "Everything is in your cookbook",
+    "inCookbook": "Already in my cookbook",
+    "add": "Add",
+    "addedAll": "No recipe added | One recipe added to your cookbook | {n} recipes added to your cookbook",
+    "error": "Couldn’t do that, please try again.",
+    "empty": {
+      "title": "Nothing to discover",
+      "description": "{author} has no recipe you can read yet."
+    }
+  },
+  "share": {
+    "title": "Share this recipe",
+    "description": "Choose who can see it, copy it or edit it.",
+    "loading": "Loading…",
+    "unnamed": "Unnamed",
+    "error": "Couldn’t do that, please try again.",
+    "visibility": {
+      "title": "Visibility",
+      "saved": "Visibility saved"
+    },
+    "grants": {
+      "title": "People and groups with access",
+      "empty": "For now, nobody has specific access.",
+      "reshared": "reshared by {by}",
+      "viaLink": "added through the public link",
+      "remove": "Remove {name}’s access",
+      "removed": "Access removed"
+    },
+    "add": {
+      "title": "Give access",
+      "who": "To whom?",
+      "whoPerson": "To whom? (one person)",
+      "placeholder": "A friend, a group member, a group…",
+      "search": "Search by name (at least 3 letters)",
+      "level": "What they can do",
+      "submit": "Give access",
+      "done": "Access given",
+      "friend": "friend",
+      "found": "found by name",
+      "groupHint": "Group of {n} people"
+    },
+    "permission": {
+      "read": "Read",
+      "copy": "Read and copy",
+      "edit_original": "Edit the original"
+    },
+    "permissionHint": {
+      "read": "View the recipe, favourite it, plan it and add it to their cookbook as is.",
+      "copy": "Everything above, plus an editable copy of their own.",
+      "edit_original": "Everything above, plus editing your recipe. They can’t delete it or reshare it at this level."
+    },
+    "link": {
+      "title": "Public link",
+      "description": "A secret address to read the recipe without an account. After signing in, people can add it to their cookbook.",
+      "create": "Create a public link",
+      "copy": "Copy",
+      "copied": "Link copied",
+      "copyError": "Couldn’t copy: select the link by hand.",
+      "nativeShare": "Share the link",
+      "revoke": "Turn the link off",
+      "revokeNote": "If you turn the link off, people who already added the recipe can keep it.",
+      "revoked": "Link turned off"
+    },
+    "reshare": {
+      "title": "Reshare this recipe",
+      "description": "You can pass it on to someone you know.",
+      "rules": "You can give “{level}” at most, to one person only (a friend or a member of one of your groups), never to a group.",
+      "submit": "Reshare",
+      "done": "Recipe reshared",
+      "alreadyHas": "That person already has access through another right."
+    }
+  },
+  "publicRecipe": {
+    "notFound": {
+      "title": "This recipe isn’t available",
+      "description": "The link is wrong or has been turned off by its author.",
+      "action": "Go to the home page"
+    },
+    "sharedBy": "Recipe shared by {author}.",
+    "add": "Add to my cookbook",
+    "added": "Recipe added to your cookbook.",
+    "addError": "Couldn’t add this recipe, the link may no longer be valid.",
+    "documentDescription": "A shared recipe"
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <UForm
-    :schema="recipeInputSchema"
+    :schema="formSchema"
     :state="state"
     :validate="validateSections"
     :validate-on="['blur', 'change']"
@@ -24,7 +24,14 @@
       <UFormField :label="$t('editor.fields.title')" name="title" required class="sm:col-span-2">
         <UInput v-model="state.title" :placeholder="$t('editor.fields.titlePlaceholder')" size="lg" class="w-full" />
       </UFormField>
-      <UFormField :label="$t('editor.fields.category')" name="category" required>
+      <!-- v2 : MA catégorie et la visibilité (auteur seulement) ; un éditeur « modifier l'original » n'y touche pas -->
+      <RecipeV2Options
+        v-if="v2 && isOwner"
+        v-model:category-id="state.categoryId"
+        v-model:visibility="state.visibility"
+        class="sm:col-span-2"
+      />
+      <UFormField v-else-if="!v2" :label="$t('editor.fields.category')" name="category" required>
         <USelectMenu
           v-model="state.category"
           :items="categoryItems"
@@ -93,11 +100,12 @@
 // Les deux blocs <script> forment un seul module : tous les imports vivent ici.
 import { computed, reactive, ref } from 'vue'
 import type { FormError, FormErrorEvent } from '@nuxt/ui'
-import type { z } from 'zod'
+import { z } from 'zod'
 import { RECIPE_CATEGORIES, type Recipe, type RecipeInput, type RecipeSectionInput, type SectionType } from '#shared/types'
 import { recipeInputSchema, type UnitCode } from '#shared/schemas'
 import { categoryI18nKey } from '#shared/utils/recipes'
 import { formSnapshot, isFormDirty } from '~/utils/formDirty'
+import type { RecipeAccess } from '#shared/utils/recipeRights'
 import EditorPhotoField from './PhotoField.vue'
 import EditorSectionEditor from './SectionEditor.vue'
 
@@ -124,6 +132,9 @@ export type SectionUpdater = (section: FormSection) => FormSection
 export interface RecipeFormState {
   title: string
   category: string
+  /** v2 : identifiant de MA catégorie (`''` = aucune) et visibilité (auteur seulement). */
+  categoryId: string
+  visibility: 'private' | 'groups'
   description: string
   notes: string
   prepTime: number | null
@@ -146,7 +157,11 @@ export const newSection = (type: FormSectionType): FormSection => ({ key: newKey
  * sections d'ingrédients et d'étapes, photo (téléversée à l'enregistrement),
  * soumission via `useRecipesStore().addRecipe / updateRecipe`.
  */
-const props = defineProps<{ recipe: Recipe | null }>()
+const props = defineProps<{
+  recipe: Recipe | null
+  /** v2 : mes droits sur la recette éditée (`recipe_access`) ; absent pour une création. */
+  access?: RecipeAccess | null
+}>()
 const emit = defineEmits<{ saved: [recipe: Recipe], cancel: [] }>()
 
 const SECTION_KINDS: readonly FormSectionType[] = ['ingredients', 'instructions']
@@ -154,6 +169,15 @@ const recipesStore = useRecipesStore()
 const toast = useToast()
 const { t } = useI18n()
 const { uploadPhoto, removePhoto } = useRecipePhoto()
+const v2 = useV2()
+const { categories } = useCategories()
+// L'état du formulaire porte `categoryId` ('' = aucune) : le schéma d'écriture l'attend en identifiant, d'où cette variante pour la validation.
+// En v2 le texte `category` n'est plus saisi : il est dérivé du nom de MA catégorie à l'envoi (`toRecipeInput`).
+const formSchema = (v2
+  ? recipeInputSchema.extend({ categoryId: z.string().nullish(), category: z.string().nullish() })
+  : recipeInputSchema.extend({ categoryId: z.string().nullish() })) as unknown as typeof recipeInputSchema
+/** v2 : l'auteur règle catégorie et visibilité ; une création est toujours « mienne » ; accès inconnu = prudence (rien). */
+const isOwner = computed(() => !props.recipe || props.access?.permission === 'author')
 
 const isEditing = computed(() => props.recipe !== null)
 const saving = ref(false)
@@ -161,7 +185,7 @@ const pendingPhoto = ref<File | null>(null)
 const photoRemoved = ref(false)
 
 /** Une section `mixed` (0005) devient une section d'ingrédients + une d'étapes du même nom. */
-function fromRecipe(recipe: Recipe | null): RecipeFormState {
+function fromRecipe(recipe: Recipe | null, access: RecipeAccess | null | undefined): RecipeFormState {
   const sections: FormSection[] = []
   for (const section of recipe?.sections ?? []) {
     const ingredients = section.ingredients.map(ingredient => ({
@@ -179,6 +203,8 @@ function fromRecipe(recipe: Recipe | null): RecipeFormState {
   return {
     title: recipe?.title ?? '',
     category: recipe?.category ?? '',
+    categoryId: access?.categoryId ?? '',
+    visibility: access?.visibility ?? 'groups',
     description: recipe?.description ?? '',
     notes: recipe?.notes ?? '',
     prepTime: recipe?.prepTime ?? null,
@@ -190,7 +216,7 @@ function fromRecipe(recipe: Recipe | null): RecipeFormState {
   }
 }
 
-const state = reactive<RecipeFormState>(fromRecipe(props.recipe))
+const state = reactive<RecipeFormState>(fromRecipe(props.recipe, props.access))
 
 // Instantané pris à l'ouverture ; l'état est « modifié » dès qu'il s'en écarte.
 const initialSnapshot = ref(formSnapshot(state))
@@ -230,6 +256,10 @@ const moveSection = (index: number, direction: -1 | 1) => {
 /** Au moins un ingrédient et une étape (en plus du schéma Zod). */
 const validateSections = (current: Partial<z.input<typeof recipeInputSchema>>): FormError[] => {
   const errors: FormError[] = []
+  // v2 : une recette neuve est rangée dans une de MES catégories (s'il en existe).
+  if (v2 && isOwner.value && !props.recipe && categories.value.length > 0 && !state.categoryId) {
+    errors.push({ name: 'categoryId', message: t('editor.validation.needCategory') })
+  }
   const sections = current.sections ?? []
   if (!sections.some(section => section.type === 'ingredients' && (section.ingredients?.length ?? 0) > 0)) {
     errors.push({ name: 'sections.ingredients', message: t('editor.validation.needIngredients') })
@@ -258,9 +288,16 @@ function toRecipeInput(photoPath: string | null): RecipeInput {
       .filter(step => step.content.trim() !== '')
       .map((step, i) => ({ content: step.content.trim(), orderIndex: i }))
   }))
+  // v2 : le texte `category` suit le nom de MA catégorie (champ historique NOT NULL) ; `categoryId` et `visibility` ne partent
+  // que pour l'auteur (la base les ignore pour un éditeur, mais on ne les envoie pas).
+  const ownCategory = v2 && isOwner.value ? categories.value.find(category => category.id === state.categoryId) : undefined
+  const v2Fields = v2 && isOwner.value
+    ? { categoryId: state.categoryId || null, visibility: state.visibility }
+    : {}
   return {
+    ...v2Fields,
     title: state.title.trim(),
-    category: state.category,
+    category: v2 ? (ownCategory?.name ?? (state.category || t('editor.fields.noCategoryText'))) : state.category,
     description: state.description.trim(),
     notes: state.notes.trim(),
     prepTime: state.prepTime,

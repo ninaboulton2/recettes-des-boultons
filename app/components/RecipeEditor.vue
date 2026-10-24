@@ -13,6 +13,7 @@
           v-if="show"
           ref="form"
           :recipe="recipe"
+          :access="access"
           @saved="onSaved"
           @cancel="requestClose"
         />
@@ -38,6 +39,7 @@
 
 <script setup lang="ts">
 import type { Recipe } from '#shared/types'
+import type { RecipeAccess } from '#shared/utils/recipeRights'
 import RecipeEditorForm from './editor/RecipeEditorForm.vue'
 
 /**
@@ -51,9 +53,12 @@ const props = withDefaults(defineProps<{
   show?: boolean
   /** Recette complète (avec sections) à modifier ; `null` pour une création. */
   recipe?: Recipe | null
+  /** v2 : mes droits sur cette recette (`recipe_access`) ; décide de ce que l'éditeur propose (catégorie, visibilité : auteur seulement). */
+  access?: RecipeAccess | null
 }>(), {
   show: false,
-  recipe: null
+  recipe: null,
+  access: null
 })
 
 const emit = defineEmits<{

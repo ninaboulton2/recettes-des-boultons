@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4 rounded-xl border border-default bg-muted/40 p-4">
-    <div class="grid gap-3 md:grid-cols-3">
+    <div class="grid gap-3" :class="hideTags ? 'md:grid-cols-2' : 'md:grid-cols-3'">
       <!--
         Libellé et champ reliés par un id FIXE : avec UFormField, l'id vient de
         useId() et différait entre SSR et client dans le build de production
@@ -34,7 +34,7 @@
         <UInput v-else :model-value="lockedCategory" disabled icon="i-lucide-chef-hat" class="w-full" />
       </UFormField>
 
-      <UFormField :label="$t('recipes.filters.tags.label')">
+      <UFormField v-if="!hideTags" :label="$t('recipes.filters.tags.label')">
         <USelectMenu
           :model-value="tags"
           :items="availableTags"
@@ -97,6 +97,8 @@ const props = defineProps<{
   totalCount: number
   /** Libellé de la catégorie imposée par l'URL (page catégorie) ; sélecteur masqué. */
   lockedCategory?: string
+  /** v2 : le carnet (`list_cookbook`) ne se filtre pas par tag ; la recherche les couvre déjà. */
+  hideTags?: boolean
 }>()
 
 const emit = defineEmits<{

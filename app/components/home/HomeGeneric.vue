@@ -14,7 +14,7 @@
       <div class="flex flex-wrap gap-3">
         <UButton :to="localePath('/recettes')" size="xl" icon="i-lucide-book-open" :label="$t('home.viewRecipes')" />
         <UButton
-          v-if="authStore.isAdmin"
+          v-if="authStore.isAdmin || v2"
           :to="localePath('/traducteur')"
           size="xl"
           color="neutral"
@@ -61,6 +61,7 @@
 /** Accueil de l'édition générique : héros typographique allégé, catégories en icônes. */
 const localePath = useLocalePath()
 const authStore = useAuthStore()
+const v2 = useV2()
 const { siteName, tagline } = useEdition()
 
 // Compteurs par catégorie (requête légère, rendue côté serveur)
