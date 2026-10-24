@@ -450,7 +450,7 @@ begin
   perform tests.login(c, 'authenticated');
   assert public.claim_shared_recipe(tok2) = r2, 'claim : c sur r2';
   perform tests.logout();
-  assert (select permission from public.recipe_grants where recipe_id = r2 and grantee_user_id = c) = 'copy' and (select origin from public.recipe_grants where recipe_id = r2 and grantee_user_id = c) = 'direct', 'claim : read relevé à copy';
+  assert (select permission from public.recipe_grants where recipe_id = r2 and grantee_user_id = c) = 'read' and (select origin from public.recipe_grants where recipe_id = r2 and grantee_user_id = c) = 'direct', 'claim : un droit read existant n''est pas modifié (relecture de sécurité n° 2)';
   perform tests.login(a, 'authenticated');
   assert public.claim_shared_recipe(tok) = rp, 'claim : sa propre recette';
   assert public.revoke_share_link(rp) = true and public.revoke_share_link(rp) = false, 'revoke_share_link : true puis false';

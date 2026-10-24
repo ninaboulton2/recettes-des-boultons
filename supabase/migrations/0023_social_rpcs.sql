@@ -126,6 +126,19 @@
 --      54000 ; groupe à transférer avant suppression de compte 55000. Un groupe ou une demande dont on n'est pas partie
 --      est « introuvable » (P0002), pas « refusé » : on n'en révèle pas l'existence.
 --
+--  13. (relecture de sécurité n° 2) Concurrence et abus. (a) `private.check_rate_limit`, le déclencheur des signalements et les
+--      plafonds de 0019 prennent d'abord un verrou consultatif `pg_advisory_xact_lock(hashtextextended(personne || ':' || genre, 0))`
+--      (tenu jusqu'à la fin de la transaction) : deux appels parallèles ne dépassent plus la limite. (b) `private.require_group_creator`
+--      verrouille la ligne du groupe (`for update`, d'où `volatile`) : transfert, départ, retrait, invitation, lien, suppression et
+--      renommage d'un même groupe sont sérialisés ; si le rôle a changé pendant l'attente, l'ancien créateur reçoit « introuvable ».
+--      `leave_group` verrouille le groupe AVANT de lire son rôle ; `transfer_group_ownership` vérifie qu'une seule ligne est
+--      passée « creator » (sinon 55000). (c) `redeem_invite_link` et `respond_group_invitation` exigent
+--      `groups.created_by = invitations.inviter_id` : l'invitation (ou le lien) d'un ex-créateur est refusée avec le message d'un
+--      jeton / d'une invitation inconnus. (d) Pseudonyme : caractères de format, invisibles et espaces spéciales refusés ; pas de mélange
+--      latin + cyrillique / grec ; unicité sur la forme normalisée (NFKC, minuscules, sans accents). Les pseudonymes d'un seul
+--      alphabet cyrillique ou grec restent permis (limite connue : un pseudonyme entièrement cyrillique qui ressemble à un
+--      pseudonyme latin n'est pas détecté).
+--
 --  RÉVERSIBILITÉ : supabase/rollback/0023_social_rpcs_down.sql (supprime fonctions, déclencheurs et journal ; les
 --  notifications déjà créées restent).
 --  IDEMPOTENTE : rejouable (create or replace, drop trigger if exists, grants rejoués).
@@ -224,6 +237,9 @@ declare
   n    int;
 begin
   if v_me is null then return; end if;
+  -- verrou consultatif par personne et par genre, tenu jusqu'à la fin de la transaction : sans lui, deux appels parallèles
+  -- comptent tous deux « n » avant que l'autre n'ait inséré et dépassent la limite (relecture de sécurité n° 2)
+  perform pg_advisory_xact_lock(hashtextextended(v_me::text || ':' || p_kind, 0));
   delete from private.rate_events where user_id = v_me and created_at < now() - interval '2 days';
   select count(*) into n from private.rate_events
    where user_id = v_me and kind = p_kind and created_at > now() - interval '1 day';
@@ -235,7 +251,7 @@ end $$;
 
 -- Exige que la personne connectée soit le créateur du groupe (P0002 si elle n'en est pas membre : on ne révèle rien)
 create or replace function private.require_group_creator(p_group uuid)
-returns void language plpgsql stable security definer set search_path = '' as $$
+returns void language plpgsql security definer set search_path = '' as $$
 declare v_me uuid := (select auth.uid());
 begin
   if v_me is null then
@@ -246,6 +262,13 @@ begin
   end if;
   if not exists (select 1 from public.groups g where g.id = p_group and g.created_by = v_me) then
     raise exception 'Réservé au créateur du groupe' using errcode = '42501';
+  end if;
+  -- verrou sur le groupe jusqu'à la fin de la transaction : un transfert, un départ, un retrait et une invitation ne
+  -- s'exécutent jamais en parallèle sur le même groupe. Si le rôle de créateur a été transféré entre-temps (on a attendu le
+  -- verrou), le groupe est « introuvable » pour l'ancien créateur.
+  perform 1 from public.groups g where g.id = p_group and g.created_by = v_me for update;
+  if not found then
+    raise exception 'Groupe introuvable' using errcode = 'P0002';
   end if;
 end $$;
 
@@ -677,7 +700,10 @@ begin
   select * into v_inv from public.invitations i
    where i.token_hash = encode(sha256(convert_to(btrim(coalesce(p_token, '')), 'UTF8')), 'hex')
    for update;
-  if not found or v_inv.kind <> 'group' or v_inv.status <> 'pending' or v_inv.expires_at <= now() then
+  -- l'invitation doit avoir été émise par le créateur ACTUEL du groupe (un ex-créateur n'invite plus) ; même message
+  -- que pour un jeton inconnu
+  if not found or v_inv.kind <> 'group' or v_inv.status <> 'pending' or v_inv.expires_at <= now()
+     or not exists (select 1 from public.groups g where g.id = v_inv.group_id and g.created_by = v_inv.inviter_id) then
     raise exception 'Lien d''invitation invalide ou expiré' using errcode = 'P0002';
   end if;
   if v_inv.inviter_id = v_me then
@@ -735,8 +761,9 @@ begin
     raise exception 'Indiquez si vous acceptez' using errcode = '22023';
   end if;
   select * into v_inv from public.invitations i where i.id = p_id for update;
-  if not found or v_inv.kind <> 'group' or v_inv.target_user_id is distinct from v_me then
-    raise exception 'Invitation introuvable' using errcode = 'P0002';
+  if not found or v_inv.kind <> 'group' or v_inv.target_user_id is distinct from v_me
+     or not exists (select 1 from public.groups g where g.id = v_inv.group_id and g.created_by = v_inv.inviter_id) then
+    raise exception 'Invitation introuvable' using errcode = 'P0002';   -- inconnue, ou émise par un ex-créateur du groupe
   end if;
   if v_inv.status <> 'pending' then
     raise exception 'Invitation déjà traitée' using errcode = '22023';
@@ -773,6 +800,12 @@ begin
   if v_me is null then
     raise exception 'Connexion requise' using errcode = '42501';
   end if;
+  -- verrou AVANT de lire le rôle : sinon un transfert en cours qui fait de moi le créateur me laisserait partir et le
+  -- groupe n'aurait plus de créateur
+  if p_group is null or not exists (select 1 from public.group_members m where m.group_id = p_group and m.user_id = v_me) then
+    raise exception 'Vous n''êtes pas dans ce groupe' using errcode = 'P0002';   -- sans verrou : un étranger ne bloque rien
+  end if;
+  perform 1 from public.groups where id = p_group for update;
   select m.role into v_role from public.group_members m where m.group_id = p_group and m.user_id = v_me;
   if not found then
     raise exception 'Vous n''êtes pas dans ce groupe' using errcode = 'P0002';
@@ -802,6 +835,7 @@ begin
   if p_user is null or p_user = v_me then
     raise exception 'Pour partir, transférez le rôle de créateur ou supprimez le groupe' using errcode = '22023';
   end if;
+  perform 1 from public.groups where id = p_group for update;       -- déjà verrouillé par require_group_creator ; explicite par prudence
   delete from public.group_members m where m.group_id = p_group and m.user_id = p_user and m.role = 'member';
   get diagnostics n = row_count;
   if n > 0 then
@@ -823,6 +857,7 @@ as $$
 declare
   v_me   uuid := (select auth.uid());
   v_name text;
+  n      integer;
 begin
   perform private.require_group_creator(p_group);
   if p_new_creator is null or p_new_creator = v_me then
@@ -835,7 +870,11 @@ begin
   end if;
   -- même transaction : created_by ET les deux rôles (l'ancien d'abord : un seul « creator » par groupe)
   update public.group_members set role = 'member'  where group_id = p_group and user_id = v_me;
-  update public.group_members set role = 'creator' where group_id = p_group and user_id = p_new_creator;
+  update public.group_members set role = 'creator' where group_id = p_group and user_id = p_new_creator and role = 'member';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'Transfert impossible : le nouveau créateur n''est plus membre du groupe' using errcode = '55000';
+  end if;
   update public.groups set created_by = p_new_creator where id = p_group returning name into v_name;
   -- les invitations en attente de l'ancien créateur ne sont plus acceptables (0019 n° 7) : annulées, le nouveau ré-invite
   update public.invitations set status = 'cancelled', responded_at = now()
@@ -1019,8 +1058,9 @@ create trigger trg_0023_grants_notify after insert or update of permission on pu
 create or replace function private.trg_reports_rate_limit()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if (select auth.uid()) is not null and new.reporter_id = (select auth.uid())
-     and (select count(*) from public.reports r
+  if (select auth.uid()) is null or new.reporter_id is distinct from (select auth.uid()) then return new; end if;
+  perform pg_advisory_xact_lock(hashtextextended(new.reporter_id::text || ':report', 0));   -- même verrou que check_rate_limit
+  if (select count(*) from public.reports r
            where r.reporter_id = new.reporter_id and r.created_at > now() - interval '1 day') >= 10 then
     raise exception 'Limite atteinte : 10 signalements par jour. Réessayez demain.' using errcode = '54000';
   end if;
@@ -1054,9 +1094,13 @@ drop trigger if exists trg_0023_recipe_deleted on public.recipes;
 create trigger trg_0023_recipe_deleted before delete on public.recipes
   for each row execute function private.trg_recipes_notify_deleted();
 
--- Pseudonyme : pas d'« @ », pas de caractère de contrôle, pas de doublon (casse et accents ignorés)
+-- Pseudonyme : pas d'« @ », pas de caractère de contrôle, de format ni invisible, pas d'espace autre que U+0020, pas de
+-- mélange latin + cyrillique / grec (homoglyphes), pas de doublon sur la forme NORMALISÉE (NFKC, minuscules, sans accents).
+-- PostgreSQL n'a pas de classes Unicode (\p{Cf}) : les plages sont écrites en clair (\uXXXX).
 create or replace function private.trg_profiles_guard_display_name()
 returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  v_norm text;
 begin
   if new.display_name is null then return new; end if;
   if tg_op = 'UPDATE' and new.display_name is not distinct from old.display_name then return new; end if;
@@ -1068,10 +1112,24 @@ begin
   if new.display_name ~ '[[:cntrl:]]' then
     raise exception 'Le pseudonyme contient un caractère interdit' using errcode = '22023';
   end if;
+  -- format (Cf), séparateurs de ligne / paragraphe (Zl, Zp), espaces autres que U+0020 (Zs, NEL), caractères invisibles
+  -- (jonction de graphèmes, remplisseurs hangul, braille vide, sélecteurs de variation)
+  if new.display_name ~ ('[\u0085\u00A0\u00AD\u034F\u0600-\u0605\u061C\u06DD\u070F\u0890\u0891\u08E2\u115F\u1160\u1680\u17B4\u17B5'
+                        || '\u180B-\u180F\u2000-\u200F\u2028-\u202F\u205F-\u2064\u2066-\u206F\u2800\u3000\u3164'
+                        || '\uFE00-\uFE0F\uFEFF\uFFA0\uFFF9-\uFFFB\U000110BD\U000110CD\U0001BCA0-\U0001BCA3'
+                        || '\U00013430-\U0001343F\U0001D173-\U0001D17A\U000E0001\U000E0020-\U000E007F\U000E0100-\U000E01EF]') then
+    raise exception 'Le pseudonyme contient un caractère invisible, de mise en forme ou une espace spéciale' using errcode = '22023';
+  end if;
+  v_norm := normalize(new.display_name, NFKC);
+  -- latin + cyrillique, ou latin + grec, dans un même pseudonyme : refusé (« Nіna » avec un і cyrillique)
+  if v_norm ~ '[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F\u1E00-\u1EFF]'
+     and v_norm ~ '[\u0370-\u03FF\u0400-\u052F\u1C80-\u1C8F\u1F00-\u1FFF\u2DE0-\u2DFF\uA640-\uA69F]' then
+    raise exception 'Le pseudonyme ne peut pas mélanger l''alphabet latin avec le cyrillique ou le grec' using errcode = '22023';
+  end if;
   perform pg_advisory_xact_lock(hashtext('recettes:display_name'));
   if exists (select 1 from public.profiles p
               where p.id <> new.id and p.display_name is not null
-                and lower(public.immutable_unaccent(p.display_name)) = lower(public.immutable_unaccent(new.display_name))) then
+                and lower(public.immutable_unaccent(normalize(p.display_name, NFKC))) = lower(public.immutable_unaccent(v_norm))) then
     raise exception 'Ce pseudonyme est déjà pris' using errcode = '22023';
   end if;
   return new;

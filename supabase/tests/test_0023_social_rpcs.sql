@@ -508,7 +508,7 @@ begin
   select payload into j from public.notifications where user_id = e and type = 'group_ownership_transferred';
   assert j ->> 'group_id' = gd::text and j ->> 'from_name' = 'Dave Étranger' and j::text not like '%@%', 'e est prévenu du transfert';
   perform tests.login(f, 'authenticated');
-  assert tests.try(format('select public.respond_group_invitation(%L, true)', inv2)) = '22023', 'f ne peut plus accepter l''invitation de l''ancien créateur';
+  assert tests.try(format('select public.respond_group_invitation(%L, true)', inv2)) = 'P0002', 'f ne peut plus accepter l''invitation de l''ancien créateur (introuvable : relecture de sécurité n° 2)';
   perform tests.logout();
   perform tests.login(d, 'authenticated');
   assert tests.try(format('select public.rename_group(%L, ''Encore moi'')', gd)) = '42501', 'l''ancien créateur est un simple membre';

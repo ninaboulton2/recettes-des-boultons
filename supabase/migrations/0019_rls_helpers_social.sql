@@ -121,6 +121,27 @@
 --      phase 3) ne sont PAS faits ici : ils relèvent des phases 5 (API) ; les
 --      tables nécessaires et les droits sont prêts.
 --
+--  13. (relecture de sécurité n° 2) E-MAIL DU PROFIL NON MODIFIABLE PAR L'API : sur Supabase les rôles anon / authenticated
+--      ont `UPDATE` sur toute la table `profiles` (droit de table) ; la politique « sa propre ligne » laissait donc
+--      changer `profiles.email`. On retire le droit de table puis on ne rend modifiables que les colonnes utiles :
+--      name, role (toujours gardé par le déclencheur anti-escalade de 0001 : admin seulement), language, theme,
+--      notifications, display_name, cookbook_title, theme_settings, active_theme_group_id, discoverable, onboarded_at.
+--      Ni `id`, ni `email`, ni `created_at`, ni `updated_at` (posé par déclencheur). Le code v1 ne modifie aucune colonne de
+--      `profiles` (il ne fait que lire son profil) : rien ne casse. C'est un droit, pas une politique : les empreintes
+--      md5 des politiques existantes restent valables. Retour arrière : le droit de table est rétabli.
+--  14. PLAFONDS DE VOLUME (déclencheurs d'insertion, ignorés sans `auth.uid()` comme les limites de débit de 0023, avec le
+--      même verrou consultatif par personne que `private.check_rate_limit`) : 2000 recettes par auteur (seulement quand
+--      `owner_id` n'est pas NULL : sans effet tant que la v1 écrit des recettes sans propriétaire ; déclencheur `when`
+--      + test dans la fonction), 20 groupes créés par personne (`groups.created_by`), 5000 bannières fermées par
+--      personne. SQLSTATE 53400 (limite de configuration) et non 54000 : ce n'est pas une limite par jour. Contraintes de
+--      taille (4000 caractères, comme `update_my_profile` / `update_group_theme`) sur `profiles.theme_settings` et
+--      `groups.theme` : tables créées en 0017 (déjà en production), contraintes ajoutées ici de façon idempotente
+--      (`not valid` puis `validate`) ; elles valent aussi pour l'écriture directe (politiques d'update).
+--  15. Invitations : l'insertion directe (API) ne sert qu'aux invitations de GROUPE émises par le créateur. Les
+--      invitations `kind = 'friend'` passent uniquement par des RPC ou sont réservées à la phase 7 (e-mail).
+--  16. Repartage : il ne vise qu'une PERSONNE (ami ou co-membre), jamais un groupe (`can_create_grant`, origine
+--      'reshare', exige `grantee_user_id`). Un droit donné à un groupe est réservé à l'auteur de la recette (origine 'direct').
+--
 --  RÉVERSIBILITÉ : supabase/rollback/0019_rls_helpers_social_down.sql.
 --  IDEMPOTENTE : rejouable (create or replace, drop policy / trigger if exists).
 --  ATTENDU APRÈS : 12 tables avec politiques, 0 changement sur les politiques /
@@ -325,6 +346,7 @@ begin
   if p_origin = 'direct' then
     return private.is_recipe_owner(p_recipe);
   elsif p_origin = 'reshare' then
+    if p_grantee_user is null then return false; end if;       -- un repartage ne vise qu'une personne (CHOIX n° 16)
     if p_permission not in ('read', 'copy') or p_source is null then return false; end if;
     select max(private.permission_rank(g.permission)) into v_lvl
       from public.recipe_grants g
@@ -459,6 +481,71 @@ revoke execute on function private.profiles_guard_active_theme() from public, an
 revoke execute on function private.on_group_member_added(), private.on_group_member_removed(),
                            private.on_friendship_removed(), private.on_grant_lowered() from public, anon, authenticated;
 
+-- 3f. Plafonds de volume (CHOIX n° 14) : un verrou par personne et par genre sérialise « compter puis insérer »
+create or replace function private.trg_recipes_quota()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.owner_id is null or (select auth.uid()) is null then return new; end if;     -- v1 / service : sans effet
+  perform pg_advisory_xact_lock(hashtextextended(new.owner_id::text || ':recipes', 0));
+  if (select count(*) from public.recipes r where r.owner_id = new.owner_id) >= 2000 then
+    raise exception 'Limite atteinte : 2000 recettes par auteur' using errcode = '53400';
+  end if;
+  return new;
+end $$;
+drop trigger if exists trg_recipes_quota on public.recipes;
+create trigger trg_recipes_quota before insert on public.recipes
+  for each row when (new.owner_id is not null)
+  execute function private.trg_recipes_quota();
+
+create or replace function private.trg_groups_quota()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (select auth.uid()) is null then return new; end if;
+  perform pg_advisory_xact_lock(hashtextextended(new.created_by::text || ':groups', 0));
+  if (select count(*) from public.groups g where g.created_by = new.created_by) >= 20 then
+    raise exception 'Limite atteinte : 20 groupes créés par personne' using errcode = '53400';
+  end if;
+  return new;
+end $$;
+drop trigger if exists trg_groups_quota on public.groups;
+create trigger trg_groups_quota before insert on public.groups
+  for each row execute function private.trg_groups_quota();
+
+create or replace function private.trg_dismissed_prompts_quota()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (select auth.uid()) is null then return new; end if;
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text || ':dismissed_prompts', 0));
+  -- une bannière déjà fermée (idempotence de dismiss_prompt, `on conflict do nothing`) ne compte pas deux fois
+  if not exists (select 1 from public.dismissed_prompts d
+                  where d.user_id = new.user_id and d.kind = new.kind and d.target_id = new.target_id)
+     and (select count(*) from public.dismissed_prompts d where d.user_id = new.user_id) >= 5000 then
+    raise exception 'Limite atteinte : 5000 bannières fermées par personne' using errcode = '53400';
+  end if;
+  return new;
+end $$;
+drop trigger if exists trg_dismissed_prompts_quota on public.dismissed_prompts;
+create trigger trg_dismissed_prompts_quota before insert on public.dismissed_prompts
+  for each row execute function private.trg_dismissed_prompts_quota();
+
+revoke execute on function private.trg_recipes_quota(), private.trg_groups_quota(),
+                           private.trg_dismissed_prompts_quota() from public, anon, authenticated;
+
+-- 3g. Taille des thèmes JSON (tables de 0017, déjà en production : ajout idempotent, `not valid` puis `validate`)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_theme_settings_size' and conrelid = 'public.profiles'::regclass) then
+    alter table public.profiles
+      add constraint profiles_theme_settings_size check (theme_settings is null or length(theme_settings::text) <= 4000) not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'groups_theme_size' and conrelid = 'public.groups'::regclass) then
+    alter table public.groups
+      add constraint groups_theme_size check (length(theme::text) <= 4000) not valid;
+  end if;
+end $$;
+alter table public.profiles validate constraint profiles_theme_settings_size;
+alter table public.groups   validate constraint groups_theme_size;
+
 -- ----------------------------------------------------------------------------
 -- 4. Politiques et droits des 12 tables sociales
 -- ----------------------------------------------------------------------------
@@ -534,7 +621,7 @@ create policy "invitations_insert_inviter" on public.invitations for insert to a
   with check (inviter_id = (select auth.uid())
               and status = 'pending'
               and (target_user_id is null or target_email is null)      -- l'e-mail de quelqu'un d'autre n'est jamais montré à la cible
-              and (kind <> 'group' or private.is_group_creator(group_id)));
+              and kind = 'group' and private.is_group_creator(group_id));   -- 'friend' : RPC / phase 7 seulement (CHOIX n° 15)
 create policy "invitations_update_respond" on public.invitations for update to authenticated
   using ((target_user_id = (select auth.uid()) and status = 'pending' and expires_at > now())
       or (inviter_id = (select auth.uid()) and status = 'pending'))
@@ -628,6 +715,12 @@ create policy "dismissed_prompts_delete_own" on public.dismissed_prompts for del
   using (user_id = (select auth.uid()));
 grant select, delete on public.dismissed_prompts to authenticated;
 grant insert (user_id, kind, target_id) on public.dismissed_prompts to authenticated;
+
+-- profiles : l'e-mail n'est pas modifiable par l'API (CHOIX n° 13). Le droit de table `update` est retiré puis rendu
+-- colonne par colonne (un `revoke update (email)` seul n'aurait AUCUN effet tant que le droit de table subsiste).
+revoke update on public.profiles from anon, authenticated;
+grant update (name, role, language, theme, notifications, display_name, cookbook_title, theme_settings,
+              active_theme_group_id, discoverable, onboarded_at) on public.profiles to authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 5. RPC publiques
@@ -746,6 +839,12 @@ begin
   assert not has_column_privilege('authenticated', 'public.invitations', 'token_hash', 'insert'), '[0019] token_hash écrivable';
   assert not has_column_privilege('authenticated', 'public.groups', 'created_by', 'update'), '[0019] groups.created_by modifiable';
   assert not has_column_privilege('authenticated', 'public.friendships', 'requester_id', 'update'), '[0019] friendships.requester_id modifiable';
+  assert not has_column_privilege('authenticated', 'public.profiles', 'email', 'update')
+     and not has_column_privilege('anon', 'public.profiles', 'email', 'update'), '[0019] profiles.email modifiable';
+  assert not has_column_privilege('authenticated', 'public.profiles', 'id', 'update'), '[0019] profiles.id modifiable';
+  assert has_column_privilege('authenticated', 'public.profiles', 'name', 'update')
+     and has_column_privilege('authenticated', 'public.profiles', 'language', 'update')
+     and has_column_privilege('authenticated', 'public.profiles', 'display_name', 'update'), '[0019] colonnes du profil non modifiables';
 
   -- fonctions d'aide : pas d'exécution par anon, search_path vide, security definer
   assert not exists (

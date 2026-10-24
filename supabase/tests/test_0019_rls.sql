@@ -101,7 +101,11 @@ begin
     'cible + e-mail d''un tiers';
   assert tests.rows_affected(format($q$insert into public.invitations (kind, inviter_id, target_user_id, group_id, status) values ('group', %L, %L, %L, 'accepted')$q$, ua, ud, g1)) < 0,
     'invitation créée déjà acceptée (colonne status non accordée)';
-  insert into public.invitations (kind, inviter_id, target_email) values ('friend', ua, 'ami-externe@x.fr');
+  assert tests.rows_affected(format($q$insert into public.invitations (kind, inviter_id, target_email) values ('friend', %L, 'ami-externe@x.fr')$q$, ua)) < 0,
+    'invitation d''ami insérée directement (réservée aux RPC / phase 7)';
+  perform tests.logout();
+  insert into public.invitations (kind, inviter_id, target_email) values ('friend', ua, 'ami-externe@x.fr');   -- créée par le serveur (phase 7)
+  perform tests.login(ua, 'authenticated');
   assert tests.visible('select 1 from public.invitations') = 3, 'A voit ses invitations';
   assert tests.visible('select target_email from public.invitations where target_email is not null') = 1;
   assert tests.visible('select token_hash from public.invitations') = -1, 'token_hash lisible';

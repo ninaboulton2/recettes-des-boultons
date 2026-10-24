@@ -67,7 +67,9 @@
 --      `permission` : author | edit_original | copy | read. `author_name` = `display_name` seulement.
 --   6. Droits : `grant_recipe` (auteur) applique `private.can_create_grant` (ami ou groupe commun, groupe dont on
 --      est membre), le plus récent remplace (0017 n° 4). `reshare_recipe` exige un droit EXPLICITE (direct ou via un
---      groupe) : un accès implicite « groupes » ne se repartage pas (0019 n° 8) ; refuse `edit_original` avec un
+--      groupe) : un accès implicite « groupes » ne se repartage pas (0019 n° 8) ; il ne vise qu'une PERSONNE (ami ou membre d'un de ses
+--      groupes), JAMAIS un groupe (relecture de sécurité n° 2 : un repartage vers un groupe diffusait à tous ses membres un droit que
+--      l'auteur n'avait donné qu'à une personne ; erreur 22023, message clair) ; refuse `edit_original` avec un
 --      message clair (la contrainte `recipe_grants_no_inherited_edit` le refuserait de toute façon), plafonne au niveau de
 --      l'appelant, et ne REMPLACE JAMAIS un droit existant qui n'est pas le sien (renvoie NULL) : sinon un
 --      repartage pourrait rétrograder le droit donné par l'auteur. `revoke_recipe_grant` suit la politique de
@@ -100,6 +102,13 @@
 --      une fois par recette candidate (dossier §3.4 : suffisant à l'échelle visée) et ne renvoient jamais une
 --      recette de niveau 0 (le cas « support peut lire une recette signalée » de `can_read_recipe` n'ouvre pas
 --      ces listes). `list_shared_with_me` inclut les recettes lisibles par le droit implicite « groupes ».
+--
+--  11. (relecture de sécurité n° 2) `claim_shared_recipe` : si un droit existe déjà pour cette personne et cette recette (quel
+--      qu'il soit), il n'est PAS modifié (`on conflict do nothing`) ; la fonction n'ajoute que l'entrée de carnet.
+--      `save_recipe` avec un `id` qui existe mais que l'appelant ne peut pas lire : insertion `on conflict do nothing`, puis le
+--      MÊME refus (42501, « Action réservée aux administrateurs ») que pour un `id` lisible mais non modifiable, au lieu d'une
+--      violation de clé primaire qui révélait l'existence. Faisable sans toucher la v1 : en v1 tout compte lit toutes les recettes
+--      (donc `v_exists` est vrai et le chemin « mise à jour » est pris, avec le refus habituel pour un non-admin).
 --
 --  RÉVERSIBILITÉ : supabase/rollback/0021_recipe_rpcs_down.sql (supprime les nouvelles fonctions, restaure
 --  save_recipe et save_recipe_translation de 0016).
@@ -395,6 +404,9 @@ begin
       raise exception 'Action réservée aux administrateurs' using errcode = '42501';
     end if;
   else
+    -- `on conflict do nothing` : un `id` qui existe déjà mais que je ne peux pas LIRE (le RLS cache la ligne, donc `v_exists`
+    -- est faux) ne doit pas révéler son existence par une violation de clé primaire : même refus que pour un `id` lisible mais
+    -- non modifiable (relecture de sécurité n° 2, CHOIX n° 11).
     insert into public.recipes (id, title, description, category,
                                 prep_time, cook_time, servings, image, photo_path, tags, notes, lang,
                                 owner_id, visibility, category_id)
@@ -404,7 +416,11 @@ begin
             coalesce(v_lang, 'fr'),
             case when coalesce(v_owner_req, false) then (select auth.uid()) end,
             coalesce(v_visibility, 'groups'), v_cat_id)
+    on conflict (id) do nothing
     returning id into v_id;
+    if not found then
+      raise exception 'Action réservée aux administrateurs' using errcode = '42501';
+    end if;
   end if;
 
   -- 2. Remplacement complet des enfants ---------------------------------------
@@ -958,8 +974,11 @@ begin
   if p_permission is null or p_permission not in ('read', 'copy') then
     raise exception 'Droit invalide : % (read ou copy attendu)', coalesce(p_permission, 'NULL') using errcode = '22023';
   end if;
-  if (p_grantee_user is null) = (p_grantee_group is null) then
-    raise exception 'Indiquez une personne OU un groupe' using errcode = '22023';
+  if p_grantee_group is not null then
+    raise exception 'Un repartage ne vise qu''une personne (un ami ou un membre d''un de vos groupes), jamais un groupe' using errcode = '22023';
+  end if;
+  if p_grantee_user is null then
+    raise exception 'Indiquez la personne à qui repartager' using errcode = '22023';
   end if;
 
   -- le droit EXPLICITE le plus haut que je détiens (direct, ou via un groupe dont je suis membre)
@@ -1001,7 +1020,7 @@ begin
 end;
 $$;
 comment on function public.reshare_recipe(uuid, uuid, uuid, text) is
-  'Repartage d''un droit reçu explicitement : read ou copy seulement (jamais edit_original), au plus le niveau de l''appelant, à un ami / membre d''un de ses groupes / groupe dont il est membre. Ne remplace jamais un droit qui n''est pas le sien (renvoie NULL). 0021.';
+  'Repartage d''un droit reçu explicitement : read ou copy seulement (jamais edit_original), au plus le niveau de l''appelant, à UNE PERSONNE seulement (ami ou membre d''un de ses groupes ; jamais un groupe, erreur 22023). Ne remplace jamais un droit qui n''est pas le sien (renvoie NULL). 0021.';
 
 create or replace function public.list_recipe_grants(p_recipe uuid)
 returns table (
@@ -1115,17 +1134,19 @@ begin
   if v_owner = v_me then
     return v_recipe;   -- c'est ma recette
   end if;
+  -- un droit existe déjà pour cette personne et cette recette : on n'y touche JAMAIS (ni hausse, ni baisse, ni changement
+  -- d'origine ou de source) ; la fonction n'ajoute alors que l'entrée de carnet
   insert into public.recipe_grants as g (recipe_id, grantee_user_id, permission, granted_by, origin)
   values (v_recipe, v_me, 'copy', v_owner, 'link')
   on conflict (recipe_id, grantee_user_id) where grantee_user_id is not null
-  do update set permission = 'copy' where g.permission = 'read';   -- jamais de rétrogradation (edit_original reste)
+  do nothing;
   insert into public.cookbook_entries (user_id, recipe_id) values (v_me, v_recipe)
   on conflict (user_id, recipe_id) do nothing;
   return v_recipe;
 end;
 $$;
 comment on function public.claim_shared_recipe(uuid) is
-  'Depuis la page publique, après connexion : crée le droit copy (origin link) de l''appelant et ajoute la recette à son carnet. Lien inconnu ou révoqué : erreur P0002. Ne rétrograde jamais un droit existant. Renvoie l''id de la recette. 0021.';
+  'Depuis la page publique, après connexion : crée le droit copy (origin link) de l''appelant et ajoute la recette à son carnet. Lien inconnu ou révoqué : erreur P0002. Si un droit existe déjà pour cette personne et cette recette, il n''est pas modifié (seule l''entrée de carnet est ajoutée). Renvoie l''id de la recette. 0021.';
 
 create or replace function public.get_shared_recipe(p_token uuid, p_locale text default null)
 returns jsonb

@@ -46,6 +46,18 @@ drop trigger if exists trg_friendship_removed   on public.friendships;
 drop trigger if exists trg_grant_lowered        on public.recipe_grants;
 drop trigger if exists trg_profiles_guard_active_theme on public.profiles;
 drop function if exists private.profiles_guard_active_theme();
+drop trigger if exists trg_recipes_quota on public.recipes;
+drop trigger if exists trg_groups_quota on public.groups;
+drop trigger if exists trg_dismissed_prompts_quota on public.dismissed_prompts;
+drop function if exists private.trg_recipes_quota();
+drop function if exists private.trg_groups_quota();
+drop function if exists private.trg_dismissed_prompts_quota();
+-- contraintes de taille des thèmes (ajoutées par 0019 sur des tables de 0017)
+alter table public.profiles drop constraint if exists profiles_theme_settings_size;
+alter table public.groups   drop constraint if exists groups_theme_size;
+-- droit de table `update` sur profiles, tel que Supabase l'accorde par défaut (0019 le remplace par des droits de colonnes)
+revoke update on public.profiles from anon, authenticated;
+grant update on public.profiles to anon, authenticated;
 drop function if exists private.on_group_member_added();
 drop function if exists private.on_group_member_removed();
 drop function if exists private.on_friendship_removed();

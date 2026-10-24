@@ -146,6 +146,70 @@ for f in "${LATE[@]}"; do "${PSQL[@]}" -f "$f"; done
 for f in "$HERE"/test_*.sql; do n=$(num "${f#*test_}"); if (( n == 19 )); then run "$f"; fi; done
 run "$HERE/test_0021_v1_compat.sql"
 run "$HERE/test_0023_v1_compat.sql"
+run "$HERE/test_0025_sec2_v1.sql"
+
+# ---------------------------------------------------------------- vraie concurrence (deux sessions psql, données validées puis nettoyées)
+# 1. limites de débit : deux demandes d'ami / deux signalements en parallèle à 19 / 9 actions : UNE SEULE passe (verrou consultatif) ;
+# 2. départ d'un membre pendant un transfert du créateur : le départ attend le verrou du groupe, relit son rôle (créateur) et est refusé.
+# Sans les verrous de la relecture de sécurité n° 2 : les deux demandes passent (21 en 24 h) et le groupe reste sans créateur.
+echo "▶ Concurrence : limites de débit et transfert / départ (deux sessions)"
+CZ=00000000-0000-0000-0000-0000000c0001; CT1=00000000-0000-0000-0000-0000000c0002; CT2=00000000-0000-0000-0000-0000000c0003
+CR=00000000-0000-0000-0000-0000000c0004; CC=00000000-0000-0000-0000-0000000c0005; CM=00000000-0000-0000-0000-0000000c0006
+conc_cleanup() {
+  "${PSQL[@]}" -c "delete from public.reports where reporter_id in ('$CR', '$CZ'); delete from public.groups where created_by in ('$CC', '$CM'); delete from auth.users where id in ('$CZ', '$CT1', '$CT2', '$CR', '$CC', '$CM');" >/dev/null 2>&1 || true
+}
+conc_session() {   # conc_session <uid> <sql> <fichier de sortie>
+  "$PGBIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -v ON_ERROR_STOP=1 -q -f - >"$3" 2>&1 <<SQL
+begin;
+select tests.login('$1', 'authenticated');
+$2
+commit;
+SQL
+}
+conc_pair() {      # conc_pair <uid1> <sql1> <uid2> <sql2> : session 1 tient ses verrous ~2 s, session 2 démarre 0,7 s après ; renvoie rc1 rc2
+  local o1 o2
+  o1="$WORKDIR/conc1.out"; o2="$WORKDIR/conc2.out"
+  conc_session "$1" "$2" "$o1" & local p1=$!
+  sleep 0.7
+  conc_session "$3" "$4" "$o2" & local p2=$!
+  CONC_RC1=0; CONC_RC2=0
+  wait $p1 || CONC_RC1=$?
+  wait $p2 || CONC_RC2=$?
+  CONC_OUT1="$(cat "$o1")"; CONC_OUT2="$(cat "$o2")"
+}
+conc_cleanup
+"${PSQL[@]}" -c "insert into auth.users (id, email, raw_user_meta_data) values
+  ('$CZ', 'conc-z@test.local', '{}'), ('$CT1', 'conc-t1@test.local', '{}'), ('$CT2', 'conc-t2@test.local', '{}'),
+  ('$CR', 'conc-r@test.local', '{}'), ('$CC', 'conc-c@test.local', '{}'), ('$CM', 'conc-m@test.local', '{}');
+  insert into private.rate_events (user_id, kind) select '$CZ', 'friend_request' from generate_series(1, 19);
+  insert into public.reports (recipe_id, reporter_id, reason) select '10000000-0000-0000-0000-000000000001', '$CR', 'spam' from generate_series(1, 9);"
+# (a) demandes d'ami : 19 déjà comptées, deux nouvelles en parallèle
+conc_pair "$CZ" "select public.send_friend_request('$CT1'); select pg_sleep(2);" "$CZ" "select public.send_friend_request('$CT2');"
+[[ ( $CONC_RC1 -eq 0 && $CONC_RC2 -ne 0 ) || ( $CONC_RC1 -ne 0 && $CONC_RC2 -eq 0 ) ]] \
+  || { echo "❌ concurrence (demandes d'ami) : les deux sessions ont le même sort ($CONC_RC1 / $CONC_RC2)"; exit 1; }
+grep -q "Limite atteinte" <<<"$CONC_OUT1$CONC_OUT2" || { echo "❌ concurrence (demandes d'ami) : message de limite absent"; exit 1; }
+[[ "$("${PSQL[@]}" -At -c "select count(*) from private.rate_events where user_id = '$CZ' and kind = 'friend_request'")" == "20" ]] \
+  || { echo "❌ concurrence (demandes d'ami) : le journal ne compte pas exactement 20 actions"; exit 1; }
+echo "   ✓ deux demandes d'ami parallèles à 19/20 : une seule passe"
+# (b) signalements : 9 déjà faits, deux nouveaux en parallèle
+conc_pair "$CR" "insert into public.reports (recipe_id, reporter_id, reason) values ('10000000-0000-0000-0000-000000000001', '$CR', 'spam'); select pg_sleep(2);" \
+          "$CR" "insert into public.reports (recipe_id, reporter_id, reason) values ('10000000-0000-0000-0000-000000000001', '$CR', 'spam');"
+[[ ( $CONC_RC1 -eq 0 && $CONC_RC2 -ne 0 ) || ( $CONC_RC1 -ne 0 && $CONC_RC2 -eq 0 ) ]] \
+  || { echo "❌ concurrence (signalements) : les deux sessions ont le même sort ($CONC_RC1 / $CONC_RC2)"; exit 1; }
+[[ "$("${PSQL[@]}" -At -c "select count(*) from public.reports where reporter_id = '$CR'")" == "10" ]] \
+  || { echo "❌ concurrence (signalements) : il devrait y avoir exactement 10 signalements"; exit 1; }
+echo "   ✓ deux signalements parallèles à 9/10 : un seul passe"
+# (c) transfert du créateur pendant le départ du futur créateur
+CG="$("${PSQL[@]}" -At -c "select set_config('request.jwt.claims', '{\"sub\":\"$CC\",\"role\":\"authenticated\"}', false); select public.create_group('Concurrence');" | tail -1)"
+"${PSQL[@]}" -c "insert into public.group_members (group_id, user_id, role) values ('$CG', '$CM', 'member')"
+conc_pair "$CC" "select public.transfer_group_ownership('$CG', '$CM'); select pg_sleep(2);" "$CM" "select public.leave_group('$CG');"
+[[ $CONC_RC1 -eq 0 && $CONC_RC2 -ne 0 ]] && grep -q "créateur ne peut pas quitter" <<<"$CONC_OUT2" \
+  || { echo "❌ concurrence (transfert / départ) : le départ du nouveau créateur aurait dû être refusé ($CONC_RC1 / $CONC_RC2) : $CONC_OUT2"; exit 1; }
+[[ "$("${PSQL[@]}" -At -c "select count(*) from public.group_members where group_id = '$CG' and role = 'creator' and user_id = '$CM'")" == "1" \
+   && "$("${PSQL[@]}" -At -c "select created_by from public.groups where id = '$CG'")" == "$CM" ]] \
+  || { echo "❌ concurrence (transfert / départ) : le groupe n'a pas exactement un créateur (le nouveau)"; exit 1; }
+echo "   ✓ départ pendant un transfert : refusé, le groupe garde son créateur"
+conc_cleanup
 
 # Réussit si la commande ÉCHOUE avec un message contenant le motif : expect_fail <fichier> <motif> <description>
 expect_fail() {
@@ -230,6 +294,7 @@ run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
 run "$HERE/test_0021_recipe_rpcs.sql"
 run "$HERE/test_0023_social_rpcs.sql"
+run "$HERE/test_0025_sec2_security.sql"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
@@ -247,6 +312,7 @@ run "$HERE/switchover_0020_rls.sql"
 run "$HERE/switchover_0018_filled.sql"
 run "$HERE/test_0021_recipe_rpcs.sql"
 run "$HERE/test_0023_social_rpcs.sql"
+run "$HERE/test_0025_sec2_security.sql"
 run "$SWITCH_DOWN"
 [[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_BEFORE" ]] || { echo "❌ empreinte des politiques différente (2e retour arrière)"; exit 1; }
 
@@ -328,6 +394,9 @@ run "$SUPA/rollback/0019_rls_helpers_social_down.sql"
   assert to_regclass('public.dismissed_prompts') is null and to_regprocedure('private.can_read_recipe(uuid)') is null, 'objets 0019 encore présents';
   assert to_regclass('public.groups') is not null and to_regprocedure('private.is_admin()') is not null, '0017 / 0009 abîmées';
   assert not has_table_privilege('authenticated', 'public.groups', 'select'), 'tables sociales de nouveau ouvertes';
+  assert not exists (select 1 from pg_trigger where tgname in ('trg_recipes_quota', 'trg_groups_quota', 'trg_dismissed_prompts_quota')), 'plafonds de volume encore présents';
+  assert not exists (select 1 from pg_constraint where conname in ('profiles_theme_settings_size', 'groups_theme_size')), 'contraintes de taille des thèmes encore présentes';
+  assert has_table_privilege('authenticated', 'public.profiles', 'update'), 'droit de table update sur profiles non rétabli';
   assert has_function_privilege('authenticated', 'public.save_recipe(jsonb)', 'execute'), 'save_recipe abîmée';
 end \$\$;"
 run "$HERE/test_0017_social_schema.sql"

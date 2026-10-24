@@ -137,9 +137,18 @@ returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if (select auth.uid()) is null then return new; end if;   -- serveur / migrations (service_role, postgres)
   -- Mise à jour faite par une clé étrangère (profondeur > 1) : supprimer l'original met `copied_from` des copies des
-  -- AUTRES à NULL (`on delete set null`) ; ce n'est pas l'auteur de la copie qui le fait, et ça ne doit pas bloquer
-  -- la suppression (corrigé en 0021 : sans cela, supprimer une recette copiée par quelqu'un échouait).
-  if pg_trigger_depth() > 1 then return new; end if;
+  -- AUTRES à NULL (`on delete set null`), supprimer une catégorie met `category_id` à NULL ; ce n'est pas l'auteur de la
+  -- copie qui le fait, et ça ne doit pas bloquer la suppression (corrigé en 0021). Mais le contrôle n'est PAS levé : à cette
+  -- profondeur on ne tolère QUE `copied_from` → NULL et `category_id` → NULL ; toute autre modification d'`owner_id` ou de
+  -- `visibility` reste refusée (relecture de sécurité n° 2 : un déclencheur ou une fonction qui mettrait à jour `recipes` en
+  -- profondeur 2 contournait toute la garde).
+  if pg_trigger_depth() > 1 then
+    if new.owner_id is distinct from old.owner_id or new.visibility is distinct from old.visibility
+       or (new.copied_from is distinct from old.copied_from and new.copied_from is not null) then
+      raise exception 'Modification du propriétaire, de la visibilité ou de l''origine refusée (mise à jour indirecte)' using errcode = '42501';
+    end if;
+    return new;
+  end if;
   if new.owner_id is distinct from old.owner_id then
     raise exception 'Le propriétaire d''une recette ne se change pas' using errcode = '42501';
   end if;
