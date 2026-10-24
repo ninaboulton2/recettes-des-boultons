@@ -32,6 +32,7 @@
 #       switchover_0020_rls.sql, switchover_0018_filled.sql (membres, étranger, visiteur), retour
 #       arrière (empreinte des politiques identique à l'avant), ré-application + tests, retour final.
 #   11b. 0026 (recipe_access, phase 6B) sous la chaîne complète : application + rejeu, test_0026_recipe_access.sql, retour arrière, ré-application + test, retour.
+#   11c. 0027 (report_shared_recipe, phase 6E) sous la chaîne complète : application + rejeu, test_0027_report_shared_recipe.sql (limite, support), retour arrière, ré-application + test, retour.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
 #  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
@@ -312,6 +313,19 @@ run "$RB26"
 run "$M26"
 run "$HERE/test_0026_recipe_access.sql"
 run "$RB26"
+# ---------------------------------------------------------------- 0027 : report_shared_recipe (phase 6E), sous la chaîne complète (0018 + 0020)
+echo "▶ 0027 : report_shared_recipe (+ rejeu + test), retour arrière, ré-application"
+M27="$SUPA/migrations/0027_report_shared_recipe.sql"
+RB27="$SUPA/rollback/0027_report_shared_recipe_down.sql"
+run "$M27"
+"${PSQL[@]}" -f "$M27"
+run "$HERE/test_0027_report_shared_recipe.sql"
+run "$RB27"
+"${PSQL[@]}" -f "$RB27"
+"${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.report_shared_recipe(uuid, text, text)') is null, 'retour arrière de 0027 incomplet'; end \$\$;"
+run "$M27"
+run "$HERE/test_0027_report_shared_recipe.sql"
+run "$RB27"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"

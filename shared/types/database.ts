@@ -823,6 +823,9 @@ isOneToOne: false
 "reshare_recipe":
 { Args: { "p_grantee_group"?: string,"p_grantee_user"?: string,"p_permission"?: string,"p_recipe": string }; Returns: string
                            },
+"report_shared_recipe":
+{ Args: { "p_token": string,"p_reason": string,"p_details"?: string }; Returns: string
+                           },
 "respond_friend_request":
 { Args: { "p_accept": boolean,"p_id": string }; Returns: string
                            },
