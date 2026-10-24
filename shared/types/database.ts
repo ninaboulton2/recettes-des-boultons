@@ -1,6 +1,6 @@
 // ============================================================================
 //  FICHIER GÉNÉRÉ — NE PAS ÉDITER À LA MAIN.
-//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0017) :
+//  Régénérer depuis la base locale (schéma prod + migrations 0003 → 0019) :
 //    npx supabase gen types typescript --local > shared/types/database.ts
 //  puis replacer cet en-tête. Après application des migrations en prod :
 //    npx supabase gen types typescript --project-id tzlkabxcmmbwhpyvmato --schema public
@@ -85,6 +85,21 @@ isOneToOne: false
       referencedRelation: "recipes"
       referencedColumns: ["id"]
     }
+                  ]
+                },"dismissed_prompts": {
+                  Row: {
+                    "created_at": string,"kind": string,"target_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"kind": string,"target_id": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"kind"?: string,"target_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                    
                   ]
                 },"favorites": {
                   Row: {
@@ -587,7 +602,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "add_recipe_to_list":
+            "add_author_recipes_to_cookbook":
+{ Args: { "p_author": string }; Returns: number
+                           },
+"add_recipe_to_list":
 { Args: { "p_list_id": string,"p_locale"?: string,"p_recipe_id": string,"p_section_ids"?: (string)[],"p_servings_factor"?: number }; Returns: {
               "amount": string | null,
 "amount_num": number | null,
@@ -621,6 +639,11 @@ isOneToOne: false
                            },
 "format_amount":
 { Args: { "p": number }; Returns: string
+                           },
+"get_public_profiles":
+{ Args: { "p_ids": (string)[] }; Returns: {
+              "cookbook_title": string,"display_name": string,"id": string
+            }[]
                            },
 "immutable_array_to_string":
 { Args: { "p": (string)[] }; Returns: string
@@ -663,6 +686,11 @@ isOneToOne: false
 "search_recipes":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_offset"?: number,"p_query"?: string,"p_tags"?: (string)[] }; Returns: {
               "category": string,"cook_time": number,"created_at": string,"description": string,"id": string,"image": string,"lang": string,"notes": string,"photo_path": string,"prep_time": number,"servings": number,"tags": (string)[],"title": string,"total_count": number,"translation": Json,"updated_at": string
+            }[]
+                           },
+"search_users":
+{ Args: { "p_query": string }; Returns: {
+              "display_name": string,"id": string
             }[]
                            }
           }

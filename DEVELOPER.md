@@ -29,6 +29,7 @@ listes de courses, favoris, traducteur IA. Pour une présentation rapide, voir
 17. [Déploiement](#17-déploiement)
 18. [À savoir](#18-à-savoir)
 19. [Recettes bilingues (fr / en)](#19-recettes-bilingues-fr--en)
+20. [v2 : partage, groupes et RLS](#20-v2--partage-groupes-et-rls)
 
 ---
 
@@ -84,8 +85,9 @@ recettes-des-boultons/
 │   └── utils/                # auth.ts, errors.ts, validate.ts, recipes.ts, shopping.ts, ai/
 ├── i18n/locales/             # fr.json, en.json
 ├── supabase/
-│   ├── migrations/           # 0001 → 0017 (SQL, appliquées à la main, voir § 4)
-│   ├── rollback/             # retours arrière (0005, 0013, 0016, 0017)
+│   ├── migrations/           # 0001 → 0017, 0019 (SQL, appliquées à la main, voir § 4)
+│   ├── v2/                   # bascule RLS 0020 (PRÉPARÉE, jamais appliquée avec les migrations, voir § 20)
+│   ├── rollback/             # retours arrière (0005, 0013, 0016, 0017, 0019, 0020)
 │   ├── fixes/                # correctifs de données ponctuels
 │   ├── local/                # base de dev locale : up.sh, setup.sh, test.sh, comptes, snapshot
 │   ├── tests/                # tests SQL par migration + schéma de base
@@ -313,6 +315,8 @@ supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
 | 0015 | nettoyage mécanique des ingrédients (optionnel, voir [docs/QUALITE_DONNEES.md](docs/QUALITE_DONNEES.md)) |
 | 0016 | recettes bilingues : `recipes.lang`, `recipe_translations`, `units.abbr_en`, `save_recipe_translation`, `save_recipe` / `search_recipes` / `add_recipe_to_list` étendues (§ 19) |
 | 0017 | v2, phase 2, « expand » seulement : 11 tables sociales fermées à l'API (RLS sans politique) — `categories`, `groups`, `group_members`, `friendships`, `invitations`, `recipe_grants`, `recipe_share_links`, `cookbook_entries`, `notifications`, `reports`, `system_alerts` — + colonnes nullables `recipes.owner_id / visibility / copied_from / category_id` et `profiles.display_name / cookbook_title / theme_settings / active_theme_group_id / discoverable / onboarded_at`. Aucun effet sur le code actuel ; choix de conception en tête du fichier. Retour arrière : `supabase/rollback/0017_social_schema_down.sql` |
+| 0019 | v2, phase 3 : fonctions d'aide RLS `private.*` (`can_read_recipe`, `can_copy_recipe`, `can_edit_recipe`, `is_group_member`, `shares_group_with`, `are_friends`, `is_support`, …), politiques + `grant` ciblés (colonnes comprises) sur les 11 tables de 0017 et sur la nouvelle table `dismissed_prompts` (bannières fermées), RPC `search_users`, `get_public_profiles`, `add_author_recipes_to_cookbook`, 4 déclencheurs d'intégrité. **Aucun effet sur le code actuel** : les politiques de `recipes` & co ne sont pas touchées (empreinte md5 vérifiée). Voir § 20. Retour arrière : `supabase/rollback/0019_rls_helpers_social_down.sql` |
+| 0020 (`supabase/v2/`) | **Bascule PRÉPARÉE, non appliquée** : remplace les politiques de `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites` (insertion) et du bucket `recipe-photos`. Refuse de tourner tant qu'une recette n'a pas de `owner_id`. Retour arrière : `supabase/rollback/0020_rls_switchover_down.sql`. Numérotation : 0018 = remplissage (phase 4), 0021 = « contract » (ancien 0020 du dossier) |
 
 Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
 Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
@@ -951,7 +955,11 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
 - `SUPABASE_TEST_DATABASE=ci_test npm run db:local:test` : même suite sur une base séparée
   `ci_test` de la stack ; la base `postgres` et ses données restent intactes (pg_dump 17
   requis).
-- `supabase/tests/run_local.sh` : variante sans Docker, sur un Postgres 17 temporaire.
+- `supabase/tests/run_local.sh` : variante sans Docker, sur un Postgres 17 temporaire. Elle teste
+  aussi 0017 et 0019 (rejeu, « up, down, up »), puis applique la bascule `supabase/v2/0020_…`
+  après un remplissage simulé d'`owner_id` (`fill_simulated.sql`), la teste
+  (`switchover_0020_rls.sql`) et vérifie que son retour arrière rétablit les politiques à
+  l'identique (empreinte md5). `npm run db:local:test` (Docker) ne joue pas la bascule.
 - Ces tests SQL ne tournent pas en CI.
 
 - Nuxt 4.5 refuse deux `nuxt dev` dans le même dossier : si un serveur de dev tourne déjà,
@@ -1152,3 +1160,55 @@ les lectures (colonnes `lang`, `recipe_translations` absentes).
 - `e2e/bilingual.spec.ts` : fiche `/en` en anglais (« [EN] … ») et `/` en français, recherche dans
   les deux langues, éditeur (version d'origine), traducteur sans sélecteur de langue avec bascule
   d'aperçu.
+
+---
+
+## 20. v2 : partage, groupes et RLS
+
+État : phases 2 (0017) et 3 (0019) écrites ; la bascule des politiques des recettes (`supabase/v2/0020_rls_switchover.sql`)
+est préparée mais **pas appliquée** (le site actuel suppose que tout compte connecté lit toutes les
+recettes). Détail et choix de conception : en-têtes de `0017`, `0019` et `v2/0020`.
+
+### 20.1 Qui peut quoi sur une recette (`private.recipe_level(r)`)
+
+| Niveau | Source | Donne |
+|---|---|---|
+| 4 | auteur (`recipes.owner_id`) | tout |
+| 3 | `recipe_grants` `edit_original` (direct, à la personne ou à un groupe dont on est membre) | lire, copier, **modifier le contenu** (pas la propriété, pas la visibilité) |
+| 2 | `recipe_grants` `copy`, **ou** `visibility = 'groups'` et un groupe en commun avec l'auteur (droit implicite) | lire, copier |
+| 1 | `recipe_grants` `read` | lire |
+
+Le support (`private.is_support()`, alias de `is_admin()` pour l'instant) **lit** pour modérer et
+supprime une recette **signalée** ; il ne modifie jamais le contenu des autres. Un repartage
+(`origin = 'reshare'`) exige un droit explicite détenu, ne dépasse jamais `copy` ni son propre niveau.
+
+### 20.2 Partage par groupe et bannières (clarification de Nina, 2026-10-24)
+
+- **Rejoindre un groupe n'ajoute aucune recette au carnet de personne.** `cookbook_entries` ne se
+  remplit que par un geste explicite (une recette, ou toutes celles d'un auteur).
+- Une recette `visibility = 'groups'` est lisible et copiable par tous les membres des groupes de son
+  auteur, recettes existantes comprises, sans ligne `recipe_grants`. `private` : auteur + droits
+  explicites. `edit_original` : seulement par un droit direct de l'auteur.
+- Après l'adhésion, l'interface (phase 5) affiche une bannière « Explorer les recettes de X » : page
+  qui liste ses recettes partagées avec mes groupes, ajout une par une ou **toutes d'un coup**
+  (`add_author_recipes_to_cookbook(author)`, idempotente), ou fermeture. Même principe quand un membre
+  d'un de mes groupes publie une nouvelle recette (« X a publié… »).
+- **Une bannière fermée ne revient plus** : table `dismissed_prompts (user_id, kind, target_id,
+  created_at)`, PK composite ; `kind` = `author_recipes` (target = l'auteur) ou `new_recipe` (target =
+  la recette). L'appel `add_author_recipes_to_cookbook` ferme aussi la bannière de l'auteur. La page
+  reste accessible via le profil de X → « ses recettes ».
+
+### 20.3 Données personnelles
+
+`profiles` garde ses politiques (soi + support). Les autres personnes passent par `search_users(q)`
+(≥ 3 lettres, `discoverable`, jamais soi-même) et `get_public_profiles(ids)` (personnes liées) : elles
+ne renvoient que `id`, `display_name`, `cookbook_title`, **jamais l'e-mail** ni `profiles.name`
+(`handle_new_user` y recopie l'e-mail). Une personne sans `display_name` est introuvable.
+
+### 20.4 Ce que la bascule change (v2/0020), pour la phase 4 / 11
+
+Lecture = `can_read_recipe`, écriture du contenu = `can_edit_recipe`, insertion = auteur, photos
+suivent la recette ; `recipes.owner_id` passe NOT NULL avec `DEFAULT auth.uid()` (`save_recipe` v1 continue
+de fonctionner, et n'est plus réservé aux admins : tout compte crée SES recettes). Reste à faire hors de ce
+fichier : `save_recipe_translation` (garde `is_admin()` à remplacer), bucket de photos **public** à passer
+en privé avec les liens signés (phase 8), 2ᵉ compte admin → `user` (remplissage 0018).

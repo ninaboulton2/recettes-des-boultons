@@ -480,6 +480,70 @@ la phase 3.
 auront `owner_id` NULL, le remplissage les rattache) ; le rôle « support » et les politiques RLS
 arrivent en phase 3.
 
+## 11. v2 — fonctions d'aide RLS et politiques sociales (migration 0019, phase 3)
+
+Branche `feat/v2-rls`. **Prérequis : 0017 appliquée** (et 0009, 0008). Comme 0017, c'est une migration
+sans effet pour le site actuel : les politiques et fonctions existantes ne sont pas modifiées (empreintes
+md5 vérifiées dans le fichier). Elle ajoute des fonctions `private.*`, des politiques sur les 11 tables
+de 0017, la table `dismissed_prompts` (bannières fermées) et 3 RPC. Applicable à tout moment après 0017,
+uniquement sur le « go » de Nina.
+
+1. **Appliquer 0019** (`apply_migration`, nom `0019_rls_helpers_social`). La numérotation saute 0018, réservé
+   au remplissage (phase 4).
+2. **NOTICE attendue** (dernière ligne) :
+   `[0019] helpers + 39 politiques sur 12 tables sociales ; politiques et fonctions existantes inchangées`.
+   Un rejeu affiche en plus des « already exists, skipping » : normal.
+3. **Contrôles** (lecture seule) :
+
+   ```sql
+   -- 12 tables sociales : RLS active, politiques présentes, toutes « authenticated »
+   select tablename, count(*) as politiques, bool_and(roles = '{authenticated}') as toutes_authenticated
+     from pg_policies where schemaname = 'public'
+      and tablename in ('categories','groups','group_members','friendships','invitations','recipe_grants',
+          'recipe_share_links','cookbook_entries','notifications','reports','system_alerts','dismissed_prompts')
+    group by 1 order by 1;                       -- 12 lignes, total 39, toutes_authenticated = true
+   -- les politiques de la v1 n'ont pas bougé : recipes = 4, recipe_sections = 4, recipe_ingredients = 4,
+   -- instructions = 4, recipe_translations = 4, storage recipe_photos_* = 4, tous « public » ou admin
+   select tablename, count(*) from pg_policies
+    where (schemaname = 'public' and tablename in ('recipes','recipe_sections','recipe_ingredients','instructions','recipe_translations'))
+       or (schemaname = 'storage' and tablename = 'objects' and policyname like 'recipe_photos_%')
+    group by 1 order by 1;
+   -- anon n'a aucun droit sur les tables sociales, ni sur les nouvelles fonctions
+   select count(*) from information_schema.role_table_grants
+    where table_schema = 'public' and grantee = 'anon'
+      and table_name in ('categories','groups','group_members','friendships','invitations','recipe_grants',
+          'recipe_share_links','cookbook_entries','notifications','reports','system_alerts','dismissed_prompts');   -- 0
+   select has_function_privilege('anon', 'public.search_users(text)', 'execute');       -- false
+   select has_function_privilege('authenticated', 'public.search_users(text)', 'execute');   -- true
+   select count(*) from public.recipes where owner_id is not null;   -- 0 (rien n'est rempli)
+   ```
+
+   Puis ouvrir le site : accueil, une recette, la recherche, le planning, les courses, l'éditeur (en admin)
+   fonctionnent comme avant. Advisors sécurité : aucune nouvelle alerte attendue (les fonctions `private.*`
+   ne sont pas exposées par l'API ; les 3 RPC publiques sont refusées à `anon`).
+4. **Retour arrière** : rien à faire côté code. `supabase/rollback/0019_rls_helpers_social_down.sql` retire
+   fonctions, politiques et la table `dismissed_prompts` (⚠️ ses lignes sont perdues) ; les tables de 0017
+   redeviennent fermées à l'API. Si la bascule 0020 a été appliquée, la retirer AVANT.
+
+### Bascule des politiques des recettes (fichier préparé : `supabase/v2/0020_rls_switchover.sql`)
+
+**Ne fait pas partie de la mise en production de 0019.** À appliquer à l'étape 5 du dossier (§4.2), après
+le remplissage 0018 (phase 4), avec le code v2 déployé en même temps : c'est ici que le site cesse d'être
+public. Le fichier est hors de `supabase/migrations/` exprès (aucun outil ne l'applique par erreur) et
+refuse de tourner si une recette n'a pas de `owner_id`.
+
+- Effets : lecture = droits v2 (`can_read_recipe`) pour `recipes`, sections, ingrédients, étapes,
+  traductions et photos ; écriture = `can_edit_recipe` ; insertion = auteur ; favoris : recette lisible
+  seulement ; `recipes.owner_id` NOT NULL avec `DEFAULT auth.uid()`.
+- NOTICE attendue : `[0020] bascule appliquée : recettes, contenu, favoris (insertion) et photos sous RLS v2 ; owner_id NOT NULL`.
+- Contrôles : chaque compte ne voit que ses recettes + celles de ses groupes + ses droits ; un compte neuf
+  n'en voit aucune ; `select count(*) from pg_policies where tablename = 'recipes'` = 4 (toutes `authenticated`).
+- Non inclus (à faire ailleurs) : bucket `recipe-photos` toujours **public** (le passer en privé avec les
+  liens signés, phase 8) ; `save_recipe_translation` garde son contrôle `is_admin()` (phase 5A) ; 2ᵉ compte
+  admin → `user` (remplissage).
+- Retour arrière : `supabase/rollback/0020_rls_switchover_down.sql` (recrée à l'identique les politiques
+  d'avant : le site redevient lisible par tous) + Instant Rollback Vercel.
+
 ## Retour arrière
 
 **Code** : Vercel → **Deployments** → le déploiement de production **précédent** (ancien
@@ -498,6 +562,7 @@ code, noté à l'étape 3) → menu « … » → **Instant Rollback**. Effet en
 | Après 0015 | Requêtes de retour dans l'en-tête de `0015_data_cleanup.sql` (depuis les tables `*_backup_cleanup`). |
 | Après 0016 (§ 9) | L'ancien code fonctionne tel quel. Pour retirer 0016 : `supabase/rollback/0016_recipe_translations_down.sql` (supprime les traductions, `recipes.lang`, `units.abbr_en`, restaure `save_recipe`, `search_recipes`, `add_recipe_to_list`). |
 | Après 0017 (§ 10) | L'ancien code fonctionne tel quel. Pour retirer 0017 : `supabase/rollback/0017_social_schema_down.sql` (supprime les 11 tables sociales et les colonnes ajoutées à `recipes` et `profiles`). |
+| Après 0019 (§ 11) | L'ancien code fonctionne tel quel. Pour retirer 0019 : `supabase/rollback/0019_rls_helpers_social_down.sql` (retirer d'abord la bascule 0020 si elle a été appliquée : `rollback/0020_rls_switchover_down.sql`). |
 | Après 0014 | Plus de sauvegarde en base : restaurer depuis l'export `pg_dump` (§ 0.1) avec `pg_restore` (à faire avec moi). |
 
 Toutes les migrations « ajout seulement » (0003, 0004, 0006 → 0012) sont réversibles sans
