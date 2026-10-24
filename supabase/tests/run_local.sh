@@ -35,6 +35,7 @@
 #   11b. 0026 (recipe_access, phase 6B) sous la chaîne complète : application + rejeu, test_0026_recipe_access.sql, retour arrière, ré-application + test, retour.
 #   11c. 0027 (report_shared_recipe, phase 6E) sous la chaîne complète : application + rejeu, test_0027_report_shared_recipe.sql (limite, support), retour arrière, ré-application + test, retour.
 #   11d. 0028 (ai_credit_email, phase 7) sous la chaîne complète : application + rejeu, test_0028_ai_credit_email.sql (quota par compte, crédit, budget, alerte une fois par 24 h, e-mails), retour arrière, ré-application + test, retour.
+#   11e. 0030 (can_read_recipe plus rapide, phase 10) sous la chaîne complète : application + rejeu, test_0030_can_read_recipe_perf.sql (même résultat que l'ancienne expression), retour arrière, ré-application + test, retour.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
 #  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
@@ -417,6 +418,19 @@ run "$RB29"
 "${PSQL[@]}" -c "do \$\$ begin assert exists (select 1 from pg_constraint where conname = 'recipes_photo_path_in_own_folder' and conrelid = 'public.recipes'::regclass), 'le retour arrière de 0029 a retiré la contrainte de 0020'; end \$\$;"
 run "$M29"
 run "$RB29"
+# ---------------------------------------------------------------- 0030 : can_read_recipe plus rapide (répétition, phase 10), sous la chaîne complète (0018 + 0020)
+echo "▶ 0030 : can_read_recipe (+ rejeu + test d'équivalence), retour arrière, ré-application"
+M30="$SUPA/migrations/0030_can_read_recipe_perf.sql"
+RB30="$SUPA/rollback/0030_can_read_recipe_perf_down.sql"
+run "$M30"
+"${PSQL[@]}" -f "$M30"
+run "$HERE/test_0030_can_read_recipe_perf.sql"
+run "$RB30"
+"${PSQL[@]}" -f "$RB30"
+"${PSQL[@]}" -c "do \$\$ begin assert (select prolang = (select oid from pg_language where lanname = 'sql') from pg_proc where oid = 'private.can_read_recipe(uuid)'::regprocedure), 'retour arrière de 0030 incomplet'; end \$\$;"
+run "$M30"
+run "$HERE/test_0030_can_read_recipe_perf.sql"
+run "$RB30"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
