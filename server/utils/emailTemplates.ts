@@ -23,11 +23,17 @@ const MAX_NAME = 60
 export const escapeHtml = (value: string): string => value
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
-/** Texte venant de la base : sans retour à la ligne ni caractère de contrôle, borné. */
+/**
+ * Caractères invisibles ou de réordonnancement bidirectionnel (U+200B à U+200F, U+202A à U+202E, U+2066 à U+2069, U+FEFF) : retirés,
+ * car un pseudonyme pourrait sinon inverser l'affichage d'une phrase de l'e-mail (« ‮ » + texte) ou se faire passer pour un autre.
+ */
+const INVISIBLE_OR_BIDI = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g
+
+/** Texte venant de la base : sans retour à la ligne, caractère de contrôle, invisible ou bidirectionnel ; borné. */
 export function cleanName(value: unknown, fallback: string): string {
   if (typeof value !== 'string') return fallback
   // eslint-disable-next-line no-control-regex
-  const cleaned = value.replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/\s+/g, ' ').trim()
+  const cleaned = value.replace(INVISIBLE_OR_BIDI, '').replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/\s+/g, ' ').trim()
   if (cleaned === '') return fallback
   return cleaned.length > MAX_NAME ? `${cleaned.slice(0, MAX_NAME - 1)}…` : cleaned
 }
