@@ -117,6 +117,13 @@ echo "▶ Bascule 0020 : refusée tant que owner_id est NULL (garde-fou)"
 if "${PSQL[@]}" -f "$SWITCH" >/dev/null 2>&1; then echo "❌ la bascule aurait dû refuser (recettes sans propriétaire)"; exit 1; fi
 FP_BEFORE="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
 run "$HERE/fill_simulated.sql"
+echo "▶ Bascule 0020 : refusée si un propriétaire n'a pas de profil"
+"${PSQL[@]}" -c "insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ff', 'sans-profil@test.local');
+  delete from public.profiles where id = '00000000-0000-0000-0000-0000000000ff';
+  update public.recipes set owner_id = '00000000-0000-0000-0000-0000000000ff' where id = (select id from public.recipes order by id limit 1);"
+if "${PSQL[@]}" -f "$SWITCH" >/dev/null 2>&1; then echo "❌ la bascule aurait dû refuser (propriétaire sans profil)"; exit 1; fi
+"${PSQL[@]}" -f "$HERE/fill_simulated.sql" -c "update public.recipes set owner_id = '00000000-0000-0000-0000-00000000000a';
+  delete from auth.users where id = '00000000-0000-0000-0000-0000000000ff';"
 run "$SWITCH"
 "${PSQL[@]}" -f "$SWITCH"
 run "$HERE/switchover_0020_rls.sql"

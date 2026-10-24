@@ -25,6 +25,18 @@ end $$;
 
 drop trigger if exists recipes_guard_owner_fields on public.recipes;
 drop function if exists private.recipes_guard_owner_fields();
+alter table public.recipes drop constraint if exists recipes_photo_path_in_own_folder;
+drop function if exists private.section_belongs_to(uuid, uuid);
+drop function if exists private.category_belongs_to(uuid, uuid);
+drop policy if exists "profiles_select_self" on public.profiles;
+drop policy if exists "profiles_update_self" on public.profiles;
+drop policy if exists "profiles_select_self_or_admin" on public.profiles;
+drop policy if exists "profiles_update_self_or_admin" on public.profiles;
+create policy "profiles_select_self_or_admin" on public.profiles for select
+  using (auth.uid() = id or private.is_admin());
+create policy "profiles_update_self_or_admin" on public.profiles for update
+  using (auth.uid() = id or private.is_admin())
+  with check (auth.uid() = id or private.is_admin());
 alter table public.recipes alter column owner_id drop not null;
 alter table public.recipes alter column owner_id drop default;
 

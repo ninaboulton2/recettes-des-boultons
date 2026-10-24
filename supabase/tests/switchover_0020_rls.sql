@@ -165,7 +165,7 @@ begin
 
   -- ============================================================ support : lit pour modérer, supprime seulement sur signalement
   perform tests.login(s, 'authenticated');
-  assert tests.visible(format('select 1 from public.recipes where id in (%L, %L)', r_old, r_priv)) = 2, 'le support lit les recettes';
+  assert tests.visible(format('select 1 from public.recipes where id in (%L, %L)', r_old, r_priv)) = 0, 'le support ne lit pas les recettes non signalées';
   assert tests.rows_affected(format($q$update public.recipes set title = 'modifié par le support' where id = %L$q$, r_old)) = 0, 'le support modifie le contenu des autres';
   assert tests.rows_affected(format($q$update public.recipe_sections set name = 'x' where recipe_id = %L$q$, r_old)) = 0;
   assert tests.rows_affected(format($q$delete from public.recipes where id = %L$q$, r_rep)) = 0, 'le support supprime sans signalement';
@@ -229,7 +229,7 @@ begin
   delete from public.group_members where group_id = g1 and user_id = ub;
   perform tests.login(ub, 'authenticated');
   assert tests.visible(format('select 1 from public.recipes where id in (%L, %L)', r_old, r_boult)) = 0, 'B garde l''accès après son départ';
-  assert tests.visible(format('select 1 from public.recipes where id = %L', r_read)) = 1, 'le droit direct reste (l''auteur doit le retirer)';
+  assert tests.visible(format('select 1 from public.recipes where id = %L', r_read)) = 0, 'droit direct conservé après le départ du dernier groupe commun';
   assert tests.rows_affected(format($q$update public.recipes set title = 'x' where id = %L$q$, r_boult)) = 0, 'B modifie après son départ';
   perform tests.logout();
   insert into public.cookbook_entries (user_id, recipe_id) values (uc, r_priv);
@@ -252,6 +252,87 @@ begin
   assert tests.visible(format('select 1 from public.recipes where id = %L', seed_r)) = 1, 'S lit ses recettes';
   perform tests.logout();
   raise notice '[switchover 0020] recettes, contenu, favoris, photos, support, fonctions v1 sous les nouvelles politiques : OK';
+end $$;
+
+-- ---------------------------------------------------------------- corrections de la relecture de sécurité
+do $$
+declare
+  s  constant uuid := '00000000-0000-0000-0000-00000000000a';
+  ua constant uuid := '00000000-0000-0000-0000-0000000000a2';
+  ub constant uuid := '00000000-0000-0000-0000-0000000000b2';
+  g uuid; ra uuid; rb uuid; rc uuid; rpriv uuid; sec_a uuid; sec_b uuid; cat_a uuid; cat_b uuid; rep uuid;
+begin
+  insert into auth.users (id, email, raw_user_meta_data) values (ua, 'a3@test.local', '{}'), (ub, 'b3@test.local', '{}');
+  insert into public.groups (name, created_by) values ('Relecture', ua) returning id into g;
+  insert into public.group_members (group_id, user_id, role) values (g, ua, 'creator'), (g, ub, 'member');
+  insert into public.categories (owner_id, slug, name_fr) values (ua, 'cat', 'Cat A') returning id into cat_a;
+  insert into public.categories (owner_id, slug, name_fr) values (ub, 'cat', 'Cat B') returning id into cat_b;
+  insert into public.recipes (title, category, owner_id, visibility, category_id) values ('Recette A', 'plats', ua, 'groups', cat_a) returning id into ra;
+  insert into public.recipes (title, category, owner_id, visibility) values ('Privée A', 'plats', ua, 'private') returning id into rpriv;
+  insert into public.recipe_sections (recipe_id, name, type, order_index) values (ra, 'Section A', 'ingredients', 0) returning id into sec_a;
+
+  -- (1) empoisonnement par section étrangère
+  perform tests.login(ub, 'authenticated');
+  insert into public.recipes (title, category) values ('Recette B', 'plats') returning id into rb;
+  insert into public.recipe_sections (recipe_id, name, type, order_index) values (rb, 'Section B', 'ingredients', 0) returning id into sec_b;
+  assert tests.visible(format('select 1 from public.recipe_sections where id = %L', sec_a)) = 1, 'B lit la section de A (prérequis du scénario)';
+  assert tests.rows_affected(format($q$insert into public.recipe_ingredients (recipe_id, section_id, name, order_index) values (%L, %L, 'poison', 0)$q$, rb, sec_a)) < 0,
+    'ingrédient de B rattaché à la section de A';
+  assert tests.rows_affected(format($q$insert into public.instructions (recipe_id, section_id, content, order_index) values (%L, %L, 'poison', 0)$q$, rb, sec_a)) < 0,
+    'étape de B rattachée à la section de A';
+  assert tests.rows_affected(format($q$insert into public.recipe_ingredients (recipe_id, section_id, name, order_index) values (%L, %L, 'ok', 0)$q$, rb, sec_b)) = 1, 'section de sa propre recette';
+  assert tests.rows_affected(format($q$insert into public.instructions (recipe_id, section_id, content, order_index) values (%L, %L, 'ok', 0)$q$, rb, sec_b)) = 1;
+  assert tests.rows_affected(format($q$insert into public.instructions (recipe_id, content, order_index) values (%L, 'sans section', 1)$q$, rb)) = 1, 'section NULL permise';
+  assert tests.rows_affected(format($q$update public.recipe_ingredients set section_id = %L where recipe_id = %L$q$, sec_a, rb)) < 0, 'UPDATE vers la section de A (ingrédients)';
+  assert tests.rows_affected(format($q$update public.instructions set section_id = %L where recipe_id = %L$q$, sec_a, rb)) < 0, 'UPDATE vers la section de A (étapes)';
+  perform tests.logout();
+  perform tests.login(ua, 'authenticated');
+  assert tests.rows_affected(format($q$delete from public.recipe_sections where id = %L$q$, sec_a)) = 1, 'A supprime sa section sans obstacle';
+  perform tests.logout();
+
+  -- (2) un éditeur met à jour une recette dont la catégorie est celle de l'auteur
+  perform tests.login(ua, 'authenticated');
+  insert into public.recipe_grants (recipe_id, grantee_user_id, permission, granted_by) values (ra, ub, 'edit_original', ua);
+  perform tests.logout();
+  perform tests.login(ub, 'authenticated');
+  assert tests.rows_affected(format($q$update public.recipes set title = 'Retitrée par B' where id = %L$q$, ra)) = 1, 'éditeur : mise à jour avec category_id non NULL';
+  assert (select category_id from public.recipes where id = ra) = cat_a, 'catégorie de l''auteur conservée';
+  assert tests.rows_affected(format($q$update public.recipes set category_id = %L where id = %L$q$, cat_b, ra)) < 0, 'éditeur : catégorie qui n''est pas celle de l''auteur';
+  perform tests.logout();
+
+  -- (3) support : recettes signalées seulement ; profils : sa ligne seulement
+  perform tests.login(s, 'authenticated');
+  assert tests.visible(format('select 1 from public.recipes where id = %L', rpriv)) = 0, 'support : recette privée non signalée';
+  assert tests.visible(format('select 1 from public.recipes where id = %L', ra)) = 0 and tests.visible(format('select 1 from public.recipe_sections where recipe_id = %L', ra)) = 0, 'support : recette de groupe non signalée';
+  assert tests.visible('select email from public.profiles') = 1, 'support : seulement sa ligne de profil';
+  assert tests.rows_affected(format($q$update public.profiles set name = 'Piraté' where id = %L$q$, ua)) = 0, 'support modifie le profil d''un autre';
+  assert tests.rows_affected(format($q$update public.profiles set name = 'Moi' where id = %L$q$, s)) = 1, 'support modifie son profil';
+  perform tests.logout();
+  perform tests.login(ub, 'authenticated');
+  insert into public.reports (recipe_id, reporter_id, reason) values (rpriv, ub, 'spam') returning id into rep;
+  perform tests.logout();
+  perform tests.login(s, 'authenticated');
+  assert tests.visible(format('select 1 from public.recipes where id = %L', rpriv)) = 1, 'support : recette signalée lisible';
+  assert tests.rows_affected(format($q$update public.recipes set title = 'x' where id = %L$q$, rpriv)) = 0, 'support : jamais de modification';
+  perform tests.logout();
+  perform tests.login(ub, 'authenticated');
+  assert tests.visible(format('select email from public.profiles where id = %L', ua)) = 0, 'B lit l''e-mail de A';
+  assert tests.visible(format('select email from public.profiles where id = %L', ub)) = 1, 'B lit son propre profil';
+  assert tests.rows_affected(format($q$update public.profiles set name = 'Piraté' where id = %L$q$, ua)) = 0;
+  perform tests.logout();
+
+  -- (7) copied_from : seulement vers une recette copiable
+  perform tests.login(ub, 'authenticated');
+  assert tests.rows_affected(format($q$update public.recipes set copied_from = %L where id = %L$q$, rpriv, rb)) < 0, 'copied_from vers une recette illisible';
+  assert tests.rows_affected(format($q$update public.recipes set copied_from = %L where id = %L$q$, ra, rb)) = 1, 'copied_from vers une recette copiable';
+  assert tests.rows_affected(format($q$update public.recipes set copied_from = null where id = %L$q$, rb)) = 1, 'copied_from NULL permis';
+
+  -- (9) photo_path dans le dossier de sa propre recette
+  assert tests.rows_affected(format($q$update public.recipes set photo_path = %L where id = %L$q$, ra || '/x.webp', rb)) < 0, 'photo d''une autre recette';
+  assert tests.rows_affected(format($q$update public.recipes set photo_path = %L where id = %L$q$, rb || '/x.webp', rb)) = 1, 'photo de sa recette';
+  assert tests.rows_affected(format($q$update public.recipes set photo_path = null where id = %L$q$, rb)) = 1;
+  perform tests.logout();
+  raise notice '[switchover 0020] corrections relecture : OK';
 end $$;
 
 rollback;

@@ -455,7 +455,7 @@ begin
   assert tests.rows_affected(format($q$insert into public.reports (recipe_id, reporter_id, reason, details) values (%L, %L, 'spam', 'test')$q$, r_old, ud)) = 1, 'D signale';
   assert tests.rows_affected(format($q$insert into public.reports (recipe_id, reporter_id, reason) values (%L, %L, 'spam')$q$, r_old, ub)) < 0, 'signalement au nom d''un autre';
   assert tests.rows_affected(format($q$insert into public.reports (recipe_id, reporter_id, reason, status) values (%L, %L, 'spam', 'actioned')$q$, r_old, ud)) < 0, 'signalement déjà traité';
-  assert tests.visible('select 1 from public.reports') = 0, 'D relit les signalements';
+  assert tests.visible('select 1 from public.reports') = 1 and tests.visible(format('select 1 from public.reports where reporter_id <> %L', ud)) = 0, 'D ne relit que SON signalement';
   assert not private.is_support();
   perform tests.logout();
   perform tests.login(ub, 'authenticated');
@@ -468,8 +468,8 @@ begin
   assert private.is_support(), 'le compte admin est support';
   assert tests.visible('select 1 from public.reports') = 1, 'le support voit les signalements';
   assert tests.visible('select 1 from public.system_alerts') = 1;
-  assert private.can_read_recipe(r_priv) and not private.can_edit_recipe(r_priv) and private.recipe_level(r_priv) = 0,
-    'le support lit pour modérer mais ne modifie jamais';
+  assert not private.can_read_recipe(r_priv) and not private.can_edit_recipe(r_priv) and private.recipe_level(r_priv) = 0,
+    'le support ne lit pas une recette privée non signalée, et ne modifie jamais';
   assert tests.rows_affected(format($q$update public.reports set status = 'reviewed', handled_at = now() where reporter_id = %L$q$, ud)) = 1;
   assert tests.rows_affected(format($q$update public.reports set reason = 'other'$q$)) < 0, 'colonne reason modifiable';
   assert tests.visible('select 1 from public.groups') = 0, 'le support n''entre pas dans les groupes';
@@ -538,6 +538,111 @@ begin
   assert (select count(*) from public.recipes) >= 2, 'v1 : tout compte connecté lit toutes les recettes';
   perform tests.logout();
   raise notice '[test 0019] politiques sociales, droits implicites et explicites, carnet, bannières, support, données personnelles : OK';
+end $$;
+
+
+-- ---------------------------------------------------------------- corrections de la relecture de sécurité
+do $$
+declare
+  s  constant uuid := '00000000-0000-0000-0000-00000000000a';
+  up constant uuid := '00000000-0000-0000-0000-0000000000f1';
+  uq constant uuid := '00000000-0000-0000-0000-0000000000f2';
+  ur constant uuid := '00000000-0000-0000-0000-0000000000f3';
+  ut constant uuid := '00000000-0000-0000-0000-0000000000f4';
+  rp constant uuid := '91000000-0000-0000-0000-000000000001';   -- privée de P
+  rg uuid; g uuid; g_other uuid; v uuid; rep uuid; rr uuid; n bigint;
+begin
+  insert into auth.users (id, email, raw_user_meta_data) values
+    (up, 'p@test.local', '{}'), (uq, 'q@test.local', '{}'), (ur, 'r@test.local', '{}'), (ut, 't@test.local', '{}');
+  update public.profiles set display_name = 'Pierre' where id = up;
+  update public.profiles set display_name = 'Quentin' where id = uq;
+  insert into public.recipes (id, title, category, owner_id, visibility) values (rp, 'Privée P', 'plats', up, 'private'), ('91000000-0000-0000-0000-000000000009', 'Privée non signalée', 'plats', up, 'private');
+
+  -- (10) création d'un groupe : l'invité a rejoint AVANT que le créateur n'insère sa propre ligne
+  perform tests.login(up, 'authenticated');
+  insert into public.groups (name, created_by) values ('Ordre inversé', up) returning id into g;
+  insert into public.invitations (kind, inviter_id, target_user_id, group_id) values ('group', up, uq, g);
+  perform tests.logout();
+  perform tests.login(uq, 'authenticated');
+  assert tests.rows_affected(format($q$insert into public.group_members (group_id, user_id, role) values (%L, %L, 'member')$q$, g, uq)) = 1, 'Q rejoint';
+  perform tests.logout();
+  perform tests.login(up, 'authenticated');
+  assert tests.rows_affected(format($q$insert into public.group_members (group_id, user_id, role) values (%L, %L, 'creator')$q$, g, up)) = 1,
+    'le créateur ne peut plus s''inscrire une fois un membre arrivé';
+  assert tests.rows_affected(format($q$insert into public.group_members (group_id, user_id, role) values (%L, %L, 'creator')$q$, g, up)) < 0, 'deux creator';
+  perform tests.logout();
+  perform tests.login(uq, 'authenticated');
+  assert tests.rows_affected(format($q$delete from public.group_members where group_id = %L and user_id = %L$q$, g, uq)) = 1, 'Q quitte';
+  perform tests.logout();
+  -- un tiers ne peut pas s'inscrire creator d'un groupe qui n'est pas le sien
+  perform tests.login(ut, 'authenticated');
+  assert tests.rows_affected(format($q$insert into public.group_members (group_id, user_id, role) values (%L, %L, 'creator')$q$, g, ut)) < 0, 'T creator du groupe de P';
+  perform tests.logout();
+
+  -- (4) INSERT … RETURNING : group_members et reports
+  perform tests.login(up, 'authenticated');
+  insert into public.groups (name, created_by) values ('Retour', up) returning id into g_other;
+  insert into public.group_members (group_id, user_id, role) values (g_other, up, 'creator') returning user_id into v;
+  assert v = up, 'returning group_members';
+  perform tests.logout();
+  perform tests.login(ut, 'authenticated');
+  insert into public.reports (recipe_id, reporter_id, reason) values (rp, ut, 'spam') returning id into rep;
+  assert rep is not null, 'returning reports';
+  assert tests.visible('select 1 from public.reports') = 1, 'T relit son signalement';
+  perform tests.logout();
+  perform tests.login(ur, 'authenticated');
+  assert tests.visible('select 1 from public.reports') = 0, 'R lit le signalement d''un autre';
+  perform tests.logout();
+
+  -- (3) support : lit une recette seulement si elle est signalée (open / reviewed)
+  perform tests.login(s, 'authenticated');
+  assert private.can_read_recipe(rp), 'support : recette signalée (open)';
+  assert not private.can_edit_recipe(rp) and private.recipe_level(rp) = 0, 'support : jamais de droit d''édition';
+  perform tests.logout();
+  update public.reports set status = 'reviewed' where id = rep;
+  perform tests.login(s, 'authenticated');
+  assert private.can_read_recipe(rp), 'support : signalement reviewed';
+  perform tests.logout();
+  update public.reports set status = 'dismissed' where id = rep;
+  perform tests.login(s, 'authenticated');
+  assert not private.can_read_recipe(rp), 'support : signalement classé -> plus d''accès';
+  perform tests.logout();
+  -- les autres recettes privées restent illisibles pour le support
+  perform tests.login(s, 'authenticated');
+  assert not private.can_read_recipe('91000000-0000-0000-0000-000000000009'::uuid), 'support : recette privée non signalée';
+  perform tests.logout();
+
+  -- (6) départ d'un groupe : droits directs retirés s'il n'y a plus ni amitié ni groupe commun
+  insert into public.group_members (group_id, user_id, role) values (g, uq, 'member');
+  insert into public.friendships (requester_id, addressee_id, status, responded_at) values (up, ur, 'accepted', now());
+  insert into public.group_members (group_id, user_id, role) values (g, ur, 'member');
+  insert into public.recipes (id, title, category, owner_id, visibility) values
+    ('91000000-0000-0000-0000-000000000002', 'Pour Q', 'plats', up, 'private'),
+    ('91000000-0000-0000-0000-000000000003', 'Pour R (amie)', 'plats', up, 'private'),
+    ('91000000-0000-0000-0000-000000000004', 'De Q pour P', 'plats', uq, 'private');
+  perform tests.login(up, 'authenticated');
+  insert into public.recipe_grants (recipe_id, grantee_user_id, permission, granted_by) values ('91000000-0000-0000-0000-000000000002', uq, 'read', up);
+  insert into public.recipe_grants (recipe_id, grantee_user_id, permission, granted_by) values ('91000000-0000-0000-0000-000000000003', ur, 'read', up);
+  perform tests.logout();
+  perform tests.login(uq, 'authenticated');
+  insert into public.recipe_grants (recipe_id, grantee_user_id, permission, granted_by) values ('91000000-0000-0000-0000-000000000004', up, 'read', uq);
+  perform tests.logout();
+  delete from public.group_members where group_id = g and user_id in (uq, ur);
+  assert not exists (select 1 from public.recipe_grants where recipe_id in ('91000000-0000-0000-0000-000000000002', '91000000-0000-0000-0000-000000000004')),
+    'droits directs conservés après le départ (plus ni amis ni groupe commun)';
+  assert exists (select 1 from public.recipe_grants where recipe_id = '91000000-0000-0000-0000-000000000003'), 'droit à une amie supprimé à tort';
+
+  -- (8) thème actif : membre du groupe seulement ; NULL toujours permis ; remis à NULL au départ
+  insert into public.group_members (group_id, user_id, role) values (g, uq, 'member');
+  perform tests.login(uq, 'authenticated');
+  assert tests.rows_affected(format($q$update public.profiles set active_theme_group_id = %L where id = %L$q$, g_other, uq)) < 0, 'thème d''un groupe étranger';
+  assert tests.rows_affected(format($q$update public.profiles set active_theme_group_id = %L where id = %L$q$, g, uq)) = 1, 'thème de son groupe';
+  assert tests.rows_affected(format($q$update public.profiles set active_theme_group_id = null where id = %L$q$, uq)) = 1, 'NULL permis';
+  assert tests.rows_affected(format($q$update public.profiles set active_theme_group_id = %L where id = %L$q$, g, uq)) = 1;
+  perform tests.logout();
+  delete from public.group_members where group_id = g and user_id = uq;
+  assert (select active_theme_group_id from public.profiles where id = uq) is null, 'thème actif conservé après départ';
+  raise notice '[test 0019] corrections relecture : OK';
 end $$;
 
 -- ---------------------------------------------------------------- v1 : les mêmes appels qu'en 0017

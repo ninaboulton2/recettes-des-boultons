@@ -136,7 +136,7 @@ create or replace function tests.policy_fp() returns text language sql stable as
            E'\n' order by schemaname, tablename, policyname), ''))
     from pg_policies
    where (schemaname = 'public' and tablename in ('recipes', 'recipe_sections', 'recipe_ingredients', 'instructions',
-                                                  'recipe_translations', 'favorites'))
+                                                  'recipe_translations', 'favorites', 'profiles'))
       or (schemaname = 'storage' and tablename = 'objects')
 $$;
 grant execute on function tests.policy_fp() to anon, authenticated, service_role, supabase_auth_admin;

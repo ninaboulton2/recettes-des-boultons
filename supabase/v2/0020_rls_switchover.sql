@@ -12,7 +12,7 @@
 --  site cesse d'être public.
 --
 --  GARDE-FOUS (le fichier s'arrête avec une erreur sinon)
---   - 0019 appliquée ; AUCUNE recette sans `owner_id` ; aucun profil absent d'un propriétaire.
+--   - 0019 appliquée ; AUCUNE recette sans `owner_id` ; aucune recette dont le propriétaire n'a pas de profil.
 --
 --  QUOI
 --   1. recipes : lecture = can_read_recipe ; insertion = auteur (owner_id = soi,
@@ -28,7 +28,12 @@
 --      (champ `public` non touché) : une URL publique contourne ces politiques.
 --      Le passage en privé et les liens signés vont ENSEMBLE avec le code de la
 --      phase 8 ; ne pas le faire seul (les photos disparaîtraient du site).
---   5. recipes.owner_id : DEFAULT (auth.uid()) et NOT NULL. Le DEFAULT permet à
+--   5. profiles : lecture et modification de SA ligne seulement, pour tout le monde, support compris
+--      (plus aucune lecture de l'e-mail d'un autre par l'API). Le support ne passe plus par `profiles`.
+--   6. recipes.photo_path : doit commencer par « <id de la recette>/ » (contrainte NOT VALID : les lignes
+--      existantes ne sont pas contrôlées, toute écriture future l'est).
+--   7. Contenu : un ingrédient / une étape ne peut référencer qu'une section de SA recette.
+--   8. recipes.owner_id : DEFAULT (auth.uid()) et NOT NULL. Le DEFAULT permet à
 --      `save_recipe` (v1, qui n'écrit pas owner_id) de continuer à créer des
 --      recettes pour la personne connectée ; la phase 5A le rendra explicite.
 --      Un client sans identité (service_role) doit donner owner_id.
@@ -59,6 +64,10 @@ begin
   if n_null > 0 then
     raise exception '[0020] % recette(s) sans owner_id : appliquer le remplissage (0018) AVANT la bascule', n_null;
   end if;
+  select count(*) into n_null from public.recipes r where not exists (select 1 from public.profiles p where p.id = r.owner_id);
+  if n_null > 0 then
+    raise exception '[0020] % recette(s) dont le propriétaire n''a pas de profil', n_null;
+  end if;
 end $$;
 
 create temporary table tmp_0020_before on commit drop as
@@ -68,6 +77,18 @@ create temporary table tmp_0020_before on commit drop as
          (select count(*) from public.instructions)       as n_instructions,
          (select count(*) from public.recipe_translations) as n_translations,
          (select count(*) from public.favorites)          as n_favorites;
+
+-- Aides : lisent des tables soumises au RLS pour le compte de l'appelant (qui ne les voit pas forcément)
+create or replace function private.section_belongs_to(p_section uuid, p_recipe uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.recipe_sections s where s.id = p_section and s.recipe_id = p_recipe)
+$$;
+create or replace function private.category_belongs_to(p_category uuid, p_owner uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.categories c where c.id = p_category and c.owner_id = p_owner)
+$$;
+revoke execute on function private.section_belongs_to(uuid, uuid), private.category_belongs_to(uuid, uuid) from public, anon;
+grant execute on function private.section_belongs_to(uuid, uuid), private.category_belongs_to(uuid, uuid) to authenticated, service_role;
 
 -- ----------------------------------------------------------------------------
 -- 1. Table rase des anciennes politiques de ces tables (toutes celles de v1)
@@ -97,13 +118,11 @@ create policy "recipes_select_readable" on public.recipes for select to authenti
 create policy "recipes_insert_author" on public.recipes for insert to authenticated
   with check (owner_id = (select auth.uid())
               and (copied_from is null or private.can_copy_recipe(copied_from))
-              and (category_id is null or exists (select 1 from public.categories c
-                                                   where c.id = category_id and c.owner_id = recipes.owner_id)));
+              and (category_id is null or private.category_belongs_to(category_id, owner_id)));
 create policy "recipes_update_editor" on public.recipes for update to authenticated
   using (private.can_edit_recipe(id))
   with check (private.can_edit_recipe(id)
-              and (category_id is null or exists (select 1 from public.categories c
-                                                   where c.id = category_id and c.owner_id = recipes.owner_id)));
+              and (category_id is null or private.category_belongs_to(category_id, owner_id)));
 create policy "recipes_delete_author_or_support" on public.recipes for delete to authenticated
   using (owner_id = (select auth.uid())
          or (private.is_support()
@@ -121,6 +140,11 @@ begin
      and old.owner_id is distinct from (select auth.uid()) then
     raise exception 'Seul l''auteur change la visibilité ou l''origine d''une recette' using errcode = '42501';
   end if;
+  -- on ne se rattache pas à une recette qu'on ne peut pas copier (NULL toujours permis)
+  if new.copied_from is not null and new.copied_from is distinct from old.copied_from
+     and not private.can_copy_recipe(new.copied_from) then
+    raise exception 'Origine de la copie non copiable' using errcode = '42501';
+  end if;
   return new;
 end $$;
 revoke execute on function private.recipes_guard_owner_fields() from public, anon, authenticated;
@@ -136,12 +160,40 @@ declare t text; pfx text;
 begin
   foreach t in array array['recipe_sections', 'recipe_ingredients', 'instructions', 'recipe_translations'] loop
     pfx := t;
+    if t in ('recipe_ingredients', 'instructions') then
+      -- la section référencée doit appartenir à LA MÊME recette (sinon on empoisonne la recette d'un autre)
+      execute format('create policy %I on public.%I for select to authenticated using (private.can_read_recipe(recipe_id))', pfx || '_select_readable', t);
+      execute format('create policy %I on public.%I for insert to authenticated with check (private.can_edit_recipe(recipe_id) and (section_id is null or private.section_belongs_to(section_id, recipe_id)))', pfx || '_insert_editor', t);
+      execute format('create policy %I on public.%I for update to authenticated using (private.can_edit_recipe(recipe_id)) with check (private.can_edit_recipe(recipe_id) and (section_id is null or private.section_belongs_to(section_id, recipe_id)))', pfx || '_update_editor', t);
+      execute format('create policy %I on public.%I for delete to authenticated using (private.can_edit_recipe(recipe_id))', pfx || '_delete_editor', t);
+      continue;
+    end if;
     execute format('create policy %I on public.%I for select to authenticated using (private.can_read_recipe(recipe_id))', pfx || '_select_readable', t);
     execute format('create policy %I on public.%I for insert to authenticated with check (private.can_edit_recipe(recipe_id))', pfx || '_insert_editor', t);
     execute format('create policy %I on public.%I for update to authenticated using (private.can_edit_recipe(recipe_id)) with check (private.can_edit_recipe(recipe_id))', pfx || '_update_editor', t);
     execute format('create policy %I on public.%I for delete to authenticated using (private.can_edit_recipe(recipe_id))', pfx || '_delete_editor', t);
   end loop;
 end $$;
+
+-- Photo : toujours dans le dossier de SA recette (<id>/<horodatage>.webp)
+alter table public.recipes drop constraint if exists recipes_photo_path_in_own_folder;
+alter table public.recipes add constraint recipes_photo_path_in_own_folder
+  check (photo_path is null or photo_path like id::text || '/%') not valid;
+
+-- profiles : sa propre ligne seulement (le support ne lit plus les e-mails des autres)
+do $$
+declare pol record;
+begin
+  for pol in select policyname from pg_policies
+              where schemaname = 'public' and tablename = 'profiles'
+                and policyname in ('profiles_select_self_or_admin', 'profiles_update_self_or_admin', 'profiles_select_self', 'profiles_update_self') loop
+    execute format('drop policy %I on public.profiles', pol.policyname);
+  end loop;
+end $$;
+create policy "profiles_select_self" on public.profiles for select to authenticated
+  using ((select auth.uid()) = id);
+create policy "profiles_update_self" on public.profiles for update to authenticated
+  using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 -- ----------------------------------------------------------------------------
 -- 4. favorites : on ne met en favori que ce qu'on peut lire

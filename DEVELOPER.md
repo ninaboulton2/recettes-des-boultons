@@ -1178,8 +1178,8 @@ recettes). Détail et choix de conception : en-têtes de `0017`, `0019` et `v2/0
 | 2 | `recipe_grants` `copy`, **ou** `visibility = 'groups'` et un groupe en commun avec l'auteur (droit implicite) | lire, copier |
 | 1 | `recipe_grants` `read` | lire |
 
-Le support (`private.is_support()`, alias de `is_admin()` pour l'instant) **lit** pour modérer et
-supprime une recette **signalée** ; il ne modifie jamais le contenu des autres. Un repartage
+Le support (`private.is_support()`, alias de `is_admin()` pour l'instant) **ne lit une recette que si elle est
+signalée** (statut `open` ou `reviewed`) et peut alors la supprimer ; il ne modifie jamais le contenu des autres. Un repartage
 (`origin = 'reshare'`) exige un droit explicite détenu, ne dépasse jamais `copy` ni son propre niveau.
 
 ### 20.2 Partage par groupe et bannières (clarification de Nina, 2026-10-24)
@@ -1212,3 +1212,25 @@ suivent la recette ; `recipes.owner_id` passe NOT NULL avec `DEFAULT auth.uid()`
 de fonctionner, et n'est plus réservé aux admins : tout compte crée SES recettes). Reste à faire hors de ce
 fichier : `save_recipe_translation` (garde `is_admin()` à remplacer), bucket de photos **public** à passer
 en privé avec les liens signés (phase 8), 2ᵉ compte admin → `user` (remplissage 0018).
+
+### 20.5 Points d'attention (relecture de sécurité)
+
+- **`invitations`** : `select *` renvoie « permission denied » (la colonne `token_hash` n'est pas lisible par
+  l'API). Lister les colonnes : `id, kind, inviter_id, target_user_id, target_email, group_id, status, created_at,
+  expires_at, responded_at`. À l'insertion : `kind, inviter_id, target_user_id, target_email, group_id`.
+- **`profiles` après la bascule 0020** : chacun ne lit et ne modifie que SA ligne, support compris (l'e-mail d'un
+  autre n'est plus lisible par l'API). Le code actuel reste compatible : `app/stores/auth.ts` lit son propre
+  profil (`select *` par `id`), `server/utils/auth.ts` (`requireAdmin`) lit son propre `role`, le hook JWT passe par
+  sa politique dédiée. Ce qui casserait : tout écran ou requête qui listerait les profils des autres ou modifierait
+  le profil / le rôle d'un autre compte via l'API (il n'y en a pas dans le dépôt) ; passer par le service role ou une RPC.
+- **Section d'une autre recette** : 0020 refuse qu'un ingrédient / une étape référence une section d'une autre
+  recette (fonction `private.section_belongs_to`). Pour le « contract » (0021) : ajouter `unique (id, recipe_id)` sur
+  `recipe_sections` et une clé étrangère composite `(section_id, recipe_id)` depuis `recipe_ingredients` et `instructions`.
+- **Jeton JWT périmé** : le claim `user_role` (et donc `private.is_support()`) peut rester périmé jusqu'à 1 h après un
+  changement de rôle (durée de vie du jeton).
+- **Compte du créateur d'un groupe** : `groups.created_by` est `on delete restrict` ; tant que la RPC de transfert de
+  la phase 5 n'existe pas, un créateur ne peut pas supprimer son compte.
+- **Performance** : `can_read_recipe(id)` est évalué ligne par ligne ; suffisant à l'échelle visée (quelques centaines
+  de comptes), à surveiller avec `EXPLAIN ANALYZE` avant la bascule ; sinon passer par une fonction de liste.
+- **Abus** : aucune limite de débit ni blocage contre le harcèlement (demandes d'amitié, invitations, signalements) :
+  à faire en phase 5 ou 7.

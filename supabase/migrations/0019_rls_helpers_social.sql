@@ -16,7 +16,7 @@
 --
 --  CE QUI EST APPLIQUÉ ICI (sans effet pour la v1)
 --   A. Fonctions d'aide dans le schéma `private` (non exposé par l'API) :
---        is_group_member(g), is_group_creator(g), group_is_empty(g),
+--        is_group_member(g), is_group_creator(g), group_has_creator(g),
 --        has_pending_group_invite(g), shares_group_with(u), are_friends(u),
 --        is_support(), is_recipe_owner(r), recipe_level(r), can_read_recipe(r),
 --        can_copy_recipe(r), can_edit_recipe(r), can_see_profile(u),
@@ -30,7 +30,7 @@
 --   C. Table `dismissed_prompts` (bannières fermées, par personne).
 --   D. RPC publiques : `search_users(q)`, `get_public_profiles(ids)`,
 --      `add_author_recipes_to_cookbook(author)`.
---   E. 4 déclencheurs d'intégrité (arrivée dans un groupe → invitation
+--   E. 5 déclencheurs d'intégrité (arrivée dans un groupe → invitation
 --      acceptée ; départ → repartages issus du groupe retirés ; fin d'amitié →
 --      droits directs entre les deux retirés s'ils ne partagent aucun groupe ;
 --      baisse d'un droit → repartages plafonnés).
@@ -76,8 +76,8 @@
 --      anti-escalade : le remplacement est PROGRESSIF. Toutes les nouvelles
 --      politiques n'utilisent que `is_support()` ; le jour où l'on renomme le
 --      rôle, on ne change qu'une fonction. Le support lit les signalements
---      (et, à la bascule, toute recette pour modérer, et supprime sur
---      signalement) ; il ne modifie jamais le contenu des autres. Le 2ᵉ compte
+--      (et, à la bascule, SEULEMENT les recettes signalées « open » ou « reviewed » ;
+--      il peut aussi les supprimer) ; il ne modifie jamais le contenu des autres. Le 2ᵉ compte
 --      admin repasse `user` au remplissage (phase 4), pas ici.
 --   6. Profils : `profiles` garde ses politiques actuelles (soi + support). Les
 --      autres ne voient une personne que par `search_users(q)` (≥ 3 lettres,
@@ -90,7 +90,7 @@
 --      (le remplissage et l'inscription le renseignent).
 --   7. Groupes : le créateur gère les membres MAIS l'arrivée se fait par
 --      invitation que la personne accepte : `group_members` n'accepte l'insertion
---      que (a) du créateur lui-même quand le groupe est vide, ou (b) de la
+--      que (a) du créateur lui-même tant que le groupe n'a pas de ligne `creator` (même s'il a déjà invité du monde), ou (b) de la
 --      personne invitée, avec une invitation « pending » non expirée émise par
 --      le créateur actuel. Le créateur retire un membre ; chacun peut partir
 --      seul. Pas de politique UPDATE sur `group_members` ni sur
@@ -201,9 +201,9 @@ returns boolean language sql stable security definer set search_path = '' as $$
                   where g.id = p_group and g.created_by = (select auth.uid()))
 $$;
 
-create or replace function private.group_is_empty(p_group uuid)
+create or replace function private.group_has_creator(p_group uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
-  select not exists (select 1 from public.group_members m where m.group_id = p_group)
+  select exists (select 1 from public.group_members m where m.group_id = p_group and m.role = 'creator')
 $$;
 
 -- Invitation « pending » non expirée, adressée à moi, émise par le créateur ACTUEL
@@ -265,7 +265,10 @@ $$;
 
 create or replace function private.can_read_recipe(p_recipe uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
-  select private.recipe_level(p_recipe) >= 1 or private.is_support()
+  select private.recipe_level(p_recipe) >= 1
+      or (private.is_support()
+          and exists (select 1 from public.reports r
+                       where r.recipe_id = p_recipe and r.status in ('open', 'reviewed')))
 $$;
 create or replace function private.can_copy_recipe(p_recipe uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
@@ -343,7 +346,7 @@ begin
   for r in select p.oid::regprocedure as sig
              from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'private'
-              and p.proname in ('permission_rank', 'is_support', 'is_group_member', 'is_group_creator', 'group_is_empty',
+              and p.proname in ('permission_rank', 'is_support', 'is_group_member', 'is_group_creator', 'group_has_creator',
                                 'has_pending_group_invite', 'shares_group_with', 'are_friends', 'is_recipe_owner',
                                 'recipe_level', 'can_read_recipe', 'can_copy_recipe', 'can_edit_recipe',
                                 'can_see_profile', 'can_create_grant', 'recipe_id_from_path') loop
@@ -375,6 +378,24 @@ begin
   delete from public.recipe_grants rg
    where rg.origin = 'reshare' and rg.granted_by = old.user_id
      and rg.source_grant_id in (select s.id from public.recipe_grants s where s.grantee_group_id = old.group_id);
+  -- droits directs entre la personne et les membres restants, s'ils ne sont plus amis ni dans un groupe commun
+  -- (symétrique du déclencheur d'amitié)
+  delete from public.recipe_grants rg
+   using public.group_members m
+   where m.group_id = old.group_id and m.user_id <> old.user_id
+     and rg.grantee_user_id is not null
+     and ((rg.granted_by = old.user_id and rg.grantee_user_id = m.user_id)
+       or (rg.granted_by = m.user_id and rg.grantee_user_id = old.user_id))
+     and not exists (select 1 from public.friendships f
+                      where f.status = 'accepted'
+                        and ((f.requester_id = old.user_id and f.addressee_id = m.user_id)
+                          or (f.requester_id = m.user_id and f.addressee_id = old.user_id)))
+     and not exists (select 1 from public.group_members a
+                       join public.group_members b on b.group_id = a.group_id
+                      where a.user_id = old.user_id and b.user_id = m.user_id);
+  -- le thème actif ne peut pas rester celui d'un groupe quitté
+  update public.profiles set active_theme_group_id = null
+   where id = old.user_id and active_theme_group_id = old.group_id;
   return old;
 end $$;
 drop trigger if exists trg_group_member_removed on public.group_members;
@@ -414,6 +435,24 @@ create trigger trg_grant_lowered after update of permission on public.recipe_gra
   for each row when (new.permission is distinct from old.permission)
   execute function private.on_grant_lowered();
 
+-- 3e. Thème actif : seulement un groupe dont on est membre (NULL toujours permis ; serveur / migrations exemptés)
+create or replace function private.profiles_guard_active_theme()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.active_theme_group_id is not null
+     and (tg_op = 'INSERT' or new.active_theme_group_id is distinct from old.active_theme_group_id)
+     and (select auth.uid()) is not null
+     and not exists (select 1 from public.group_members m
+                      where m.group_id = new.active_theme_group_id and m.user_id = new.id) then
+    raise exception 'Le thème actif doit être celui d''un groupe dont on est membre' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+drop trigger if exists trg_profiles_guard_active_theme on public.profiles;
+create trigger trg_profiles_guard_active_theme before insert or update of active_theme_group_id on public.profiles
+  for each row execute function private.profiles_guard_active_theme();
+
+revoke execute on function private.profiles_guard_active_theme() from public, anon, authenticated;
 revoke execute on function private.on_group_member_added(), private.on_group_member_removed(),
                            private.on_friendship_removed(), private.on_grant_lowered() from public, anon, authenticated;
 
@@ -458,11 +497,11 @@ grant update (name, theme) on public.groups to authenticated;
 
 -- group_members ---------------------------------------------------------------
 create policy "group_members_select_fellow" on public.group_members for select to authenticated
-  using (private.is_group_member(group_id));
+  using (private.is_group_member(group_id) or user_id = (select auth.uid()));   -- `or user_id` : INSERT … RETURNING relit la ligne neuve
 create policy "group_members_insert" on public.group_members for insert to authenticated
   with check (
     user_id = (select auth.uid())
-    and ((role = 'creator' and private.is_group_creator(group_id) and private.group_is_empty(group_id))
+    and ((role = 'creator' and private.is_group_creator(group_id) and not private.group_has_creator(group_id))
       or (role = 'member' and private.has_pending_group_invite(group_id))));
 create policy "group_members_delete" on public.group_members for delete to authenticated
   using (role = 'member' and (user_id = (select auth.uid()) or private.is_group_creator(group_id)));
@@ -565,7 +604,7 @@ grant update (read_at) on public.notifications to authenticated;
 create policy "reports_insert_own" on public.reports for insert to authenticated
   with check (reporter_id = (select auth.uid()) and status = 'open' and handled_at is null);
 create policy "reports_select_support" on public.reports for select to authenticated
-  using (private.is_support());
+  using (private.is_support() or reporter_id = (select auth.uid()));   -- le support lit tout ; chacun relit SES signalements (INSERT … RETURNING)
 create policy "reports_update_support" on public.reports for update to authenticated
   using (private.is_support()) with check (private.is_support());
 grant select on public.reports to authenticated;
