@@ -319,6 +319,8 @@ supprimées par 0002. Voir [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
 | 0018 (`supabase/v2/`) | **Remplissage v2, phase 4, NON appliqué** (jour de la bascule, avec des paramètres saisis par Nina : `v2/0018_params.sql`) : groupe « Les Boultons » (thème `boultons`), tous les comptes membres, `recipes.owner_id` = Nina, un droit `edit_original` du groupe par recette, catégories personnelles (9 par compte) et `recipes.category_id`, favoris des autres comptes → leur carnet, `display_name` / thème actif / rôles (le 2ᵉ admin repasse `user`). Idempotent, assertions, sauvegarde `private.backup_0018_*` pour le retour arrière `supabase/rollback/0018_v2_data_fill_down.sql`. Procédure : [supabase/BASCULE_V2.md](supabase/BASCULE_V2.md). Voir § 20.6 |
 | 0020 (`supabase/v2/`) | **Bascule PRÉPARÉE, non appliquée** : remplace les politiques de `recipes`, `recipe_sections`, `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites` (insertion) et du bucket `recipe-photos`. Refuse de tourner tant qu'une recette n'a pas de `owner_id`. Retour arrière : `supabase/rollback/0020_rls_switchover_down.sql`. Numérotation : 0018 = remplissage (phase 4, appliqué AVANT 0020 mais APRÈS 0019), 0021 = fonctions métier côté recettes (ci-dessous), 0022 = « contract » (ancien 0020 du dossier) |
 | 0021 | v2, phase 5A : fonctions métier côté recettes, **sans effet sur le code actuel** (aucune table, colonne, politique ni donnée ; empreintes md5 vérifiées). 17 fonctions nouvelles (`security definer`, `search_path` vide, `authenticated` seulement ; `get_shared_recipe` aussi `anon`) : `copy_recipe`, `add_to_cookbook`, `remove_from_cookbook`, `list_cookbook`, `list_author_recipes`, `list_shared_with_me`, `grant_recipe`, `revoke_recipe_grant`, `reshare_recipe`, `list_recipe_grants`, `create_share_link`, `revoke_share_link`, `claim_shared_recipe`, `get_shared_recipe`, `recipe_usage`, `pending_prompts`, `dismiss_prompt`. Deux fonctions remplacées à signature identique : `save_recipe` (écrit `owner_id`, `category_id`, `visibility` ; inchangée sans ces clés) et `save_recipe_translation` (garde « admin OU peut modifier la recette »). S'applique **tout de suite après 0019**. Voir § 20.7. Retour arrière : `supabase/rollback/0021_recipe_rpcs_down.sql` |
+| 0022 | **RÉSERVÉE** au « contract » (suppression des colonnes v1 : `recipes.category`, `recipes.image`…, clés étrangères composites sur les sections). Ne pas l'utiliser pour autre chose. |
+| 0023 | v2, phase 5B : fonctions métier côté social, **sans effet sur le code actuel** (aucune table, colonne ni politique modifiée ; empreintes md5 des politiques, des autres fonctions publiques et des déclencheurs existants vérifiées). 29 fonctions publiques nouvelles (`security definer`, `search_path` vide, `authenticated` seulement ; `prepare_account_deletion` : `service_role` seulement) : amis (`send_friend_request`, `respond_friend_request`, `cancel_friend_request`, `remove_friend`, `list_friends`, `list_friend_requests`), groupes (`create_group`, `rename_group`, `update_group_theme`, `invite_to_group`, `cancel_group_invitation`, `respond_group_invitation`, `leave_group`, `remove_group_member`, `transfer_group_ownership`, `delete_group`, `list_my_groups`, `list_group_members`, `list_group_invitations`), invitation par lien (`create_invite_link`, `redeem_invite_link`), notifications (`list_notifications`, `mark_notifications_read`, `unread_notifications_count`), profil (`update_my_profile`, `get_user_profile`), compte (`export_my_data`, `account_deletion_blockers`, `prepare_account_deletion`). 9 déclencheurs `trg_0023_*` (limites de débit, notifications, règles du pseudonyme, notification à la suppression d'une recette) et un journal `private.rate_events`. S'applique **tout de suite après 0021** (indépendante d'elle : seulement 0019 est requise). Voir § 20.8. Retour arrière : `supabase/rollback/0023_social_rpcs_down.sql` |
 
 Chaque fichier est idempotent, encadré par `begin; … commit;` et contient des assertions.
 Ordre et contrôles de la mise en production : [supabase/BASCULE_PROD.md](supabase/BASCULE_PROD.md).
@@ -445,6 +447,7 @@ snake_case sont converties en camelCase par `shared/utils/recipes.ts`.
 | `POST /api/shopping-items` | 👤 | `{ listId, name, amount?, unit?, recipeId? }` | `parse_amount`, `normalize_unit`, `merge_shopping_item` | `{ success, item, message }` |
 | `PUT /api/shopping-items/:id` | 👤 | `{ name?, amount?, unit?, isChecked? }` | update (triggers `amount_num` / `unit_code`, 404) | `{ success, item, message }` |
 | `DELETE /api/shopping-items/:id` | 👤 | — | delete (404) | `{ success, message }` |
+| `POST /api/account/delete` | 👤 | `{ confirmEmail }` = l'e-mail du compte (`deleteAccountInputSchema`) | `account_deletion_blockers` (409 + `data.blockers` si un groupe créé a d'autres membres), clé `service_role` : `prepare_account_deletion`, `auth.admin.deleteUser`, nettoyage des photos (voir § 20.8) | `{ success, message, deletedGroups, removedPhotos }` |
 
 `RecipeInput` = `z.infer<typeof recipeInputSchema>` (`shared/schemas/recipe.ts`), la forme
 de l'éditeur : `title`, `category`, `description?`, `notes?`, `prepTime` / `cookTime` /
@@ -461,7 +464,8 @@ sont ignorées. `toSaveRecipePayload` le convertit en payload snake_case pour `s
 - `400` « Données invalides : champ : raison ; … » (Zod, en français, 5 champs au plus).
 - `401` / `403` (auth), `404` / `409` (métier), `429` (quota IA).
 - `throwSupabaseError` n'expose que les erreurs volontaires des RPC : `22023` → 400 avec le
-  message SQL, `P0002` → 404, `42501` → 403, `23505` → 409.
+  message SQL, `P0002` → 404, `42501` → 403, `23505` → 409. Les RPC sociales appelées directement par le
+  navigateur (§ 20.8) lèvent aussi `54000` (limite de débit) et `55000` (groupe à transférer).
 - Tout le reste → `500` « Une erreur est survenue, réessayez plus tard. ». Le détail est
   écrit dans les journaux serveur (`[api] <contexte>`), jamais renvoyé au client.
 - Côté client, les stores lèvent une `ApiError` (`apiErrorFromResponse`) ; `toUserMessage`
@@ -970,6 +974,13 @@ E2E_SERVER=preview npm run test:e2e    # sur le build Node (+ tests du service w
   `test_0021_recipe_rpcs.sql` sous la chaîne complète 0019 → 0021 → 0018 → 0020 (pour chaque fonction : le « oui », et
   le « non » pour un étranger, un membre de groupe et une amie), et « up, down, up » de 0021 (`save_recipe` /
   `save_recipe_translation` restaurées à l'identique).
+  0023 : `test_0023_v1_compat.sql` (0023 avec 0021, puis 0023 SEULE sans 0021 : la v1 n'est pas cassée),
+  `test_0023_social_rpcs.sql` sous la chaîne complète 0019 → 0021 → 0023 → 0018 → 0020 (deux fois, comme 0021 : chaque
+  fonction a son « oui » et son « non » pour un étranger, un membre et le créateur ; notifications sans e-mail ; limites de
+  débit ; transfert du créateur ; départ qui fait perdre l'accès ; suppression de groupe ; export sans donnée d'autrui ;
+  blocages de suppression de compte), et « up, down, up » de 0023 (empreinte md5 de toutes les fonctions, déclencheurs,
+  politiques et tables `private` identique à l'avant). Les tests de 0019 ont été adaptés à 0023 (relance après refus : délai
+  de 7 jours ; notifications créées par les déclencheurs).
 - Ces tests SQL ne tournent pas en CI.
 
 - Nuxt 4.5 refuse deux `nuxt dev` dans le même dossier : si un serveur de dev tourne déjà,
@@ -993,6 +1004,7 @@ Variables (aucun fichier `.env` n'est déployé).
 | `AI_MODEL` | idem | modèle ; vide = défaut du fournisseur |
 | `AI_TRANSCRIBE_MODEL` | idem | modèle de transcription de la dictée (défaut `gpt-4o-mini-transcribe`, OpenAI) |
 | `AI_DAILY_QUOTA` | idem | appels par personne et par jour (défaut 50, `0` = coupé) |
+| `SUPABASE_SECRET_KEY` | `@nuxtjs/supabase` (`serverSupabaseServiceRole`), `POST /api/account/delete` | clé secrète `service_role` / `sb_secret_…`, **serveur seulement** (suppression de compte, § 20.8) ; vide = la route répond 500, le reste fonctionne |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY` | idem | clé du fournisseur choisi |
 | `NUXT_PUBLIC_SENTRY_DSN` (repli `SENTRY_DSN`) | `nuxt.config.ts`, `sentry.*.config.ts` | DSN Sentry ; vide = Sentry inactif |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | `nuxt.config.ts` (build) | envoi des sourcemaps (optionnel) |
@@ -1007,7 +1019,7 @@ Variables (aucun fichier `.env` n'est déployé).
   `NUXT_PUBLIC_SUPABASE_URL` / `NUXT_PUBLIC_SUPABASE_KEY` fonctionnent aussi à l'exécution.
 - Les variables IA peuvent aussi s'écrire `NUXT_AI_PROVIDER`, `NUXT_OPENAI_API_KEY`… (surcharge
   de `runtimeConfig`).
-- La clé `service_role` (ou `sb_secret_…`) n'est pas utilisée et ne doit jamais être exposée.
+- La clé `service_role` (ou `sb_secret_…`) n'est lue QUE par `POST /api/account/delete` (`SUPABASE_SECRET_KEY`, côté serveur) et ne doit jamais être exposée ni préfixée `NUXT_PUBLIC_`.
 - `API_BASE` et `NODE_ENV` ne sont plus lues par le code.
 
 ## 17. Déploiement
@@ -1175,9 +1187,9 @@ les lectures (colonnes `lang`, `recipe_translations` absentes).
 
 ## 20. v2 : partage, groupes et RLS
 
-État : phases 2 (0017), 3 (0019), 4 (remplissage `supabase/v2/0018_v2_data_fill.sql`) et 5A (0021, § 20.7) écrites ; le
+État : phases 2 (0017), 3 (0019), 4 (remplissage `supabase/v2/0018_v2_data_fill.sql`), 5A (0021, § 20.7) et 5B (0023, § 20.8) écrites ; le
 remplissage et la bascule des politiques des recettes (`supabase/v2/0020_rls_switchover.sql`) sont préparés mais **pas
-appliqués** (le site actuel suppose que tout compte connecté lit toutes les recettes). Ordre : 0017 → 0019 → **0021**
+appliqués** (le site actuel suppose que tout compte connecté lit toutes les recettes). Ordre : 0017 → 0019 → 0021 → **0023**
 → 0018 → 0020 → code v2 (procédure : `supabase/BASCULE_V2.md`). Détail et choix de conception : en-têtes de `0017`, `0019`, `v2/0018` et `v2/0020`.
 
 ### 20.1 Qui peut quoi sur une recette (`private.recipe_level(r)`)
@@ -1239,12 +1251,14 @@ fichier : bucket de photos **public** à passer en privé avec les liens signés
   `recipe_sections` et une clé étrangère composite `(section_id, recipe_id)` depuis `recipe_ingredients` et `instructions`.
 - **Jeton JWT périmé** : le claim `user_role` (et donc `private.is_support()`) peut rester périmé jusqu'à 1 h après un
   changement de rôle (durée de vie du jeton).
-- **Compte du créateur d'un groupe** : `groups.created_by` est `on delete restrict` ; tant que la RPC de transfert de
-  la phase 5 n'existe pas, un créateur ne peut pas supprimer son compte.
+- **Compte du créateur d'un groupe** : `groups.created_by` est `on delete restrict`. Réglé par 0023 : `transfer_group_ownership`,
+  `delete_group`, et `prepare_account_deletion` (supprime les groupes où la personne est seule, refuse s'il reste des membres) ;
+  voir § 20.8.
 - **Performance** : `can_read_recipe(id)` est évalué ligne par ligne ; suffisant à l'échelle visée (quelques centaines
   de comptes), à surveiller avec `EXPLAIN ANALYZE` avant la bascule ; sinon passer par une fonction de liste.
-- **Abus** : aucune limite de débit ni blocage contre le harcèlement (demandes d'amitié, invitations, signalements) :
-  à faire en phase 5 ou 7.
+- **Abus** : réglé par 0023 pour les demandes d'ami (20 par jour), les invitations (20 par jour), les signalements (10 par
+  jour) et les exports (3 par jour) ; pas de blocage de personne (hors périmètre) ; la recherche d'utilisateurs n'a pas encore
+  de limite (§ 7.7 du dossier) : à faire avec la phase 7.
 
 ### 20.6 Remplissage des données (`supabase/v2/0018_v2_data_fill.sql`), phase 4
 
@@ -1338,8 +1352,121 @@ select public.get_shared_recipe('<jeton>'::uuid, 'fr');   -- exécutable sans co
 - Les routes `add-recipe`, `update-recipe`, `delete-recipe` et les endpoints IA restent réservés aux admins (`requireAdmin`) :
   les ouvrir à tout compte (le RLS décide) relève des phases 6 et 7. Le schéma `recipeInputSchema` accepte déjà `visibility` et
   `categoryId` (transmis à `save_recipe` seulement s'ils sont fournis).
-- Les notifications « recette supprimée » (réponse n° 4 du dossier, § 10) et celles d'amis / groupes relèvent de la phase 5B.
+- Les notifications « recette supprimée » (réponse n° 4 du dossier, § 10) et celles d'amis / groupes sont faites par la migration 0023 (§ 20.8).
 - La copie ne duplique pas la photo (phase 8) ; `get_shared_recipe` ne renvoie pas d'URL de photo (liens signés, phase 8).
 - Correction apportée à `v2/0020` pendant cette phase : le déclencheur de garde `recipes_guard_owner_fields` bloquait la
   suppression, par son auteur, d'une recette copiée par quelqu'un d'autre (`copied_from` des copies passe à NULL par clé
   étrangère). Les mises à jour faites par clé étrangère (`pg_trigger_depth() > 1`) sont désormais exemptées.
+
+### 20.8 API v2 côté social (migration 0023), phase 5B
+
+**Convention.** Identique au § 20.7 : les fonctions s'appellent **directement avec supabase-js et la session de la personne**
+(`security definer`, `search_path` vide, `(select auth.uid())`, jamais « qui je suis » en paramètre). Une seule exception : la
+suppression de compte passe par une route serveur (clé `service_role`, jamais dans le navigateur). Application :
+`app/composables/useFriends.ts`, `useGroups.ts`, `useNotifications.ts`, `useAccount.ts` (fonctions pures `fn(supabase, …)` +
+`useX()`), schémas Zod `shared/schemas/social.ts`, conversions `shared/utils/social.ts`, types de `shared/types/database.ts`
+(ajoutés à la main). Aucune interface (phase 6). Erreurs : `42501` refusé, `P0002` introuvable (un groupe ou une demande dont
+on n'est pas partie est « introuvable » : on n'en révèle pas l'existence), `22023` entrée refusée (message français),
+**`54000` limite de débit**, **`55000` groupe à transférer avant de supprimer le compte** (`isRateLimitError` côté client).
+Choix de conception détaillés : en-tête de `0023_social_rpcs.sql`.
+
+| Fonction | Qui peut l'appeler | Rôle / retour |
+|---|---|---|
+| `send_friend_request(p_user)` | connecté | Demande d'ami ; idempotente (renvoie la demande en cours ou l'amitié). Après un refus : **la personne qui a refusé peut demander à son tour** (la ligne change de sens, sans délai) ; **le demandeur d'origine peut relancer au plus une fois par 7 jours**. Notifie le destinataire. 20 par jour (`54000`). |
+| `respond_friend_request(p_id, p_accept)` | **destinataire** d'une demande en attente | `accepted` (notifie le demandeur) ou `declined` (aucune notification). |
+| `cancel_friend_request(p_id)` | **demandeur** | Retire la demande en attente et la notification non lue ; `false` sinon. Ne remet pas la limite à zéro. |
+| `remove_friend(p_user)` | connecté | Supprime l'amitié ; le déclencheur de 0019 retire les droits directs entre les deux s'ils ne partagent aucun groupe. `true` si retirée. |
+| `list_friends()` / `list_friend_requests()` | connecté | Pseudonymes, `since` ; demandes reçues en attente + envoyées en attente ou refusées (`retry_after`). Jamais d'e-mail. |
+| `create_group(p_name)` | connecté | Groupe + ligne `creator` (atomique). Renvoie l'id. |
+| `rename_group(p_group, p_name)` / `update_group_theme(p_group, p_theme)` | **créateur** | Nom 1–60 ; thème = objet JSON ≤ 4000 caractères. |
+| `invite_to_group(p_group, p_user)` | **créateur seulement** (§ 10 du dossier : « le créateur gère les membres ») | Invitation à ACCEPTER (30 jours) ; idempotente ; refusée récemment : 7 jours d'attente. Notifie. 20 invitations par jour. |
+| `create_invite_link(p_group)` / `redeem_invite_link(p_token)` | **créateur** / connecté | Lien à usage unique (7 jours). Le jeton en clair (64 hex) n'est renvoyé **qu'une fois** ; seule son empreinte SHA-256 est stockée. L'envoi par e-mail relève de la phase 7. |
+| `cancel_group_invitation(p_id)` | **créateur** | Annule une invitation (personne ou lien) en attente. |
+| `respond_group_invitation(p_id, p_accept)` | **personne invitée** | Accepter = rejoindre comme `member` (notifie le créateur) ; **aucune recette n'est ajoutée au carnet** ; refuser ne notifie personne. |
+| `leave_group(p_group)` | **membre** (pas le créateur) | Part ; perd l'accès aux recettes partagées par le groupe (déclencheurs de 0019). |
+| `remove_group_member(p_group, p_user)` | **créateur** | Retire un membre (prévenu) ; jamais lui-même. |
+| `transfer_group_ownership(p_group, p_new_creator)` | **créateur** | Atomique : `created_by` + les deux rôles. Le nouveau doit déjà être membre ; les invitations en attente sont annulées ; il est prévenu. |
+| `delete_group(p_group)` | **créateur** | Cascade : membres, invitations, droits donnés au groupe (et repartages). Recettes, copies et droits directs restent ; les membres sont prévenus. |
+| `list_my_groups()` / `list_group_members(p_group)` / `list_group_invitations()` | connecté / membre / connecté | Pseudonymes seulement. Invitations : reçues par moi + envoyées en attente pour les groupes que je crée. |
+| `list_notifications(p_limit, p_before)` / `mark_notifications_read(p_ids)` / `unread_notifications_count()` | connecté | Les miennes seulement ; `p_ids` NULL = toutes. |
+| `update_my_profile(…)` | connecté | Pseudonyme (1–60, sans « @ », unique), titre ≤ 80, `discoverable`, thème (objet ≤ 4000), thème actif (un de mes groupes). NULL = inchangé ; titre `''` / thème `'{}'` = effacer ; `p_personal_theme => true` = thème personnel. |
+| `get_user_profile(p_user)` | connecté | Pseudonyme, titre du carnet, statut d'amitié, groupes communs, nombre de recettes lisibles ; **aucune ligne** si la personne ne m'est pas déjà visible (`private.can_see_profile`). |
+| `export_my_data()` | connecté | Toutes mes données en jsonb ; les autres n'y figurent que par pseudonyme (aucun id de personne, aucun e-mail). 3 par jour. |
+| `account_deletion_blockers()` | connecté | Groupes que je crée et qui ont d'autres membres. |
+| `prepare_account_deletion(p_user)` | **`service_role` seulement** | Refuse (`55000`) si un tel groupe existe ; sinon supprime les groupes où la personne est seule. |
+
+**Notifications** (créées par la base, jamais par le client ; `created_at` = horloge réelle, tri stable). Payload : identifiants,
+pseudonymes, titres ; jamais d'e-mail ni de `profiles.name`.
+
+| `type` | Pour qui | Quand | Clés du `payload` |
+|---|---|---|---|
+| `friend_request` | destinataire | demande ou relance | `friendship_id`, `from_user_id`, `from_name` |
+| `friend_accepted` | demandeur | demande acceptée | `friendship_id`, `user_id`, `name` |
+| `group_invitation` | personne invitée | invitation nominative | `invitation_id`, `group_id`, `group_name`, `from_user_id`, `from_name` |
+| `group_invitation_accepted` | créateur | invitation ou lien accepté | `invitation_id`, `group_id`, `group_name`, `user_id`, `name` |
+| `recipe_shared` | bénéficiaire | droit direct ou repartage donné à une PERSONNE (hausse seulement ; un doublon non lu est ignoré ; ni lien public, ni droit à un groupe) | `recipe_id`, `title`, `permission`, `from_user_id`, `from_name` |
+| `recipe_deleted` | détenteurs du carnet autres que l'auteur | suppression de la recette (déclencheur `before delete` sur `recipes`) | `recipe_id`, `title`, `author_id`, `author_name` |
+| `group_member_removed` | membre retiré | `remove_group_member` | `group_id`, `group_name` |
+| `group_deleted` | membres (pas le créateur) | `delete_group` | `group_id`, `group_name` |
+| `group_ownership_transferred` | nouveau créateur | `transfer_group_ownership` | `group_id`, `group_name`, `from_user_id`, `from_name` |
+
+Un refus (ami ou groupe) ne notifie personne ; annuler une demande ou une invitation retire la notification non lue.
+
+**Déclencheur sur `recipes` (table v1).** `trg_0023_recipe_deleted` (avant suppression) est le seul moyen de couvrir tous les chemins
+(`delete_recipe`, suppression par le support, suppression d'un compte en cascade) sans modifier `delete_recipe`. En v1
+`cookbook_entries` est vide : il ne fait qu'un test d'existence indexé. Il ne notifie pas ceux qui ne peuvent plus lire la recette
+(sauf quand c'est le compte de l'auteur qui disparaît). Les personnes qui ont une COPIE ne sont pas prévenues (la copie leur appartient).
+
+**Limites de débit** (`private.rate_events`, fenêtre glissante de 24 h, par personne, valables aussi pour les écritures directes que les
+politiques de 0019 autorisent, ignorées sans `auth.uid()`) : 20 demandes d'ami, 20 invitations (personne ou lien), 3 exports ; 10
+signalements (comptés sur `reports.created_at`). Annuler, supprimer ou refuser ne remet pas les compteurs à zéro.
+
+**Suppression de compte** (dossier § 7.4) :
+
+1. L'interface appelle `account_deletion_blockers()` : s'il y a des groupes, proposer `transfer_group_ownership` (ou `delete_group`).
+2. `POST /api/account/delete { confirmEmail }` (l'adresse e-mail du compte, saisie de confirmation) → `server/utils/accountDeletion.ts` :
+   contrôle des blocages (409 + `data.blockers`), chemins des photos, `prepare_account_deletion` (service_role, sous verrou),
+   `auth.admin.deleteUser` (la cascade supprime profil, recettes, carnet, favoris, planning, courses, relations ; les copies faites par
+   d'autres leur restent ; les détenteurs de ses recettes reçoivent `recipe_deleted`), puis retrait des photos du bucket (meilleur effort).
+3. Variable `SUPABASE_SECRET_KEY` à définir dans Vercel avant le déploiement du code v2 (sinon la route répond 500).
+4. L'e-mail de confirmation du § 7.4 relève de la phase 7 (Resend) : la saisie de l'adresse en tient lieu en attendant.
+
+**Exemples** :
+
+```ts
+const { searchUsers, sendFriendRequest, respondFriendRequest, listFriendRequests, getUserProfile } = useFriends()
+const [eve] = await searchUsers({ query: 'eve' })                 // ≥ 3 lettres
+await sendFriendRequest({ userId: eve.id })                       // 54000 si 20 demandes aujourd'hui
+const requests = await listFriendRequests()                       // [{ direction: 'incoming', friendshipId, displayName, … }]
+await respondFriendRequest({ friendshipId: requests[0].friendshipId, accept: true })
+const profile = await getUserProfile({ userId: eve.id })          // null si elle ne m'est pas visible
+
+const { createGroup, inviteToGroup, respondGroupInvitation, transferGroupOwnership, createInviteLink } = useGroups()
+const groupId = await createGroup({ name: 'Les voisins' })
+await inviteToGroup({ groupId, userId: eve.id })                  // créateur seulement
+const { token } = await createInviteLink({ groupId })             // jeton en clair : à copier TOUT DE SUITE
+await respondGroupInvitation({ invitationId, accept: true })      // côté invitée : aucune recette ajoutée
+await transferGroupOwnership({ groupId, newCreatorId: eve.id })   // avant de supprimer son compte
+
+const { listNotifications, markNotificationsRead, unreadNotificationsCount } = useNotifications()
+const { items, nextBefore } = await listNotifications({ limit: 20 })
+await markNotificationsRead({ ids: [items[0].id] })               // sans ids : toutes
+
+const { updateMyProfile, exportMyData, accountDeletionBlockers, deleteAccount } = useAccount()
+await updateMyProfile({ displayName: 'Mamie', cookbookTitle: 'Recettes de Mamie', activeThemeGroupId: null })
+await deleteAccount({ confirmEmail: 'moi@exemple.fr' })           // 409 si un groupe est à transférer
+```
+
+```sql
+-- appel brut : select * from public.list_notifications(p_limit => 20);
+select public.send_friend_request('<uuid>'::uuid);   -- exécutable par authenticated seulement (pas anon)
+```
+
+**À savoir.**
+
+- La recherche d'utilisateurs (`search_users`, 0019) n'a pas de limite de débit ; pas de blocage de personne ; l'invitation par
+  **e-mail** (`target_email`) et l'envoi de messages (Resend) relèvent de la phase 7.
+- `update_my_profile` ne touche pas `onboarded_at` (l'update direct de sa ligne reste possible) ; le pseudonyme est validé aussi en
+  écriture directe (déclencheur `trg_0023_profiles_display_name`).
+- Les tests de 0019 (`test_0019_rls.sql`) ont dû être adaptés : la relance d'une demande refusée par le demandeur d'origine demande
+  désormais 7 jours, et les déclencheurs créent des notifications.

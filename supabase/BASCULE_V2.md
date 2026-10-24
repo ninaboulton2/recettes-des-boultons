@@ -1,7 +1,7 @@
 # Bascule v2 — remplissage des données et passage au multi-comptes
 
 Pour : **Nina** et **Claude**, sur le projet Supabase `recettes-boultons` (`tzlkabxcmmbwhpyvmato`) et dans Vercel.
-Complète `BASCULE_PROD.md` (§ 10 et § 11 : 0017 et 0019, déjà passées ; **0021 se pose aussi tout de suite**, voir § 2) ; correspond à la phase 11 du dossier
+Complète `BASCULE_PROD.md` (§ 10 et § 11 : 0017 et 0019, déjà passées ; **0021 et 0023 se posent aussi tout de suite**, voir § 2) ; correspond à la phase 11 du dossier
 « Recettes v2 » (§ 4.2 étapes 3 à 6, § 4.3, § 9).
 
 Ce que fait la bascule : les recettes Boultons reçoivent une propriétaire (Nina), les comptes actuels
@@ -62,14 +62,15 @@ Les politiques de la v1 ne sont pas touchées : tout le monde lit encore tout, s
    `recipe_ingredients`, `instructions`, `recipe_translations`, `favorites`, `planning`, `planning_notes`,
    `shopping_lists`, `shopping_items`, `ai_usage`, et les 11 tables de 0017) + le `pg_dump` du § 0.1 de
    `BASCULE_PROD.md`, **hors du dépôt Git**, + la liste des fichiers du bucket `recipe-photos`.
-2. **0017, 0019 et 0021 appliquées en production** (`BASCULE_PROD.md` § 10 et § 11 pour 0017 et 0019 ; 0021 : voir
-   « Où s'insère 0021 » au § 2). Vérification :
+2. **0017, 0019, 0021 et 0023 appliquées en production** (`BASCULE_PROD.md` § 10 et § 11 pour 0017 et 0019 ; 0021 et 0023 : voir
+   « Où s'insère 0021 » et « Où s'insère 0023 » au § 2). Vérification :
 
    ```sql
    select to_regclass('public.groups') is not null                      as t0017,
           to_regprocedure('private.can_read_recipe(uuid)') is not null  as f0019,
           to_regprocedure('public.copy_recipe(uuid)') is not null       as f0021,
-          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true / true / true / 0
+          to_regprocedure('public.send_friend_request(uuid)') is not null as f0023,
+          (select count(*) from public.recipes where owner_id is not null) as recettes_avec_proprietaire;   -- true / true / true / true / 0
    ```
 3. **Code v2 prêt** : branche fusionnable, CI verte, **déployé en préproduction et non promu** (Vercel :
    déploiement « staged », à promouvoir à l'étape 7). Noter l'identifiant du déploiement de production actuel
@@ -99,6 +100,25 @@ Ordre complet : **0017 → 0019 → 0021** → paramètres → **0018** → **00
 * **Retour arrière** : indépendant de 0018 / 0020 (`supabase/rollback/0021_recipe_rpcs_down.sql`, n'écrit aucune donnée). À
   jouer AVANT le retour arrière de 0019 (les fonctions de 0021 s'appuient sur `private.*`). Les clients v2 qui appellent les
   fonctions supprimées échouent : retirer d'abord le code v2.
+
+### Où s'insère 0023 (fonctions métier côté social, phase 5B)
+
+Ordre complet : **0017 → 0019 → 0021 → 0023** → paramètres → **0018** → **0020** → code v2. (**0022 est RÉSERVÉE** au « contract » : ne
+pas l'utiliser.)
+
+* **0023 s'applique tout de suite après 0021** : `supabase/migrations/0023_social_rpcs.sql`, un seul Run dans le SQL Editor (ou
+  `apply_migration` sur le « go » de Nina). Elle ne change **rien pour la v1** : aucune table existante, colonne, politique ni donnée ;
+  elle ajoute 29 fonctions, 9 déclencheurs (`trg_0023_*`, dont un `before delete` sur `recipes` et un sur `profiles`, sans effet tant
+  que `cookbook_entries` est vide et que `display_name` n'est pas écrit par l'API) et le journal `private.rate_events`. Elle vérifie
+  elle-même, en fin de fichier, les empreintes md5 des politiques, des autres fonctions publiques et des déclencheurs existants.
+  **Indépendante de 0021** (seule 0019 est requise) : elle peut passer avant ou après.
+* **Le remplissage 0018 et la bascule 0020 ne sont pas gênés** : les limites de débit et les règles du pseudonyme sont ignorées sans
+  `auth.uid()` (SQL Editor, service), et 0018 ne crée ni amitié, ni invitation, ni droit à une personne (donc aucune notification).
+* **Avant le déploiement du code v2** : définir `SUPABASE_SECRET_KEY` (clé secrète `service_role`) dans Vercel, côté serveur seulement,
+  pour la route `POST /api/account/delete` ; sans elle la route répond 500 et tout le reste fonctionne.
+* **Retour arrière** : indépendant de 0018 / 0020 et de 0021 (`supabase/rollback/0023_social_rpcs_down.sql`, ne supprime aucune
+  donnée sociale ; les notifications déjà créées restent). À jouer AVANT le retour arrière de 0019 (les fonctions s'appuient sur
+  `private.*`). Les clients v2 qui appellent les fonctions supprimées échouent : retirer d'abord le code v2.
 
 | # | Étape | Qui |
 |---|---|---|
@@ -310,8 +330,9 @@ Ensuite : `drop table private.v2_fill_params;` si ce n'est pas déjà fait.
   copiables) tant qu'elle n'a pas accordé `edit_original` (v2, partage).
 * **Bannières « Explorer les recettes de Nina »** : 0018 ne ferme aucune bannière ; chaque membre la verra et pourra
   tout ajouter à son carnet d'un geste, comme décidé le 2026-10-24. Les favoris actuels sont déjà dans leur carnet.
-* **Créateur du groupe** : Nina ne peut pas supprimer son compte tant que la RPC de transfert (phase 5) n'existe pas
-  (`groups.created_by` est `on delete restrict`).
+* **Créateur du groupe** : Nina ne peut pas supprimer son compte tant que le groupe « Les Boultons » a d'autres membres
+  (`groups.created_by` est `on delete restrict`) : elle doit d'abord passer le rôle (`transfer_group_ownership`, 0023) ou
+  supprimer le groupe ; `account_deletion_blockers()` le lui indique, `prepare_account_deletion` le contrôle côté serveur.
 * **Photos publiques** jusqu'à la phase 8 (bucket `recipe-photos` toujours public).
 * **Nouvelles inscriptions** : tant que les inscriptions sont ouvertes, un compte neuf ne voit rien (pas de groupe) ;
   c'est normal.
