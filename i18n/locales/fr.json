@@ -930,9 +930,6 @@
     "description": "Cette page arrive bientôt.",
     "back": "Retour à l'accueil",
     "sharedWithMe": "Partagées avec moi",
-    "friends": "Amis",
-    "groups": "Groupes",
-    "notifications": "Notifications",
     "explore": "Explorer les recettes"
   },
   "notifications": {
@@ -1253,7 +1250,7 @@
   "userSearch": {
     "placeholder": "Un pseudonyme…",
     "hint": "Au moins 3 lettres. Seules les personnes qui acceptent d’apparaître dans la recherche sont trouvées.",
-    "empty": "Personne trouvée. Vérifiez l’orthographe : la personne n’apparaît peut-être pas dans la recherche."
+    "empty": "Aucune personne trouvée. Vérifiez l’orthographe : la personne n’apparaît peut-être pas dans la recherche."
   },
   "friends": {
     "title": "Amis",
@@ -1420,7 +1417,7 @@
     },
     "leave": {
       "title": "Quitter le groupe",
-      "help": "Vous perdrez l’accès aux recettes que les membres partagent avec ce groupe. Les recettes déjà ajoutées à votre carnet ne vous seront plus montrées si vous ne pouvez plus les lire ; vos propres recettes et vos copies restent.",
+      "help": "Vous perdrez l’accès aux recettes que les membres partagent avec ce groupe. Celles que vous aviez ajoutées à votre carnet disparaissent aussi de votre liste tant que vous ne pouvez plus les lire. Vos propres recettes et vos copies restent.",
       "button": "Quitter le groupe",
       "confirmTitle": "Quitter « {group} » ?",
       "confirmDescription": "Vous n’aurez plus accès aux recettes partagées par ce groupe. Pour y revenir, il faudra être invité de nouveau."

@@ -75,7 +75,9 @@
         <li v-for="request in outgoing" :key="request.friendshipId" class="flex flex-wrap items-center gap-3 p-3" data-testid="friend-request-out">
           <UIcon name="i-lucide-send" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
           <div class="min-w-0 flex-1">
-            <NuxtLink :to="localePath(`/personnes/${request.userId}`)" class="block truncate font-medium text-highlighted hover:text-primary">{{ nameOf(request.displayName) }}</NuxtLink>
+            <!-- Une demande refusée ne rend pas la personne visible : pas de lien vers son profil -->
+            <NuxtLink v-if="request.status === 'pending'" :to="localePath(`/personnes/${request.userId}`)" class="block truncate font-medium text-highlighted hover:text-primary">{{ nameOf(request.displayName) }}</NuxtLink>
+            <span v-else class="block truncate font-medium text-highlighted">{{ nameOf(request.displayName) }}</span>
             <p class="text-xs text-muted" data-testid="request-state">
               <template v-if="request.status === 'pending'">{{ $t('friends.outgoing.pending') }}</template>
               <template v-else-if="canRetryRequest(request)">{{ $t('friends.outgoing.declinedRetry') }}</template>

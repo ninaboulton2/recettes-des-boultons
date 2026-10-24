@@ -72,17 +72,22 @@ const { count, refresh: refreshBell } = useUnreadNotifications()
 
 useHead({ title: () => t('notifications.title') })
 
-const items = ref<AppNotification[]>([])
-const nextBefore = ref<string | null>(null)
 const busy = ref<string | null>(null)
 const message = ref<string | null>(null)
 
-const { status, refresh } = await useAsyncData('notifications-page', async () => {
-  const page = await api.listNotifications({ limit: NOTIFICATIONS_PAGE_SIZE })
+// La première page vient de `useAsyncData` (rendue côté serveur, reprise telle quelle par le navigateur) ; la liste affichée
+// en est une copie locale, prolongée par « Voir plus » et mise à jour par le marquage.
+const { data: firstPage, status, refresh } = await useAsyncData(
+  'notifications-page',
+  () => api.listNotifications({ limit: NOTIFICATIONS_PAGE_SIZE }),
+  { default: () => ({ items: [] as AppNotification[], nextBefore: null as string | null }) }
+)
+const items = ref<AppNotification[]>(firstPage.value.items)
+const nextBefore = ref<string | null>(firstPage.value.nextBefore)
+watch(firstPage, (page) => {
   items.value = page.items
   nextBefore.value = page.nextBefore
-  return true
-}, { default: () => true })
+})
 
 const views = computed(() => items.value.flatMap((notification) => {
   const view = notificationView(notification)

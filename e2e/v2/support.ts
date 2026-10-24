@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { expect, type Page } from '@playwright/test'
 import { SUPABASE_ANON_KEY, SUPABASE_URL, assertLocalSupabase } from '../support/env'
@@ -128,4 +129,57 @@ export async function removeFriendship(a: V2Account = 'admin', b: V2Account = 'a
 export async function logoutV2(page: Page): Promise<void> {
   await page.context().clearCookies()
   await page.evaluate(() => { try { localStorage.clear() } catch { /* sans stockage */ } })
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Phase 6C : amis, groupes, notifications
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Préfixe des groupes et recettes créés par les parcours 6C (retrouvés et supprimés par `cleanup6C`). */
+export const E2E_6C = 'E2E_6C_'
+
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? 'supabase_db_recettes-des-boultons'
+
+/**
+ * SQL sur la base LOCALE (conteneur Docker de la stack Supabase, rôle postgres) pour ce que l'API ne permet pas :
+ * vider les journaux de limites de débit (`private.rate_events`), les notifications, ou en fabriquer.
+ * Refuse net si l'URL Supabase du test n'est pas locale.
+ */
+export function sqlLocal(statement: string): string {
+  assertLocalSupabase()
+  return execFileSync('docker', ['exec', DB_CONTAINER, 'psql', '-U', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1', '-c', statement], { encoding: 'utf8' })
+}
+
+/** Remet le social à zéro : amitiés, notifications, limites de débit, bannières fermées, groupes `E2E_6C_*`. */
+export function cleanup6C(): void {
+  sqlLocal(`
+    delete from public.friendships;
+    delete from public.notifications;
+    delete from private.rate_events;
+    delete from public.dismissed_prompts;
+    delete from public.groups where name like '${E2E_6C}%';
+  `)
+}
+
+/** Déconnecte puis connecte un autre compte dans la même page (deux personnes à la suite). */
+export async function switchTo(page: Page, account: V2Account): Promise<void> {
+  await logoutV2(page)
+  await loginV2(page, account)
+}
+
+/** Crée un groupe `E2E_6C_*` dont `creator` est le créateur ; les `members` y entrent (invitation puis acceptation). Renvoie son id. */
+export async function createGroupWith(creator: V2Account, name: string, members: V2Account[] = []): Promise<string> {
+  const owner = await signedIn(creator)
+  const { data: groupId, error } = await owner.client.rpc('create_group', { p_name: name })
+  if (error) throw new Error(`Création du groupe impossible : ${error.message}`)
+  for (const member of members) {
+    const guest = await signedIn(member)
+    const invited = await owner.client.rpc('invite_to_group', { p_group: groupId, p_user: guest.userId })
+    if (invited.error) throw new Error(`Invitation impossible : ${invited.error.message}`)
+    const answered = await guest.client.rpc('respond_group_invitation', { p_id: invited.data as string, p_accept: true })
+    if (answered.error) throw new Error(`Acceptation impossible : ${answered.error.message}`)
+    await guest.client.auth.signOut({ scope: 'local' })
+  }
+  await owner.client.auth.signOut({ scope: 'local' })
+  return groupId as string
 }

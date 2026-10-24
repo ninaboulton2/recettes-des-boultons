@@ -20,7 +20,7 @@ test.afterAll(async () => {
   if (recipeId) await admin.client.from('recipes').delete().eq('id', recipeId)
 })
 
-test('(v2-nav1) entrées de navigation et pages à venir', async ({ page }) => {
+test('(v2-nav1) entrées de navigation, pages amis et notifications', async ({ page }) => {
   await loginV2(page, 'user')
   const nav = page.getByRole('navigation', { name: 'Navigation principale' })
   for (const label of ['Mon carnet', 'Partagées avec moi', 'Amis', 'Groupes']) await expect(nav.getByRole('link', { name: label })).toBeVisible()
@@ -28,9 +28,10 @@ test('(v2-nav1) entrées de navigation et pages à venir', async ({ page }) => {
   await expect(page.getByTestId('notification-bell')).toBeVisible()
 
   await nav.getByRole('link', { name: 'Amis' }).click()
-  await expect(page.getByTestId('coming-soon')).toBeVisible()
+  await expect(page.getByTestId('friends-page')).toBeVisible()
   await page.getByTestId('notification-bell').click()
   await expect(page).toHaveURL(/\/notifications$/)
+  await expect(page.getByTestId('notifications-page')).toBeVisible()
 
   await page.getByRole('banner').getByRole('button', { name: /user|Utilisateur/i }).click()
   await expect(page.getByRole('menuitem', { name: 'Réglages' })).toBeVisible()

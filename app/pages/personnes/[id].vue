@@ -1,6 +1,6 @@
 <template>
   <div class="mx-auto max-w-2xl space-y-6" data-testid="person-page">
-    <LoadingState v-if="pending" :message="$t('person.loading')" />
+    <LoadingState v-if="pending && !profile" :message="$t('person.loading')" />
 
     <!-- Inconnue, invisible ou lien erroné : même page neutre, sans rien révéler -->
     <EmptyState v-else-if="!profile" icon="i-lucide-user-x" :title="$t('person.notFound.title')" :message="$t('person.notFound.description')" data-testid="person-not-found">
@@ -135,12 +135,16 @@ const respond = (accept: boolean) => run(async () => {
   if (profile.value?.friendshipId) await api.respondFriendRequest({ friendshipId: profile.value.friendshipId, accept })
   $toast.success(t(accept ? 'friends.toast.accepted' : 'friends.toast.declined'))
 })
+/** Retirer un ami : sans amitié (ni groupe) la personne ne m'est plus visible : retour à la liste des amis. */
 async function remove(): Promise<void> {
+  let removed = false
   await run(async () => {
     await api.removeFriend({ userId: userId.value! })
+    removed = true
     $toast.success(t('friends.toast.removed'))
   })
   confirmRemove.value = false
+  if (removed) await navigateTo(localePath('/amis'))
 }
 
 useHead({ title: () => name.value, meta: [{ name: 'robots', content: 'noindex' }] })

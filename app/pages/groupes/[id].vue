@@ -4,7 +4,7 @@
       <UButton :to="localePath('/groupes')" variant="link" color="neutral" icon="i-lucide-arrow-left" size="sm" class="-ml-2" :label="$t('groups.back')" />
     </div>
 
-    <LoadingState v-if="pending" :message="$t('groups.loading')" />
+    <LoadingState v-if="pending && !group" :message="$t('groups.loading')" />
 
     <!-- Groupe inconnu, ou dont je ne suis pas membre : même page neutre -->
     <EmptyState v-else-if="!group" icon="i-lucide-users-round" :title="$t('groups.notFound.title')" :message="$t('groups.notFound.description')" data-testid="group-not-found">

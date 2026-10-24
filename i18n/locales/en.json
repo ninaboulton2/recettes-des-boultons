@@ -930,9 +930,6 @@
     "description": "This page is coming soon.",
     "back": "Back to home",
     "sharedWithMe": "Shared with me",
-    "friends": "Friends",
-    "groups": "Groups",
-    "notifications": "Notifications",
     "explore": "Explore recipes"
   },
   "notifications": {
@@ -1420,7 +1417,7 @@
     },
     "leave": {
       "title": "Leave the group",
-      "help": "You will lose access to the recipes members share with this group. Recipes already added to your cookbook will no longer be shown if you can no longer read them; your own recipes and copies stay.",
+      "help": "You will lose access to the recipes members share with this group. Those you had added to your cookbook also vanish from your list while you cannot read them. Your own recipes and copies stay.",
       "button": "Leave the group",
       "confirmTitle": "Leave “{group}”?",
       "confirmDescription": "You will no longer have access to the recipes shared by this group. To come back, you will have to be invited again."
