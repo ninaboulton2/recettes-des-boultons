@@ -770,6 +770,23 @@
       "notFound": "Recipe not found or no longer accessible.",
       "invalid": "That request isn’t valid (for example, the person or group isn’t among your contacts).",
       "duplicate": "That already exists."
+    },
+    "social": {
+      "rate": "Too many requests today (the limit is 20 a day). Try again tomorrow.",
+      "quota": "Limit reached: you cannot create more groups for now.",
+      "forbidden": "Not allowed: only the creator of the group can do this.",
+      "notFound": "Not found: this person, request or group no longer exists or is not accessible.",
+      "conflict": "This cannot be done in the group’s current state. Refresh the page and try again.",
+      "invalid": "This request is not valid. Check it and try again.",
+      "retryLater": "This person declined your request recently. You can send it again in {n} day. | This person declined your request recently. You can send it again in {n} days.",
+      "reverseRequest": "This person has already sent you a request: reply to it from “Received requests”.",
+      "inviteDeclined": "This person declined the invitation recently: try again in a few days.",
+      "alreadyMember": "This person is already in the group.",
+      "creatorCannotLeave": "The creator cannot leave their group: first hand the role over to another member, or delete the group.",
+      "ownLink": "You cannot use your own invitation link.",
+      "invitationGone": "This invitation is no longer valid (expired or already answered).",
+      "self": "You cannot add yourself.",
+      "invalidLink": "This invitation link is invalid, expired or already used."
     }
   },
   "translator": {
@@ -920,7 +937,26 @@
   },
   "notifications": {
     "bell": "Notifications",
-    "bellUnread": "Notifications, none unread | Notifications, {count} unread | Notifications, {count} unread"
+    "bellUnread": "Notifications, none unread | Notifications, {count} unread | Notifications, {count} unread",
+    "title": "Notifications",
+    "subtitle": "Friend requests, invitations and recipes shared with you.",
+    "markAll": "Mark all as read",
+    "more": "Show more",
+    "loading": "Loading notifications…",
+    "unread": "Unread",
+    "emptyTitle": "Nothing new",
+    "empty": "Your notifications will appear here.",
+    "types": {
+      "friend_request": "{name} sent you a friend request.",
+      "friend_accepted": "{name} accepted your friend request.",
+      "group_invitation": "{name} invites you to join the group “{group}”.",
+      "group_invitation_accepted": "{name} joined the group “{group}”.",
+      "recipe_shared": "{name} shared the recipe “{title}” with you.",
+      "recipe_deleted": "{name} deleted the recipe “{title}”: it is no longer in your cookbook.",
+      "group_member_removed": "You were removed from the group “{group}”.",
+      "group_deleted": "The group “{group}” was deleted.",
+      "group_ownership_transferred": "{name} handed you the management of the group “{group}”."
+    }
   },
   "prompts": {
     "dismiss": "Dismiss this banner",
@@ -1137,7 +1173,8 @@
     "empty": {
       "title": "Nothing to discover",
       "description": "{author} has no recipe you can read yet."
-    }
+    },
+    "profileLink": "See {author}’s profile"
   },
   "share": {
     "title": "Share this recipe",
@@ -1212,5 +1249,221 @@
     "added": "Recipe added to your cookbook.",
     "addError": "Couldn’t add this recipe, the link may no longer be valid.",
     "documentDescription": "A shared recipe"
+  },
+  "userSearch": {
+    "placeholder": "A nickname…",
+    "hint": "At least 3 letters. Only people who agree to appear in search are found.",
+    "empty": "Nobody found. Check the spelling: the person may not appear in search."
+  },
+  "friends": {
+    "title": "Friends",
+    "subtitle": "Your friends, their requests and search by nickname.",
+    "incoming": {
+      "title": "Received requests",
+      "accept": "Accept",
+      "decline": "Decline"
+    },
+    "search": {
+      "title": "Find someone",
+      "label": "Search by nickname",
+      "ask": "Add as a friend",
+      "alreadyFriend": "Already a friend",
+      "requestSent": "Request sent"
+    },
+    "list": {
+      "title": "My friends",
+      "emptyTitle": "No friends yet",
+      "empty": "Search for someone by nickname to send a friend request.",
+      "remove": "Remove"
+    },
+    "outgoing": {
+      "title": "Sent requests",
+      "pending": "Waiting for an answer",
+      "declinedRetry": "Request declined. You can send it again.",
+      "declinedWait": "Request declined. You can send it again from {date}.",
+      "cancel": "Cancel the request",
+      "resend": "Send again"
+    },
+    "remove": {
+      "title": "Remove {name} from your friends?",
+      "description": "You will no longer be friends. Recipes you shared directly with each other will no longer be accessible, unless you have a group in common. Copies already made stay with their owners.",
+      "confirm": "Remove this friend"
+    },
+    "toast": {
+      "requested": "Friend request sent.",
+      "accepted": "You are now friends.",
+      "declined": "Request declined.",
+      "cancelled": "Request cancelled.",
+      "removed": "Friend removed."
+    }
+  },
+  "person": {
+    "loading": "Loading profile…",
+    "itsYou": "This is you.",
+    "notFound": {
+      "title": "Person not found",
+      "description": "This link does not lead to anyone you can see.",
+      "action": "See my friends"
+    },
+    "friendship": {
+      "title": "Friendship",
+      "ask": "Add as a friend",
+      "askAgain": "Ask again",
+      "status": {
+        "none": "You are not friends.",
+        "friends": "You are friends.",
+        "request_sent": "Your request is waiting for an answer.",
+        "request_received": "This person sent you a friend request.",
+        "request_declined": "Your request was declined. You can send it again after 7 days."
+      }
+    },
+    "groups": {
+      "title": "Groups in common",
+      "none": "No group in common."
+    },
+    "recipes": {
+      "title": "Recipes",
+      "count": "No recipe you can read | One recipe you can read | {n} recipes you can read",
+      "link": "Their recipes"
+    }
+  },
+  "groups": {
+    "title": "Groups",
+    "subtitle": "Share your recipes with the people you choose. Joining a group adds nothing to your cookbook.",
+    "back": "My groups",
+    "loading": "Loading group…",
+    "notFound": {
+      "title": "Group not found",
+      "description": "This group does not exist, or you are not part of it.",
+      "action": "My groups"
+    },
+    "role": {
+      "creator": "Creator",
+      "member": "Member"
+    },
+    "joined": {
+      "title": "You joined “{group}”",
+      "description": "Nothing was added to your cookbook. You can now read and copy the recipes members share with the group: explore them below, at your own pace."
+    },
+    "invitations": {
+      "title": "Received invitations",
+      "nothingAdded": "Accepting an invitation puts no recipe in your cookbook: you then choose what to add.",
+      "from": "Invited by {name}",
+      "accept": "Accept",
+      "decline": "Decline"
+    },
+    "create": {
+      "title": "Create a group",
+      "label": "Group name",
+      "placeholder": "Neighbours, family…",
+      "submit": "Create group"
+    },
+    "list": {
+      "title": "My groups",
+      "emptyTitle": "No group",
+      "empty": "Create a group or accept an invitation to share your recipes.",
+      "members": "No member | One member | {n} members"
+    },
+    "page": {
+      "createdBy": "created by {name}"
+    },
+    "members": {
+      "title": "Members",
+      "you": "you",
+      "remove": "Remove",
+      "transfer": "Hand over creator role",
+      "removeTitle": "Remove {name} from the group?",
+      "removeDescription": "This person loses access to the recipes shared with the group and is notified. Their own recipes and copies stay theirs.",
+      "transferTitle": "Hand the creator role to {name}?",
+      "transferDescription": "{name} will become the creator: they will be able to invite, remove members, change the theme and delete the group. You will remain a regular member and will no longer manage the group. Your pending invitations will be cancelled. This cannot be undone.",
+      "transferConfirm": "Hand over the role"
+    },
+    "theme": {
+      "title": "Group theme",
+      "creatorHelp": "The group theme is offered to its members, who can pick it for their own display.",
+      "memberHelp": "The creator chooses the group theme. You can use it for your own display.",
+      "save": "Save the group theme",
+      "use": "Use this group’s theme",
+      "useMine": "Go back to my theme",
+      "active": "You are using this group’s theme.",
+      "none": "This group has no theme yet.",
+      "useHelp": "You are currently using your own theme."
+    },
+    "invite": {
+      "title": "Invite",
+      "help": "The invited person has to accept: nothing is shared without their agreement. You can invite 20 people a day.",
+      "friends": "Among your friends",
+      "search": "Or search by nickname",
+      "send": "Invite",
+      "alreadyMember": "Already a member",
+      "alreadyInvited": "Already invited",
+      "pending": "Pending invitations",
+      "cancel": "Cancel"
+    },
+    "link": {
+      "title": "Invitation link",
+      "help": "A single-use link, valid for {days} days. Anyone who opens it (after signing in) joins the group: send it to one person only.",
+      "create": "Create an invitation link",
+      "once": "Copy this link now: it is only shown once.",
+      "field": "Invitation link",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyManual": "Copy failed: select the link and copy it by hand.",
+      "expires": "Valid until {date}, single use.",
+      "pending": "Pending links",
+      "pendingItem": "Link valid until {date}"
+    },
+    "rename": {
+      "title": "Rename the group",
+      "label": "New name",
+      "submit": "Rename"
+    },
+    "leave": {
+      "title": "Leave the group",
+      "help": "You will lose access to the recipes members share with this group. Recipes already added to your cookbook will no longer be shown if you can no longer read them; your own recipes and copies stay.",
+      "button": "Leave the group",
+      "confirmTitle": "Leave “{group}”?",
+      "confirmDescription": "You will no longer have access to the recipes shared by this group. To come back, you will have to be invited again."
+    },
+    "delete": {
+      "title": "Delete the group",
+      "help": "All members are removed and notified. Recipes stay: only the access given to the group disappears.",
+      "button": "Delete the group",
+      "confirmTitle": "Delete “{group}”?",
+      "confirmDescription": "Recipes stay with their authors, and so do copies: only the access given to the group disappears, along with the group, its members and its invitations. This cannot be undone."
+    },
+    "toast": {
+      "created": "Group created.",
+      "declined": "Invitation declined.",
+      "renamed": "Group renamed.",
+      "themeSaved": "Group theme saved.",
+      "themeUsed": "You are now using this group’s theme.",
+      "themeMine": "You are back to your own theme.",
+      "invited": "Invitation sent.",
+      "cancelled": "Invitation cancelled.",
+      "removed": "Member removed.",
+      "transferred": "Creator role handed over.",
+      "left": "You left the group.",
+      "deleted": "Group deleted."
+    }
+  },
+  "join": {
+    "title": "Join a group",
+    "description": "You received an invitation link to a recipe-sharing group.",
+    "nothingAdded": "Joining the group adds no recipe to your cookbook.",
+    "button": "Join the group",
+    "login": "Sign in to join",
+    "success": "You joined the group.",
+    "invalid": {
+      "title": "Invalid invitation link",
+      "description": "This link is invalid, expired or already used. Ask the group’s creator for a new one.",
+      "action": "Back to home"
+    }
+  },
+  "entryCategory": {
+    "label": "Category",
+    "none": "No category",
+    "saved": "Recipe filed.",
+    "error": "Could not file the recipe, try again."
   }
 }

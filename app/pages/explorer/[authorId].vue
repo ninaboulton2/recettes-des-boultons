@@ -25,6 +25,10 @@
           <p class="text-sm font-medium uppercase tracking-wide text-primary">{{ $t('explore.eyebrow', { author: authorName }) }}</p>
           <h1 class="font-serif text-3xl font-semibold text-highlighted md:text-4xl" data-testid="explore-title">{{ heading }}</h1>
           <p class="mt-2 text-muted">{{ $t('explore.subtitle', { author: authorName }) }}</p>
+          <NuxtLink :to="localePath(`/personnes/${profile.userId}`)" class="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline underline-offset-2" data-testid="explore-profile-link">
+            <UIcon name="i-lucide-user-round" class="size-4" aria-hidden="true" />
+            {{ $t('explore.profileLink', { author: authorName }) }}
+          </NuxtLink>
         </div>
         <UButton
           v-if="notYetAdded > 0 || (totalPages > 1 && !addedEverything)"

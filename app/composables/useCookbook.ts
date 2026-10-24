@@ -11,6 +11,7 @@ import {
   pageToRange,
   pendingPromptsQuerySchema,
   removeFromCookbookInputSchema,
+  setEntryCategoryInputSchema,
   sharedWithMeQuerySchema
 } from '#shared/schemas/cookbook'
 import {
@@ -120,6 +121,26 @@ export async function removeFromCookbook(supabase: Client, input: z.input<typeof
   return data === true
 }
 
+/**
+ * Range une recette AJOUTÉE (dont je ne suis pas l'auteur) dans l'une de mes catégories, ou la sort de toute catégorie
+ * (`categoryId: null`). Écriture directe sur `cookbook_entries.category_id` : la politique de mise à jour de 0019 limite
+ * aux lignes de la personne et à ses propres catégories (une catégorie d'un autre est refusée : 42501). `add_to_cookbook`
+ * ne convient pas : elle garde la catégorie existante quand on lui en passe `null`. Erreur P0002 si la recette n'est pas dans le carnet.
+ */
+export async function setEntryCategory(supabase: Client, input: z.input<typeof setEntryCategoryInputSchema>): Promise<void> {
+  const { recipeId, categoryId } = parseClientInput(setEntryCategoryInputSchema, input)
+  const { data, error } = await supabase.from('cookbook_entries').update({ category_id: categoryId }).eq('recipe_id', recipeId).select('recipe_id')
+  if (error) throw error
+  if (!data || data.length === 0) throw Object.assign(new Error('Recette absente de votre carnet'), { code: 'P0002' })
+}
+
+/** Ma catégorie pour une recette ajoutée (`null` : sans catégorie ; `undefined` : pas dans mon carnet). */
+export async function getEntryCategory(supabase: Client, recipeId: string): Promise<string | null | undefined> {
+  const { data, error } = await supabase.from('cookbook_entries').select('category_id').eq('recipe_id', recipeId).maybeSingle()
+  if (error) throw error
+  return data ? (data.category_id ?? null) : undefined
+}
+
 /** Copie modifiable (droit « copy » requis). Renvoie l'id de la copie. La photo n'est pas copiée (phase 8). */
 export async function copyRecipe(supabase: Client, input: z.input<typeof copyRecipeInputSchema>): Promise<string> {
   const { recipeId } = parseClientInput(copyRecipeInputSchema, input)
@@ -160,6 +181,8 @@ export function useCookbook() {
     listSharedWithMe: (input?: z.input<typeof sharedWithMeQuerySchema>) => listSharedWithMe(supabase, input),
     addToCookbook: (input: z.input<typeof addToCookbookInputSchema>) => addToCookbook(supabase, input),
     removeFromCookbook: (input: z.input<typeof removeFromCookbookInputSchema>) => removeFromCookbook(supabase, input),
+    setEntryCategory: (input: z.input<typeof setEntryCategoryInputSchema>) => setEntryCategory(supabase, input),
+    getEntryCategory: (recipeId: string) => getEntryCategory(supabase, recipeId),
     copyRecipe: (input: z.input<typeof copyRecipeInputSchema>) => copyRecipe(supabase, input),
     addAuthorRecipesToCookbook: (input: z.input<typeof addAuthorRecipesInputSchema>) => addAuthorRecipesToCookbook(supabase, input),
     pendingPrompts: (input?: z.input<typeof pendingPromptsQuerySchema>) => pendingPrompts(supabase, input),

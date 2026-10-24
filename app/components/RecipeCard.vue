@@ -87,6 +87,11 @@
         <UBadge v-if="hiddenTagCount > 0" color="neutral" variant="outline" size="sm" :label="`+${hiddenTagCount}`" />
       </div>
 
+      <!-- v2 : rangement d'une recette ajoutée dans l'une de mes catégories -->
+      <div v-if="addedEntry" class="relative z-10">
+        <EntryCategoryPicker :recipe-id="recipe.id" :category-id="addedEntry.categoryId" compact />
+      </div>
+
       <!-- Pied de carte poussé en bas : aligné d'une carte à l'autre dans une rangée. -->
       <div class="mt-auto flex items-center justify-between gap-2 pt-1">
         <div class="flex items-center gap-3 text-xs text-muted">
@@ -173,6 +178,13 @@ const provenance = computed(() => {
   const cookbook = props.recipe as Partial<CookbookRecipe>
   if (cookbook.relation !== 'owned' && cookbook.relation !== 'added') return null
   return provenanceOf({ relation: cookbook.relation, authorName: cookbook.authorName ?? null }, cookbook.copiedFrom)
+})
+
+/** v2 : recette AJOUTÉE (pas la mienne) du carnet : on peut la ranger dans une de mes catégories. */
+const addedEntry = computed(() => {
+  if (!v2) return null
+  const cookbook = props.recipe as Partial<CookbookRecipe>
+  return cookbook.relation === 'added' ? { categoryId: cookbook.categoryId ?? null } : null
 })
 
 const showPlanningModal = ref(false)

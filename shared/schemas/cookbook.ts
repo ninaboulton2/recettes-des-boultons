@@ -54,6 +54,15 @@ export const addToCookbookInputSchema = z.object({
   categoryId: uuidSchema.nullish()
 })
 
+/**
+ * Rangement d'une recette ajoutée : `categoryId` = une de MES catégories, ou `null` pour « sans catégorie ». Pas de RPC
+ * dédiée : la politique `cookbook_entries_update_own` (0019) limite l'écriture à mes lignes et à mes catégories.
+ */
+export const setEntryCategoryInputSchema = z.object({
+  recipeId: uuidSchema,
+  categoryId: uuidSchema.nullable()
+})
+
 /** `remove_from_cookbook(p_recipe)` */
 export const removeFromCookbookInputSchema = z.object({ recipeId: uuidSchema })
 

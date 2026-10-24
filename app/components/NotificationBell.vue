@@ -13,32 +13,30 @@
 
 <script setup lang="ts">
 /**
- * Cloche de notifications (v2) : seulement le compteur (`unread_notifications_count`, 0023). La liste détaillée
- * (demandes d'amis, invitations, recettes partagées) relève de la phase 6C : le bouton mène à `/notifications`,
- * dont l'emplacement est déjà posé. Compteur relu à l'ouverture, à chaque navigation et toutes les 60 secondes.
+ * Cloche de notifications (v2) : compteur (`unread_notifications_count`, 0023) ; le bouton mène à `/notifications`.
+ * Compteur relu à l'ouverture, à chaque navigation, au retour sur l'onglet et toutes les 60 secondes (pas de temps réel).
+ * L'état est partagé avec la page des notifications (`useUnreadNotifications`) : marquer comme lu met la cloche à jour.
  */
 const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
-const { unreadNotificationsCount } = useNotifications()
+const { count, refresh } = useUnreadNotifications()
 
-const count = ref(0)
 const countLabel = computed(() => (count.value > 99 ? '99+' : String(count.value)))
 const ariaLabel = computed(() => count.value > 0 ? t('notifications.bellUnread', count.value) : t('notifications.bell'))
 
-async function refresh(): Promise<void> {
-  try {
-    count.value = await unreadNotificationsCount()
-  } catch {
-    // Compteur indisponible (hors ligne, base v1) : la cloche reste sans pastille.
-  }
-}
-
 let timer: ReturnType<typeof setInterval> | undefined
+const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
 onMounted(() => {
   void refresh()
   timer = setInterval(() => { void refresh() }, 60_000)
+  document.addEventListener('visibilitychange', onVisible)
+  window.addEventListener('focus', onVisible)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  clearInterval(timer)
+  document.removeEventListener('visibilitychange', onVisible)
+  window.removeEventListener('focus', onVisible)
+})
 watch(() => route.fullPath, () => { void refresh() })
 </script>

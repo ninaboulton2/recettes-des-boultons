@@ -892,6 +892,23 @@
       "notFound": "Recette introuvable ou plus accessible.",
       "invalid": "Cette demande n’est pas valide (par exemple, la personne ou le groupe n’est pas dans votre entourage).",
       "duplicate": "Cet élément existe déjà."
+    },
+    "social": {
+      "rate": "Trop de demandes aujourd’hui (la limite est de 20 par jour). Réessayez demain.",
+      "quota": "Limite atteinte : vous ne pouvez pas créer plus de groupes pour l’instant.",
+      "forbidden": "Action réservée : seul le créateur du groupe peut faire cela.",
+      "notFound": "Introuvable : cette personne, cette demande ou ce groupe n’existe plus ou n’est pas accessible.",
+      "conflict": "Action impossible dans l’état actuel du groupe. Actualisez la page puis réessayez.",
+      "invalid": "Cette demande n’est pas valide. Vérifiez puis réessayez.",
+      "retryLater": "Cette personne a refusé votre demande récemment. Vous pourrez la renouveler dans {n} jour. | Cette personne a refusé votre demande récemment. Vous pourrez la renouveler dans {n} jours.",
+      "reverseRequest": "Cette personne vous a déjà envoyé une demande : répondez-y depuis « Demandes reçues ».",
+      "inviteDeclined": "Cette personne a refusé l’invitation récemment : réessayez dans quelques jours.",
+      "alreadyMember": "Cette personne est déjà dans le groupe.",
+      "creatorCannotLeave": "Le créateur ne peut pas quitter son groupe : passez d’abord le rôle à un autre membre, ou supprimez le groupe.",
+      "ownLink": "Vous ne pouvez pas utiliser votre propre lien d’invitation.",
+      "invitationGone": "Cette invitation n’est plus valable (expirée ou déjà traitée).",
+      "self": "Vous ne pouvez pas vous ajouter vous-même.",
+      "invalidLink": "Ce lien d’invitation est invalide, expiré ou déjà utilisé."
     }
   },
   "pwa": {
@@ -920,7 +937,26 @@
   },
   "notifications": {
     "bell": "Notifications",
-    "bellUnread": "Notifications, aucune non lue | Notifications, {count} non lue | Notifications, {count} non lues"
+    "bellUnread": "Notifications, aucune non lue | Notifications, {count} non lue | Notifications, {count} non lues",
+    "title": "Notifications",
+    "subtitle": "Demandes d’amis, invitations et recettes partagées avec vous.",
+    "markAll": "Tout marquer comme lu",
+    "more": "Voir plus",
+    "loading": "Chargement des notifications…",
+    "unread": "Non lue",
+    "emptyTitle": "Rien de nouveau",
+    "empty": "Vos notifications apparaîtront ici.",
+    "types": {
+      "friend_request": "{name} vous demande en ami.",
+      "friend_accepted": "{name} a accepté votre demande d’ami.",
+      "group_invitation": "{name} vous invite à rejoindre le groupe « {group} ».",
+      "group_invitation_accepted": "{name} a rejoint le groupe « {group} ».",
+      "recipe_shared": "{name} a partagé la recette « {title} » avec vous.",
+      "recipe_deleted": "{name} a supprimé la recette « {title} » : elle n’est plus dans votre carnet.",
+      "group_member_removed": "Vous avez été retiré du groupe « {group} ».",
+      "group_deleted": "Le groupe « {group} » a été supprimé.",
+      "group_ownership_transferred": "{name} vous a confié la gestion du groupe « {group} »."
+    }
   },
   "prompts": {
     "dismiss": "Fermer cette bannière",
@@ -1137,7 +1173,8 @@
     "empty": {
       "title": "Rien à découvrir",
       "description": "{author} n’a pas encore de recette que vous puissiez lire."
-    }
+    },
+    "profileLink": "Voir le profil de {author}"
   },
   "share": {
     "title": "Partager cette recette",
@@ -1212,5 +1249,221 @@
     "added": "Recette ajoutée à votre carnet.",
     "addError": "Impossible d’ajouter cette recette, le lien n’est peut-être plus valide.",
     "documentDescription": "Une recette partagée"
+  },
+  "userSearch": {
+    "placeholder": "Un pseudonyme…",
+    "hint": "Au moins 3 lettres. Seules les personnes qui acceptent d’apparaître dans la recherche sont trouvées.",
+    "empty": "Personne trouvée. Vérifiez l’orthographe : la personne n’apparaît peut-être pas dans la recherche."
+  },
+  "friends": {
+    "title": "Amis",
+    "subtitle": "Vos amis, leurs demandes et la recherche par pseudonyme.",
+    "incoming": {
+      "title": "Demandes reçues",
+      "accept": "Accepter",
+      "decline": "Refuser"
+    },
+    "search": {
+      "title": "Trouver quelqu’un",
+      "label": "Rechercher par pseudonyme",
+      "ask": "Demander en ami",
+      "alreadyFriend": "Déjà ami(e)",
+      "requestSent": "Demande envoyée"
+    },
+    "list": {
+      "title": "Mes amis",
+      "emptyTitle": "Pas encore d’ami",
+      "empty": "Cherchez quelqu’un par son pseudonyme pour lui demander en ami.",
+      "remove": "Retirer"
+    },
+    "outgoing": {
+      "title": "Demandes envoyées",
+      "pending": "En attente d’une réponse",
+      "declinedRetry": "Demande refusée. Vous pouvez la renouveler.",
+      "declinedWait": "Demande refusée. Vous pourrez la renouveler à partir du {date}.",
+      "cancel": "Annuler la demande",
+      "resend": "Relancer"
+    },
+    "remove": {
+      "title": "Retirer {name} de vos amis ?",
+      "description": "Vous ne serez plus amis. Les recettes que vous vous étiez partagées directement ne seront plus accessibles, sauf si vous avez un groupe en commun. Les copies déjà faites restent à leurs propriétaires.",
+      "confirm": "Retirer cet ami"
+    },
+    "toast": {
+      "requested": "Demande d’ami envoyée.",
+      "accepted": "Vous êtes maintenant amis.",
+      "declined": "Demande refusée.",
+      "cancelled": "Demande annulée.",
+      "removed": "Ami retiré."
+    }
+  },
+  "person": {
+    "loading": "Chargement du profil…",
+    "itsYou": "C’est vous.",
+    "notFound": {
+      "title": "Personne introuvable",
+      "description": "Ce lien ne mène à aucune personne que vous puissiez voir.",
+      "action": "Voir mes amis"
+    },
+    "friendship": {
+      "title": "Amitié",
+      "ask": "Demander en ami",
+      "askAgain": "Redemander en ami",
+      "status": {
+        "none": "Vous n’êtes pas amis.",
+        "friends": "Vous êtes amis.",
+        "request_sent": "Votre demande est en attente d’une réponse.",
+        "request_received": "Cette personne vous a envoyé une demande d’ami.",
+        "request_declined": "Votre demande a été refusée. Vous pouvez la renouveler après un délai de 7 jours."
+      }
+    },
+    "groups": {
+      "title": "Groupes en commun",
+      "none": "Aucun groupe en commun."
+    },
+    "recipes": {
+      "title": "Recettes",
+      "count": "Aucune recette que vous puissiez lire | Une recette que vous pouvez lire | {n} recettes que vous pouvez lire",
+      "link": "Ses recettes"
+    }
+  },
+  "groups": {
+    "title": "Groupes",
+    "subtitle": "Partagez vos recettes avec les personnes de votre choix. Rejoindre un groupe n’ajoute rien à votre carnet.",
+    "back": "Mes groupes",
+    "loading": "Chargement du groupe…",
+    "notFound": {
+      "title": "Groupe introuvable",
+      "description": "Ce groupe n’existe pas, ou vous n’en faites pas partie.",
+      "action": "Mes groupes"
+    },
+    "role": {
+      "creator": "Créateur",
+      "member": "Membre"
+    },
+    "joined": {
+      "title": "Vous avez rejoint « {group} »",
+      "description": "Rien n’a été ajouté à votre carnet. Vous pouvez maintenant lire et copier les recettes que les membres partagent avec le groupe : explorez-les ci-dessous, à votre rythme."
+    },
+    "invitations": {
+      "title": "Invitations reçues",
+      "nothingAdded": "Accepter une invitation ne met aucune recette dans votre carnet : vous choisirez ensuite ce que vous ajoutez.",
+      "from": "Invité par {name}",
+      "accept": "Accepter",
+      "decline": "Refuser"
+    },
+    "create": {
+      "title": "Créer un groupe",
+      "label": "Nom du groupe",
+      "placeholder": "Les voisins, la famille…",
+      "submit": "Créer le groupe"
+    },
+    "list": {
+      "title": "Mes groupes",
+      "emptyTitle": "Aucun groupe",
+      "empty": "Créez un groupe ou acceptez une invitation pour partager vos recettes.",
+      "members": "Aucun membre | Un membre | {n} membres"
+    },
+    "page": {
+      "createdBy": "créé par {name}"
+    },
+    "members": {
+      "title": "Membres",
+      "you": "vous",
+      "remove": "Retirer",
+      "transfer": "Passer le rôle de créateur",
+      "removeTitle": "Retirer {name} du groupe ?",
+      "removeDescription": "Cette personne perd l’accès aux recettes partagées avec le groupe et en est prévenue. Ses propres recettes et ses copies restent à elle.",
+      "transferTitle": "Passer le rôle de créateur à {name} ?",
+      "transferDescription": "{name} deviendra le créateur : elle pourra inviter, retirer des membres, changer le thème et supprimer le groupe. Vous resterez simple membre et ne pourrez plus gérer le groupe. Vos invitations en attente seront annulées. Cette action ne se défait pas.",
+      "transferConfirm": "Passer le rôle"
+    },
+    "theme": {
+      "title": "Thème du groupe",
+      "creatorHelp": "Le thème du groupe est proposé à ses membres, qui peuvent le choisir pour leur propre affichage.",
+      "memberHelp": "Le créateur choisit le thème du groupe. Vous pouvez l’utiliser pour votre propre affichage.",
+      "save": "Enregistrer le thème du groupe",
+      "use": "Utiliser le thème de ce groupe",
+      "useMine": "Revenir à mon thème",
+      "active": "Vous utilisez le thème de ce groupe.",
+      "none": "Ce groupe n’a pas encore de thème.",
+      "useHelp": "Vous utilisez actuellement votre propre thème."
+    },
+    "invite": {
+      "title": "Inviter",
+      "help": "La personne invitée doit accepter : rien n’est partagé sans son accord. Vous pouvez inviter 20 personnes par jour.",
+      "friends": "Parmi vos amis",
+      "search": "Ou chercher par pseudonyme",
+      "send": "Inviter",
+      "alreadyMember": "Déjà membre",
+      "alreadyInvited": "Déjà invitée",
+      "pending": "Invitations en attente",
+      "cancel": "Annuler"
+    },
+    "link": {
+      "title": "Lien d’invitation",
+      "help": "Un lien à usage unique, valable {days} jours. Toute personne qui l’ouvre (après connexion) rejoint le groupe : envoyez-le à une seule personne.",
+      "create": "Créer un lien d’invitation",
+      "once": "Copiez ce lien maintenant : il n’est montré qu’une seule fois.",
+      "field": "Lien d’invitation",
+      "copy": "Copier",
+      "copied": "Copié",
+      "copyManual": "Copie impossible : sélectionnez le lien et copiez-le à la main.",
+      "expires": "Valable jusqu’au {date}, à usage unique.",
+      "pending": "Liens en attente",
+      "pendingItem": "Lien valable jusqu’au {date}"
+    },
+    "rename": {
+      "title": "Renommer le groupe",
+      "label": "Nouveau nom",
+      "submit": "Renommer"
+    },
+    "leave": {
+      "title": "Quitter le groupe",
+      "help": "Vous perdrez l’accès aux recettes que les membres partagent avec ce groupe. Les recettes déjà ajoutées à votre carnet ne vous seront plus montrées si vous ne pouvez plus les lire ; vos propres recettes et vos copies restent.",
+      "button": "Quitter le groupe",
+      "confirmTitle": "Quitter « {group} » ?",
+      "confirmDescription": "Vous n’aurez plus accès aux recettes partagées par ce groupe. Pour y revenir, il faudra être invité de nouveau."
+    },
+    "delete": {
+      "title": "Supprimer le groupe",
+      "help": "Tous les membres sont retirés et prévenus. Les recettes restent : seuls les accès donnés au groupe disparaissent.",
+      "button": "Supprimer le groupe",
+      "confirmTitle": "Supprimer « {group} » ?",
+      "confirmDescription": "Les recettes restent à leurs auteurs, les copies aussi : seuls les accès donnés au groupe disparaissent, ainsi que le groupe, ses membres et ses invitations. Cette action ne se défait pas."
+    },
+    "toast": {
+      "created": "Groupe créé.",
+      "declined": "Invitation refusée.",
+      "renamed": "Groupe renommé.",
+      "themeSaved": "Thème du groupe enregistré.",
+      "themeUsed": "Vous utilisez maintenant le thème de ce groupe.",
+      "themeMine": "Vous êtes revenu à votre thème.",
+      "invited": "Invitation envoyée.",
+      "cancelled": "Invitation annulée.",
+      "removed": "Membre retiré.",
+      "transferred": "Rôle de créateur transmis.",
+      "left": "Vous avez quitté le groupe.",
+      "deleted": "Groupe supprimé."
+    }
+  },
+  "join": {
+    "title": "Rejoindre un groupe",
+    "description": "Vous avez reçu un lien d’invitation à un groupe de partage de recettes.",
+    "nothingAdded": "Rejoindre le groupe n’ajoute aucune recette à votre carnet.",
+    "button": "Rejoindre le groupe",
+    "login": "Se connecter pour rejoindre",
+    "success": "Vous avez rejoint le groupe.",
+    "invalid": {
+      "title": "Lien d’invitation invalide",
+      "description": "Ce lien est invalide, expiré ou déjà utilisé. Demandez-en un nouveau au créateur du groupe.",
+      "action": "Retour à l’accueil"
+    }
+  },
+  "entryCategory": {
+    "label": "Catégorie",
+    "none": "Sans catégorie",
+    "saved": "Recette rangée.",
+    "error": "Impossible de ranger la recette, réessayez."
   }
 }

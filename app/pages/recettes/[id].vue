@@ -73,6 +73,11 @@
         @share="showShare = true"
       />
 
+      <!-- v2 : ranger une recette ajoutée dans l'une de mes catégories -->
+      <div v-if="v2 && access && !rights?.isOwner && access.inCookbook" class="-mt-4 print:hidden" data-testid="recipe-entry-category">
+        <EntryCategoryPicker :recipe-id="recipeId" :category-id="entryCategory ?? null" @changed="value => entryCategory = value" />
+      </div>
+
       <div class="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-12">
         <RecipeIngredients :sections="ingredientSections" :factor="scaler.factor.value" class="print:break-inside-avoid" />
         <RecipeSteps :sections="instructionSections" />
@@ -175,6 +180,15 @@ const { data: access, refresh: refreshAccess } = await useAsyncData<RecipeAccess
   { default: () => null, watch: [recipeId, () => recipesStore.revision] }
 )
 const rights = computed(() => (access.value ? recipeRights(access.value) : null))
+
+// v2 : ma catégorie pour une recette ajoutée (cookbook_entries.category_id ; l'auteur a la sienne dans l'éditeur)
+const { data: entryCategory } = await useAsyncData<string | null>(
+  () => `recipe-entry-category:${recipeId.value}`,
+  async () => (v2 && authStore.isAuthenticated && access.value?.inCookbook && access.value.permission !== 'author'
+    ? ((await cookbookApi.getEntryCategory(recipeId.value).catch(() => null)) ?? null)
+    : null),
+  { default: () => null, watch: [recipeId, () => access.value?.inCookbook, () => recipesStore.revision] }
+)
 
 // Texte dans la langue de l'interface (traduction si elle existe, sinon texte d'origine).
 // L'éditeur, lui, reçoit toujours la version d'origine (`sourceRecipe`).
