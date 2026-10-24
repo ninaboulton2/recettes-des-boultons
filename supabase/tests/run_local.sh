@@ -27,6 +27,7 @@
 #       dont 2 admins, recettes avec catégorie, favoris) : refus vérifiés (admins ex æquo, pseudonyme
 #       absent, égal à l'e-mail ou en double, e-mail ou clé de paramètre inconnus), application,
 #       test_0018, rejeu sans doublon.
+#   (0029 : photos privées, phase 8 : migration + bascule v2/0029, voir plus bas.)
 #   11. Bascule v2/0020 (NON appliquée en prod avec les migrations) sur les données de 0018 : refus si
 #       une recette n'a pas de propriétaire ou si un propriétaire n'a pas de profil, application + rejeu,
 #       switchover_0020_rls.sql, switchover_0018_filled.sql (membres, étranger, visiteur), retour
@@ -326,6 +327,34 @@ run "$RB27"
 run "$M27"
 run "$HERE/test_0027_report_shared_recipe.sql"
 run "$RB27"
+# ---------------------------------------------------------------- 0029 : photos privées (phase 8), sous la chaîne complète (0018 + 0020)
+echo "▶ 0029 : shared_recipe_photo_path (+ rejeu), bascule des photos v2/0029 (+ rejeu + test), retours arrière"
+M29="$SUPA/migrations/0029_shared_recipe_photo.sql"
+RB29="$SUPA/rollback/0029_shared_recipe_photo_down.sql"
+SW29="$SUPA/v2/0029_private_photos_switchover.sql"
+SW29_DOWN="$SUPA/rollback/0029_private_photos_switchover_down.sql"
+FP_BEFORE_PHOTOS="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
+run "$M29"
+"${PSQL[@]}" -f "$M29"
+run "$SW29"
+"${PSQL[@]}" -f "$SW29"
+run "$HERE/test_0029_private_photos.sql"
+FP_PHOTOS_ON="$("${PSQL[@]}" -At -c "select tests.policy_fp()")"
+run "$SW29_DOWN"
+"${PSQL[@]}" -f "$SW29_DOWN"
+"${PSQL[@]}" -c "do \$\$ begin
+  assert (select public from storage.buckets where id = 'recipe-photos'), 'retour arrière de v2/0029 : le bucket doit redevenir public';
+  assert exists (select 1 from pg_policies where schemaname = 'storage' and policyname = 'recipe_photos_delete_editor'), 'retour arrière de v2/0029 : suppression par les éditeurs non rétablie';
+  assert not exists (select 1 from pg_policies where schemaname = 'storage' and policyname = 'recipe_photos_delete_owner'), 'retour arrière de v2/0029 : politique auteur restante';
+end \$\$;"
+[[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_BEFORE_PHOTOS" ]] || { echo "❌ empreinte des politiques différente après le retour arrière de v2/0029"; exit 1; }
+run "$SW29"
+[[ "$("${PSQL[@]}" -At -c "select tests.policy_fp()")" == "$FP_PHOTOS_ON" ]] || { echo "❌ ré-application de v2/0029 différente de la première"; exit 1; }
+run "$HERE/test_0029_private_photos.sql"
+run "$SW29_DOWN"
+run "$RB29"
+"${PSQL[@]}" -f "$RB29"
+"${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.shared_recipe_photo_path(uuid)') is null, 'retour arrière de 0029 incomplet'; end \$\$;"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
