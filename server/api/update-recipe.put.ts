@@ -19,7 +19,7 @@ import { translateRecipe } from '../utils/translations'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const auth = await requireAdmin(event)
+    const auth = await requireRecipeWriter(event)
     const { supabase } = auth
     const { id } = validateQuery(event, recipeIdQuerySchema)
     const { updates } = await validateBody(event, updateRecipeBodySchema)

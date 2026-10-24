@@ -21,7 +21,7 @@ import { toRpcTranslation, translateRecipe } from '../utils/translations'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const auth = await requireAdmin(event)
+    const auth = await requireRecipeWriter(event)
     const { supabase } = auth
     const { recipe, lang, translation } = await validateBody(event, addRecipeBodySchema)
 

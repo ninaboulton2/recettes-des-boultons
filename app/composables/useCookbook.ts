@@ -64,6 +64,26 @@ export async function listCookbook(supabase: Client, input: z.input<typeof cookb
   return { items: rows.map(toCookbookRecipe), totalCount: rows[0]?.total_count ?? 0 }
 }
 
+/**
+ * Copies modifiables parmi des recettes à moi : `copied_from` (lu sur `recipes`, le RLS limite aux recettes que je lis)
+ * puis le titre de l'original s'il m'est lisible. Un échec n'empêche jamais d'afficher la liste : on renvoie les cartes telles quelles.
+ */
+export async function attachCopyOrigins(supabase: Client, items: CookbookRecipe[]): Promise<CookbookRecipe[]> {
+  const ownedIds = items.filter(item => item.relation === 'owned').map(item => item.id)
+  if (ownedIds.length === 0) return items
+  try {
+    const { data: copies, error } = await supabase.from('recipes').select('id, copied_from').in('id', ownedIds).not('copied_from', 'is', null)
+    if (error || !copies || copies.length === 0) return items
+    const originIds = [...new Set(copies.map(row => row.copied_from).filter((id): id is string => typeof id === 'string'))]
+    const { data: origins } = await supabase.from('recipes').select('id, title').in('id', originIds)
+    const titles = new Map((origins ?? []).map(row => [row.id, row.title]))
+    const copiedFrom = new Map(copies.map(row => [row.id, { title: titles.get(row.copied_from as string) ?? null }]))
+    return items.map(item => copiedFrom.has(item.id) ? { ...item, copiedFrom: copiedFrom.get(item.id) } : item)
+  } catch {
+    return items
+  }
+}
+
 /** « Explorer les recettes de X » : ses recettes que je peux lire, avec « déjà dans mon carnet ». */
 export async function listAuthorRecipes(supabase: Client, input: z.input<typeof authorRecipesQuerySchema>): Promise<Page<AuthorRecipe>> {
   const { authorId, page, pageSize } = parseClientInput(authorRecipesQuerySchema, input)

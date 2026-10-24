@@ -24,13 +24,22 @@ export function useRecipeFacets() {
     'recipe-facets',
     async () => {
       if (v2) {
-        // v2 : compteurs de MES recettes par catégorie personnelle (`category_id`). Le carnet complet (recettes
-        // ajoutées) relève de la phase 6B.
+        // v2 : compteurs de MON CARNET par catégorie personnelle, comme `list_cookbook` : mes recettes (`category_id`) + celles
+        // que j'ai ajoutées et que je peux encore lire (mon rangement `cookbook_entries.category_id`). `recipes!inner` applique
+        // le RLS : une recette devenue illisible n'est pas comptée. Les tags ne sont pas filtrables en v2 (`list_cookbook`).
         const ownerId = authStore.currentUser?.id
         if (!ownerId) return []
-        const { data, error } = await supabase.from('recipes').select('category_id, tags').eq('owner_id', ownerId)
-        if (error) throw error
-        return (data ?? []).map(row => ({ category: row.category_id ?? '', tags: row.tags }))
+        const [owned, added] = await Promise.all([
+          supabase.from('recipes').select('category_id').eq('owner_id', ownerId),
+          supabase.from('cookbook_entries').select('category_id, recipes!inner(owner_id)').eq('user_id', ownerId)
+        ])
+        if (owned.error) throw owned.error
+        if (added.error) throw added.error
+        const own = (owned.data ?? []).map(row => ({ category: row.category_id ?? '', tags: null }))
+        const others = (added.data ?? [])
+          .filter(row => (row.recipes as { owner_id: string | null } | null)?.owner_id !== ownerId)
+          .map(row => ({ category: row.category_id ?? '', tags: null }))
+        return [...own, ...others]
       }
       const { data, error } = await supabase.from('recipes').select('category, tags')
       if (error) throw error
@@ -60,8 +69,9 @@ export function useRecipeFacets() {
     return sortTags(tags)
   })
 
-  /** Tags présents dans une catégorie (toutes si `null`). */
+  /** Tags présents dans une catégorie (toutes si `null`). Aucun en v2 : le carnet ne se filtre pas par tag. */
   const tagsForCategory = (category: string | null | undefined): string[] => {
+    if (v2) return []
     if (!category) return allTags.value
     const tags = new Set<string>()
     for (const row of asyncData.data.value) {

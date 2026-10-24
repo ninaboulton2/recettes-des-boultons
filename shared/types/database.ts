@@ -795,6 +795,11 @@ isOneToOne: false
 "prepare_account_deletion":
 { Args: { "p_user": string }; Returns: number
                            },
+"recipe_access":
+{ Args: { "p_recipe": string }; Returns: {
+              "permission": string,"explicit_permission": string | null,"in_cookbook": boolean,"owner_id": string | null,"owner_name": string | null,"visibility": string,"category_id": string | null,"copied_from": string | null,"copied_from_title": string | null,"has_share_link": boolean
+            }[]
+                           },
 "recipe_usage":
 { Args: { "p_recipe": string }; Returns: {
               "cookbook_count": number,"copy_count": number

@@ -2,7 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import type { Database } from '#shared/types/database'
 import type { RecipeSearchPage } from '#shared/types'
 import { toRecipeSummary } from '#shared/utils/recipes'
-import { listCookbook } from './useCookbook'
+import { attachCopyOrigins, listCookbook } from './useCookbook'
 
 /** Taille de page de la liste des recettes (RPC `search_recipes`, max 100). */
 export const RECIPES_PAGE_SIZE = 24
@@ -28,7 +28,8 @@ export interface RecipeSearchOptions {
  * sans accents, filtres catégorie/tags, `total_count`), rendue côté serveur.
  *
  * v2 (`NUXT_PUBLIC_V2`) : la liste est MON CARNET (RPC `list_cookbook`, 0021) et le filtre de catégorie désigne
- * une de mes catégories. `list_cookbook` n'a pas de filtre par tag : les tags sont ignorés en v2 (phase 6B).
+ * une de mes catégories. `list_cookbook` n'a pas de filtre par tag : les tags sont ignorés en v2 (la recherche plein texte couvre
+ * déjà les tags) ; les copies portent leur original (`copiedFrom`) pour le badge de provenance.
  *
  * `scope` distingue les clés `useAsyncData` des pages qui l'utilisent.
  * La requête est relancée quand un paramètre change ou après une écriture
@@ -58,7 +59,7 @@ export function useRecipeSearch(scope: string, params: RecipeSearchParams = {}, 
           page: page(),
           pageSize: RECIPES_PAGE_SIZE
         })
-        return { recipes: items, totalCount }
+        return { recipes: await attachCopyOrigins(supabase, items), totalCount }
       }
       const selectedTags = tags()
       const { data, error } = await supabase.rpc('search_recipes', {

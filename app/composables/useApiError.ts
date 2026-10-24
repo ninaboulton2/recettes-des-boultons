@@ -85,6 +85,9 @@ export function toUserMessage(error: unknown): string {
   const generic = translateKey('errors.generic', FALLBACK_GENERIC)
 
   if (isApiError(error)) {
+    // v2 : plafonds de la base (2000 recettes…) et limites de débit, traduits (le message de la base est en français seulement).
+    if (error.code === 'QUOTA_REACHED') return translateKey('errors.sharing.quota', error.statusMessage)
+    if (error.code === 'RATE_LIMITED') return translateKey('errors.sharing.rate', error.statusMessage)
     return error.statusCode < 500 && error.statusMessage ? error.statusMessage : generic
   }
 

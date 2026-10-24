@@ -13,6 +13,7 @@ import {
   type SharedRecipe
 } from '#shared/schemas/sharing'
 import { sharedRecipePath, toRecipeGrant, type RecipeGrant } from '#shared/utils/cookbook'
+import { toRecipeAccess, type RecipeAccess } from '#shared/utils/recipeRights'
 import { parseClientInput } from './useCookbook'
 
 /**
@@ -110,6 +111,15 @@ export async function recipeUsage(supabase: Client, input: z.input<typeof recipe
   return { cookbookCount: row?.cookbook_count ?? 0, copyCount: row?.copy_count ?? 0 }
 }
 
+/** Mon accès à une recette lisible (migration 0026) : droit, carnet, auteur, original d'une copie. `null` si elle est inconnue ou illisible. */
+export async function getRecipeAccess(supabase: Client, input: z.input<typeof recipeShareInputSchema>): Promise<RecipeAccess | null> {
+  const { recipeId } = parseClientInput(recipeShareInputSchema, input)
+  const { data, error } = await supabase.rpc('recipe_access', { p_recipe: recipeId })
+  if (error) throw error
+  const row = data?.[0]
+  return row ? toRecipeAccess(row) : null
+}
+
 /** Règle la visibilité d'une recette dont on est l'auteur (la base refuse tout autre : trigger de garde, RLS). */
 export async function setRecipeVisibility(supabase: Client, input: z.input<typeof setVisibilityInputSchema>): Promise<void> {
   const { recipeId, visibility } = parseClientInput(setVisibilityInputSchema, input)
@@ -131,6 +141,7 @@ export function useSharing() {
     getSharedRecipe: (input: z.input<typeof getSharedRecipeInputSchema>) => getSharedRecipe(supabase, input),
     claimSharedRecipe: (input: z.input<typeof claimSharedRecipeInputSchema>) => claimSharedRecipe(supabase, input),
     recipeUsage: (input: z.input<typeof recipeShareInputSchema>) => recipeUsage(supabase, input),
+    getRecipeAccess: (input: z.input<typeof recipeShareInputSchema>) => getRecipeAccess(supabase, input),
     setRecipeVisibility: (input: z.input<typeof setVisibilityInputSchema>) => setRecipeVisibility(supabase, input)
   }
 }

@@ -7,7 +7,7 @@ import { recipeIdQuerySchema } from '#shared/schemas'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const { supabase } = await requireAdmin(event)
+    const { supabase } = await requireRecipeWriter(event)
     const { id } = validateQuery(event, recipeIdQuerySchema)
 
     const { error } = await supabase.rpc('delete_recipe', { p_id: id })

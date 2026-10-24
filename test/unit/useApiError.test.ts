@@ -62,3 +62,10 @@ describe('REAUTH_REQUIRED', () => {
     expect(isReauthRequired(new Error('x'))).toBe(false)
   })
 })
+
+describe('plafonds et limites de la v2', () => {
+  it('QUOTA_REACHED / RATE_LIMITED : message traduit si disponible, sinon celui du serveur (jamais le message générique)', () => {
+    expect(toUserMessage(new ApiError(409, 'Limite atteinte : 2000 recettes', 'QUOTA_REACHED'))).toBe('Limite atteinte : 2000 recettes')
+    expect(toUserMessage(new ApiError(429, 'Trop de demandes', 'RATE_LIMITED'))).toBe('Trop de demandes')
+  })
+})

@@ -3,6 +3,7 @@ import { createError, getHeader, type H3Event } from 'h3'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import type { Database } from '#shared/types/database'
 import type { UserRole } from '#shared/types'
+import { recipeWriterRequirement } from '#shared/utils/v2'
 import { iatFromClaims } from './recentAuth'
 
 /**
@@ -154,4 +155,14 @@ export async function requireAdmin(event: H3Event): Promise<AuthContext> {
   }
 
   return { ...context, user: { ...context.user, role } }
+}
+
+/**
+ * Écriture et IA des recettes : réservées aux admins en v1 (`requireAdmin`), ouvertes à tout compte connecté en v2
+ * (`requireUser`). En v2 le rôle ne décide plus rien : le RLS et les RPC (`save_recipe`, `delete_recipe`) refusent (42501) ce
+ * que la personne n'a pas le droit de faire sur CETTE recette, et le quota par compte (`check_ai_quota`, `ai_usage`) borne
+ * l'IA. Sans l'interrupteur, le comportement est strictement celui de la v1.
+ */
+export async function requireRecipeWriter(event: H3Event): Promise<AuthContext> {
+  return recipeWriterRequirement(useRuntimeConfig(event).public.v2) === 'user' ? requireUser(event) : requireAdmin(event)
 }

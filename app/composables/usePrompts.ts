@@ -32,6 +32,7 @@ export function usePendingPrompts() {
   async function addRecipe(prompt: PendingPrompt): Promise<void> {
     if (!prompt.recipeId) return
     await cookbook.addToCookbook({ recipeId: prompt.recipeId })
+    useRecipesStore().refresh()   // mon carnet (liste, compteurs de catégories) se recharge
     await refresh()
   }
 

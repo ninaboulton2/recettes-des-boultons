@@ -30,7 +30,7 @@ import { fileParts, readUploadParts, textField } from '../utils/ai/upload'
  */
 export default defineEventHandler(async (event): Promise<TranscribeRecipeResponse> => {
   try {
-    const { supabase, user } = await requireAdmin(event)
+    const { supabase, user } = await requireRecipeWriter(event)
 
     const parts = await readUploadParts(event, AUDIO_MAX_BYTES)
     const [audioPart] = fileParts(parts, 'audio')

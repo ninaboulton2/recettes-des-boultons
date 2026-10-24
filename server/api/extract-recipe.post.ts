@@ -28,7 +28,7 @@ import { fileParts, readUploadParts } from '../utils/ai/upload'
  */
 export default defineEventHandler(async (event): Promise<TranslateRecipeResponse> => {
   try {
-    const { supabase, user } = await requireAdmin(event)
+    const { supabase, user } = await requireRecipeWriter(event)
 
     const parts = await readUploadParts(event, RECIPE_UPLOAD_MAX_BYTES)
 

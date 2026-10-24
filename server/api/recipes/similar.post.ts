@@ -16,7 +16,7 @@ import { loadRecipeFingerprints } from '../../utils/similarRecipes'
  */
 export default defineEventHandler(async (event): Promise<SimilarRecipesResponse> => {
   try {
-    const { supabase } = await requireAdmin(event)
+    const { supabase } = await requireRecipeWriter(event)
     const { title, ingredientNames, excludeId } = await validateBody(event, similarRecipesBodySchema)
 
     const corpus = await loadRecipeFingerprints(supabase)

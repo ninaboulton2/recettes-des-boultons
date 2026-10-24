@@ -12,3 +12,12 @@ export function isV2Enabled(value: unknown): boolean {
   if (typeof value === 'string') return ['true', '1'].includes(value.trim().toLowerCase())
   return false
 }
+
+/**
+ * Qui peut écrire des recettes et appeler l'IA (routes serveur `add-recipe`, `update-recipe`, `delete-recipe`, extraction,
+ * transcription, traduction, doublons) : `'admin'` en v1, `'user'` (tout compte connecté ; le RLS et les RPC décident ensuite
+ * pour chaque recette) quand l'interrupteur v2 est allumé. Isolée de `server/utils/auth.ts` pour être testée sans Nuxt.
+ */
+export function recipeWriterRequirement(v2Flag: unknown): 'admin' | 'user' {
+  return isV2Enabled(v2Flag) ? 'user' : 'admin'
+}

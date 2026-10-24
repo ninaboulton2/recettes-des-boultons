@@ -37,6 +37,11 @@ export interface CookbookRecipe extends RecipeSummary {
   authorName: string | null
   /** Date d'ajout au carnet (`added`) ou de création (`owned`). */
   addedAt: string | null
+  /**
+   * Copie modifiable : l'original (`title` = `null` s'il n'est plus lisible). Renseigné après coup par
+   * `attachCopyOrigins` (la RPC `list_cookbook` ne renvoie pas `copied_from`), absent sinon.
+   */
+  copiedFrom?: { title: string | null } | null
 }
 
 export function toCookbookRecipe(row: CookbookRow): CookbookRecipe {

@@ -58,6 +58,8 @@ export function handleApiError(error: unknown, context: string): never {
  *  - `P0002` (no_data_found)            → 404 (ex. « Recette introuvable »)
  *  - `42501` (insufficient_privilege)   → 403, message fixe
  *  - `23505` (unique_violation)         → 409, message fourni ou fixe
+ *  - `53400` (plafond de volume, v2)    → 409, `data.code = 'QUOTA_REACHED'`
+ *  - `54000` (limite de débit, v2)      → 429, `data.code = 'RATE_LIMITED'`
  * Tout autre code (erreur interne, fonction absente, réseau…) est journalisé
  * et devient un 500 générique.
  */
@@ -74,6 +76,10 @@ export function throwSupabaseError(error: SupabaseErrorLike, context: string, op
       throw createError({ statusCode: 403, statusMessage: 'Action non autorisée' })
     case '23505':
       throw createError({ statusCode: 409, statusMessage: options.conflictMessage ?? 'Cet élément existe déjà' })
+    case '53400':
+      throw createError({ statusCode: 409, statusMessage: message || 'Limite atteinte', data: { code: 'QUOTA_REACHED' } })
+    case '54000':
+      throw createError({ statusCode: 429, statusMessage: message || 'Trop de demandes, réessayez plus tard', data: { code: 'RATE_LIMITED' } })
     default:
       console.error(`[api] ${context}`, error)
       Sentry.captureException(error, { tags: { api: context } })

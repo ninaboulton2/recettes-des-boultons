@@ -70,3 +70,22 @@ describe('server/utils/errors : sans DSN (SDK non initialisé)', () => {
     expect(() => real.captureException(new Error('sans DSN'))).not.toThrow()
   })
 })
+
+describe('server/utils/errors : plafonds et limites de la v2 (§ 20.9)', () => {
+  it('53400 (plafond de volume) → 409 avec le code QUOTA_REACHED, jamais un 500', () => {
+    const error = thrown(() => throwSupabaseError({ code: '53400', message: 'Limite atteinte : 2000 recettes' }, 'add-recipe'))
+    expect(error.statusCode).toBe(409)
+    expect(error.statusMessage).toBe('Limite atteinte : 2000 recettes')
+    expect(error.data).toEqual({ code: 'QUOTA_REACHED' })
+  })
+  it('54000 (limite de débit) → 429 avec le code RATE_LIMITED', () => {
+    const error = thrown(() => throwSupabaseError({ code: '54000', message: '' }, 'add-recipe'))
+    expect(error.statusCode).toBe(429)
+    expect(error.data).toEqual({ code: 'RATE_LIMITED' })
+  })
+  it('42501 reste un 403 au message fixe (le détail de la base ne sort pas)', () => {
+    const error = thrown(() => throwSupabaseError({ code: '42501', message: 'Réservé à l’auteur de la recette' }, 'delete-recipe'))
+    expect(error.statusCode).toBe(403)
+    expect(error.statusMessage).toBe('Action non autorisée')
+  })
+})

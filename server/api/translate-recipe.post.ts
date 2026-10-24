@@ -29,7 +29,7 @@ import { buildRecipeResponse } from '../utils/ai/recipe-response'
  */
 export default defineEventHandler(async (event): Promise<TranslateRecipeResponse> => {
   try {
-    const { supabase, user } = await requireAdmin(event)
+    const { supabase, user } = await requireRecipeWriter(event)
     const { recipeText } = await validateBody(event, translateRecipeBodySchema)
 
     const config = getAiConfig(event)
