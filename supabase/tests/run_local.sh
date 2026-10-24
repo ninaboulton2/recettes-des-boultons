@@ -89,7 +89,7 @@ num() { local b; b="$(basename "$1")"; echo $((10#${b:0:4})); }
 EXPAND=(); CONTRACT=(); LATE=()
 for f in "$SUPA"/migrations/0*_*.sql; do
   n=$(num "$f")
-  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 && n <= 17 )); then CONTRACT+=("$f"); elif (( n >= 18 )); then LATE+=("$f"); fi
+  if (( n >= 3 && n <= 12 )); then EXPAND+=("$f"); elif (( n >= 13 && n <= 17 )); then CONTRACT+=("$f"); elif (( n >= 18 && n != 24 )); then LATE+=("$f"); fi
 done
 
 for f in "${EXPAND[@]}"; do run "$f"; done
@@ -131,6 +131,11 @@ ALL_FP_SQL="select md5(
   coalesce((select string_agg(pg_get_triggerdef(t.oid), E'\\n' order by t.tgrelid::regclass::text, t.tgname) from pg_trigger t where not t.tgisinternal), '') || '#' ||
   coalesce((select string_agg(concat_ws('|', schemaname, tablename, policyname, cmd, roles::text, qual, with_check), E'\\n' order by schemaname, tablename, policyname) from pg_policies where schemaname in ('public', 'storage')), '') || '#' ||
   coalesce((select string_agg(c.relname, ',' order by c.relname) from pg_class c where c.relnamespace = 'private'::regnamespace and c.relkind = 'r'), ''))"
+# 0024 (correctif handle_new_user, indépendant) : appliquée avant la boucle pour que l'empreinte « avant 0023 » l'inclue.
+echo "▶ 0024 : rôle 'user' en dur à l'inscription (+ rejeu + test)"
+run "$SUPA/migrations/0024_handle_new_user_role.sql"
+"${PSQL[@]}" -f "$SUPA/migrations/0024_handle_new_user_role.sql"
+run "$HERE/test_0024_handle_new_user.sql"
 FP23_BEFORE=""
 for f in "${LATE[@]}"; do
   if (( $(num "$f") == 23 )); then FP23_BEFORE="$("${PSQL[@]}" -At -c "$ALL_FP_SQL")"; fi
