@@ -132,6 +132,7 @@ import type { RecipeVisibility } from '#shared/schemas/sharing'
 import type { RecipeGrant } from '#shared/utils/cookbook'
 import { filterRecipients } from '#shared/utils/recipients'
 import { recipeRights, reshareLevels, sharingErrorKey, type RecipeAccess } from '#shared/utils/recipeRights'
+import { publicOrigin } from '#shared/utils/siteUrl'
 
 /**
  * Fenêtre « Partager » (v2). L'AUTEUR règle la visibilité, donne ou retire des droits (personne ou groupe ; lecture, copie ou
@@ -310,7 +311,7 @@ async function reshare(): Promise<void> {
 const linkActive = ref(props.access.hasShareLink)
 const linkUrl = ref('')
 const canNativeShare = ref(false)
-const absolute = (path: string) => new URL(localePath(path), window.location.origin).toString()
+const absolute = (path: string) => new URL(localePath(path), publicOrigin(useRuntimeConfig().public.siteUrl, window.location.origin)).toString()
 
 async function loadLink(): Promise<void> {
   if (!rights.value.canManageSharing || !linkActive.value) return

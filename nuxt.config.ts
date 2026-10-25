@@ -13,8 +13,7 @@ const isInstalled = (name: string): boolean => {
   }
 }
 
-// Édition lue au BUILD pour ce qui est figé dans le bundle (titre par défaut,
-// manifeste PWA). Le reste suit `runtimeConfig.public.edition` à l'exécution
+// Édition lue au BUILD pour ce qui est figé dans le bundle (titre par défaut). Le reste suit `runtimeConfig.public.edition` à l'exécution
 // (même variable NUXT_PUBLIC_EDITION) : voir DEVELOPER.md § Éditions.
 const buildEdition = getEdition(process.env.NUXT_PUBLIC_EDITION)
 
@@ -80,7 +79,7 @@ export default defineNuxtConfig({
       ],
       link: [
         // Icônes de l'onglet : posées selon l'édition par plugins/edition.ts.
-        // Manifeste PWA généré par @vite-pwa/nuxt (clé `pwa` ci-dessous).
+        // Manifeste PWA : route serveur dynamique (clé `pwa` ci-dessous).
         { rel: 'manifest', href: '/manifest.webmanifest' }
       ]
     }
@@ -166,6 +165,8 @@ export default defineNuxtConfig({
       // Adresse de contact des pages légales et du pied de page (v2). Vide = texte de repli, aucun lien.
       // Variable d'exécution : NUXT_PUBLIC_CONTACT_EMAIL (à poser une fois le domaine acheté).
       contactEmail: '',
+      // Adresse canonique (SITE_URL, ex. https://familycookbook.fr) : balises canonical / og:url et liens copiés. Vide = rien.
+      siteUrl: process.env.SITE_URL || '',
       // --- Import depuis Google Drive (composables/useGoogleDrivePicker.ts) ---
       // Trois valeurs publiques (aucun secret) ; l'une d'elles vide = bouton
       // masqué. Surchargeables à l'exécution par NUXT_PUBLIC_GOOGLE_CLIENT_ID,
@@ -211,25 +212,9 @@ export default defineNuxtConfig({
   // --- PWA (@vite-pwa/nuxt) : installable + courses hors ligne ---
   pwa: {
     registerType: 'autoUpdate',
-    // Manifeste figé au build : nom et couleurs de l'édition de BUILD.
-    manifest: {
-      name: localize(buildEdition.brand.name, 'fr'),
-      short_name: buildEdition.brand.shortName,
-      description: localize(buildEdition.brand.tagline, 'fr'),
-      lang: 'fr',
-      start_url: '/',
-      scope: '/',
-      display: 'standalone',
-      theme_color: buildEdition.theme.themeColor.light,
-      background_color: buildEdition.theme.backgroundColor,
-      // Icônes de l'édition de BUILD (`brand.icons.pwa`) : toque générée par
-      // `npm run pwa:icons`, cocotte Boultons par `npm run icons:boultons`.
-      icons: [
-        { src: buildEdition.brand.icons.pwa.any192, sizes: '192x192', type: 'image/png' },
-        { src: buildEdition.brand.icons.pwa.any512, sizes: '512x512', type: 'image/png' },
-        { src: buildEdition.brand.icons.pwa.maskable512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-      ]
-    },
+    // Pas de manifeste généré au build : `/manifest.webmanifest` est une route serveur (server/routes/manifest.webmanifest.get.ts)
+    // qui suit l'édition (v1) ou le thème actif de la personne (v2). Voir DEVELOPER.md § 20.18.
+    manifest: false,
     workbox: {
       // App rendue côté serveur : pas de page de repli précachée (« / » n'est
       // pas un fichier statique). Les pages visitées sont servies par le
@@ -237,7 +222,7 @@ export default defineNuxtConfig({
       navigateFallback: null,
       // App shell : JS/CSS de Nuxt, icônes, manifeste. Les images de
       // catégories et les polices sont mises en cache à la demande.
-      globPatterns: ['_nuxt/**/*.{js,css}', '*.{svg,png,ico,webmanifest}', 'editions/**/*.png'],
+      globPatterns: ['_nuxt/**/*.{js,css}', '*.{svg,png,ico}', 'editions/**/*.png'],
       cleanupOutdatedCaches: true,
       runtimeCaching: [
         {

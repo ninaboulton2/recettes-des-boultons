@@ -52,7 +52,7 @@
         <p class="text-sm text-muted">{{ rights.canEditTheme ? $t('groups.theme.creatorHelp') : $t('groups.theme.memberHelp') }}</p>
 
         <template v-if="rights.canEditTheme">
-          <ThemePicker v-model="theme" />
+          <ThemePicker v-model="theme" :name-suggestion="group?.name" />
           <div class="flex flex-wrap items-center justify-end gap-3">
             <p v-if="themeMessage" class="text-sm text-error" role="alert">{{ themeMessage }}</p>
             <UButton :loading="busy === 'theme'" :disabled="busy !== null || !theme" :label="$t('groups.theme.save')" data-testid="group-theme-save" @click="saveTheme" />
@@ -202,6 +202,7 @@ import { uuidSchema } from '#shared/schemas/common'
 import { parseThemeInput, type ThemeInput } from '#shared/themes'
 import type { Friend, GroupInvitation, GroupMember, MyGroup } from '#shared/utils/social'
 import { groupRights, inviteLinkPath, INVITE_LINK_VALID_DAYS, memberRights } from '#shared/utils/socialUi'
+import { publicOrigin } from '#shared/utils/siteUrl'
 
 /**
  * Un groupe (v2) : membres (liens vers leurs profils), thème du groupe (choisir « Utiliser le thème de ce groupe »),
@@ -337,7 +338,7 @@ const createdLink = ref<{ url: string, expiresAt: string } | null>(null)
 const copied = ref(false)
 const createLink = () => run('link', async () => {
   const link = await api.createInviteLink({ groupId: groupId.value! })
-  createdLink.value = { url: `${requestUrl.origin}${localePath(inviteLinkPath(link.token))}`, expiresAt: link.expiresAt }
+  createdLink.value = { url: `${publicOrigin(useRuntimeConfig().public.siteUrl, requestUrl.origin)}${localePath(inviteLinkPath(link.token))}`, expiresAt: link.expiresAt }
   copied.value = false
 })
 async function copyLink(): Promise<void> {

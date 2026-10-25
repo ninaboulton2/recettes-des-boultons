@@ -66,3 +66,14 @@ test('(ed2) liste : cartes de même hauteur par rangée, repli visuel de l\'édi
   }
   if (!isMobile(page)) expect(layout.rows.some(heights => heights.length > 1)).toBe(true)
 })
+
+test('(ed3) manifeste PWA : nom, couleurs et icônes de l\'édition (route serveur)', async ({ request }) => {
+  const response = await request.get('/manifest.webmanifest')
+  expect(response.status()).toBe(200)
+  expect(response.headers()['content-type']).toContain('application/manifest+json')
+  const manifest = await response.json()
+  expect(manifest.name).toBe(edition.brand.name.fr)
+  expect(manifest.short_name).toBe(edition.brand.shortName)
+  expect(manifest.theme_color).toBe(edition.theme.themeColor.light)
+  expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([edition.brand.icons.pwa.any192, edition.brand.icons.pwa.any512, edition.brand.icons.pwa.maskable512])
+})

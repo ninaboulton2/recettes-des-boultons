@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_SHORT_NAME } from '../brand'
 import type { EditionConfig } from './types'
 
 /**
@@ -7,8 +8,8 @@ import type { EditionConfig } from './types'
 export const genericEdition: EditionConfig = {
   id: 'generic',
   brand: {
-    name: { fr: 'Carnet de recettes', en: 'Recipe Book' },
-    shortName: 'Recettes',
+    name: { fr: BRAND_NAME, en: BRAND_NAME },
+    shortName: BRAND_SHORT_NAME,
     tagline: {
       fr: 'Toutes vos recettes préférées, au même endroit.',
       en: 'All your favorite recipes, in one place.'

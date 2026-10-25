@@ -1,9 +1,10 @@
+import { BRAND_NAME } from '../../shared/brand'
 import { renderAiCreditAlert, type AiAlertData, type RenderedEmail, type TemplateContext } from './emailTemplates'
 
 /**
  * Envoi d'e-mails transactionnels par Resend (phase 7, dossier §6.3). Tout passe par des variables d'environnement :
  *  - `RESEND_API_KEY` : clé d'API Resend (serveur seulement) ;
- *  - `EMAIL_FROM`     : expéditeur sur un domaine VÉRIFIÉ dans Resend, ex. `Recettes <no-reply@mondomaine.com>` ;
+ *  - `EMAIL_FROM`     : expéditeur sur un domaine VÉRIFIÉ dans Resend, ex. `Family Cookbook <bonjour@familycookbook.fr>` ;
  *  - `ALERT_EMAIL`    : adresse de Nina pour l'alerte de crédit (jamais en dur dans le code) ;
  *  - `SITE_URL`       : adresse publique de l'application (liens des e-mails) ; à défaut, l'adresse de la requête.
  *
@@ -35,7 +36,7 @@ export type FetchLike = (input: string, init: { method: string, headers: Record<
 
 export const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 const SEND_TIMEOUT_MS = 8000
-const DEFAULT_APP_NAME = 'Recettes'
+const DEFAULT_APP_NAME = BRAND_NAME
 
 const asString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 

@@ -3,7 +3,7 @@ import { isEmailConfigured, readEmailConfig, RESEND_ENDPOINT, sendAiCreditAlert,
 import { appLink, cleanName, renderAiCreditAlert, renderFriendRequest, renderGroupInvitation, renderNotificationDigest } from '../../server/utils/emailTemplates'
 import { NOTIFICATION_EMAIL_BATCH, NOTIFICATION_EMAIL_BUDGET_MS, sendNotificationEmails, type ClaimedNotification } from '../../server/utils/notificationEmails'
 
-const CONFIG: EmailConfig = { apiKey: 're_test_123', from: 'Recettes <no-reply@example.test>', alertEmail: 'nina@example.test', siteUrl: 'https://recettes.example.test', appName: 'Recettes' }
+const CONFIG: EmailConfig = { apiKey: 're_test_123', from: 'Recettes <no-reply@example.test>', alertEmail: 'nina@example.test', siteUrl: 'https://recettes.example.test', appName: 'Family Cookbook' }
 const CTX = { siteUrl: CONFIG.siteUrl, appName: CONFIG.appName }
 const MESSAGE = { to: 'eve@example.test', subject: 'Sujet', html: '<p>x</p>', text: 'x' }
 
@@ -22,7 +22,7 @@ describe('configuration des e-mails (variables d\'environnement)', () => {
   it('lit runtimeConfig, puis la variable historique', () => {
     expect(readEmailConfig({ resendApiKey: 'k1', emailFrom: 'f1', alertEmail: 'a1', siteUrl: 'https://s1' }, { RESEND_API_KEY: 'k2' })).toMatchObject({ apiKey: 'k1', from: 'f1', alertEmail: 'a1', siteUrl: 'https://s1' })
     expect(readEmailConfig({}, { RESEND_API_KEY: 'k2', EMAIL_FROM: 'f2', ALERT_EMAIL: 'a2', SITE_URL: 'https://s2' }, 'https://origine')).toMatchObject({ apiKey: 'k2', from: 'f2', alertEmail: 'a2', siteUrl: 'https://s2' })
-    expect(readEmailConfig({}, {}, 'https://origine')).toMatchObject({ apiKey: '', from: '', alertEmail: '', siteUrl: 'https://origine', appName: 'Recettes' })
+    expect(readEmailConfig({}, {}, 'https://origine')).toMatchObject({ apiKey: '', from: '', alertEmail: '', siteUrl: 'https://origine', appName: 'Family Cookbook' })
   })
 
   it('« configuré » demande la clé ET l\'expéditeur', () => {

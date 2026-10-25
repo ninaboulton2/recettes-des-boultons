@@ -36,7 +36,8 @@ export default defineConfig({
     ? undefined
     : {
         command: `npx nuxt dev --dotenv .env.local --port ${PORT}`,
-        env: { PORT: String(PORT), NUXT_TELEMETRY_DISABLED: '1', NUXT_PUBLIC_V2: 'true' },
+        // SITE_URL : adresse canonique factice (parcours v2-mf4 / v2-mf5 : redirection de l'ancien alias, balise canonical).
+        env: { PORT: String(PORT), NUXT_TELEMETRY_DISABLED: '1', NUXT_PUBLIC_V2: 'true', SITE_URL: process.env.E2E_SITE_URL ?? 'https://familycookbook.test' },
         url: baseURL,
         reuseExistingServer: true,
         timeout: 180_000,
