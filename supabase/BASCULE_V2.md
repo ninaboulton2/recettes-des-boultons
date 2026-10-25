@@ -457,6 +457,32 @@ Les migrations 0025 → 0030 n'ont **pas** à être retirées pour revenir à la
 | Favoris / repas / articles | 5 / 70 / 43 | identiques, même propriétaire |
 | Admins | 2 | 1 (Nina, rôle « support ») |
 
+## 5 bis. Domaine (phase 9)
+
+Domaine acheté : **familycookbook.fr**. Le code est prêt (`SITE_URL`, redirection de l'ancienne adresse, manifeste PWA par thème, nom « Family Cookbook » ; `DEVELOPER.md` § 20.18) mais **rien n'est branché** : tout ce qui suit est à faire par Nina, dans cet ordre. Rien de cela n'est nécessaire à la bascule des données ; le site fonctionne sur l'ancienne adresse tant que `SITE_URL` est vide.
+
+**À savoir avant de commencer**
+
+* Quand `SITE_URL` est posée, `recettes-des-boultons.vercel.app` répond **301** vers `familycookbook.fr` (même chemin). Les adresses de prévisualisation Vercel et `localhost` ne sont pas touchées.
+* **La session est perdue** : le cookie de connexion est propre à l'hôte, donc tout le monde devra **se reconnecter une fois** sur le nouveau domaine (favoris, listes, recettes : rien de perdu). Prévenir les membres. Les liens « confirmer mon e-mail » / « mot de passe oublié » envoyés avant la bascule sont à redemander.
+* Poser `SITE_URL` **en dernier** (étape 7) : elle déclenche la redirection. Avant, le nouveau domaine peut déjà servir le site.
+
+**Checklist**
+
+1. **Vercel → projet → Settings → Domains** : ajouter `familycookbook.fr` (domaine principal, il sera la cible) puis `www.familycookbook.fr` avec **redirection vers `familycookbook.fr`** (permanente, 308). Vercel affiche les enregistrements attendus.
+2. **DNS chez Ionos** (bureau d'enregistrement ; on **garde les serveurs de noms d'Ionos**, pas de délégation à Vercel) : espace client Ionos → *Domaines & SSL* → cliquer `familycookbook.fr` → onglet **DNS** → *Ajouter un enregistrement* (l'intitulé exact varie un peu selon la version de l'interface). Le champ « Nom d'hôte » prend `@` pour la racine, ou seulement le préfixe (`www`, `send`…), jamais le domaine complet.
+   * **D'abord supprimer** les enregistrements de parking créés par Ionos pour la racine : le `A` (et le `AAAA`) sur `@`, et le `CNAME`/`A` sur `www` s'ils pointent chez Ionos. Un `A` et un `AAAA` vers Ionos en parallèle casseraient l'accès.
+   * Ajouter `A` | hôte `@` | valeur `76.76.21.21` (TTL par défaut) ; ajouter `CNAME` | hôte `www` | valeur `cname.vercel-dns.com`. **Les valeurs affichées par Vercel (Settings → Domains) font foi** : Vercel peut proposer d'autres adresses.
+   * Ne pas toucher aux enregistrements `MX`/`TXT` de la racine si une messagerie Ionos existe déjà.
+   * Attendre la propagation (quelques minutes à quelques heures) jusqu'à « Valid Configuration » côté Vercel, qui émet alors le certificat.
+3. **Resend → Domains** : ajouter `familycookbook.fr` (région Europe si proposée). Resend affiche un tableau d'enregistrements ; les recopier **tels quels** dans Ionos (même onglet DNS) : un `TXT` **DKIM** (hôte `resend._domainkey`, la longue valeur `p=…`), un `MX` d'hôte `send` (priorité 10, valeur `feedback-smtp….amazonses.com`) et un `TXT` **SPF** d'hôte `send` (`v=spf1 include:amazonses.com ~all`) ; ajouter à la main un `TXT` **DMARC** (hôte `_dmarc`, valeur `v=DMARC1; p=none; rua=mailto:contact@familycookbook.fr`, à durcir plus tard). Dans Ionos, coller la valeur d'un TXT sans guillemets ajoutés et sans retour à la ligne ; ne pas y ajouter le suffixe `.familycookbook.fr` au nom d'hôte. Puis *Verify* dans Resend jusqu'à *Verified* (jusqu'à quelques heures). Si le domaine a déjà un SPF sur la racine, ne pas en créer un second : en fusionner les `include`.
+4. **Adresse de contact** : créer `contact@familycookbook.fr` chez Ionos (espace client → *E-mail* : une adresse ou un **alias/redirection** vers ta boîte personnelle, selon le forfait) et la tester en s'écrivant. `bonjour@familycookbook.fr` n'a besoin d'exister que comme expéditeur Resend (pas de boîte à relever, mais mieux vaut qu'elle redirige aussi).
+5. **Variables Vercel** (Production ; relancer un déploiement pour celles lues au build) : `NUXT_PUBLIC_CONTACT_EMAIL=contact@familycookbook.fr`, `EMAIL_FROM=Family Cookbook <bonjour@familycookbook.fr>` (valeurs validées par Nina), `RESEND_API_KEY` (clé Resend), `ALERT_EMAIL` ; `EMAIL_APP_NAME` laissée vide (défaut « Family Cookbook »).
+6. **Supabase → Authentication → URL Configuration** : *Site URL* = `https://familycookbook.fr`. *Redirect URLs* : ajouter `https://familycookbook.fr/**` (couvre `/confirm`, `/reset-password` et les versions `/en/…`) et `https://www.familycookbook.fr/**` ; **garder** `https://recettes-des-boultons.vercel.app/**` et `http://localhost:3001/**` le temps de la transition (et les prévisualisations utiles). Vérifier aussi le modèle d'e-mail Auth (il utilise `{{ .SiteURL }}`).
+7. **Google Cloud → APIs & Services → Identifiants → client OAuth « Web »** (celui de la connexion Google, configuré dans Supabase → Authentication → Providers → Google) : *Origines JavaScript autorisées* → ajouter `https://familycookbook.fr` ; *URI de redirection autorisés* → **ne rien changer** si elle pointe vers Supabase (`https://<projet>.supabase.co/auth/v1/callback`, c'est l'adresse que Google rappelle) ; n'ajouter `https://familycookbook.fr/confirm` que si une redirection directe est configurée. Pour l'**import Google Drive** (Picker, `NUXT_PUBLIC_GOOGLE_CLIENT_ID` / `API_KEY`) : ajouter `https://familycookbook.fr` aux origines JavaScript du client **et** aux restrictions de référent HTTP de la clé d'API (`https://familycookbook.fr/*`). Écran de consentement OAuth : domaine autorisé `familycookbook.fr`, nom de l'application « Family Cookbook ».
+8. **`SITE_URL=https://familycookbook.fr`** dans Vercel (Production seulement, pas Preview), puis redéployer. Contrôles : `curl -sI https://recettes-des-boultons.vercel.app/recettes` → `301` et `location: https://familycookbook.fr/recettes` ; `https://familycookbook.fr/manifest.webmanifest` répond le nom attendu ; se connecter avec e-mail et avec Google sur le nouveau domaine ; demander un e-mail de réinitialisation et vérifier que le lien pointe sur `familycookbook.fr` ; envoyer un e-mail de test (notification) et vérifier SPF/DKIM « pass » dans les en-têtes reçus.
+9. **Retour arrière du domaine** : vider `SITE_URL` et redéployer (la redirection s'arrête, le site reste servi sur les deux adresses). Le 301 déjà reçu par un navigateur reste en cache au plus 1 h.
+
 ## 6. Checklist du jour J (à cocher)
 
 Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suivante qu'une fois la case cochée. Les `[ ]` se cochent dans une copie de ce fichier ou dans l'Obsidian de Nina.
@@ -466,6 +492,7 @@ Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suiva
 - [ ] Sauvegarde : export JSON des tables + `pg_dump` (`BASCULE_PROD.md` § 0.1) **hors du dépôt**, liste des fichiers du bucket `recipe-photos`.
 - [ ] Prérequis 1.2 : 0017, 0019, 0021, 0023, 0024 présentes (requête du § 1, `recettes_avec_proprietaire = 0`).
 - [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
+- [ ] Domaine (§ 5 bis) : fait avant ou après la bascule, indépendamment ; `SITE_URL` en dernier.
 - [ ] Variables Vercel posées : `SUPABASE_SECRET_KEY`, `CRON_SECRET` (≥ 16 caractères), `ALERT_EMAIL`, `AI_MONTHLY_BUDGET_USD` (suggéré 5) ; `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL` si le domaine est prêt (`DEVELOPER.md` § 20.15).
 - [ ] Supabase → Settings → API → *Exposed schemas* : `private` **absent** (§ 4).
 - [ ] Code v2 construit, CI verte, **déployé en préproduction et non promu** ; identifiant du déploiement actuel noté (Instant Rollback). Les « previews » ne pointent pas sur la prod.
