@@ -1025,6 +1025,12 @@
   },
   "theme": {
     "presets": "Thèmes proposés",
+    "name": {
+      "label": "Nom affiché",
+      "hint": "Affiché dans l'en-tête, le titre des pages et l'icône de l'écran d'accueil. Vide : « {default} ».",
+      "invalid": "Lettres, chiffres, espaces et . , ' & ! ( ) - seulement (60 caractères au plus).",
+      "useGroup": "Utiliser le nom du groupe"
+    },
     "customColor": "Couleur principale",
     "colorPicker": "Choisir une couleur",
     "customHint": "Un code #rrggbb. Les textes restent lisibles : une couleur trop claire est refusée.",

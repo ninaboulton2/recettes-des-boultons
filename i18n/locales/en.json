@@ -1025,6 +1025,12 @@
   },
   "theme": {
     "presets": "Suggested themes",
+    "name": {
+      "label": "Display name",
+      "hint": "Shown in the header, page titles and the home-screen icon. Empty: \"{default}\".",
+      "invalid": "Letters, digits, spaces and . , ' & ! ( ) - only (60 characters at most).",
+      "useGroup": "Use the group name"
+    },
     "customColor": "Main color",
     "colorPicker": "Choose a color",
     "customHint": "A #rrggbb code. Text must stay readable: a color that is too light is refused.",
