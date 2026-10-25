@@ -55,6 +55,19 @@ Les chiffres de production seront plus élevés (réseau, instance plus petite) 
 Photos → 0020 → 0018 dans l'ordre du runbook : < 0,3 s, aucune erreur. Politiques `recipes` revenues à `recipes_read_public` + 3 politiques admin, bucket public, rôles d'origine rétablis (2 admins), groupe / droits / catégories / carnets supprimés,
 `owner_id` et `category_id` à NULL. Empreinte des données identique à l'avant (comptes de test créés après la bascule exclus : le retour arrière ne supprime pas de comptes, voir `BASCULE_V2.md` § 3). Reste après retour : `recipes.visibility = 'groups'` (défaut de 0017, sans effet v1) et les migrations 0025 → 0030 (sans effet v1).
 
+## Tests (fin de travail, base remise en v1 avec le snapshot)
+
+| Suite | Résultat |
+|---|---|
+| `npm run lint` | propre |
+| `npm run typecheck` | propre |
+| `npx vitest run` (base v1 **et** base v2) | 723 passés, 32 ignorés (4 fichiers d'intégration qui exigent le serveur) ; `save-recipe.local.test.ts` passe dans les deux modes |
+| `bash supabase/tests/run_local.sh` | « Toutes les migrations et tous les tests sont passés » (≈ 2 min), avec `test_0030` (60 comparaisons) |
+| e2e v1 (`npm run test:e2e`, base v1 avec 0025 → 0030) | 117 passés, 3 ignorés, 0 échec (≈ 4 min) |
+| e2e v2 (`npm run test:e2e:v2`, `db:local:v2`) | 55 passés, 1 ignoré (la partie « avec secret » de `p7-cron`, `CRON_SECRET` vide), 0 échec (≈ 4,4 min) |
+
+Remarque : sur une machine très chargée (autres sessions, simulateur iOS), des parcours v2 (`p8-read`, `6b-share1`) ont dépassé leurs délais ; ils passent seuls et dans le passage complet à charge normale.
+
 ## Migrations 0025 à 0029 : modifiées ?
 
 **Non.** Aucun des fichiers 0017 → 0029, `supabase/v2/*` et `supabase/rollback/*` existants n'a été modifié. Ajouts seulement : **0030** (nouvelle migration, à appliquer avec 0025 → 0029), son rollback et son test.
