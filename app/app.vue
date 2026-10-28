@@ -21,7 +21,8 @@ const canonicalUrl = computed(() => {
 })
 // Nom et accroche du site : configuration de l'édition (shared/editions/).
 // `data-edition`, thème et `theme-color` : plugins/edition.ts.
-const { siteName, tagline } = useEdition()
+const { tagline } = useEdition()
+const siteName = useSiteName()
 
 // Textes internes de Nuxt UI (pagination, modales…) dans la langue courante.
 const uiLocale = computed(() => (locale.value === 'en' ? en : fr))

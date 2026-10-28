@@ -90,6 +90,15 @@ test('(v2-mf6) nom personnalisé : en-tête, <title> et manifeste ; vide = Famil
     await gotoApp(page, '/')
     await expect(page).toHaveTitle(/Chez Mamie/)
     await expect(page.getByTestId('site-name')).toHaveText('Chez Mamie')
+    // Même nom partout où la personne est chez elle : titre de l'accueil, pied de page ; logo générique (toque), pas la cocotte.
+    await expect(page.locator('h1').first()).toHaveText('Chez Mamie')
+    await expect(page.getByTestId('app-footer')).toContainText('Chez Mamie')
+    await expect(page.getByTestId('site-logo-generic')).toBeVisible()
+    await expect(page.getByTestId('site-logo')).toHaveCount(0)
+    // Pages légales : l'identité du service, pas le nom du carnet.
+    await gotoApp(page, '/mentions-legales')
+    await expect(page.getByTestId('site-name')).toHaveText('Family Cookbook')
+    await gotoApp(page, '/')
     const manifest = await (await page.request.get('/manifest.webmanifest')).json()
     expect(manifest.name).toBe('Chez Mamie')
     expect(manifest.short_name).toBe('Chez Mamie')
@@ -103,4 +112,17 @@ test('(v2-mf6) nom personnalisé : en-tête, <title> et manifeste ; vide = Famil
   } finally {
     await client.from('profiles').update({ theme_settings: before?.theme_settings ?? null, active_theme_group_id: before?.active_theme_group_id ?? null }).eq('id', userId)
   }
+})
+
+test('(v2-mf7) logo : toque générique pour le visiteur, cocotte seulement pour le thème Les Boultons', async ({ page }) => {
+  await gotoApp(page, '/')
+  await expect(page.getByTestId('site-logo-generic')).toBeVisible()
+  await expect(page.getByTestId('site-logo')).toHaveCount(0)
+  await expect(page.locator('link[rel="icon"][href*="boultons"], link[rel="apple-touch-icon"][href*="boultons"]')).toHaveCount(0)
+
+  await loginV2(page, 'user')
+  await gotoApp(page, '/')
+  await expect(page.getByTestId('site-logo')).toHaveAttribute('src', /logo\.png/)
+  await expect(page.getByTestId('site-logo-generic')).toHaveCount(0)
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/editions/boultons/apple-touch-icon.png')
 })

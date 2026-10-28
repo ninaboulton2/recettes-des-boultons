@@ -18,7 +18,8 @@ export const genericEdition: EditionConfig = {
       fr: 'Vos recettes, vos listes de courses et votre planning de repas, au même endroit.',
       en: 'Your recipes, shopping lists and meal planning, in one place.'
     },
-    logo: '/images/logo.png',
+    // Pas de cocotte : elle appartient au thème Les Boultons. Toque (icône `chef-hat`) à la couleur du thème.
+    logo: null,
     nameColor: null,
     // Toque terracotta (scripts/generate-pwa-icons.mjs).
     icons: {

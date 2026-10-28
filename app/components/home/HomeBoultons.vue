@@ -100,7 +100,8 @@
  * Accueil de l'édition Boultons : reprise de la page d'origine (commit
  * 6a9a207) avec les composants actuels, i18n, mode sombre et mobile.
  */
-const { config, siteName, tagline, text } = useEdition()
+const { config, tagline, text } = useEdition()
+const siteName = useSiteName()
 const heroImage = config.home.heroImage
 
 // Compteurs par catégorie (requête légère, rendue côté serveur)

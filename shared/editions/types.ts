@@ -55,8 +55,8 @@ export interface EditionBrand {
   tagline: LocalizedText
   /** Meta description de la page d'accueil. */
   homeDescription: LocalizedText
-  /** Logo de l'en-tête (chemin dans `public/`). */
-  logo: string
+  /** Logo de l'en-tête (chemin dans `public/`) ; `null` = la toque générique du produit (icône `chef-hat`, couleur du thème). */
+  logo: string | null
   /**
    * Couleur du nom du site dans l'en-tête ; `null` = couleur `primary`.
    * (Un nom de marque n'est pas soumis aux exigences de contraste WCAG,

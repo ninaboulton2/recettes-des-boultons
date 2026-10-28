@@ -73,7 +73,7 @@ describe.each(EDITION_IDS.map(id => [id, EDITIONS[id]] as const))('édition %s',
   })
 
   it('images existantes dans public/ et une illustration par catégorie', () => {
-    expect(publicFile(edition.brand.logo)).toBe(true)
+    if (edition.brand.logo) expect(publicFile(edition.brand.logo)).toBe(true)
     if (edition.home.heroImage) expect(publicFile(edition.home.heroImage.src)).toBe(true)
     if (edition.categoryImages) {
       expect(Object.keys(edition.categoryImages).sort()).toEqual([...RECIPE_CATEGORIES].sort())

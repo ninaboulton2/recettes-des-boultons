@@ -23,7 +23,7 @@ import { LEGAL_PAGE_IDS, LEGAL_PATHS } from '#shared/legal'
  * Pied de page v2 : mentions légales, confidentialité, conditions, cookies, et contact s'il est configuré. Visible aussi sur
  * mobile ; le bas de la page est dégagé de la hauteur de la barre d'onglets fixe (4,5 rem + zone sûre de l'appareil).
  */
-const { siteName } = useEdition()
+const siteName = useSiteName()
 const localePath = useLocalePath()
 const contact = useContactEmail()
 </script>

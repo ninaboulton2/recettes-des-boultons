@@ -3,7 +3,11 @@
     <header class="sticky top-0 z-40 border-b border-default bg-default/90 backdrop-blur">
       <UContainer class="flex h-14 items-center justify-between gap-3 md:h-16">
         <NuxtLink :to="localePath('/')" class="flex min-w-0 items-center gap-2 rounded-lg" :aria-label="$t('navigation.home')">
-          <NuxtImg :src="brand.logo" alt="" :height="36" densities="x1 x2" format="webp" class="h-8 w-auto shrink-0 md:h-9" />
+          <NuxtImg v-if="brand.logo" :src="brand.logo" alt="" :height="36" densities="x1 x2" format="webp" class="h-8 w-auto shrink-0 md:h-9" data-testid="site-logo" />
+          <!-- Logo générique : la toque, à la couleur du thème (la cocotte est réservée au thème Les Boultons). -->
+          <span v-else class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-inverted md:size-9" aria-hidden="true" data-testid="site-logo-generic">
+            <UIcon name="i-lucide-chef-hat" class="size-5 md:size-6" />
+          </span>
           <!-- Couleur du nom : celle de l'édition (--site-name-color), sinon `primary`. -->
           <span
             class="truncate font-lobster text-xl md:text-2xl"
@@ -88,7 +92,7 @@ const route = useRoute()
 // `brand` est un accesseur calculé : en v2 il suit le thème actif (logo, couleur du nom) sans rechargement.
 const edition = useEdition()
 const brand = computed(() => edition.config.brand)
-const { siteName } = edition
+const siteName = useSiteName()
 const localePath = useLocalePath()
 const { v2, mainLinks: links, menuLinks } = useNav()
 

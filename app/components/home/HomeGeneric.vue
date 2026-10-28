@@ -62,7 +62,8 @@
 const localePath = useLocalePath()
 const authStore = useAuthStore()
 const v2 = useV2()
-const { siteName, tagline } = useEdition()
+const { tagline } = useEdition()
+const siteName = useSiteName()
 
 // Compteurs par catégorie (requête légère, rendue côté serveur)
 const facets = useRecipeFacets()
