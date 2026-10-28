@@ -104,16 +104,19 @@ async function run(recipe: SharedWithMeRecipe, action: 'add' | 'copy', work: () 
   }
 }
 
+// Titre dans la langue de l'interface (les cartes l'affichent déjà ainsi).
+const { localizeCard } = useRecipeLocale()
+
 const add = (recipe: SharedWithMeRecipe) => run(recipe, 'add', async () => {
   await cookbook.addToCookbook({ recipeId: recipe.id })
-  $toast.success(t('shared.added', { title: recipe.title }))
+  $toast.success(t('shared.added', { title: localizeCard(recipe).title }))
   recipesStore.refresh()
   await refresh()
 })
 
 const copy = (recipe: SharedWithMeRecipe) => run(recipe, 'copy', async () => {
   const { id: copyId } = await cookbook.copyRecipeWithPhoto({ recipeId: recipe.id })
-  $toast.success(t('shared.copied', { title: recipe.title }))
+  $toast.success(t('shared.copied', { title: localizeCard(recipe).title }))
   recipesStore.refresh()
   await navigateTo(localePath(`/recettes/${copyId}`))
 })

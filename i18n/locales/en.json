@@ -342,6 +342,8 @@
     },
     "language": {
       "translated": "Automatically translated from {lang}.",
+      "translating": "Translating… showing the original text ({lang}) for now.",
+      "unavailable": "Translation unavailable for now: original text ({lang}).",
       "original": "Original text ({lang}): not translated yet.",
       "fr": "French",
       "en": "English"

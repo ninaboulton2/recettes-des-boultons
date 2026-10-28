@@ -34,6 +34,12 @@
         />
       </div>
 
+      <!-- Langue du texte affiché : traduction en cours, traduction indisponible ou traduit automatiquement. -->
+      <p v-if="languageHint" class="-mb-4 flex items-center gap-1.5 text-xs text-muted print:hidden" data-testid="public-language-hint">
+        <UIcon name="i-lucide-languages" class="size-3.5" aria-hidden="true" />
+        {{ languageHint }}
+      </p>
+
       <RecipeHero
         :recipe="recipe"
         :servings="scaler.servings.value"
@@ -107,13 +113,30 @@ const token = computed(() => {
   return uuidSchema.safeParse(raw).success ? raw : null
 })
 
-const { data: shared, status } = await useAsyncData(
+const { data: shared, status, refresh } = await useAsyncData(
   () => `shared-recipe:${token.value}:${locale.value}`,
   async () => (token.value ? await sharing.getSharedRecipe({ token: token.value, locale: lang.value }).catch(() => null) : null),
   { default: () => null, watch: [token, locale] }
 )
 
 const recipe = computed(() => (shared.value && token.value ? localizeFull(sharedToRecipe(shared.value, `shared:${token.value}`)) : null))
+// Lien lu dans l'autre langue sans traduction à jour : on la fait traduire (une fois, comptée sur l'auteur) puis on recharge ;
+// en attendant, texte d'origine + « traduction en cours ». Aucun compte requis (la langue est celle de la page : /en/r/…).
+const { status: translationStatus } = useOnDemandTranslation({
+  endpoint: () => (shared.value && token.value ? `/api/v2/shared/${token.value}/translate` : null),
+  shown: () => (recipe.value ? { lang: recipe.value.lang, displayLang: recipe.value.displayLang } : null),
+  onTranslated: () => refresh()
+})
+const languageHint = computed(() => {
+  const shown = recipe.value
+  if (!shown) return null
+  const origin = t(`recipeDetail.language.${shown.displayLang}`)
+  if (translationStatus.value === 'pending') return t('recipeDetail.language.translating', { lang: origin })
+  if (translationStatus.value === 'unavailable') return t('recipeDetail.language.unavailable', { lang: origin })
+  if (shown.displayLang !== lang.value) return t('recipeDetail.language.original', { lang: origin })
+  if (shown.displayLang !== shown.lang) return t('recipeDetail.language.translated', { lang: t(`recipeDetail.language.${shown.lang}`) })
+  return null
+})
 // Photo : route serveur qui vérifie le jeton puis redirige vers une URL signée de 2 minutes (le bucket est privé).
 const photoSrc = computed(() => (shared.value?.has_photo && token.value ? `/api/v2/shared/${token.value}/photo` : null))
 const ingredientSections = computed(() => sectionsWithIngredients(recipe.value?.sections ?? []))

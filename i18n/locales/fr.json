@@ -342,6 +342,8 @@
     },
     "language": {
       "translated": "Traduit automatiquement (texte d'origine en {lang}).",
+      "translating": "Traduction en cours… texte d'origine ({lang}) affiché en attendant.",
+      "unavailable": "Traduction indisponible pour le moment : texte d'origine ({lang}).",
       "original": "Texte d'origine ({lang}) : pas encore traduit.",
       "fr": "français",
       "en": "anglais"

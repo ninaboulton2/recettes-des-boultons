@@ -58,7 +58,7 @@ async function loadMeta(supabase: SupabaseClient, recipeId: string): Promise<Tra
   return row ? { locale: row.locale, sourceHash: row.source_hash, stale: row.stale } : null
 }
 
-function failureOf(error: unknown): { reason: FailureReason, message: string } {
+export function failureOf(error: unknown): { reason: FailureReason, message: string } {
   const status = typeof error === 'object' && error !== null && 'statusCode' in error
     ? (error as { statusCode: unknown }).statusCode
     : undefined

@@ -150,11 +150,14 @@ const addingAll = ref(false)
 
 const failure = (cause: unknown) => $toast.error(t(sharingErrorKey(cause) === 'errors.generic' ? 'explore.error' : sharingErrorKey(cause)))
 
+// Titre dans la langue de l'interface (les cartes l'affichent déjà ainsi).
+const { localizeCard } = useRecipeLocale()
+
 async function add(recipe: AuthorRecipe): Promise<void> {
   busyId.value = recipe.id
   try {
     await cookbook.addToCookbook({ recipeId: recipe.id })
-    $toast.success(t('shared.added', { title: recipe.title }))
+    $toast.success(t('shared.added', { title: localizeCard(recipe).title }))
     recipesStore.refresh()
     await refresh()
   } catch (cause) {

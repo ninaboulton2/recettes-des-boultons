@@ -54,7 +54,9 @@
 <script setup lang="ts">
 import { NOTIFICATIONS_PAGE_SIZE } from '#shared/schemas/social'
 import type { AppNotification } from '#shared/utils/social'
-import { notificationView, unreadIds, type NotificationView } from '#shared/utils/socialUi'
+import { isUuid, notificationView, unreadIds, type NotificationView } from '#shared/utils/socialUi'
+import { localizedRecipeTitle } from '#shared/utils/translation'
+import type { Database } from '#shared/types/database'
 
 /**
  * Notifications (v2) : liste paginée (`list_notifications`, 30 par page, « Voir plus »), texte lisible FR/EN par genre
@@ -89,8 +91,23 @@ watch(firstPage, (page) => {
   nextBefore.value = page.nextBefore
 })
 
+// Titres des recettes partagées avec moi dans la langue de l'interface (le payload de la notification garde le titre d'origine).
+const supabase = useSupabaseClient<Database>()
+const { lang: recipeLang } = useRecipeLocale()
+const recipeTitles = ref<Record<string, string>>({})
+async function loadRecipeTitles(): Promise<void> {
+  const ids = [...new Set(items.value.filter(item => item.type === 'recipe_shared').map(item => item.payload.recipe_id).filter((id): id is string => typeof id === 'string' && isUuid(id)))]
+  if (ids.length === 0) return
+  const { data } = await supabase.from('recipes').select('id, title, lang, recipe_translations(locale, title, stale)').in('id', ids)
+  recipeTitles.value = Object.fromEntries((data ?? []).map(row => [row.id, localizedRecipeTitle(row, recipeLang.value)]))
+}
+if (import.meta.client) {
+  onMounted(loadRecipeTitles)
+  watch([items, recipeLang], loadRecipeTitles)
+}
+
 const views = computed(() => items.value.flatMap((notification) => {
-  const view = notificationView(notification)
+  const view = notificationView(notification, recipeTitles.value)
   return view ? [{ notification, view }] : []
 }))
 const unread = computed(() => Math.max(count.value, unreadIds(items.value).length))

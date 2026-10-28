@@ -243,6 +243,40 @@ export function normalizeDraft(texts: RecipeTexts, draft: TranslationDraft): Tra
 }
 
 // ---------------------------------------------------------------------------
+// Traduction à la demande d'une recette lue dans l'autre langue (recette partagée)
+// ---------------------------------------------------------------------------
+
+export type TranslationAction = 'same-language' | 'ready' | 'revalidate' | 'translate'
+
+/**
+ * Que faire pour montrer une recette dans la langue `locale` de la personne qui la lit ?
+ *  - `same-language` : la recette est déjà écrite dans cette langue ;
+ *  - `ready` : une traduction à jour vers `locale` existe ;
+ *  - `revalidate` : elle existe, les textes n'ont pas changé (même empreinte) mais elle est marquée périmée : on la revalide ;
+ *  - `translate` : aucune traduction utilisable (absente, vers une autre langue, ou textes modifiés depuis) : à traduire.
+ */
+export function translationAction(input: {
+  recipeLang: RecipeLang
+  locale: RecipeLang
+  existing: { locale: RecipeLang, sourceHash: string, stale: boolean } | null
+  /** Empreinte des textes actuels (`sourceHash(recipeTexts(recette))`). */
+  hash: string
+}): TranslationAction {
+  if (input.locale === input.recipeLang) return 'same-language'
+  const { existing } = input
+  if (!existing || existing.locale !== input.locale || existing.sourceHash !== input.hash) return 'translate'
+  return existing.stale ? 'revalidate' : 'ready'
+}
+
+/**
+ * Côté navigateur : la recette affichée n'est pas dans la langue de l'interface alors qu'elle devrait pouvoir l'être
+ * (langue d'origine ≠ langue de l'interface et `localizeRecipe` n'a rien trouvé à appliquer) ? Alors on demande sa traduction.
+ */
+export function needsTranslation(input: { recipeLang: RecipeLang, displayLang: RecipeLang, locale: RecipeLang }): boolean {
+  return input.recipeLang !== input.locale && input.displayLang !== input.locale
+}
+
+// ---------------------------------------------------------------------------
 // Affichage dans la langue de l'interface
 // ---------------------------------------------------------------------------
 
@@ -254,6 +288,16 @@ function usableTranslation<T extends SummaryTranslation>(
 ): T | null {
   if (!translation || locale === lang || translation.locale !== locale) return null
   return translation
+}
+
+/** Titre d'une recette dans la langue `locale` à partir d'une ligne `recipes` avec ses traductions (notifications, liens) ; repli sur l'original. */
+export function localizedRecipeTitle(
+  row: { title: string, lang?: string | null, recipe_translations?: ReadonlyArray<{ locale: string, title: string, stale?: boolean | null }> | null },
+  locale: RecipeLang
+): string {
+  if (!isRecipeLang(row.lang) || row.lang === locale) return row.title
+  const translation = (row.recipe_translations ?? []).find(item => item.locale === locale && !item.stale && item.title.trim() !== '')
+  return translation ? translation.title : row.title
 }
 
 /** Résumé (carte, liste, favori, planning) dans la langue `locale`, repli sur le texte d'origine. */

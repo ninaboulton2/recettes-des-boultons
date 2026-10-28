@@ -205,10 +205,20 @@ const recipe = computed(() => (sourceRecipe.value ? localizeFull(sourceRecipe.va
 // v2 : photo (URL signée, obtenue dans le navigateur) en tête de la fiche ; la v1 n'affiche pas de photo sur la fiche
 const heroPhoto = usePhotoSrc(() => (v2 ? sourceRecipe.value?.photoPath : null))
 
+// v2 : recette lue dans l'autre langue sans traduction à jour (recette partagée par une amie, un groupe…) : on la fait traduire
+// (une fois, comptée sur l'auteur) et on la recharge ; en attendant, texte d'origine + « traduction en cours ».
+const { status: translationStatus } = useOnDemandTranslation({
+  endpoint: () => (v2 && authStore.isAuthenticated && sourceRecipe.value ? `/api/v2/recipes/${recipeId.value}/translate` : null),
+  shown: () => (recipe.value ? { lang: recipe.value.lang, displayLang: recipe.value.displayLang } : null),
+  onTranslated: () => refresh()
+})
+
 // Discret : dit d'où vient le texte quand ce n'est pas du texte écrit dans la langue de l'interface.
 const languageHint = computed(() => {
   const shown = recipe.value
   if (!shown) return null
+  if (translationStatus.value === 'pending') return t('recipeDetail.language.translating', { lang: t(`recipeDetail.language.${shown.displayLang}`) })
+  if (translationStatus.value === 'unavailable') return t('recipeDetail.language.unavailable', { lang: t(`recipeDetail.language.${shown.displayLang}`) })
   if (shown.displayLang !== lang.value) return t('recipeDetail.language.original', { lang: t(`recipeDetail.language.${shown.displayLang}`) })
   if (shown.displayLang !== shown.lang) return t('recipeDetail.language.translated', { lang: t(`recipeDetail.language.${shown.lang}`) })
   return null

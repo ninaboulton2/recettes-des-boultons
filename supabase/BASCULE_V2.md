@@ -135,10 +135,10 @@ Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres �
 * **Variable Vercel** : `SUPABASE_SECRET_KEY` (clé service_role, côté serveur seulement), déjà demandée pour la suppression de compte, sert aussi à signer la photo de la page publique, copier une photo, et nettoyer le stockage. Sans elle, ces routes répondent 500 (le reste marche).
 * **Retour arrière** : `supabase/rollback/0029_private_photos_switchover_down.sql` (bucket redevient public, suppression de photo de nouveau permise aux éditeurs) **AVANT** `0020_rls_switchover_down`. Puis `0029_shared_recipe_photo_down.sql` (indépendant de 0018 / 0020, après avoir retiré le code v2).
 
-### Où s'insèrent 0024, 0025, 0027 et 0030 (petites migrations « sans effet pour la v1 »)
+### Où s'insèrent 0024, 0025, 0027, 0030 et 0031 (petites migrations « sans effet pour la v1 »)
 
-Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030**
-(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0030 d'un coup, avant le jour J**, un fichier = un Run).
+Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031**
+(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0031 d'un coup, avant le jour J**, un fichier = un Run).
 
 * **0024** (déjà en production) : rôle `user` en dur à l'inscription. Rien à refaire.
 * **0025** `0025_profile_onboarding.sql` : remplace `update_my_profile` par une version à 7 paramètres (fin de l'accueil). Elle **supprime l'ancienne
@@ -148,6 +148,10 @@ Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 �
   **Même résultat, ~10 fois plus rapide** : `select * from recipes` d'un membre 77 → 7 ms, `search_recipes` 150 → 15 ms, une fiche 29 → 3 ms (181 recettes,
   linéaire en nombre de recettes : sans elle ~0,5 s par liste à 1 000 recettes). Aucune table, colonne, politique ni donnée touchée : sans effet v1. Un Run.
   Retour : `rollback/0030_can_read_recipe_perf_down.sql` (remet la version SQL de 0019), **à jouer avant le retour arrière de 0019**.
+* **0031** `0031_shared_recipe_translation.sql` (retour de test n° 1) : deux fonctions **réservées au serveur** (`service_role`) : `save_recipe_translation_server` (écrit la traduction d'une
+  recette sans exiger le droit d'édition) et `shared_recipe_id(jeton)`. Elles permettent de traduire à la demande une recette partagée dans la langue de la personne qui la lit
+  (`DEVELOPER.md` § 20.19). Aucune table, colonne, politique ni donnée touchée : sans effet v1. Un Run, **avant de déployer le code v2** (sans elle, la traduction à la demande répond
+  « indisponible » et les pages gardent le texte d'origine : rien ne casse). Retour : `rollback/0031_shared_recipe_translation_down.sql` (retirer d'abord le code v2).
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
@@ -188,7 +192,7 @@ pas davantage. La **durée réelle du jour J est dominée par le temps humain** 
 
 | Étape | Fichier | Durée |
 |---|---|---|
-| Migrations 0025 → 0030 (6 Runs) | `migrations/0025…0030` | 0,03 à 0,06 s chacune |
+| Migrations 0025 → 0030 (6 Runs) ; 0031 en plus depuis le retour de test n° 1 | `migrations/0025…0031` | 0,03 à 0,06 s chacune |
 | 2 | `v2/0018_params.sql` | 0,03 s |
 | 4 | `v2/0018_v2_data_fill.sql` | **0,5 à 0,7 s** (181 recettes, 36 à 45 catégories, 181 droits) |
 | 5 | contrôles A à F | < 0,1 s |
@@ -491,7 +495,7 @@ Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suiva
 
 - [ ] Sauvegarde : export JSON des tables + `pg_dump` (`BASCULE_PROD.md` § 0.1) **hors du dépôt**, liste des fichiers du bucket `recipe-photos`.
 - [ ] Prérequis 1.2 : 0017, 0019, 0021, 0023, 0024 présentes (requête du § 1, `recettes_avec_proprietaire = 0`).
-- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
+- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030, 0031**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
 - [ ] Domaine (§ 5 bis) : fait avant ou après la bascule, indépendamment ; `SITE_URL` en dernier.
 - [ ] Variables Vercel posées : `SUPABASE_SECRET_KEY`, `CRON_SECRET` (≥ 16 caractères), `ALERT_EMAIL`, `AI_MONTHLY_BUDGET_USD` (suggéré 5) ; `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL` si le domaine est prêt (`DEVELOPER.md` § 20.15).
 - [ ] Supabase → Settings → API → *Exposed schemas* : `private` **absent** (§ 4).

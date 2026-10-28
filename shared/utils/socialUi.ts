@@ -76,8 +76,9 @@ const text = (value: unknown): string | null => (typeof value === 'string' && va
  * Texte, icône et lien d'une notification. Un genre inconnu (base plus récente que l'interface) renvoie `null` :
  * la liste le masque plutôt que d'afficher du texte technique. Un identifiant mal formé supprime le lien (jamais de chemin
  * construit avec une valeur non vérifiée). Le texte vient de l'interface, jamais du payload, sauf les noms et titres.
+ * `titles` : titres traduits des recettes (par identifiant) pour la langue de l'interface, repli sur le titre du payload.
  */
-export function notificationView(notification: Pick<AppNotification, 'type' | 'payload'>): NotificationView | null {
+export function notificationView(notification: Pick<AppNotification, 'type' | 'payload'>, titles: Readonly<Record<string, string>> = {}): NotificationView | null {
   const p = notification.payload
   const name = (key: string, fallback = '') => text(p[key]) ?? fallback
   const id = (key: string): string | null => (isUuid(p[key]) ? p[key] as string : null)
@@ -92,7 +93,8 @@ export function notificationView(notification: Pick<AppNotification, 'type' | 'p
     case 'group_invitation_accepted':
       return { key, params: { name: name('name'), group: name('group_name') }, icon: 'i-lucide-user-round-check', to: id('group_id') ? `/groupes/${id('group_id')}` : '/groupes' }
     case 'recipe_shared':
-      return { key, params: { name: name('from_name'), title: name('title') }, icon: 'i-lucide-share-2', to: id('recipe_id') ? `/recettes/${id('recipe_id')}` : null }
+      // Titre dans la langue de l'interface si on l'a (le payload garde le titre d'origine, figé à l'envoi).
+      return { key, params: { name: name('from_name'), title: titles[id('recipe_id') ?? ''] ?? name('title') }, icon: 'i-lucide-share-2', to: id('recipe_id') ? `/recettes/${id('recipe_id')}` : null }
     case 'recipe_deleted':
       return { key, params: { name: name('author_name'), title: name('title') }, icon: 'i-lucide-trash-2', to: null }
     case 'group_member_removed':
