@@ -36,6 +36,7 @@
 #   11c. 0027 (report_shared_recipe, phase 6E) sous la chaîne complète : application + rejeu, test_0027_report_shared_recipe.sql (limite, support), retour arrière, ré-application + test, retour.
 #   11d. 0028 (ai_credit_email, phase 7) sous la chaîne complète : application + rejeu, test_0028_ai_credit_email.sql (quota par compte, crédit, budget, alerte une fois par 24 h, e-mails), retour arrière, ré-application + test, retour.
 #   11e. 0030 (can_read_recipe plus rapide, phase 10) sous la chaîne complète : application + rejeu, test_0030_can_read_recipe_perf.sql (même résultat que l'ancienne expression), retour arrière, ré-application + test, retour.
+#   11f. 0031 (traduction d'une recette partagée par le serveur) sous la chaîne complète : application + rejeu, test_0031_shared_recipe_translation.sql (service_role seul, validations, langue source corrigée, jeton révoqué), retour arrière, ré-application + test, retour.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
 #  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
@@ -431,6 +432,19 @@ run "$RB30"
 run "$M30"
 run "$HERE/test_0030_can_read_recipe_perf.sql"
 run "$RB30"
+# ---------------------------------------------------------------- 0031 : traduction d'une recette partagée par le serveur (retour de test n° 1), sous la chaîne complète
+echo "▶ 0031 : save_recipe_translation_server + shared_recipe_id (+ rejeu + test), retour arrière, ré-application"
+M31="$SUPA/migrations/0031_shared_recipe_translation.sql"
+RB31="$SUPA/rollback/0031_shared_recipe_translation_down.sql"
+run "$M31"
+"${PSQL[@]}" -f "$M31"
+run "$HERE/test_0031_shared_recipe_translation.sql"
+run "$RB31"
+"${PSQL[@]}" -f "$RB31"
+"${PSQL[@]}" -c "do \$\$ begin assert to_regprocedure('public.save_recipe_translation_server(uuid, text, jsonb)') is null and to_regprocedure('public.shared_recipe_id(uuid)') is null, 'retour arrière de 0031 incomplet'; end \$\$;"
+run "$M31"
+run "$HERE/test_0031_shared_recipe_translation.sql"
+run "$RB31"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"
