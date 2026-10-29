@@ -57,7 +57,7 @@ if [[ $RESET -eq 1 ]]; then
   say "▶ Reset de la base locale + snapshot + 0001 → 0017, 0019, 0021, 0023, 0024"
   ( cd "$ROOT" && npx supabase db reset >/dev/null 2>&1 && bash "$HERE/setup.sh" --until 24 --no-verify ) >>"$LOG" 2>&1
   q -f "$HERE/rehearsal_seed_translations.sql" >>"$LOG"
-  for f in "$SUPA"/migrations/00{25,26,27,28,29,30}_*.sql; do step "Migration $(basename "$f" | cut -c1-4)" "$f"; done
+  for f in "$SUPA"/migrations/00{25,26,27,28,29,30,31}_*.sql; do step "Migration $(basename "$f" | cut -c1-4)" "$f"; done
 fi
 q -f "$HERE/rehearsal_fingerprint.sql" > "${LOG%.log}_avant.txt"
 say ""; say "▶ Empreinte « avant » : ${LOG%.log}_avant.txt"
