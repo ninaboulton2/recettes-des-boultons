@@ -128,6 +128,9 @@ import type { NoteType } from '#shared/schemas/planning'
 import { mealTitle, usePlanningWeek } from '~/composables/usePlanningWeek'
 import { fromDateString, toDateString } from '~/utils/week'
 
+// v2 : visiteur → connexion puis retour ici (sans effet en v1).
+definePageMeta({ middleware: 'v2-members' })
+
 const { lang: recipeLang } = useRecipeLocale()
 
 const authStore = useAuthStore()

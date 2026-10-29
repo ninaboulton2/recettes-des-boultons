@@ -149,6 +149,9 @@ import type { AddItemPayload } from '~/components/shopping/AddItemForm.vue'
 import { useOfflineShopping } from '~/composables/useOfflineShopping'
 import { useShoppingLists } from '~/composables/useShoppingLists'
 
+// v2 : visiteur → connexion puis retour ici (sans effet en v1).
+definePageMeta({ middleware: 'v2-members' })
+
 const authStore = useAuthStore()
 const { t } = useI18n()
 const shopping = useShoppingLists()

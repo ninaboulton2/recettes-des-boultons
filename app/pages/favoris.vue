@@ -39,6 +39,9 @@
 <script setup lang="ts">
 import type { Favorite, RecipeSummary } from '#shared/types'
 
+// v2 : visiteur → connexion puis retour ici (sans effet en v1).
+definePageMeta({ middleware: 'v2-members' })
+
 type FavoriteWithRecipe = Favorite & { recipe: RecipeSummary }
 
 const { t, locale } = useI18n()

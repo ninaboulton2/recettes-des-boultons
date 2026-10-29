@@ -83,11 +83,13 @@
       </template>
     </UDrawer>
 
-    <AuthModal :is-open="showLoginModal" @close="showLoginModal = false" @success="showLoginModal = false" />
+    <AuthModal :is-open="showLoginModal" @close="showLoginModal = false" @success="onLoginSuccess" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { safeReturnPath } from '#shared/utils/returnPath'
+
 const route = useRoute()
 // `brand` est un accesseur calculé : en v2 il suit le thème actif (logo, couleur du nom) sans rechargement.
 const edition = useEdition()
@@ -111,6 +113,20 @@ const planningStore = usePlanningStore()
 const shoppingStore = useShoppingStore()
 
 const showLoginModal = ref(false)
+
+// v2 : un visiteur qui ouvre Favoris / Planning / Courses arrive ici avec `?connexion=<page demandée>` (middleware `v2-members`) :
+// la fenêtre de connexion s'ouvre, puis on le ramène sur la page demandée.
+const loginReturnTo = computed(() => safeReturnPath(route.query.connexion))
+if (v2) {
+  watch(loginReturnTo, (target) => {
+    if (target && !authStore.isAuthenticated) showLoginModal.value = true
+  }, { immediate: import.meta.client })
+}
+async function onLoginSuccess(): Promise<void> {
+  showLoginModal.value = false
+  const target = loginReturnTo.value
+  if (target) await navigateTo(target)
+}
 const showMobileMenu = ref(false)
 
 const isActive = (to: string) => route.path === localePath(to) || route.path.startsWith(`${localePath(to)}/`)

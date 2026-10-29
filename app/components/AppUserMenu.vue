@@ -47,7 +47,8 @@ const items = computed<DropdownMenuItem[][]>(() => [
           { label: t('navigation.planning'), icon: 'i-lucide-calendar-days', to: localePath('/planning') },
           { label: t('navigation.shopping'), icon: 'i-lucide-shopping-cart', to: localePath('/courses') }
         ]),
-    ...(authStore.isAdmin || v2
+    // Le traducteur reste dans le menu en v1 (admins) ; en v2 il s'ouvre depuis « Nouvelle recette » et l'accueil.
+    ...(authStore.isAdmin && !v2
       ? [
           { label: t('ui.user.translator'), icon: 'i-lucide-sparkles', to: localePath('/traducteur') }
         ]
