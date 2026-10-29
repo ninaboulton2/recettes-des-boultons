@@ -100,3 +100,72 @@ jobs:
       - name: Logs Supabase
         if: failure()
         run: docker ps -a && supabase status || true
+
+  e2e-v2:
+    name: Tests e2e v2 (Playwright + Supabase local)
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NUXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: Start Supabase (local)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit
+
+      - name: psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Données jetables (seed_test.sql, pas de snapshot), migrations jusqu'à 0031, puis l'état v2 (chaîne de la bascule,
+      # paramètres factices, comptes nouveau@ / ami@) : mêmes étapes que `npm run db:local:v2`.
+      - name: Seed database (état v2)
+        run: |
+          bash scripts/ci-seed.sh
+          bash supabase/local/setup_v2.sh
+
+      - name: Write .env.local (v2)
+        run: |
+          bash scripts/ci-env-local.sh
+          {
+            echo "NUXT_PUBLIC_V2=true"
+            echo "SITE_URL=${E2E_SITE_URL:-https://familycookbook.test}"
+            echo "SUPABASE_SECRET_KEY=$(supabase status -o env | sed -n 's/^SERVICE_ROLE_KEY="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')"
+          } >> .env.local
+
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build -- --dotenv .env.local
+        env:
+          NITRO_PRESET: node-server
+
+      - name: Tests e2e v2
+        run: npx playwright test -c playwright.v2.config.ts
+
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-v2
+          path: |
+            test-results/report-v2
+            test-results/artifacts-v2
+          retention-days: 7
+
+      - name: Logs Supabase
+        if: failure()
+        run: docker ps -a && supabase status || true
