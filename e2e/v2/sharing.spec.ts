@@ -84,7 +84,7 @@ test('(6b-share1) lecture à un ami, vérifiée avec l’autre compte ; Échap f
   await amiPage.getByTestId('share-recipient').click()
   await amiPage.getByRole('option', { name: /User/ }).first().click()
   await amiPage.getByTestId('share-reshare-submit').click()
-  await expect(amiPage.getByText('Recette repartagée')).toBeVisible()
+  await expect(amiPage.getByText('Recette repartagée', { exact: true })).toBeVisible()
   await ami.close()
 
   // Le destinataire du repartage la voit en lecture ; puis l’auteur retire le droit de l’ami : le repartage disparaît avec lui
