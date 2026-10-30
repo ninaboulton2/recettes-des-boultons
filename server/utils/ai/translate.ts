@@ -1,7 +1,7 @@
 import { generateObject, type LanguageModel } from 'ai'
-import { aiRecipeSchema, assertTranslationShape, type AiRecipe } from '#shared/schemas/ai'
+import { aiRecipeSchema, assertTranslationShape, TranslationShapeError, type AiRecipe } from '#shared/schemas/ai'
 import { aiTranslateExistingSchema } from '#shared/schemas/translation'
-import { draftFromAi, normalizeDraft, type RecipeTexts, type TranslationDraft } from '#shared/utils/translation'
+import { draftFromAi, normalizeDraft, sourceLanguageProblem, type RecipeTexts, type TranslationDraft } from '#shared/utils/translation'
 import type { RecipeLang } from '#shared/types'
 import { buildSystemPrompt, buildTranslateSystemPrompt, buildTranslateUserPrompt, buildUserPrompt } from './prompt'
 
@@ -81,6 +81,10 @@ export async function translateRecipeTexts(model: LanguageModel, texts: RecipeTe
 
   const translation = normalizeDraft(texts, draftFromAi(result.object.translation))
   assertTranslationShape(texts, translation)
+  // Garde-fou : une langue source nettement contredite par le texte (recette française déclarée « en ») donnerait une
+  // « traduction » dans la mauvaise colonne ; on préfère ne rien enregistrer (la recette reste lisible dans sa langue).
+  const languageProblem = sourceLanguageProblem(texts, result.object.sourceLanguage)
+  if (languageProblem) throw new TranslationShapeError(languageProblem)
   return {
     sourceLanguage: result.object.sourceLanguage,
     translation,

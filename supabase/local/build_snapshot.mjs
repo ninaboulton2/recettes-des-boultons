@@ -11,12 +11,17 @@
 //    recipes, recipe_sections, recipe_ingredients, instructions,
 //    user_data (un objet : {shopping_lists, shopping_items, planning,
 //               planning_notes, favorites, profiles, users})
+//    recipe_lang (id, lang des recettes écrites en anglais), recipe_translations*
+//    (une ligne par recette et par langue cible) — facultatifs mais indispensables
+//    pour tester l'affichage bilingue (voir export_snapshot.md § recipe_lang).
 //  Les requêtes SQL exactes sont dans export_snapshot.md.
 //
 //  Sortie : snapshot/00_users.sql, 10_recipes.sql, 20_recipe_sections.sql,
 //  30_recipe_ingredients.sql, 40_instructions.sql, 50_user_data.sql,
 //  tous idempotents (on conflict … do nothing / do update), appliqués par
 //  setup.sh APRÈS 0001/0002 et AVANT 0003 (colonnes « avant migration »).
+//  after_0016_recipe_i18n.sql (recipes.lang + recipe_translations) est appliqué
+//  par setup.sh juste APRÈS la migration 0016, qui crée ces colonne et table.
 //
 //  Anonymisation : aucun e-mail réel n'est lu ni écrit. Les comptes locaux
 //  deviennent admin@local.test, admin2@local.test, user@local.test, user2@…
@@ -155,6 +160,31 @@ fs.writeFileSync(path.join(OUT, '20_recipe_sections.sql'), header('recipe_sectio
 fs.writeFileSync(path.join(OUT, '30_recipe_ingredients.sql'), header('recipe_ingredients') + insertFromJson('recipe_ingredients', ingredients))
 fs.writeFileSync(path.join(OUT, '40_instructions.sql'), header('instructions') + insertFromJson('instructions', instructions))
 
+// --- Langue et traductions (appliqués après 0016) ---------------------------
+// recipes.lang et recipe_translations n'existent qu'à partir de 0016 : ce fichier
+// ne peut pas suivre les 10_…40_ (chargés avant 0003). setup.sh le joue après 0016.
+const optionalFiles = prefix => rawFiles(prefix)
+let i18nSql = header('recipes.lang + recipe_translations').replace('avant 0003', 'après 0016')
+let nLang = 0
+let nTr = 0
+const langFiles = optionalFiles('recipe_lang')
+if (langFiles.length > 0) {
+  const langRows = langFiles.flatMap(f => loadJson(f))
+  nLang = langRows.length
+  i18nSql += `\n-- ${nLang} recette(s) dont la langue d'origine n'est pas le français\nupdate public.recipes r set lang = v.lang\n  from jsonb_to_recordset(${dollar(JSON.stringify(langRows))}::jsonb) as v(id uuid, lang text)\n where r.id = v.id and r.lang is distinct from v.lang;\n`
+}
+const trFiles = optionalFiles('recipe_translations')
+if (trFiles.length > 0) {
+  const trRows = trFiles.flatMap(f => loadJson(f))
+  if (new Set(trRows.map(r => `${r.recipe_id}/${r.locale}`)).size !== trRows.length) throw new Error('recipe_translations : doublons (recipe_id, locale)')
+  nTr = trRows.length
+  // Colonnes explicites : `search` est générée et ne peut pas être insérée.
+  i18nSql += `\n-- ${nTr} traduction(s)\ninsert into public.recipe_translations (recipe_id, locale, title, description, notes, tags, content, source_hash, model, stale, translated_at)\nselect v.recipe_id, v.locale, v.title, v.description, v.notes, coalesce(v.tags, '{}'), v.content, v.source_hash, v.model, coalesce(v.stale, false), coalesce(v.translated_at, now())\n  from jsonb_populate_recordset(null::public.recipe_translations, ${dollar(JSON.stringify(trRows))}::jsonb) v\n  join public.recipes r on r.id = v.recipe_id\non conflict (recipe_id, locale) do nothing;\n`
+}
+const i18nFile = path.join(OUT, 'after_0016_recipe_i18n.sql')
+if (nLang + nTr > 0) fs.writeFileSync(i18nFile, i18nSql)
+else if (fs.existsSync(i18nFile)) fs.unlinkSync(i18nFile)
+
 // --- Données personnelles ----------------------------------------------------
 const emailById = new Map(accounts.map(a => [a.id, a.email]))
 const profileRows = profiles.map(p => ({ ...p, email: emailById.get(p.id) ?? `${p.id}@local.test` }))
@@ -178,4 +208,5 @@ fs.writeFileSync(path.join(OUT, '50_user_data.sql'), userDataSql)
 console.log(`Snapshot généré dans ${OUT} :`)
 console.log(`  users ${accounts.length} (${accounts.map(a => a.email).join(', ')})`)
 console.log(`  recipes ${recipes.length}, recipe_sections ${sections.length}, recipe_ingredients ${ingredients.length}, instructions ${instructions.length}`)
+console.log(`  recipe_lang (non-fr) ${nLang}, recipe_translations ${nTr}${nLang + nTr === 0 ? ' — ABSENTS : l\'UI bilingue ne sera pas représentative (export_snapshot.md)' : ''}`)
 console.log(`  profiles ${profileRows.length}, shopping_lists ${(ud.shopping_lists ?? []).length}, shopping_items ${(ud.shopping_items ?? []).length}, planning ${(ud.planning ?? []).length}, planning_notes ${(ud.planning_notes ?? []).length}, favorites ${(ud.favorites ?? []).length}`)

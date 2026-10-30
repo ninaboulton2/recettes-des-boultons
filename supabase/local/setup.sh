@@ -91,7 +91,7 @@ elif [[ $MODE == seed-test ]]; then
   run "$SUPA/seed_test.sql"
 else
   shopt -s nullglob
-  snapshot_files=("$HERE"/snapshot/*.sql)
+  snapshot_files=("$HERE"/snapshot/[0-9]*.sql)
   shopt -u nullglob
   if (( ${#snapshot_files[@]} == 0 )); then
     echo "⚠ Aucun snapshot dans supabase/local/snapshot/ : base sans recettes (voir export_snapshot.md)."
@@ -123,6 +123,11 @@ for f in "$SUPA"/migrations/0*_*.sql; do
   # (surcharge de update_my_profile). 0024 et suivantes sont idempotentes.
   if (( n < 24 && SOCIAL_PRESENT == 1 )); then continue; fi
   run "$f"
+  # recipes.lang et recipe_translations naissent avec 0016 : leurs données (lang des recettes anglaises, traductions
+  # prod) ne peuvent donc être chargées qu'ensuite. Idempotent (update conditionnel, on conflict do nothing).
+  if (( n == 16 )) && [[ $MODE == snapshot ]]; then
+    for post in "$HERE"/snapshot/after_0016_*.sql; do [[ -f "$post" ]] && run "$post"; done
+  fi
 done
 
 # 4. Comptes de test + aide aux tests ----------------------------------------

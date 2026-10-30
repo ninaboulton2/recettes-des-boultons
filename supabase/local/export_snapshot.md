@@ -25,6 +25,17 @@ select json_agg(t order by t.id) as data from (
          servings,image,tags,notes,created_at,updated_at
     from public.recipes order by id) t;
 
+-- raw/recipe_lang.json  — langue d'origine des recettes (colonne recipes.lang, créée par 0016). Seules les recettes
+-- NON françaises sont nécessaires (les autres gardent la valeur par défaut 'fr').
+select json_agg(t order by t.id) as data from (
+  select id, lang from public.recipes where lang <> 'fr' order by id) t;
+
+-- raw/recipe_translations.json  (ou recipe_translations_01.json, _02.json… avec limit 20 offset 0 / 20 / 40…) —
+-- sans ces fichiers, TOUTES les recettes restent lang='fr' en local et l'UI anglaise paraît « non traduite ».
+select json_strip_nulls(json_agg(t order by t.recipe_id)) as data from (
+  select recipe_id, locale, title, description, notes, tags, content, source_hash, model
+    from public.recipe_translations order by recipe_id limit 20 offset 0) t;
+
 -- raw/recipe_sections.json
 select json_agg(t order by t.id) as data from (
   select id,recipe_id,name,type,order_index,created_at,updated_at from public.recipe_sections) t;
@@ -66,7 +77,9 @@ comptes de `verify.sql` devront être revus (les orphelins auront déjà été s
 npm run db:local:snapshot        # = node supabase/local/build_snapshot.mjs
 ```
 
-Produit `snapshot/00_users.sql` → `50_user_data.sql` (`insert … on conflict do nothing`),
+Produit `snapshot/00_users.sql` → `50_user_data.sql` (`insert … on conflict do nothing`) et
+`snapshot/after_0016_recipe_i18n.sql` (`recipes.lang` + `recipe_translations`, joué par `setup.sh` juste **après** la
+migration 0016 qui crée cette colonne et cette table — les autres fichiers passent avant 0003),
 puis affiche la correspondance uuid prod → e-mail local :
 
 * le 1er admin (par date de création) → `admin@local.test`, le 2e → `admin2@local.test` ;

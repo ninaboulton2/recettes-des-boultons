@@ -414,6 +414,12 @@ const EN_WORDS = new Set(['the', 'and', 'with', 'for', 'into', 'until', 'add', '
  * lui-même. Égalité ou texte vide : français (langue par défaut du site).
  */
 export function detectLanguage(text: string): RecipeLang {
+  const { fr, en } = languageScores(text)
+  return en > fr ? 'en' : 'fr'
+}
+
+/** Nombre de mots courants (et d'accents) français / anglais d'un texte : base de `detectLanguage` et `strongLanguage`. */
+function languageScores(text: string): { fr: number, en: number } {
   const words = text.toLowerCase().match(/[\p{L}'’œ]+/gu) ?? []
   let fr = 0
   let en = 0
@@ -423,7 +429,31 @@ export function detectLanguage(text: string): RecipeLang {
   }
   const accents = (text.match(/[àâçéèêëîïôùûüœ]/gi) ?? []).length
   fr += Math.min(accents, 10) / 2
-  return en > fr ? 'en' : 'fr'
+  return { fr, en }
+}
+
+/**
+ * Langue d'un texte quand elle ne fait AUCUN doute (écart d'au moins 8 points et rapport d'au moins 2 : une recette entière,
+ * pas un titre), `null` sinon (texte court, mélangé, ambigu). Sert de garde-fou face à la détection du modèle.
+ */
+export function strongLanguage(text: string): RecipeLang | null {
+  const { fr, en } = languageScores(text)
+  const [max, min] = fr >= en ? [fr, en] : [en, fr]
+  if (max - min < 8 || max < 2 * min) return null
+  return fr > en ? 'fr' : 'en'
+}
+
+/**
+ * Le modèle a-t-il déclaré une langue source (`sourceLanguage`) que le texte contredit nettement ? Une recette française étiquetée
+ * « en » est traduite dans le mauvais sens : la « traduction » est alors du français dans la colonne anglaise et l'interface
+ * paraît non traduite. `null` si rien ne cloche (ou si le texte est trop court / ambigu pour trancher).
+ */
+export function sourceLanguageProblem(texts: RecipeTexts, sourceLanguage: RecipeLang): string | null {
+  const detected = strongLanguage(flattenTexts(texts))
+  if (detected && detected !== sourceLanguage) {
+    return `langue source déclarée « ${sourceLanguage} » mais le texte est nettement en « ${detected} »`
+  }
+  return null
 }
 
 /** Tous les textes d'une recette à plat (détection de langue, estimation de taille). */

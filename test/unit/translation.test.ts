@@ -12,6 +12,8 @@ import {
   otherLang,
   recipeTexts,
   sourceHash,
+  sourceLanguageProblem,
+  strongLanguage,
   translatedInput,
   translationShapeProblem,
   type TranslationDraft
@@ -55,6 +57,39 @@ describe('langues', () => {
     expect(detectLanguage('Mix the flour with the butter and bake until golden.')).toBe('en')
     expect(detectLanguage('')).toBe('fr')
     expect(detectLanguage('12345')).toBe('fr')
+  })
+})
+
+describe('garde-fou de la langue source (détection du modèle)', () => {
+  const french = recipeTexts({
+    title: 'Blinis', description: 'Petites crêpes légères et moelleuses.', notes: null, tags: [],
+    sections: [{ name: 'Recette', orderIndex: 0, ingredients: [{ name: 'farine de blé', amount: null, unit: null, unitCode: null, orderIndex: 0 }],
+      instructions: [
+        { content: 'Séparer les jaunes et les blancs des œufs.', orderIndex: 0 },
+        { content: 'Verser la farine dans un saladier, puis ajouter le sel et le poivre.', orderIndex: 1 },
+        { content: 'Faire cuire les cuillerées dans une poêle huilée avec du beurre.', orderIndex: 2 },
+        { content: 'Laisser reposer la pâte avec le lait pendant une heure dans le four.', orderIndex: 3 }
+      ] }]
+  })
+
+  it('strongLanguage ne tranche que sur un texte long et sans ambiguïté', () => {
+    expect(strongLanguage(flattenTexts(french))).toBe('fr')
+    expect(strongLanguage('Mix the flour with the butter and the sugar, then add the eggs and stir until smooth. Bake in the oven for an hour.')).toBe('en')
+    expect(strongLanguage('Tarte aux pommes')).toBeNull()
+    expect(strongLanguage('')).toBeNull()
+    expect(strongLanguage('Mix the flour avec le sucre')).toBeNull()
+  })
+
+  it('sourceLanguageProblem refuse une recette française déclarée anglaise (et inversement), pas un texte ambigu', () => {
+    expect(sourceLanguageProblem(french, 'fr')).toBeNull()
+    expect(sourceLanguageProblem(french, 'en')).toMatch(/« en ».*« fr »/)
+    const english = recipeTexts({ ...detail, title: 'Pie', description: null, tags: [], sections: [{ name: 'Method', orderIndex: 0, ingredients: [],
+      instructions: [{ content: 'Preheat the oven, then mix the flour with the butter and the sugar until smooth.', orderIndex: 0 },
+        { content: 'Add the eggs and stir, then bake for about an hour and serve with cream.', orderIndex: 1 }] }] })
+    expect(sourceLanguageProblem(english, 'fr')).toMatch(/« fr ».*« en »/)
+    expect(sourceLanguageProblem(english, 'en')).toBeNull()
+    // texte court (titre seul) : on fait confiance au modèle
+    expect(sourceLanguageProblem(recipeTexts({ ...detail, title: 'Gaspacho', description: null, tags: [], sections: [] }), 'en')).toBeNull()
   })
 })
 
@@ -265,6 +300,20 @@ describe('affichage dans la langue de l\'interface', () => {
     expect(result.title).toBe('Tarte aux pommes')
     const noContent = { ...recipe, translation: null }
     expect(localizeRecipe(noContent, 'en').displayLang).toBe('fr')
+  })
+
+  it('fiche : contenu tel que stocké en prod (clés null absentes, section sans ingrédient) toujours appliqué', () => {
+    // `jsonb_strip_nulls` : ni `unit` ni `amount` dans les ingrédients ; les textes d'origine sont gardés pour ce qui manque.
+    const stripped = toRecipe({ ...row, recipe_translations: [{ ...row.recipe_translations![0]!,
+      content: { sections: [
+        { name: 'Dough', ingredients: [{ name: 'flour' }, { name: 'salt' }], instructions: [] },
+        { name: 'Method', ingredients: [], instructions: ['Mix.', 'Bake.'] }
+      ] } as never }] })
+    const en = localizeRecipe(stripped, 'en')
+    expect(en.displayLang).toBe('en')
+    const [flour, salt] = en.sections[0]!.ingredients
+    expect(flour).toMatchObject({ name: 'flour', amount: '250', unitCode: 'g' })
+    expect(salt).toMatchObject({ name: 'salt', amount: 'au goût' })
   })
 
   it('fiche : une traduction périmée n\'est jamais appliquée', () => {

@@ -1,8 +1,9 @@
--- Répétition de la bascule v2 : le snapshot a été pris AVANT la traduction des recettes (recipe_translations vide),
--- alors que la prod en contient une par recette (dossier v2 § 4.3 : 181). Ce script fabrique, en LOCAL seulement,
--- une traduction anglaise « réaliste » (dictionnaire de mots courants, pas d'IA) pour chaque recette sans traduction,
+-- Répétition de la bascule v2 : si le snapshot n'embarque pas les traductions prod (raw/recipe_translations*.json, voir
+-- export_snapshot.md), recipe_translations est vide alors que la prod en contient une par recette (dossier v2 § 4.3 : 181).
+-- Ce script ne COMBLE QUE LES TROUS, en LOCAL seulement : pour chaque recette sans aucune traduction (donc aucune avec un
+-- snapshot complet), il fabrique une traduction « réaliste » (dictionnaire de mots courants, pas d'IA) vers l'autre langue,
 -- afin de rejouer la recherche bilingue et de garder les compteurs de la bascule représentatifs.
--- Rejouable (n'ajoute que les traductions manquantes). Ne pas jouer en production.
+-- Rejouable (n'ajoute que les traductions manquantes). Ne jamais écraser les vraies traductions. Ne pas jouer en production.
 create or replace function pg_temp.en(t text) returns text language sql immutable as $f$
   select regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
          lower(t),
@@ -12,7 +13,7 @@ create or replace function pg_temp.en(t text) returns text language sql immutabl
 $f$;
 
 insert into public.recipe_translations (recipe_id, locale, title, description, notes, tags, content, source_hash, model, stale)
-select r.id, 'en', initcap(pg_temp.en(r.title)), pg_temp.en(r.description), pg_temp.en(r.notes),
+select r.id, case when r.lang = 'en' then 'fr' else 'en' end, initcap(pg_temp.en(r.title)), pg_temp.en(r.description), pg_temp.en(r.notes),
        coalesce((select array_agg(pg_temp.en(x)) from unnest(r.tags) x), '{}'),
        jsonb_build_object('sections', coalesce((
          select jsonb_agg(jsonb_build_object(
