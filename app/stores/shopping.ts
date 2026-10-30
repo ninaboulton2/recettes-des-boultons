@@ -50,6 +50,7 @@ async function request<T = unknown>(url: string, init: RequestInit = {}): Promis
  */
 export const useShoppingStore = defineStore('shopping', () => {
   const supabase = useSupabaseClient<Database>()
+  const v2 = useV2()   // lu ici : après un `await`, le contexte Nuxt n'est plus disponible
 
   const shoppingLists = ref<ShoppingList[]>([])
   const currentListId = ref<string | null>(null)
@@ -107,7 +108,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       if (loadError) throw loadError
 
       // v2 seulement (la table n'existe pas en v1) ; une erreur ici ne bloque pas les listes
-      if (useV2()) {
+      if (v2) {
         const prefs = await supabase.from('shopping_aisle_prefs').select('name_key, aisle')
         aislePrefs.value = new Map((prefs.data ?? []).filter(row => isAisle(row.aisle)).map(row => [row.name_key, row.aisle as Aisle]))
       }

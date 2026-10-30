@@ -129,7 +129,7 @@ jobs:
       - name: psql
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
-      # Données jetables (seed_test.sql, pas de snapshot), migrations jusqu'à 0031, puis l'état v2 (chaîne de la bascule,
+      # Données jetables (seed_test.sql, pas de snapshot), migrations jusqu'à 0032, puis l'état v2 (chaîne de la bascule,
       # paramètres factices, comptes nouveau@ / ami@) : mêmes étapes que `npm run db:local:v2`.
       - name: Seed database (état v2)
         run: |

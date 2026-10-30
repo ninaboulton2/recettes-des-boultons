@@ -34,7 +34,6 @@ test('(v2-aisle1) changer l\'article de rayon : persistant, retenu pour la proch
   await loginV2(page, 'user')
   await gotoApp(page, '/courses')
   await expect(page.getByRole('switch', { name: 'Mode magasin' })).toHaveCount(0)
-  await page.getByRole('tab', { name: new RegExp(LIST) }).click().catch(() => undefined)
   await page.getByRole('switch', { name: 'Par rayon' }).click()
   const row = (name: string) => page.locator('li', { hasText: name })
   const group = (title: string) => page.locator('div.mb-3', { has: page.getByRole('heading', { name: title }) })
