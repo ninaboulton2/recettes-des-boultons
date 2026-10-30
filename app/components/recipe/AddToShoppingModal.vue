@@ -112,6 +112,7 @@ const props = withDefaults(defineProps<{
 
 const open = defineModel<boolean>('open', { default: false })
 
+const v2 = useV2()   // v2 seulement : la v1 garde son formulaire « Créer la liste »
 const shoppingStore = useShoppingStore()
 const toast = useToast()
 const { t, locale } = useI18n()
@@ -145,6 +146,14 @@ watch(open, async (isOpen) => {
   listsLoading.value = true
   try {
     await shoppingStore.ensureLoaded()
+    // Aucune liste : « Ma liste » est créée et présélectionnée (comme sur les cartes) ; en cas d'échec, le formulaire « Créer la liste » reste
+    if (v2 && shoppingStore.shoppingLists.length === 0) {
+      try {
+        await shoppingStore.createList(t('ui.addToList.defaultListName'))
+      } catch {
+        // création impossible : on retombe sur le formulaire de création en ligne
+      }
+    }
   } catch (error) {
     toast.add({ title: t('recipeDetail.shopping.error'), description: toUserMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
     return

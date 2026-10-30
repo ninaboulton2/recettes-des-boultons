@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { gotoApp } from '../support/app'
-import { loginV2, signedIn } from './support'
+import { E2E_6B, createRecipe, deleteOwnRecipes, loginV2, signedIn } from './support'
 
 /**
  * Courses v2 (retour de test n° 2, points 4, 6 et 7) : « Changer de rayon » (retenu pour les futures listes), plus de « Mode magasin »,
@@ -77,4 +77,22 @@ test('(v2-aisle2) « ajouter aux courses » sans aucune liste : une liste par d�
   const lists = await after.client.from('shopping_lists').select('name')
   expect((lists.data ?? []).map(l => l.name)).toEqual(['Ma liste'])
   await after.client.from('shopping_lists').delete().eq('user_id', after.userId)
+})
+
+test('(v2-aisle3) fiche : « Ajouter aux courses » sans aucune liste crée « Ma liste » et la présélectionne', async ({ page }) => {
+  const { client, userId } = await signedIn('ami')
+  await client.from('shopping_lists').delete().eq('user_id', userId)
+  const recipeId = await createRecipe(client, `${E2E_6B}Courses fiche`, 'private')
+  await client.auth.signOut({ scope: 'local' })
+  await loginV2(page, 'ami')
+  await gotoApp(page, `/recettes/${recipeId}`)
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('Ma liste')).toBeVisible()
+  await expect(dialog.getByPlaceholder('Nom de la nouvelle liste')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/recettes\//)
+  const after = await signedIn('ami')
+  expect(((await after.client.from('shopping_lists').select('name')).data ?? []).map(l => l.name)).toEqual(['Ma liste'])
+  await after.client.from('shopping_lists').delete().eq('user_id', after.userId)
+  await deleteOwnRecipes(after.client)
 })

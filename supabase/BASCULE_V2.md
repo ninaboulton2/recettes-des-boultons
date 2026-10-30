@@ -137,8 +137,8 @@ Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres �
 
 ### Où s'insèrent 0024, 0025, 0027, 0030 et 0031 (petites migrations « sans effet pour la v1 »)
 
-Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032**
-(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0032 d'un coup, avant le jour J**, un fichier = un Run).
+Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033**
+(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0033 d'un coup, avant le jour J**, un fichier = un Run).
 
 * **0024** (déjà en production) : rôle `user` en dur à l'inscription. Rien à refaire.
 * **0025** `0025_profile_onboarding.sql` : remplace `update_my_profile` par une version à 7 paramètres (fin de l'accueil). Elle **supprime l'ancienne
@@ -156,6 +156,7 @@ Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 �
   fonction `set_shopping_item_aisle` ; (b) `reserve_ai_call` et `ai_quota_status` (0028) remplacées pour que la traduction à la demande (feature `translate_shared`) ne compte **que dans le budget global du mois**,
   jamais dans le plafond du jour de l'auteur ni du lecteur (`DEVELOPER.md` § 20.19 et § 20.20). Sans effet v1 (colonne nullable, table nouvelle). Un Run, **avant de déployer le code v2** (sans elle, « Changer de rayon » échoue
   avec un message d'erreur, et la traduction à la demande est refusée par la base). Prérequis : 0028. Retour : `rollback/0032_feedback2_aisle_translate_budget_down.sql` (retirer d'abord le code v2).
+* **0033** `0033_export_aisle.sql` : `export_my_data()` redéfinie à l'identique avec en plus le rayon des articles et `shopping_aisle_prefs` (export « mes données »). Un Run, après 0032 (prérequis). Retour : `rollback/0033_export_aisle_down.sql`.
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
@@ -499,7 +500,7 @@ Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suiva
 
 - [ ] Sauvegarde : export JSON des tables + `pg_dump` (`BASCULE_PROD.md` § 0.1) **hors du dépôt**, liste des fichiers du bucket `recipe-photos`.
 - [ ] Prérequis 1.2 : 0017, 0019, 0021, 0023, 0024 présentes (requête du § 1, `recettes_avec_proprietaire = 0`).
-- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030, 0031, 0032**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
+- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030, 0031, 0032, 0033**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
 - [ ] Domaine (§ 5 bis) : fait avant ou après la bascule, indépendamment ; `SITE_URL` en dernier.
 - [ ] Variables Vercel posées : `SUPABASE_SECRET_KEY`, `CRON_SECRET` (≥ 16 caractères), `ALERT_EMAIL`, `AI_MONTHLY_BUDGET_USD` (suggéré 5) ; `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL` si le domaine est prêt (`DEVELOPER.md` § 20.15).
 - [ ] Supabase → Settings → API → *Exposed schemas* : `private` **absent** (§ 4).

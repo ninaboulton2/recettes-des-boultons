@@ -92,6 +92,7 @@ const { t, locale } = useI18n()
 const { toUserMessage } = useApiError()
 const localePath = useLocalePath()
 const supabase = useSupabaseClient<Database>()
+const v2 = useV2()   // v2 seulement : la v1 garde l'alerte « créer une liste » vers /courses
 const shoppingStore = useShoppingStore()
 const { $toast } = useNuxtApp()
 const numberLocale = useNumberLocale()
@@ -130,7 +131,7 @@ watch(open, async (isOpen) => {
     loadedSections.value = recipeSections
     selectedSectionIds.value = sections.value.map(section => section.id)
     // Aucune liste : on en crée une par défaut (« Ma liste ») plutôt que d'envoyer la personne sur la page des courses
-    if (shoppingStore.shoppingLists.length === 0) await shoppingStore.createList(t('ui.addToList.defaultListName'))
+    if (v2 && shoppingStore.shoppingLists.length === 0) await shoppingStore.createList(t('ui.addToList.defaultListName'))
     selectedListId.value = shoppingStore.currentList?.id ?? shoppingStore.shoppingLists[0]?.id
   } catch (error) {
     console.error('Erreur lors du chargement des ingrédients :', error)

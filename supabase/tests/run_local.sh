@@ -38,6 +38,7 @@
 #   11e. 0030 (can_read_recipe plus rapide, phase 10) sous la chaîne complète : application + rejeu, test_0030_can_read_recipe_perf.sql (même résultat que l'ancienne expression), retour arrière, ré-application + test, retour.
 #   11f. 0031 (traduction d'une recette partagée par le serveur) sous la chaîne complète : application + rejeu, test_0031_shared_recipe_translation.sql (service_role seul, validations, langue source corrigée, jeton révoqué), retour arrière, ré-application + test, retour.
 #   11g. 0032 (rayon choisi, traduction hors plafond du jour) sous la chaîne complète : application + rejeu, test_0032_feedback2.sql, retour arrière, ré-application + test, retour.
+#   11h. 0033 (export « mes données » avec rayons) sous 0028 + 0032 : application + rejeu, test_0033_export_aisle.sql, retour arrière, ré-application + test, retour.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
 #  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
@@ -459,6 +460,23 @@ run "$RB32"
 "${PSQL[@]}" -c "do \$\$ begin assert to_regclass('public.shopping_aisle_prefs') is null and not exists (select 1 from information_schema.columns where table_name = 'shopping_items' and column_name = 'aisle'), 'retour arrière de 0032 incomplet'; end \$\$;"
 run "$M32"
 run "$HERE/test_0032_feedback2.sql"
+run "$RB32"
+run "$RB28"
+# ---------------------------------------------------------------- 0033 : export « mes données » avec rayons (retour de test n° 2, suite), sous 0028 + 0032
+echo "▶ 0033 : export_my_data avec aisle + shopping_aisle_prefs (+ rejeu + test), retour arrière, ré-application"
+M33="$SUPA/migrations/0033_export_aisle.sql"
+RB33="$SUPA/rollback/0033_export_aisle_down.sql"
+run "$M28"
+run "$M32"
+run "$M33"
+"${PSQL[@]}" -f "$M33"
+run "$HERE/test_0033_export_aisle.sql"
+run "$RB33"
+"${PSQL[@]}" -f "$RB33"
+"${PSQL[@]}" -c "do \$\$ begin assert position('shopping_aisle_prefs' in pg_get_functiondef('public.export_my_data()'::regprocedure)) = 0, 'retour arrière de 0033 incomplet'; end \$\$;"
+run "$M33"
+run "$HERE/test_0033_export_aisle.sql"
+run "$RB33"
 run "$RB32"
 run "$RB28"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
