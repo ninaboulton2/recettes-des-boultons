@@ -60,6 +60,9 @@ test('(v2-nav3) visiteur : Favoris, Planning, Courses visibles ; un clic ouvre l
 
 test('(v2-nav2) bannières : fermer les rend définitivement invisibles', async ({ page }) => {
   await loginV2(page, 'user')
+  // Pas d'accueil : les bannières sont dans Mon carnet
+  await expect(page.getByTestId('prompt-banners')).toHaveCount(0)
+  await gotoApp(page, '/recettes')
   const banners = page.getByTestId('prompt-banner')
   await expect(banners.first()).toContainText(/Explorer les recettes de|a ajouté une recette/)
   // Selon les données : « Explorer les recettes de X » et / ou « X a ajouté une recette »

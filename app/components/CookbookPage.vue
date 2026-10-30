@@ -13,6 +13,9 @@
       </div>
     </header>
 
+    <!-- Bannières « Explorer les recettes de X » / « nouvelle recette » (pending_prompts) : dans Mon carnet, pas sur l'accueil -->
+    <PromptBanners />
+
     <RecipeFilters
       v-model:query="searchQuery"
       v-model:category="selectedCategory"

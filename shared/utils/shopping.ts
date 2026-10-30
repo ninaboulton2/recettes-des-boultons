@@ -132,11 +132,27 @@ const FOLDED_KEYWORDS: ReadonlyArray<{ aisle: Aisle, keyword: string }> = (
  * Les mots-clés sont cherchés comme mots entiers (« thé » ne matche pas « thym »),
  * le plus long reconnu l'emporte (« haricot vert » avant « haricot »).
  */
-export function aisleOf(name: string): Aisle {
+export function aisleOf(name: string, prefs?: AislePrefs): Aisle {
+  const preferred = prefs?.get(foldName(name).trim())
+  if (preferred) return preferred
   const folded = foldName(name)
   if (folded.trim() === '') return 'other'
   const match = FOLDED_KEYWORDS.find(({ keyword }) => folded.includes(` ${keyword} `))
   return match?.aisle ?? 'other'
+}
+
+/** Rayons retenus par la personne (v2) : nom replié (`foldName(...).trim()`) → rayon. Prioritaires sur les mots-clés. */
+export type AislePrefs = ReadonlyMap<string, Aisle>
+
+/** Clé de préférence d'un nom d'article (`shopping_aisle_prefs.name_key`). */
+export const aisleKeyOf = (name: string): string => foldName(name).trim()
+
+/** `value` est-il un rayon connu ? */
+export const isAisle = (value: unknown): value is Aisle => typeof value === 'string' && (AISLES as readonly string[]).includes(value)
+
+/** Rayon d'un article : son rayon choisi, sinon la préférence de la personne pour ce nom, sinon les mots-clés. */
+export function itemAisle(item: Pick<ShoppingItem, 'name' | 'aisle'>, prefs?: AislePrefs): Aisle {
+  return isAisle(item.aisle) ? item.aisle : aisleOf(item.name, prefs)
 }
 
 export interface AisleGroup<T> {
@@ -145,10 +161,10 @@ export interface AisleGroup<T> {
 }
 
 /** Regroupe les articles par rayon, dans l'ordre d'`AISLES`, sans rayon vide. */
-export function groupByAisle<T extends Pick<ShoppingItem, 'name'>>(items: readonly T[]): AisleGroup<T>[] {
+export function groupByAisle<T extends Pick<ShoppingItem, 'name' | 'aisle'>>(items: readonly T[], prefs?: AislePrefs): AisleGroup<T>[] {
   const buckets = new Map<Aisle, T[]>()
   for (const item of items) {
-    const aisle = aisleOf(item.name)
+    const aisle = itemAisle(item, prefs)
     const bucket = buckets.get(aisle)
     if (bucket) bucket.push(item)
     else buckets.set(aisle, [item])

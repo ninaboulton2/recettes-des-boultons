@@ -1,6 +1,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import type { ShoppingItem, ShoppingList } from '#shared/types'
-import { formatQuantity, groupByAisle, splitChecked, type AisleGroup } from '#shared/utils/shopping'
+import { formatQuantity, groupByAisle, splitChecked, type Aisle, type AisleGroup } from '#shared/utils/shopping'
 import { toUserMessage } from '~/composables/useApiError'
 import type { NewShoppingItem, ShoppingItemPatch } from '~/stores/shopping'
 
@@ -41,11 +41,12 @@ export function useShoppingLists() {
   const items = computed<ShoppingItem[]>(() => store.currentItems)
 
   // --- Préférences d'affichage (par navigateur), lues après l'hydratation ---
-  const storeMode = ref(false)
+  const v2 = useV2()
+  const storeMode = ref(false)   // v1 seulement : le « Mode magasin » est retiré en v2 (voir DEVELOPER.md § 20.20)
   const byAisle = ref(false)
   onMounted(() => {
     const prefs = readPrefs()
-    storeMode.value = prefs.storeMode
+    storeMode.value = !v2 && prefs.storeMode
     byAisle.value = prefs.byAisle
     watch([storeMode, byAisle], ([mode, aisle]) => {
       try {
@@ -58,7 +59,7 @@ export function useShoppingLists() {
 
   // --- Regroupements ---
   const groups = computed(() => splitChecked(items.value))
-  const toBuyByAisle = computed<AisleGroup<ShoppingItem>[]>(() => groupByAisle(groups.value.toBuy))
+  const toBuyByAisle = computed<AisleGroup<ShoppingItem>[]>(() => groupByAisle(groups.value.toBuy, store.aislePrefs))
   const allChecked = computed(() => items.value.length > 0 && groups.value.toBuy.length === 0)
 
   /** « 200 g », « 1 ½ c. à s. » … (libellé d'unité via le référentiel `units`). */
@@ -100,6 +101,9 @@ export function useShoppingLists() {
   const updateItem = (itemId: string, patch: ShoppingItemPatch) => run(() => store.updateItem(itemId, patch))
   const removeItem = (item: ShoppingItem) => run(() => store.removeItem(item.id), t('shopping.toast.itemRemoved', { name: item.name }))
   const toggleItem = (itemId: string) => run(() => store.toggleItem(itemId))
+  /** v2 : « Changer de rayon » (`null` = automatique), retenu pour les futures listes. */
+  const setItemAisle = (item: ShoppingItem, aisle: Aisle | null) =>
+    run(() => store.setItemAisle(item.id, aisle), t('shopping.toast.aisleChanged', { name: item.name, aisle: aisle ? t(`shopping.aisles.${aisle}`) : t('shopping.aisles.auto') }))
   const moveItem = (item: ShoppingItem, targetListId: string) =>
     run(() => store.moveItem(item.id, targetListId), t('shopping.toast.itemMoved', { name: item.name, list: listName(targetListId) }))
 
@@ -130,6 +134,7 @@ export function useShoppingLists() {
     removeItem,
     toggleItem,
     moveItem,
+    setItemAisle,
     checkAll,
     uncheckAll,
     clearChecked,

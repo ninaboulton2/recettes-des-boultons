@@ -41,7 +41,8 @@ const { locale } = useI18n()
 const localePath = useLocalePath()
 const contact = useContactEmail()
 
-const texts = computed(() => legalTexts(locale.value))
+const googleAuth = useGoogleAuth()
+const texts = computed(() => legalTexts(locale.value, googleAuth))
 const doc = computed(() => texts.value.pages[props.page])
 const updated = computed(() => new Intl.DateTimeFormat(locale.value, { dateStyle: 'long' }).format(new Date(`${LEGAL_UPDATED}T12:00:00Z`)))
 

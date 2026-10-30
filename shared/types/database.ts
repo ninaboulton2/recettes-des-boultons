@@ -501,16 +501,28 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"shopping_items": {
+                },"shopping_aisle_prefs": {
                   Row: {
-                    "amount": string | null,"amount_num": number | null,"created_at": string | null,"id": string,"is_checked": boolean | null,"list_id": string,"name": string,"recipe_id": string | null,"unit": string | null,"unit_code": string | null,"updated_at": string | null
+                    "aisle": string,"name_key": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount"?: string | null,"amount_num"?: number | null,"created_at"?: string | null,"id"?: string,"is_checked"?: boolean | null,"list_id": string,"name": string,"recipe_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
+                    "aisle": string,"name_key": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "amount"?: string | null,"amount_num"?: number | null,"created_at"?: string | null,"id"?: string,"is_checked"?: boolean | null,"list_id"?: string,"name"?: string,"recipe_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
+                    "aisle"?: string,"name_key"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: []
+                },"shopping_items": {
+                  Row: {
+                    "aisle": string | null,"amount": string | null,"amount_num": number | null,"created_at": string | null,"id": string,"is_checked": boolean | null,"list_id": string,"name": string,"recipe_id": string | null,"unit": string | null,"unit_code": string | null,"updated_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "aisle"?: string | null,"amount"?: string | null,"amount_num"?: number | null,"created_at"?: string | null,"id"?: string,"is_checked"?: boolean | null,"list_id": string,"name": string,"recipe_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
+                  }
+                  Update: {
+                    "aisle"?: string | null,"amount"?: string | null,"amount_num"?: number | null,"created_at"?: string | null,"id"?: string,"is_checked"?: boolean | null,"list_id"?: string,"name"?: string,"recipe_id"?: string | null,"unit"?: string | null,"unit_code"?: string | null,"updated_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -609,6 +621,9 @@ isOneToOne: false
                            },
 "add_author_recipes_to_cookbook":
 { Args: { "p_author": string }; Returns: number
+                           },
+"set_shopping_item_aisle":
+{ Args: { "p_aisle": string | null,"p_item": string,"p_name_key": string }; Returns: undefined
                            },
 "add_recipe_to_list":
 { Args: { "p_list_id": string,"p_locale"?: string,"p_recipe_id": string,"p_section_ids"?: (string)[],"p_servings_factor"?: number }; Returns: {

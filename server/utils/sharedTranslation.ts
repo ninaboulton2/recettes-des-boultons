@@ -7,13 +7,13 @@ import { trackAiCall } from './ai/usage'
 import { reserveAiAllowed, throwAiFailure } from './ai/guard'
 import { serviceClient } from './serviceClient'
 import { fetchRecipeDetail } from './recipes'
-import { failureOf, toRpcTranslation, TRANSLATE_FEATURE } from './translations'
+import { failureOf, toRpcTranslation, TRANSLATE_SHARED_FEATURE } from './translations'
 import { ensureRecipeTranslation, TranslationGuard, type EnsureOutcome, type TranslationPorts } from './sharedTranslationCore'
 
 /**
  * Branchement Nuxt de la traduction à la demande (`sharedTranslationCore.ts`) : lectures et écritures avec la clé service_role,
  * APRÈS que la route a vérifié le droit de lire la recette (RLS avec la session de la personne) ou un lien public actif.
- * Appel IA compté sur l'auteur de la recette (`reserveAiAllowed` avec son identifiant) : voir l'en-tête du cœur.
+ * Appel IA compté seulement sur le budget global du mois (feature `translate_shared`, hors plafond du jour de l'auteur comme du lecteur ; migration 0032) : la ligne `ai_usage` porte l'identifiant de l'auteur (clé étrangère) sans compter dans son plafond.
  */
 
 /** Un garde par instance du serveur : suffit à éviter les doubles appels et les relances répétées (au mieux, serverless). */
@@ -53,10 +53,10 @@ export async function ensureTranslationFor(event: H3Event, recipeId: string, loc
       try {
         const config = getAiConfig(event)
         const model = getModel(config)   // avant la réservation : rien d'autre ne doit pouvoir échouer entre la réservation et l'appel
-        const reservation = await reserveAiAllowed(event, admin, config, { userId: ownerId, feature: TRANSLATE_FEATURE })
+        const reservation = await reserveAiAllowed(event, admin, config, { userId: ownerId, feature: TRANSLATE_SHARED_FEATURE })
         const { result } = await trackAiCall(
           admin,
-          { userId: ownerId, provider: config.provider, model: config.model, feature: TRANSLATE_FEATURE },
+          { userId: ownerId, provider: config.provider, model: config.model, feature: TRANSLATE_SHARED_FEATURE },
           () => translateRecipeTexts(model, texts),
           ({ usage }) => usage,
           reservation

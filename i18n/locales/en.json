@@ -68,6 +68,7 @@
       "list": "Shopping list",
       "noLists": "You don't have a shopping list yet.",
       "createList": "Create a list",
+      "defaultListName": "My list",
       "sections": "Ingredient sections",
       "unnamedSection": "Unnamed",
       "success": "Recipe added",
@@ -533,6 +534,7 @@
     },
     "aisles": {
       "toggle": "By aisle",
+      "auto": "Automatic",
       "produce": "Fruit and vegetables",
       "bakery": "Bakery",
       "meatFish": "Meat and fish",
@@ -555,6 +557,7 @@
       "actions": "Item actions",
       "edit": "Edit quantity",
       "move": "Move to",
+      "changeAisle": "Change aisle",
       "remove": "Delete",
       "save": "Save",
       "cancel": "Cancel",
@@ -576,6 +579,7 @@
       "listCleared": "No item to remove | {count} item removed | {count} items removed",
       "itemAdded": "“{name}” added",
       "itemRemoved": "“{name}” removed",
+      "aisleChanged": "“{name}” filed under: {aisle}",
       "itemMoved": "“{name}” moved to “{list}”",
       "checkedAll": "All items checked",
       "uncheckedAll": "All items unchecked",
@@ -1640,7 +1644,8 @@
     "subtitle": "Gather your recipes, share them with family and friends, and cook without losing a crumb.",
     "signup": "Create an account",
     "login": "Sign in",
-    "free": "Free, no advertising. Sign in with e-mail or Google.",
+    "free": "Free, no advertising. Sign in with e-mail.",
+    "freeGoogle": "Free, no advertising. Sign in with e-mail or Google.",
     "features": {
       "title": "What you will find here",
       "cookbook": {

@@ -83,6 +83,7 @@ import { formatIngredient, sectionsWithIngredients } from '#shared/utils/recipes
 /**
  * « Ajouter aux courses » : choix de la liste et des sections d'ingrédients,
  * puis `useShoppingStore().addRecipeToList(listId, recipeId, sectionIds?)`.
+ * Sans aucune liste, une liste par défaut est créée à l'ouverture (jamais de redirection vers /courses).
  */
 const props = defineProps<{ recipe: RecipeSummary | Recipe }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -128,6 +129,8 @@ watch(open, async (isOpen) => {
     const [recipeSections] = await Promise.all([loadSections(), shoppingStore.ensureLoaded()])
     loadedSections.value = recipeSections
     selectedSectionIds.value = sections.value.map(section => section.id)
+    // Aucune liste : on en crée une par défaut (« Ma liste ») plutôt que d'envoyer la personne sur la page des courses
+    if (shoppingStore.shoppingLists.length === 0) await shoppingStore.createList(t('ui.addToList.defaultListName'))
     selectedListId.value = shoppingStore.currentList?.id ?? shoppingStore.shoppingLists[0]?.id
   } catch (error) {
     console.error('Erreur lors du chargement des ingrédients :', error)

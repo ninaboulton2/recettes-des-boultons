@@ -5,7 +5,8 @@ import type { LegalTexts } from './types'
  * but they are NOT legal advice. Have them reviewed (CNIL templates, service-public.fr) before going live. The French version
  * (fr.ts) is the reference; keep both in step (test/unit/legal.test.ts checks the structure).
  */
-export const legalEn: LegalTexts = {
+/** `googleAuth` : la connexion Google est-elle proposée (`NUXT_PUBLIC_GOOGLE_AUTH`) ? Sinon les phrases qui la citent sont retirées (l'import Google Drive reste décrit). */
+export const buildLegalEn = (googleAuth: boolean): LegalTexts => ({
   contactLabel: 'Contact: ',
   contactFallback: 'A dedicated contact address will be published here soon. In the meantime you can exercise most of your rights yourself from the Settings page (export and deletion of your data).',
   updatedLabel: 'Last updated: ',
@@ -67,7 +68,7 @@ export const legalEn: LegalTexts = {
           title: 'The data we process',
           blocks: [
             { type: 'ul', items: [
-              'Account: e-mail address, name entered at sign-up and password (stored only in encrypted form by the authentication service, never readable); with Google sign-in, the name and e-mail address Google provides.',
+              'Account: e-mail address, name entered at sign-up and password (stored only in encrypted form by the authentication service, never readable)' + (googleAuth ? '; with Google sign-in, the name and e-mail address Google provides.' : '.'),
               'Profile: nickname (visible to other people), your cookbook title, theme, preferred language, notification setting, whether you appear in search.',
               'Content: your recipes (title, ingredients, steps, notes, tags, category, automatic translation), your categories, your photos if you add any, your favorites, your meal planner and your shopping lists.',
               'Sharing: your friends and friend requests, your groups, invitations and sharing permissions, your public links, your in-app notifications, the banners you have dismissed.',
@@ -101,7 +102,9 @@ export const legalEn: LegalTexts = {
               'Vercel (hosting of the site and server functions): a US company.',
               'OpenAI (artificial intelligence): a US company. Sent for extraction or translation: the text you paste or dictate (dictation is sent as an audio recording to be transcribed), the photos and PDFs you drop, and the text of a recipe when it is translated into the other language. Neither your e-mail address nor your identifier is attached. According to the terms OpenAI publishes for its API, this data is not used to train its models and may be kept for up to 30 days to detect abuse.',
               'Sentry (error tracking): data hosted in the European Union. The application sends Sentry no cookies, no request headers, no request content, no identity or e-mail address; only the technical error message, the page concerned (without parameters) and browser information. The project is set not to store IP addresses.',
-              'Google: only if you choose Google sign-in (Google receives your sign-in) or the import from Google Drive (loaded only when you click the button; the application can only read the files you choose, directly from your browser).'
+              googleAuth
+                ? 'Google: only if you choose Google sign-in (Google receives your sign-in) or the import from Google Drive (loaded only when you click the button; the application can only read the files you choose, directly from your browser).'
+                : 'Google: only if you click the import from Google Drive (loaded only when you click the button; the application can only read the files you choose, directly from your browser).'
             ] },
             { type: 'p', text: 'Several of these providers are located or operate outside the European Union (United States). Transfers rely on the safeguards provided by the GDPR, in particular the European Commission\'s standard contractual clauses or the EU–US data protection framework, depending on the provider.' }
           ]
@@ -175,7 +178,7 @@ export const legalEn: LegalTexts = {
           title: 'The service',
           blocks: [
             { type: 'p', text: 'The site lets you keep your recipes, share them with friends and groups, plan your meals and make shopping lists. It is free, offered with no guarantee of availability, and may change or stop. AI features are limited by a daily quota.' },
-            { type: 'p', text: 'To create an account you must be 15 or older (or have a parent\'s consent) and provide a valid e-mail address, or use Google sign-in. You are responsible for keeping your password confidential.' }
+            { type: 'p', text: 'To create an account you must be 15 or older (or have a parent\'s consent) and provide a valid e-mail address' + (googleAuth ? ', or use Google sign-in' : '') + '. You are responsible for keeping your password confidential.' }
           ]
         },
         {
@@ -243,7 +246,7 @@ export const legalEn: LegalTexts = {
               'Browser local storage "nuxt-color-mode": remembers light, dark or automatic mode.',
               'Local storage "shopping:prefs": remembers how you display your shopping lists.',
               'Local storage "offline:shopping:v1": a copy of your shopping lists so you can read them without a connection; erased when you sign out.',
-              'Session storage "auth:redirect": remembers the page to return to after a Google sign-in; erased right afterwards.',
+              ...(googleAuth ? ['Session storage "auth:redirect": remembers the page to return to after a Google sign-in; erased right afterwards.'] : []),
               'Service worker and caches of the installable app (PWA): remember visited pages, images, icons and fonts to speed up the site and make it readable offline; cached pages are cleared when you sign out. Requests to the database and to server functions are never cached.'
             ] }
           ]
@@ -254,7 +257,9 @@ export const legalEn: LegalTexts = {
           blocks: [
             { type: 'ul', items: [
               'Sentry receives technical errors, with no cookies and no identity (see the privacy policy).',
-              'Google is only contacted if you choose Google sign-in, or if you click the import from Google Drive.',
+              googleAuth
+                ? 'Google is only contacted if you choose Google sign-in, or if you click the import from Google Drive.'
+                : 'Google is only contacted if you click the import from Google Drive.',
               'The site\'s fonts are served by the site itself.'
             ] },
             { type: 'p', text: 'If an audience measurement tool or another tracker were ever added, this page would be updated and your agreement would be requested before any non-essential storage.' }
@@ -270,4 +275,6 @@ export const legalEn: LegalTexts = {
       ]
     }
   }
-}
+})
+
+export const legalEn: LegalTexts = buildLegalEn(true)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AISLES, aisleOf, foldName, formatQuantity, groupByAisle, splitChecked } from '#shared/utils/shopping'
+import { AISLES, aisleKeyOf, aisleOf, foldName, formatQuantity, groupByAisle, itemAisle, splitChecked } from '#shared/utils/shopping'
 
 describe('formatQuantity', () => {
   it('assemble quantité numérique et libellé d\'unité', () => {
@@ -92,5 +92,30 @@ describe('groupByAisle', () => {
 
   it('renvoie un tableau vide sans article', () => {
     expect(groupByAisle([])).toEqual([])
+  })
+})
+
+describe('rayon choisi par la personne (v2)', () => {
+  it('le rayon de l\'article l\'emporte sur la préférence et sur les mots-clés', () => {
+    const prefs = new Map([['tomate', 'bakery' as const]])
+    expect(aisleOf('Tomates')).toBe('produce')
+    expect(aisleOf('Tomates', prefs)).toBe('bakery')            // préférence (nom replié) > mots-clés
+    expect(itemAisle({ name: 'Tomates', aisle: 'frozen' }, prefs)).toBe('frozen')   // article > préférence
+    expect(itemAisle({ name: 'Tomates', aisle: null }, prefs)).toBe('bakery')
+    expect(itemAisle({ name: 'Tomates', aisle: 'inconnu' }, undefined)).toBe('produce')   // valeur inconnue ignorée
+  })
+
+  it('aisleKeyOf replie le nom (pluriel, accents, casse)', () => {
+    expect(aisleKeyOf('  Pommes de TERRE ')).toBe(aisleKeyOf('pomme de terre'))
+  })
+
+  it('groupByAisle suit le rayon choisi puis la préférence', () => {
+    const items = [{ name: 'Lait', aisle: null }, { name: 'Savon', aisle: 'grocery' }, { name: 'Tomates', aisle: null }]
+    const groups = groupByAisle(items, new Map([['tomate', 'beverages' as const]]))
+    expect(groups.map(group => [group.aisle, group.items.map(item => item.name)])).toEqual([
+      ['dairy', ['Lait']],
+      ['grocery', ['Savon']],
+      ['beverages', ['Tomates']]
+    ])
   })
 })

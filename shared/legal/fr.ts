@@ -10,7 +10,8 @@ import type { LegalTexts } from './types'
  *  - les durées : aucune purge automatique n'existe pour les signalements (voir la page de confidentialité) ;
  *  - les sauvegardes de l'hébergeur (ce que Supabase conserve après suppression).
  */
-export const legalFr: LegalTexts = {
+/** `googleAuth` : la connexion Google est-elle proposée (`NUXT_PUBLIC_GOOGLE_AUTH`) ? Sinon les phrases qui la citent sont retirées (l'import Google Drive reste décrit). */
+export const buildLegalFr = (googleAuth: boolean): LegalTexts => ({
   contactLabel: 'Contact : ',
   contactFallback: 'Une adresse de contact dédiée sera publiée ici prochainement. En attendant, vous pouvez exercer l\'essentiel de vos droits vous-même depuis la page Réglages (export et suppression de vos données).',
   updatedLabel: 'Dernière mise à jour : ',
@@ -72,7 +73,7 @@ export const legalFr: LegalTexts = {
           title: 'Les données que nous traitons',
           blocks: [
             { type: 'ul', items: [
-              'Compte : adresse e-mail, nom saisi à l\'inscription et mot de passe (conservé uniquement sous forme chiffrée par le service d\'authentification, jamais lisible) ; avec la connexion Google, le nom et l\'adresse e-mail que Google transmet.',
+              'Compte : adresse e-mail, nom saisi à l\'inscription et mot de passe (conservé uniquement sous forme chiffrée par le service d\'authentification, jamais lisible) ' + (googleAuth ? '; avec la connexion Google, le nom et l\'adresse e-mail que Google transmet.' : '.'),
               'Profil : pseudonyme (visible des autres personnes), titre de votre carnet, thème, langue préférée, réglage des notifications, choix d\'apparaître ou non dans la recherche.',
               'Contenu : vos recettes (titre, ingrédients, étapes, notes, étiquettes, catégorie, traduction automatique), vos catégories, vos photos si vous en ajoutez, vos favoris, votre planning de repas et vos listes de courses.',
               'Partage : vos amis et demandes d\'amis, vos groupes, invitations et droits de partage, vos liens publics, vos notifications dans l\'application, les bandeaux que vous avez fermés.',
@@ -106,7 +107,9 @@ export const legalFr: LegalTexts = {
               'Vercel (hébergement du site et des fonctions serveur) : société américaine.',
               'OpenAI (intelligence artificielle) : société américaine. Reçoivent un envoi pour extraction ou traduction : le texte que vous collez ou dictez (la dictée est envoyée sous forme d\'enregistrement audio pour être transcrite), les photos et PDF que vous déposez, et le texte d\'une recette lorsqu\'elle est traduite vers l\'autre langue. Ni votre adresse e-mail ni votre identifiant ne sont joints. D\'après les conditions publiées par OpenAI pour son API, ces données ne servent pas à entraîner ses modèles et peuvent être conservées jusqu\'à 30 jours pour détecter les abus.',
               'Sentry (suivi des erreurs) : données hébergées dans l\'Union européenne. L\'application n\'envoie à Sentry ni cookies, ni en-têtes de requête, ni contenu des requêtes, ni identité ou adresse e-mail ; seulement le message technique de l\'erreur, la page concernée (sans paramètres) et des informations sur le navigateur. Le projet est réglé pour ne pas conserver les adresses IP.',
-              'Google : uniquement si vous choisissez la connexion Google (Google reçoit votre connexion) ou l\'import depuis Google Drive (chargé seulement au moment où vous cliquez sur le bouton ; l\'application ne peut lire que les fichiers que vous choisissez, directement depuis votre navigateur).'
+              googleAuth
+                ? 'Google : uniquement si vous choisissez la connexion Google (Google reçoit votre connexion) ou l\'import depuis Google Drive (chargé seulement au moment où vous cliquez sur le bouton ; l\'application ne peut lire que les fichiers que vous choisissez, directement depuis votre navigateur).'
+                : 'Google : uniquement si vous cliquez sur l\'import depuis Google Drive (chargé seulement au moment où vous cliquez sur le bouton ; l\'application ne peut lire que les fichiers que vous choisissez, directement depuis votre navigateur).'
             ] },
             { type: 'p', text: 'Plusieurs de ces prestataires sont situés ou ont des activités hors de l\'Union européenne (États-Unis). Les transferts reposent sur les garanties prévues par le RGPD, en particulier les clauses contractuelles types de la Commission européenne ou le cadre de protection des données UE–États-Unis, selon le prestataire.' }
           ]
@@ -180,7 +183,7 @@ export const legalFr: LegalTexts = {
           title: 'Le service',
           blocks: [
             { type: 'p', text: 'Le site permet de conserver ses recettes, de les partager avec des amis et des groupes, de planifier ses repas et de faire ses listes de courses. Il est gratuit, proposé sans garantie de disponibilité, et peut évoluer ou s\'arrêter. Les fonctions d\'intelligence artificielle sont limitées par un quota quotidien.' },
-            { type: 'p', text: 'Pour créer un compte, il faut avoir 15 ans ou plus (ou l\'accord d\'un parent) et fournir une adresse e-mail valide, ou utiliser la connexion Google. Vous êtes responsable de la confidentialité de votre mot de passe.' }
+            { type: 'p', text: 'Pour créer un compte, il faut avoir 15 ans ou plus (ou l\'accord d\'un parent) et fournir une adresse e-mail valide' + (googleAuth ? ', ou utiliser la connexion Google' : '') + '. Vous êtes responsable de la confidentialité de votre mot de passe.' }
           ]
         },
         {
@@ -248,7 +251,7 @@ export const legalFr: LegalTexts = {
               'Stockage local du navigateur « nuxt-color-mode » : retient le mode clair, sombre ou automatique.',
               'Stockage local « shopping:prefs » : retient la façon dont vous affichez vos listes de courses.',
               'Stockage local « offline:shopping:v1 » : copie de vos listes de courses pour les consulter sans réseau ; effacée à la déconnexion.',
-              'Stockage de session « auth:redirect » : retient la page où revenir après une connexion Google ; effacé aussitôt après.',
+              ...(googleAuth ? ["Stockage de session « auth:redirect » : retient la page où revenir après une connexion Google ; effacé aussitôt après."] : []),
               'Service worker et caches de l\'application installable (PWA) : mémorisent des pages visitées, images, icônes et polices pour accélérer le site et le consulter hors ligne ; les pages en cache sont vidées à la déconnexion. Les requêtes vers la base de données et vers les fonctions serveur ne sont jamais mises en cache.'
             ] }
           ]
@@ -259,7 +262,9 @@ export const legalFr: LegalTexts = {
           blocks: [
             { type: 'ul', items: [
               'Sentry reçoit les erreurs techniques, sans cookies et sans identité (voir la politique de confidentialité).',
-              'Google n\'est contacté que si vous choisissez la connexion Google, ou si vous cliquez sur l\'import depuis Google Drive.',
+              googleAuth
+                ? 'Google n\'est contacté que si vous choisissez la connexion Google, ou si vous cliquez sur l\'import depuis Google Drive.'
+                : 'Google n\'est contacté que si vous cliquez sur l\'import depuis Google Drive.',
               'Les polices du site sont servies par le site lui-même.'
             ] },
             { type: 'p', text: 'Si un outil de mesure d\'audience ou un autre traceur devait être ajouté un jour, cette page serait mise à jour et votre accord serait demandé avant tout dépôt non nécessaire.' }
@@ -275,4 +280,6 @@ export const legalFr: LegalTexts = {
       ]
     }
   }
-}
+})
+
+export const legalFr: LegalTexts = buildLegalFr(true)

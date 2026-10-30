@@ -37,6 +37,7 @@
 #   11d. 0028 (ai_credit_email, phase 7) sous la chaîne complète : application + rejeu, test_0028_ai_credit_email.sql (quota par compte, crédit, budget, alerte une fois par 24 h, e-mails), retour arrière, ré-application + test, retour.
 #   11e. 0030 (can_read_recipe plus rapide, phase 10) sous la chaîne complète : application + rejeu, test_0030_can_read_recipe_perf.sql (même résultat que l'ancienne expression), retour arrière, ré-application + test, retour.
 #   11f. 0031 (traduction d'une recette partagée par le serveur) sous la chaîne complète : application + rejeu, test_0031_shared_recipe_translation.sql (service_role seul, validations, langue source corrigée, jeton révoqué), retour arrière, ré-application + test, retour.
+#   11g. 0032 (rayon choisi, traduction hors plafond du jour) sous la chaîne complète : application + rejeu, test_0032_feedback2.sql, retour arrière, ré-application + test, retour.
 #   12. « Up, down, up » de 0018 (retour arrière refusé tant que 0020 est là, puis rejeu ; données
 #       identiques à l'avant, tests.data_fp()), puis de 0019 (rollback + rejeu, ré-application + rejeu).
 #  13. Migration 0021 (fonctions métier côté recettes) : appliquée avec 0019 (+ rejeu), v1 non cassée
@@ -445,6 +446,21 @@ run "$RB31"
 run "$M31"
 run "$HERE/test_0031_shared_recipe_translation.sql"
 run "$RB31"
+# ---------------------------------------------------------------- 0032 : rayon choisi (courses) + traduction à la demande hors plafond du jour (retour de test n° 2)
+echo "▶ 0032 : shopping_items.aisle + shopping_aisle_prefs + set_shopping_item_aisle + translate_shared hors plafond (+ rejeu + test), retour arrière, ré-application"
+M32="$SUPA/migrations/0032_feedback2_aisle_translate_budget.sql"
+RB32="$SUPA/rollback/0032_feedback2_aisle_translate_budget_down.sql"
+run "$M28"   # 0032 remplace reserve_ai_call / ai_quota_status de 0028
+run "$M32"
+"${PSQL[@]}" -f "$M32"
+run "$HERE/test_0032_feedback2.sql"
+run "$RB32"
+"${PSQL[@]}" -f "$RB32"
+"${PSQL[@]}" -c "do \$\$ begin assert to_regclass('public.shopping_aisle_prefs') is null and not exists (select 1 from information_schema.columns where table_name = 'shopping_items' and column_name = 'aisle'), 'retour arrière de 0032 incomplet'; end \$\$;"
+run "$M32"
+run "$HERE/test_0032_feedback2.sql"
+run "$RB32"
+run "$RB28"
 echo "▶ Retour arrière de 0018 refusé tant que 0020 est appliquée"
 expect_fail "$FILL_DOWN" "retirer d'abord la bascule" "0018 down avant 0020 down"
 echo "▶ Retour arrière de la bascule : politiques d'avant rétablies à l'identique"

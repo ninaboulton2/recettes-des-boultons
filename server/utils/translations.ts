@@ -30,6 +30,13 @@ import { GENERIC_ERROR_MESSAGE } from './errors'
 
 export const TRANSLATE_FEATURE = 'translate_recipe'
 
+/**
+ * Traduction À LA DEMANDE d'une recette partagée (migration 0032) : la ligne `ai_usage` compte dans le budget GLOBAL du mois et le coût,
+ * mais jamais dans le plafond du jour de quelqu'un (ni l'auteur ni la personne qui lit) : `reserve_ai_call` et `ai_quota_status`
+ * ignorent cette feature.
+ */
+export const TRANSLATE_SHARED_FEATURE = 'translate_shared'
+
 export type FailureReason = TranslationFailureReason
 
 export type TranslationOutcome

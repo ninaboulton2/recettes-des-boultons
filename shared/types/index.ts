@@ -188,6 +188,8 @@ export interface ShoppingItem {
   amountNum: number | null
   unit: string | null
   unitCode: string | null
+  /** Rayon choisi par la personne (v2) ; `null`/absent = préférence retenue ou mots-clés. */
+  aisle?: string | null
   note?: string
   checked: boolean
   recipeId: string | null

@@ -154,6 +154,9 @@ export default defineNuxtConfig({
       // Fournisseurs OAuth affichés dans la modale d'authentification
       // (liste séparée par des virgules ; NUXT_PUBLIC_AUTH_PROVIDERS=google,apple).
       authProviders: 'google',
+      // v2 seulement : connexion Google proposée ? Éteinte par défaut (Google OAuth pas encore configuré) ;
+      // NUXT_PUBLIC_GOOGLE_AUTH=true pour la rallumer. La v1 n'est pas concernée.
+      googleAuth: false,
       // Édition du site : `boultons` (défaut, identité d'origine) ou `generic`
       // (base de la v2). Surchargeable à l'exécution par NUXT_PUBLIC_EDITION ;
       // valeur inconnue = `boultons` (shared/editions/index.ts).

@@ -10,7 +10,7 @@
         <UButton size="xl" icon="i-lucide-user-plus" :label="$t('visitor.signup')" data-testid="visitor-signup" @click="open('signup')" />
         <UButton size="xl" color="neutral" variant="outline" icon="i-lucide-log-in" :label="$t('visitor.login')" data-testid="visitor-login" @click="open('login')" />
       </div>
-      <p class="text-sm text-muted">{{ $t('visitor.free') }}</p>
+      <p class="text-sm text-muted">{{ $t(googleAuth ? 'visitor.freeGoogle' : 'visitor.free') }}</p>
     </section>
 
     <section aria-labelledby="visitor-features-title" class="border-t border-default pt-12 md:pt-16">
@@ -42,6 +42,7 @@ const FEATURES = [
   { key: 'bilingual', icon: 'i-lucide-languages' }
 ] as const
 
+const googleAuth = useGoogleAuth()
 const authOpen = ref(false)
 const authMode = ref<'login' | 'signup'>('login')
 function open(mode: 'login' | 'signup'): void {

@@ -65,7 +65,9 @@ test('(6b-add) ajouter à mon carnet puis retirer ; badge « Ajoutée — de Adm
 
 test('(6b-explore) Explorer : « Ajouter », « Déjà dans mon carnet » et « Tout ajouter » ; la bannière disparaît', async ({ page }) => {
   await loginV2(page, 'user')
-  // La bannière « Explorer les recettes de Admin » mène à la page
+  // La bannière « Explorer les recettes de Admin » est dans Mon carnet (pas sur l'accueil) et mène à la page
+  await expect(page.getByTestId('prompt-banner')).toHaveCount(0)
+  await gotoApp(page, '/recettes')
   await expect(page.getByTestId('prompt-banner').filter({ hasText: 'Explorer les recettes de Admin' })).toBeVisible()
   await page.getByRole('link', { name: 'Explorer', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/explorer/${adminId}`))
@@ -82,7 +84,8 @@ test('(6b-explore) Explorer : « Ajouter », « Déjà dans mon carnet » et « 
   await expect(second.getByTestId('in-cookbook')).toBeVisible()
   await expect(page.getByTestId('explore-all-added')).toBeVisible()
 
-  await gotoApp(page, '/')
+  await gotoApp(page, '/recettes')
+  await expect(page.getByTestId('cookbook-page')).toBeVisible()
   await expect(page.getByTestId('prompt-banner').filter({ hasText: 'Explorer les recettes de Admin' })).toHaveCount(0)
 })
 

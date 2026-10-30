@@ -169,6 +169,9 @@ test('(6c-groups1) créer un groupe, inviter, accepter : rien dans le carnet, pu
   await invitation.getByTestId('group-invitation-accept').click()
   await expect(page.getByTestId('groups-joined')).toContainText('Rien n’a été ajouté à votre carnet')
   await expect(page.getByTestId('group-card').filter({ hasText: groupName })).toBeVisible()
+  await gotoApp(page, '/')
+  await expect(page.getByTestId('prompt-banner')).toHaveCount(0)   // plus sur l'accueil : dans Mon carnet
+  await gotoApp(page, '/recettes')
   const banner = page.getByTestId('prompt-banner').filter({ hasText: 'Explorer les recettes de Admin' })
   await expect(banner).toBeVisible()
 
@@ -446,7 +449,7 @@ test('(6c-notifs2) pagination « Voir plus », genre inconnu masqué, état vide
 
 // ------------------------------------------------------------------------------------------------ rangement
 
-test('(6c-category) ranger une recette ajoutée dans une de mes catégories (fiche et carte), jamais pour mes recettes', async ({ page }) => {
+test('(6c-category) ranger une recette ajoutée dans une de mes catégories (sur la fiche seulement, jamais sur la carte), jamais pour mes recettes', async ({ page }) => {
   const admin = await signedIn('admin')
   const recipeId = await createRecipe(admin.client, `${E2E_6B}Salade 6C`, 'groups')
   const user = await signedIn('user')
@@ -467,12 +470,16 @@ test('(6c-category) ranger une recette ajoutée dans une de mes catégories (fic
   await waitForHydration(page)
   await expect(page.getByTestId('recipe-entry-category').getByTestId('entry-category')).toHaveValue(first!.id)
 
-  // Depuis la carte du carnet : le choix est repris, on change, le filtre par catégorie suit
+  // La carte du carnet n'a PAS de sélecteur (il est sur la fiche) ; on change depuis la fiche, le filtre par catégorie suit
   await gotoApp(page, '/recettes')
   const card = page.getByTestId('recipe-grid').locator('article', { hasText: `${E2E_6B}Salade 6C` })
-  await expect(card.getByTestId('entry-category')).toHaveValue(first!.id)
-  await card.getByTestId('entry-category').selectOption({ label: second!.name_fr })
-  await expect(card.getByTestId('entry-category')).toHaveValue(second!.id)
+  await expect(card).toBeVisible()
+  await expect(card.getByTestId('entry-category')).toHaveCount(0)
+  await expect(page.getByTestId('entry-category')).toHaveCount(0)
+  await gotoApp(page, `/recettes/${recipeId}`)
+  const detailPicker = page.getByTestId('recipe-entry-category').getByTestId('entry-category')
+  await detailPicker.selectOption({ label: second!.name_fr })
+  await expect(detailPicker).toHaveValue(second!.id)
   await expect.poll(entryCategory).toEqual({ category_id: second!.id })
   await gotoApp(page, `/recettes?category=${second!.id}`)
   await expect(page.getByTestId('recipe-grid').locator('article', { hasText: `${E2E_6B}Salade 6C` })).toBeVisible()

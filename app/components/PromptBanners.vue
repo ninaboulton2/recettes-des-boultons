@@ -19,7 +19,7 @@ import type { PendingPrompt } from '#shared/utils/cookbook'
 import type { PromptAction } from '~/utils/prompt'
 
 /**
- * Bannières de l'accueil connecté (v2) à partir de `pending_prompts` :
+ * Bannières de Mon carnet (v2, connecté ; plus sur l'accueil) à partir de `pending_prompts` :
  *  - `author_recipes` : « Explorer les recettes de X » → page de X (phase 6B : boutons « ajouter » / « tout ajouter ») ;
  *  - `new_recipe` : « X a ajouté une recette » → voir la fiche, ajouter au carnet.
  * Fermer = `dismiss_prompt` (la bannière ne revient plus ; la page de X reste accessible).

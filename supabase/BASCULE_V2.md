@@ -137,8 +137,8 @@ Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres �
 
 ### Où s'insèrent 0024, 0025, 0027, 0030 et 0031 (petites migrations « sans effet pour la v1 »)
 
-Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031**
-(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0031 d'un coup, avant le jour J**, un fichier = un Run).
+Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032**
+(0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0032 d'un coup, avant le jour J**, un fichier = un Run).
 
 * **0024** (déjà en production) : rôle `user` en dur à l'inscription. Rien à refaire.
 * **0025** `0025_profile_onboarding.sql` : remplace `update_my_profile` par une version à 7 paramètres (fin de l'accueil). Elle **supprime l'ancienne
@@ -152,6 +152,10 @@ Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 �
   recette sans exiger le droit d'édition) et `shared_recipe_id(jeton)`. Elles permettent de traduire à la demande une recette partagée dans la langue de la personne qui la lit
   (`DEVELOPER.md` § 20.19). Aucune table, colonne, politique ni donnée touchée : sans effet v1. Un Run, **avant de déployer le code v2** (sans elle, la traduction à la demande répond
   « indisponible » et les pages gardent le texte d'origine : rien ne casse). Retour : `rollback/0031_shared_recipe_translation_down.sql` (retirer d'abord le code v2).
+* **0032** `0032_feedback2_aisle_translate_budget.sql` (retour de test n° 2) : (a) courses « Par rayon » : colonne `shopping_items.aisle` (nullable), table `shopping_aisle_prefs` (RLS propriétaire seulement) et
+  fonction `set_shopping_item_aisle` ; (b) `reserve_ai_call` et `ai_quota_status` (0028) remplacées pour que la traduction à la demande (feature `translate_shared`) ne compte **que dans le budget global du mois**,
+  jamais dans le plafond du jour de l'auteur ni du lecteur (`DEVELOPER.md` § 20.19 et § 20.20). Sans effet v1 (colonne nullable, table nouvelle). Un Run, **avant de déployer le code v2** (sans elle, « Changer de rayon » échoue
+  avec un message d'erreur, et la traduction à la demande est refusée par la base). Prérequis : 0028. Retour : `rollback/0032_feedback2_aisle_translate_budget_down.sql` (retirer d'abord le code v2).
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 
@@ -192,7 +196,7 @@ pas davantage. La **durée réelle du jour J est dominée par le temps humain** 
 
 | Étape | Fichier | Durée |
 |---|---|---|
-| Migrations 0025 → 0030 (6 Runs) ; 0031 en plus depuis le retour de test n° 1 | `migrations/0025…0031` | 0,03 à 0,06 s chacune |
+| Migrations 0025 → 0030 (6 Runs) ; 0031 et 0032 en plus depuis les retours de test | `migrations/0025…0032` | 0,03 à 0,06 s chacune |
 | 2 | `v2/0018_params.sql` | 0,03 s |
 | 4 | `v2/0018_v2_data_fill.sql` | **0,5 à 0,7 s** (181 recettes, 36 à 45 catégories, 181 droits) |
 | 5 | contrôles A à F | < 0,1 s |
@@ -483,7 +487,7 @@ Domaine acheté : **familycookbook.fr**. Le code est prêt (`SITE_URL`, redirect
 4. **Adresse de contact** : créer `contact@familycookbook.fr` chez Ionos (espace client → *E-mail* : une adresse ou un **alias/redirection** vers ta boîte personnelle, selon le forfait) et la tester en s'écrivant. `bonjour@familycookbook.fr` n'a besoin d'exister que comme expéditeur Resend (pas de boîte à relever, mais mieux vaut qu'elle redirige aussi).
 5. **Variables Vercel** (Production ; relancer un déploiement pour celles lues au build) : `NUXT_PUBLIC_CONTACT_EMAIL=contact@familycookbook.fr`, `EMAIL_FROM=Family Cookbook <bonjour@familycookbook.fr>` (valeurs validées par Nina), `RESEND_API_KEY` (clé Resend), `ALERT_EMAIL` (adresse personnelle de Nina : alertes crédit IA et budget ; ne doit pas être vide) ; **ne pas créer** `EMAIL_APP_NAME` (Vercel refuse une valeur vide ; absente = « Family Cookbook »).
 6. **Supabase → Authentication → URL Configuration** : *Site URL* = `https://familycookbook.fr`. *Redirect URLs* : ajouter `https://familycookbook.fr/**` (couvre `/confirm`, `/reset-password` et les versions `/en/…`) et `https://www.familycookbook.fr/**` ; **garder** `https://recettes-des-boultons.vercel.app/**` et `http://localhost:3001/**` le temps de la transition (et les prévisualisations utiles). Vérifier aussi le modèle d'e-mail Auth (il utilise `{{ .SiteURL }}`).
-7. **Google Cloud → APIs & Services → Identifiants → client OAuth « Web »** (celui de la connexion Google, configuré dans Supabase → Authentication → Providers → Google) : *Origines JavaScript autorisées* → ajouter `https://familycookbook.fr` ; *URI de redirection autorisés* → **ne rien changer** si elle pointe vers Supabase (`https://<projet>.supabase.co/auth/v1/callback`, c'est l'adresse que Google rappelle) ; n'ajouter `https://familycookbook.fr/confirm` que si une redirection directe est configurée. Pour l'**import Google Drive** (Picker, `NUXT_PUBLIC_GOOGLE_CLIENT_ID` / `API_KEY`) : ajouter `https://familycookbook.fr` aux origines JavaScript du client **et** aux restrictions de référent HTTP de la clé d'API (`https://familycookbook.fr/*`). Écran de consentement OAuth : domaine autorisé `familycookbook.fr`, nom de l'application « Family Cookbook ».
+7. **Google Cloud → APIs & Services → Identifiants → client OAuth « Web »** (celui de la connexion Google, configuré dans Supabase → Authentication → Providers → Google) : *Origines JavaScript autorisées* → ajouter `https://familycookbook.fr` ; *URI de redirection autorisés* → **ne rien changer** si elle pointe vers Supabase (`https://<projet>.supabase.co/auth/v1/callback`, c'est l'adresse que Google rappelle) ; n'ajouter `https://familycookbook.fr/confirm` que si une redirection directe est configurée. Pour l'**import Google Drive** (Picker, `NUXT_PUBLIC_GOOGLE_CLIENT_ID` / `API_KEY`) : ajouter `https://familycookbook.fr` aux origines JavaScript du client **et** aux restrictions de référent HTTP de la clé d'API (`https://familycookbook.fr/*`). Écran de consentement OAuth : domaine autorisé `familycookbook.fr`, nom de l'application « Family Cookbook ». **Une fois Google OAuth configuré, poser `NUXT_PUBLIC_GOOGLE_AUTH=true` dans Vercel (Production) et redéployer** : tant que cette variable est absente, la v2 n'affiche ni le bouton « Continuer avec Google » ni la mention « ou avec Google » (accueil visiteur, pages légales). La v1 n'est pas concernée (`NUXT_PUBLIC_AUTH_PROVIDERS`). Contrôle : la modale de connexion propose Google et le texte d'accueil redit « Connexion par e-mail ou avec Google ».
 8. **`SITE_URL=https://familycookbook.fr`** dans Vercel (Production seulement, pas Preview), puis redéployer. Contrôles : `curl -sI https://recettes-des-boultons.vercel.app/recettes` → `301` et `location: https://familycookbook.fr/recettes` ; `https://familycookbook.fr/manifest.webmanifest` répond le nom attendu ; se connecter avec e-mail et avec Google sur le nouveau domaine ; demander un e-mail de réinitialisation et vérifier que le lien pointe sur `familycookbook.fr` ; envoyer un e-mail de test (notification) et vérifier SPF/DKIM « pass » dans les en-têtes reçus.
 9. **Retour arrière du domaine** : vider `SITE_URL` et redéployer (la redirection s'arrête, le site reste servi sur les deux adresses). Le 301 déjà reçu par un navigateur reste en cache au plus 1 h.
 
@@ -495,7 +499,7 @@ Chaque case correspond à une étape répétée ci-dessus. Ne passer à la suiva
 
 - [ ] Sauvegarde : export JSON des tables + `pg_dump` (`BASCULE_PROD.md` § 0.1) **hors du dépôt**, liste des fichiers du bucket `recipe-photos`.
 - [ ] Prérequis 1.2 : 0017, 0019, 0021, 0023, 0024 présentes (requête du § 1, `recettes_avec_proprietaire = 0`).
-- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030, 0031**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
+- [ ] Appliquer **0025, 0026, 0027, 0028, 0029, 0030, 0031, 0032**, un fichier = un Run ; la requête du § 1.2 répond `true` partout. (Sans effet v1 : le site reste utilisable.)
 - [ ] Domaine (§ 5 bis) : fait avant ou après la bascule, indépendamment ; `SITE_URL` en dernier.
 - [ ] Variables Vercel posées : `SUPABASE_SECRET_KEY`, `CRON_SECRET` (≥ 16 caractères), `ALERT_EMAIL`, `AI_MONTHLY_BUDGET_USD` (suggéré 5) ; `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL` si le domaine est prêt (`DEVELOPER.md` § 20.15).
 - [ ] Supabase → Settings → API → *Exposed schemas* : `private` **absent** (§ 4).

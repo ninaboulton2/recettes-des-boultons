@@ -68,6 +68,7 @@
       "list": "Liste de courses",
       "noLists": "Vous n'avez pas encore de liste de courses.",
       "createList": "Créer une liste",
+      "defaultListName": "Ma liste",
       "sections": "Sections d'ingrédients",
       "unnamedSection": "Sans nom",
       "success": "Recette ajoutée",
@@ -628,6 +629,7 @@
     },
     "aisles": {
       "toggle": "Par rayon",
+      "auto": "Automatique",
       "produce": "Fruits et légumes",
       "bakery": "Boulangerie",
       "meatFish": "Boucherie et poissonnerie",
@@ -650,6 +652,7 @@
       "actions": "Actions sur l'article",
       "edit": "Modifier la quantité",
       "move": "Déplacer vers",
+      "changeAisle": "Changer de rayon",
       "remove": "Supprimer",
       "save": "Enregistrer",
       "cancel": "Annuler",
@@ -671,6 +674,7 @@
       "listCleared": "Aucun article à supprimer | {count} article supprimé | {count} articles supprimés",
       "itemAdded": "« {name} » ajouté",
       "itemRemoved": "« {name} » supprimé",
+      "aisleChanged": "« {name} » rangé : {aisle}",
       "itemMoved": "« {name} » déplacé vers « {list} »",
       "checkedAll": "Tous les articles sont cochés",
       "uncheckedAll": "Tous les articles sont décochés",
@@ -1640,7 +1644,8 @@
     "subtitle": "Rassemblez vos recettes, partagez-les en famille et entre amis, et cuisinez sans perdre une miette.",
     "signup": "Créer un compte",
     "login": "Se connecter",
-    "free": "Gratuit, sans publicité. Connexion par e-mail ou avec Google.",
+    "free": "Gratuit, sans publicité. Connexion par e-mail.",
+    "freeGoogle": "Gratuit, sans publicité. Connexion par e-mail ou avec Google.",
     "features": {
       "title": "Ce que vous trouverez ici",
       "cookbook": {

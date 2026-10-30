@@ -14,6 +14,15 @@ export function isV2Enabled(value: unknown): boolean {
 }
 
 /**
+ * Connexion Google proposée en v2 : `runtimeConfig.public.googleAuth`, variable `NUXT_PUBLIC_GOOGLE_AUTH=true`.
+ * Éteinte par défaut tant que Google OAuth n'est pas configuré (Supabase + Google Cloud) ; voir DEVELOPER.md § 20.20.
+ * La v1 n'est pas concernée (elle suit `NUXT_PUBLIC_AUTH_PROVIDERS`).
+ */
+export function isGoogleAuthEnabled(value: unknown): boolean {
+  return isV2Enabled(value)
+}
+
+/**
  * Qui peut écrire des recettes et appeler l'IA (routes serveur `add-recipe`, `update-recipe`, `delete-recipe`, extraction,
  * transcription, traduction, doublons) : `'admin'` en v1, `'user'` (tout compte connecté ; le RLS et les RPC décident ensuite
  * pour chaque recette) quand l'interrupteur v2 est allumé. Isolée de `server/utils/auth.ts` pour être testée sans Nuxt.

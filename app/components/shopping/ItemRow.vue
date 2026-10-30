@@ -74,6 +74,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import type { ShoppingItem, ShoppingList } from '#shared/types'
+import { AISLES, itemAisle, type Aisle, type AislePrefs } from '#shared/utils/shopping'
 
 /**
  * Une ligne d'article : case à cocher, nom, quantité formatée (« 200 g »),
@@ -87,12 +88,15 @@ const props = defineProps<{
   /** Autres listes vers lesquelles déplacer l'article. */
   otherLists: ShoppingList[]
   storeMode?: boolean
+  /** v2 : rayons retenus par la personne ; `undefined` en v1 (pas de menu « Changer de rayon »). */
+  aislePrefs?: AislePrefs
 }>()
 
 const emit = defineEmits<{
   toggle: [item: ShoppingItem]
   update: [item: ShoppingItem, patch: { amount: string | null, unit: string | null }, done: () => void]
   move: [item: ShoppingItem, targetListId: string]
+  aisle: [item: ShoppingItem, aisle: Aisle | null]
   remove: [item: ShoppingItem]
 }>()
 
@@ -128,6 +132,9 @@ const save = () => {
   })
 }
 
+/** Rayon actuel de l'article (choix, préférence ou mots-clés). */
+const currentAisle = computed(() => itemAisle(props.item, props.aislePrefs))
+
 const menuItems = computed(() => [
   [
     { label: t('shopping.item.edit'), icon: 'i-lucide-pencil', onSelect: (): void => { void startEditing() } },
@@ -136,6 +143,20 @@ const menuItems = computed(() => [
           label: t('shopping.item.move'),
           icon: 'i-lucide-arrow-right-left',
           children: props.otherLists.map(list => ({ label: list.name, onSelect: () => emit('move', props.item, list.id) }))
+        }]
+      : []),
+    ...(props.aislePrefs
+      ? [{
+          label: t('shopping.item.changeAisle'),
+          icon: 'i-lucide-layout-list',
+          children: [
+            ...AISLES.map(aisle => ({
+              label: t(`shopping.aisles.${aisle}`),
+              icon: currentAisle.value === aisle ? 'i-lucide-check' : undefined,
+              onSelect: () => emit('aisle', props.item, aisle)
+            })),
+            { label: t('shopping.aisles.auto'), icon: 'i-lucide-wand-sparkles', onSelect: () => emit('aisle', props.item, null) }
+          ]
         }]
       : [])
   ],

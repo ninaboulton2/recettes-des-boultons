@@ -8,7 +8,8 @@ import { recipeTexts, sourceHash, translationAction, type RecipeTexts, type Tran
  * Règles :
  *  - la recette est traduite vers la langue de la personne qui la lit, une fois : le résultat est écrit en base (une ligne par recette),
  *    toutes les personnes qui la lisent ensuite dans cette langue le voient, sans nouvel appel ;
- *  - le coût de l'appel IA est compté sur l'AUTEUR de la recette (comme à l'enregistrement), jamais sur la personne qui lit ;
+ *  - le coût de l'appel IA est compté UNIQUEMENT sur le budget global du mois (feature `translate_shared`, migration 0032) : jamais sur
+ *    le plafond du jour de l'auteur ni de la personne qui lit ;
  *  - jamais d'erreur pour l'appelant : l'échec (plafond de l'auteur, crédit coupé, fournisseur) devient `unavailable` et la page garde
  *    le texte d'origine ; un échec n'est pas rejoué avant `FAILURE_COOLDOWN_MS` (pas d'appel payant répété à chaque affichage) ;
  *  - deux demandes simultanées pour la même recette et la même langue ne font qu'un appel (`busy` pour la seconde).

@@ -21,9 +21,11 @@
               :quantity="quantityOf(item)"
               :other-lists="otherLists"
               :store-mode="storeMode"
+              :aisle-prefs="aislePrefs"
               @toggle="emit('toggle', $event)"
               @update="(target, patch, done) => emit('update', target, patch, done)"
               @move="(target, listId) => emit('move', target, listId)"
+              @aisle="(target, aisle) => emit('aisle', target, aisle)"
               @remove="emit('remove', $event)"
             />
           </ul>
@@ -38,9 +40,11 @@
           :quantity="quantityOf(item)"
           :other-lists="otherLists"
           :store-mode="storeMode"
+              :aisle-prefs="aislePrefs"
           @toggle="emit('toggle', $event)"
           @update="(target, patch, done) => emit('update', target, patch, done)"
           @move="(target, listId) => emit('move', target, listId)"
+              @aisle="(target, aisle) => emit('aisle', target, aisle)"
           @remove="emit('remove', $event)"
         />
       </ul>
@@ -61,9 +65,11 @@
           :quantity="quantityOf(item)"
           :other-lists="otherLists"
           :store-mode="storeMode"
+              :aisle-prefs="aislePrefs"
           @toggle="emit('toggle', $event)"
           @update="(target, patch, done) => emit('update', target, patch, done)"
           @move="(target, listId) => emit('move', target, listId)"
+              @aisle="(target, aisle) => emit('aisle', target, aisle)"
           @remove="emit('remove', $event)"
         />
       </ul>
@@ -73,7 +79,7 @@
 
 <script setup lang="ts">
 import type { ShoppingItem, ShoppingList } from '#shared/types'
-import type { AisleGroup } from '#shared/utils/shopping'
+import type { Aisle, AisleGroup, AislePrefs } from '#shared/utils/shopping'
 
 /** Articles d'une liste : « à acheter » (à plat ou par rayon) puis « dans le panier ». */
 defineProps<{
@@ -81,6 +87,8 @@ defineProps<{
   toBuyByAisle: AisleGroup<ShoppingItem>[]
   byAisle: boolean
   storeMode: boolean
+  /** v2 : rayons retenus par la personne (active le menu « Changer de rayon ») ; absent en v1. */
+  aislePrefs?: AislePrefs
   otherLists: ShoppingList[]
   quantityOf: (item: ShoppingItem) => string
 }>()
@@ -89,6 +97,7 @@ const emit = defineEmits<{
   toggle: [item: ShoppingItem]
   update: [item: ShoppingItem, patch: { amount: string | null, unit: string | null }, done: () => void]
   move: [item: ShoppingItem, targetListId: string]
+  aisle: [item: ShoppingItem, aisle: Aisle | null]
   remove: [item: ShoppingItem]
 }>()
 </script>

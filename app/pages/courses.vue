@@ -22,7 +22,7 @@
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3 print:hidden">
-          <USwitch v-model="shopping.storeMode.value" :label="$t('shopping.storeMode')" size="sm" />
+          <USwitch v-if="!v2" v-model="shopping.storeMode.value" :label="$t('shopping.storeMode')" size="sm" />
           <USwitch v-model="shopping.byAisle.value" :label="$t('shopping.aisles.toggle')" size="sm" />
           <UButton
             v-if="shopping.currentList.value"
@@ -126,11 +126,13 @@
             :to-buy-by-aisle="shopping.toBuyByAisle.value"
             :by-aisle="shopping.byAisle.value"
             :store-mode="shopping.storeMode.value"
+            :aisle-prefs="v2 ? shopping.store.aislePrefs : undefined"
             :other-lists="otherLists"
             :quantity-of="shopping.quantityOf"
             @toggle="item => shopping.toggleItem(item.id)"
             @update="(item, patch, done) => shopping.updateItem(item.id, patch).finally(done)"
             @move="(item, listId) => shopping.moveItem(item, listId)"
+            @aisle="(item, aisle) => shopping.setItemAisle(item, aisle)"
             @remove="item => shopping.removeItem(item)"
           />
 
@@ -154,6 +156,7 @@ definePageMeta({ middleware: 'v2-members' })
 
 const authStore = useAuthStore()
 const { t } = useI18n()
+const v2 = useV2()
 const shopping = useShoppingLists()
 
 const showLoginModal = ref(false)

@@ -4,6 +4,7 @@ import { apiFetch } from '~/composables/useApi'
 import { apiErrorFromResponse, toUserMessage, translateKey } from '~/composables/useApiError'
 import type { ShoppingItem, ShoppingList } from '#shared/types'
 import type { Database } from '#shared/types/database'
+import { aisleKeyOf, isAisle, type Aisle } from '#shared/utils/shopping'
 import { useAuthStore } from './auth'
 
 export type { ShoppingItem, ShoppingList }
@@ -52,6 +53,8 @@ export const useShoppingStore = defineStore('shopping', () => {
 
   const shoppingLists = ref<ShoppingList[]>([])
   const currentListId = ref<string | null>(null)
+  /** v2 : rayons retenus par la personne (nom replié → rayon), prioritaires sur les mots-clés. Vide en v1. */
+  const aislePrefs = ref<Map<string, Aisle>>(new Map())
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   /** Utilisateur pour lequel `shoppingLists` a été chargé (`null` : personne). */
@@ -103,6 +106,12 @@ export const useShoppingStore = defineStore('shopping', () => {
         .order('created_at', { referencedTable: 'shopping_items', ascending: true })
       if (loadError) throw loadError
 
+      // v2 seulement (la table n'existe pas en v1) ; une erreur ici ne bloque pas les listes
+      if (useV2()) {
+        const prefs = await supabase.from('shopping_aisle_prefs').select('name_key, aisle')
+        aislePrefs.value = new Map((prefs.data ?? []).filter(row => isAisle(row.aisle)).map(row => [row.name_key, row.aisle as Aisle]))
+      }
+
       shoppingLists.value = data.map(list => ({
         id: list.id,
         name: list.name,
@@ -117,6 +126,7 @@ export const useShoppingStore = defineStore('shopping', () => {
           amountNum: item.amount_num,
           unit: item.unit,
           unitCode: item.unit_code,
+          aisle: item.aisle ?? null,
           checked: item.is_checked ?? false,
           recipeId: item.recipe_id,
           createdAt: item.created_at,
@@ -274,6 +284,32 @@ export const useShoppingStore = defineStore('shopping', () => {
     return targets.length
   }
 
+  /**
+   * v2 : range un article dans un rayon (`null` = automatique) et retient le choix pour son nom replié : les futures listes de la
+   * personne y mettront le même article directement. Mise à jour locale immédiate, annulée si la base refuse.
+   */
+  const setItemAisle = async (itemId: string, aisle: Aisle | null): Promise<void> => {
+    const item = shoppingLists.value.flatMap(list => list.items).find(candidate => candidate.id === itemId)
+    if (!item) return
+    const key = aisleKeyOf(item.name)
+    const previousAisle = item.aisle ?? null
+    const previousPref = aislePrefs.value.get(key)
+    const next = new Map(aislePrefs.value)
+    if (aisle) next.set(key, aisle)
+    else next.delete(key)
+    item.aisle = aisle
+    aislePrefs.value = next
+    const { error: rpcError } = await supabase.rpc('set_shopping_item_aisle', { p_item: itemId, p_aisle: aisle, p_name_key: key })
+    if (rpcError) {
+      item.aisle = previousAisle
+      const restore = new Map(aislePrefs.value)
+      if (previousPref) restore.set(key, previousPref)
+      else restore.delete(key)
+      aislePrefs.value = restore
+      throw rpcError
+    }
+  }
+
   /** Déplace un article vers une autre liste (ajout avec fusion dans la cible, puis suppression). */
   const moveItem = async (itemId: string, targetListId: string): Promise<void> => {
     const item = shoppingLists.value.flatMap(list => list.items).find(candidate => candidate.id === itemId)
@@ -339,6 +375,8 @@ export const useShoppingStore = defineStore('shopping', () => {
 
     // Listes
     createList,
+    aislePrefs,
+    setItemAisle,
     updateListName,
     deleteList,
     clearList,
