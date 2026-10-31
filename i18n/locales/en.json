@@ -1036,9 +1036,9 @@
     "customHint": "A #rrggbb code. Text must stay readable: a color that is too light is refused.",
     "preset": {
       "boultons": "Boultons",
-      "terracotta": "Terracotta",
+      "terracotta": "Paprika",
       "olive": "Olive",
-      "ocean": "Ocean",
+      "ocean": "Blueberry",
       "prune": "Plum",
       "framboise": "Raspberry",
       "moutarde": "Mustard",

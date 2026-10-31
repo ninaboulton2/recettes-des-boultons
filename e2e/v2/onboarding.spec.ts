@@ -40,7 +40,7 @@ test('(v2-ob1) 3 écrans : pseudonyme, titre, thème, puis accueil', async ({ pa
   await title.fill('Carnet de test')
   await next.click()
 
-  // Écran 3 : aperçu en direct du thème Océan
+  // Écran 3 : aperçu en direct du thème Myrtille (`ocean`)
   await expect(page.getByTestId('onboarding-progress')).toHaveText('Étape 3 sur 3')
   await page.getByTestId('theme-preset-ocean').click()
   await expect.poll(() => cssVar(page, '--color-primary-500')).toBe('#2f74b5')
