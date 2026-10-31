@@ -100,7 +100,7 @@ test('(v2-th3) hors des Boultons : la base refuse un enregistrement forcé du pr
   expect(direct.error?.code).toBe('42501')
 })
 
-test('(v2-th4) créateur d\'un AUTRE groupe : pas de thème Boultons pour son groupe (interface et base) ; Les Boultons le gardent', async ({ page }) => {
+test('(v2-th4) créateur d\'un AUTRE groupe : pas de thème Boultons pour son groupe (interface et base)', async ({ page }) => {
   const name = `${E2E_6C}Th4 Groupe`
   const groupId = await createGroupWith('user', name, [])
   try {
@@ -118,16 +118,22 @@ test('(v2-th4) créateur d\'un AUTRE groupe : pas de thème Boultons pour son gr
     await expect(reserved.locator('input')).toBeDisabled()
     await expect(page.getByTestId('theme-reserved-note')).toHaveText(RESERVED_NOTE)
 
-    // Le groupe Les Boultons garde son thème (déjà posé) : il reste sélectionnable pour lui
-    await gotoApp(page, `/groupes/${await boultonsGroupId()}`)
-    await expect(page.getByTestId('theme-preset-boultons')).not.toHaveAttribute('data-unavailable', 'true')
   } finally {
     sqlLocal(`delete from public.groups where name = '${name}';`)
   }
 })
 
-async function boultonsGroupId(): Promise<string> {
-  const { client } = await signedIn('user')
+// Le groupe Les Boultons (dont admin@local.test est le créateur) garde son thème : le préréglage reste sélectionnable pour lui.
+test('(v2-th5) le groupe Les Boultons garde son thème : préréglage disponible pour son créateur', async ({ page }) => {
+  await loginV2(page, 'admin')
+  await gotoApp(page, `/groupes/${await boultonsGroupId('admin')}`)
+  await expect(page.getByTestId('theme-preset-boultons')).toBeVisible()
+  await expect(page.getByTestId('theme-preset-boultons')).not.toHaveAttribute('data-unavailable', 'true')
+  await expect(page.getByTestId('theme-reserved-note')).toHaveCount(0)
+})
+
+async function boultonsGroupId(account: 'user' | 'admin' = 'user'): Promise<string> {
+  const { client } = await signedIn(account)
   const { data, error } = await client.rpc('list_my_groups')
   if (error) throw new Error(error.message)
   const group = ((data ?? []) as Array<{ name: string, group_id: string }>).find(candidate => candidate.name === 'Les Boultons')

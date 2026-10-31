@@ -65,9 +65,10 @@ test('(v2-mf4) ancien alias → SITE_URL en 301 ; autres hôtes servis normaleme
 })
 
 test('(v2-mf5) balise canonical sur SITE_URL', async ({ page }) => {
-  await gotoApp(page, '/recettes')
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/recettes`)
-  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `${SITE_URL}/recettes`)
+  // Page publique du visiteur (« /recettes », Mon carnet, ouvre désormais la connexion et revient à l'accueil)
+  await gotoApp(page, '/mentions-legales')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/mentions-legales`)
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `${SITE_URL}/mentions-legales`)
 })
 
 test('(v2-mf6) titre du carnet : en-tête, <title> et manifeste ; vide = Family Cookbook ; le thème ne change pas le nom', async ({ page }) => {
