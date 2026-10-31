@@ -1,5 +1,6 @@
 import type { FriendshipStatus, GroupRole, NotificationType } from '#shared/schemas/social'
 import { friendshipStatusSchema, notificationTypeSchema } from '#shared/schemas/social'
+import { parseTitleI18n, type CookbookTitleI18n } from './cookbookTitle'
 
 /**
  * Lignes des RPC de la migration 0023 (snake_case) → objets d'application (camelCase).
@@ -29,6 +30,8 @@ export interface FriendRow {
   user_id: string
   display_name: string | null
   cookbook_title: string | null
+  /** 0034 ; absent tant que la migration n'est pas appliquée. */
+  cookbook_title_i18n?: unknown
   since: string | null
 }
 export interface Friend {
@@ -36,6 +39,8 @@ export interface Friend {
   userId: string
   displayName: string | null
   cookbookTitle: string | null
+  /** Titre par langue (0034) : voir `localizedCookbookTitle`. */
+  cookbookTitleI18n: CookbookTitleI18n
   since: string | null
 }
 export const toFriend = (row: FriendRow): Friend => ({
@@ -43,6 +48,7 @@ export const toFriend = (row: FriendRow): Friend => ({
   userId: row.user_id,
   displayName: row.display_name ?? null,
   cookbookTitle: row.cookbook_title ?? null,
+  cookbookTitleI18n: parseTitleI18n(row.cookbook_title_i18n),
   since: row.since ?? null
 })
 
@@ -206,6 +212,7 @@ export interface UserProfileRow {
   user_id: string
   display_name: string | null
   cookbook_title: string | null
+  cookbook_title_i18n?: unknown
   is_self: boolean
   friendship_status: string
   friendship_id: string | null
@@ -216,6 +223,7 @@ export interface UserProfile {
   userId: string
   displayName: string | null
   cookbookTitle: string | null
+  cookbookTitleI18n: CookbookTitleI18n
   isSelf: boolean
   friendshipStatus: FriendshipStatus
   friendshipId: string | null
@@ -229,6 +237,7 @@ export function toUserProfile(row: UserProfileRow): UserProfile {
     userId: row.user_id,
     displayName: row.display_name ?? null,
     cookbookTitle: row.cookbook_title ?? null,
+    cookbookTitleI18n: parseTitleI18n(row.cookbook_title_i18n),
     isSelf: row.is_self === true,
     friendshipStatus: status.success ? status.data : 'none',
     friendshipId: row.friendship_id ?? null,

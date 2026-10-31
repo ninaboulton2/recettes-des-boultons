@@ -19,6 +19,11 @@
           <UInput id="settings-cookbook-title" v-model="cookbookTitle" :maxlength="COOKBOOK_TITLE_MAX" class="w-full" aria-describedby="settings-cookbook-title-help" data-testid="settings-cookbook-title" />
           <p id="settings-cookbook-title-help" class="text-sm text-muted">{{ $t('settings.profile.cookbookTitleHint') }}</p>
         </div>
+        <div class="space-y-1.5">
+          <label for="settings-cookbook-title-other" class="block text-sm font-medium text-default">{{ $t(`settings.profile.cookbookTitleOther.${otherLocale}`) }}</label>
+          <UInput id="settings-cookbook-title-other" v-model="cookbookTitleOther" :maxlength="COOKBOOK_TITLE_MAX" class="w-full" aria-describedby="settings-cookbook-title-other-help" data-testid="settings-cookbook-title-other" />
+          <p id="settings-cookbook-title-other-help" class="text-sm text-muted">{{ $t('settings.profile.cookbookTitleOtherHint') }}</p>
+        </div>
         <div class="flex justify-end">
           <UButton type="submit" :loading="saving === 'profile'" :label="$t('ui.common.save')" data-testid="profile-save" />
         </div>
@@ -85,6 +90,7 @@
 import type { ThemeInput } from '#shared/themes'
 import { parseThemeInput } from '#shared/themes'
 import { COOKBOOK_TITLE_MAX, validateDisplayName } from '#shared/utils/profileErrors'
+import { localizedCookbookTitle, otherTitleLocale, parseTitleI18n, toTitleLocale } from '#shared/utils/cookbookTitle'
 import type { MyGroup } from '#shared/utils/social'
 
 /**
@@ -97,6 +103,7 @@ const { t, locale, setLocale } = useI18n()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const { save, savePreferences, errorMessage } = useProfileSettings()
+const { saveTranslation } = useCookbookTitle()
 const { listMyGroups } = useGroups()
 const { $toast } = useNuxtApp()
 
@@ -106,7 +113,11 @@ const saving = ref<null | 'profile' | 'theme' | 'prefs'>(null)
 
 // ---- profil
 const displayName = ref(authStore.profile?.display_name ?? '')
-const cookbookTitle = ref(authStore.profile?.cookbook_title ?? '')
+// Titre dans la langue de l'interface, et dans l'autre langue (traduction automatique ou saisie, migration 0034)
+const uiLocale = computed(() => toTitleLocale(locale.value))
+const otherLocale = computed(() => otherTitleLocale(uiLocale.value))
+const cookbookTitle = ref(localizedCookbookTitle(authStore.profile?.cookbook_title, authStore.profile?.cookbook_title_i18n, uiLocale.value) ?? '')
+const cookbookTitleOther = ref(parseTitleI18n(authStore.profile?.cookbook_title_i18n)[otherTitleLocale(toTitleLocale(locale.value))] ?? '')
 const nameError = ref<string | null>(null)
 
 async function saveProfile(): Promise<void> {
@@ -117,7 +128,18 @@ async function saveProfile(): Promise<void> {
   }
   saving.value = 'profile'
   try {
-    await save({ displayName: displayName.value, cookbookTitle: cookbookTitle.value.trim() })
+    const title = cookbookTitle.value.trim()
+    const other = cookbookTitleOther.value.trim()
+    const stored = authStore.profile
+    const titleChanged = title !== (localizedCookbookTitle(stored?.cookbook_title, stored?.cookbook_title_i18n, uiLocale.value) ?? '')
+    const otherChanged = other !== (parseTitleI18n(stored?.cookbook_title_i18n)[otherLocale.value] ?? '')
+    await save({ displayName: displayName.value, ...(titleChanged ? { cookbookTitle: title } : {}) })
+    if (titleChanged || otherChanged) {
+      // Une saisie manuelle l'emporte ; sinon traduction automatique (refaite si le titre change ou si le champ a été vidé)
+      const result = await saveTranslation({ title, other: other || undefined, refresh: titleChanged || otherChanged })
+      if (title && !other && result.status === 'unavailable') $toast.info(t('settings.profile.translationUnavailable'))
+      cookbookTitleOther.value = result.i18n[otherLocale.value] ?? other
+    }
     $toast.success(t('settings.saved'))
   } catch (error) {
     nameError.value = errorMessage(error)

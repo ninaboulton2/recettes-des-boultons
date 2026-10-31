@@ -42,11 +42,11 @@ test('(v2-nav1) barre : Mon carnet, Favoris, Planning, Courses ; menu : Partagé
   await expect(page.getByRole('menuitem', { name: /IA/ })).toBeVisible()
 })
 
-test('(v2-nav3) visiteur : Favoris, Planning, Courses visibles ; un clic ouvre la connexion puis ramène sur la page', async ({ page }) => {
+test('(v2-nav3) visiteur : Mon carnet, Favoris, Planning, Courses visibles (dans cet ordre) ; un clic ouvre la connexion puis ramène sur la page', async ({ page }) => {
   await gotoApp(page, '/')
   const nav = page.getByRole('navigation', { name: 'Navigation principale' })
-  for (const label of ['Favoris', 'Planning', 'Courses']) await expect(nav.getByRole('link', { name: label })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Mon carnet' })).toHaveCount(0)
+  for (const label of ['Mon carnet', 'Favoris', 'Planning', 'Courses']) await expect(nav.getByRole('link', { name: label })).toBeVisible()
+  await expect(nav.getByRole('link')).toHaveText(['Mon carnet', 'Favoris', 'Planning', 'Courses'])
 
   await nav.getByRole('link', { name: 'Planning' }).click()
   const dialog = page.getByRole('dialog', { name: 'Connexion' })
@@ -56,6 +56,31 @@ test('(v2-nav3) visiteur : Favoris, Planning, Courses visibles ; un clic ouvre l
   await dialog.getByRole('textbox', { name: 'Mot de passe' }).fill(V2_PASSWORD)
   await dialog.getByRole('button', { name: 'Se connecter' }).click()
   await expect(page).toHaveURL(/\/planning$/)
+})
+
+test('(v2-nav4) visiteur : « Mon carnet » ouvre la connexion puis ramène sur Mon carnet', async ({ page }) => {
+  await gotoApp(page, '/')
+  await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Mon carnet' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Connexion' })
+  await expect(dialog).toBeVisible()
+  await expect(page).toHaveURL(/connexion=(%2F|\/)recettes/)
+  await dialog.getByRole('textbox', { name: 'Email' }).fill(V2_ACCOUNTS.user)
+  await dialog.getByRole('textbox', { name: 'Mot de passe' }).fill(V2_PASSWORD)
+  await dialog.getByRole('button', { name: 'Se connecter' }).click()
+  await expect(page).toHaveURL(/\/recettes$/)
+  await expect(page.getByTestId('cookbook-page')).toBeVisible()
+})
+
+test('(v2-nav5) chaque entrée de la barre garde sa propre icône (carnet, favoris, planning, courses), en FR comme en EN', async ({ page }) => {
+  const expected: Record<string, string> = { '/recettes': 'book-open', '/favoris': 'heart', '/planning': 'calendar-days', '/courses': 'shopping-cart' }
+  for (const path of ['/', '/en']) {
+    await gotoApp(page, path)
+    const nav = page.getByRole('navigation', { name: /Navigation principale|Main navigation/ })
+    for (const [href, icon] of Object.entries(expected)) {
+      const link = nav.locator(`a[href$="${href}"]`)
+      await expect(link.locator(`[class*="lucide"][class*="${icon}"]`)).toHaveCount(1)
+    }
+  }
 })
 
 test('(v2-nav2) bannières : fermer les rend définitivement invisibles', async ({ page }) => {

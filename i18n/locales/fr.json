@@ -997,7 +997,8 @@
       "titleLength": "Le titre du carnet doit faire 80 caractères au plus.",
       "notMember": "Vous n'êtes pas membre de ce groupe.",
       "rate": "Trop de tentatives, réessayez plus tard.",
-      "generic": "Enregistrement impossible, réessayez."
+      "generic": "Enregistrement impossible, réessayez.",
+      "boultonsReserved": "Ce thème est réservé aux Boultons."
     }
   },
   "onboarding": {
@@ -1055,7 +1056,8 @@
       "tooDark": "Cette couleur est trop sombre pour former une palette lisible.",
       "contrast": "Cette couleur n'offre pas un contraste suffisant (AA).",
       "invalid": "Thème invalide."
-    }
+    },
+    "reserved": "Thème réservé aux Boultons. Demandez à un membre de la famille de vous ajouter au groupe."
   },
   "settings": {
     "title": "Réglages",
@@ -1065,7 +1067,13 @@
       "title": "Profil",
       "displayName": "Pseudonyme",
       "cookbookTitle": "Titre du carnet",
-      "cookbookTitleHint": "Affiché en haut du site et sur votre carnet. Vide : « Family Cookbook »."
+      "cookbookTitleHint": "Affiché en haut du site et sur votre carnet. Vide : « Family Cookbook ».",
+      "cookbookTitleOther": {
+        "fr": "Titre en français (facultatif)",
+        "en": "Titre en anglais (facultatif)"
+      },
+      "cookbookTitleOtherHint": "Traduit automatiquement quand vous changez le titre. Modifiez-le ici pour imposer votre version.",
+      "translationUnavailable": "Titre enregistré. La traduction automatique n'est pas disponible pour le moment : le titre d'origine s'affichera dans l'autre langue."
     },
     "theme": {
       "title": "Thème",

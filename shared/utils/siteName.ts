@@ -40,5 +40,6 @@ export function cleanCookbookTitle(title: string | null | undefined): string | n
 export function displaySiteName(options: { v2: boolean, path: string, cookbookTitle: string | null | undefined, editionName: string }): string {
   if (!options.v2) return options.editionName
   if (isNeutralSitePath(options.path)) return BRAND_NAME
+  // `cookbookTitle` est déjà dans la langue de l'interface (`localizedCookbookTitle`, shared/utils/cookbookTitle.ts)
   return cleanCookbookTitle(options.cookbookTitle) ?? BRAND_NAME
 }

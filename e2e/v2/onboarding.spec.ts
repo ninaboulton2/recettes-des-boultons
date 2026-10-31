@@ -42,6 +42,11 @@ test('(v2-ob1) 3 écrans : pseudonyme, titre, thème, puis accueil', async ({ pa
 
   // Écran 3 : aperçu en direct du thème Myrtille (`ocean`)
   await expect(page.getByTestId('onboarding-progress')).toHaveText('Étape 3 sur 3')
+  // Le préréglage Boultons est réservé aux membres de Les Boultons : grisé, avec l'explication (infobulle et note visible)
+  const reserved = page.getByTestId('theme-preset-boultons')
+  await expect(reserved).toHaveAttribute('data-unavailable', 'true')
+  await expect(reserved.locator('input')).toBeDisabled()
+  await expect(page.getByTestId('theme-reserved-note')).toHaveText('Thème réservé aux Boultons. Demandez à un membre de la famille de vous ajouter au groupe.')
   await page.getByTestId('theme-preset-ocean').click()
   await expect.poll(() => cssVar(page, '--color-primary-500')).toBe('#2f74b5')
   await next.click()

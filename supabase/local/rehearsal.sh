@@ -4,7 +4,7 @@
 # ============================================================================
 #  Rejoue de bout en bout supabase/BASCULE_V2.md sur la base Docker locale + le snapshot réel (gitignoré) :
 #    1. base v1 « comme la prod » : reset, snapshot, 0001 → 0017, 0019, 0021, 0023, 0024 ;
-#       traductions anglaises fabriquées (le snapshot n'en a pas), puis ce que Nina applique : 0025 → 0030
+#       traductions anglaises fabriquées (le snapshot n'en a pas), puis ce que Nina applique : 0025 → 0034
 #    2. jour J : paramètres FACTICES (propriétaire = le compte admin le plus ancien, pseudonymes inventés pour CHAQUE compte),
 #       0018 params, 0018, contrôles de l'étape 5, 0020, contrôles, 0029 (photos), contrôles
 #    3. contrôles fonctionnels (rehearsal_checks.sql) et mesures de performance (rehearsal_perf.sql)
@@ -12,7 +12,7 @@
 #  Chaque étape affiche sa durée et ses NOTICE. Journal complet dans $LOG (défaut : /tmp/rehearsal_v2.log).
 #
 #    bash supabase/local/rehearsal.sh [--no-reset] [--keep-v2] [--skip-perf]
-#      --no-reset   ne remet pas la base à zéro (suppose l'état v1 + 0025 → 0030 déjà posé)
+#      --no-reset   ne remet pas la base à zéro (suppose l'état v1 + 0025 → 0034 déjà posé)
 #      --keep-v2    s'arrête avant le retour arrière (base en état v2 : pour les e2e v2 ou la navigation à la main)
 #      --skip-perf  saute les mesures
 #  Pré-requis : la stack tourne (`npm run db:local:up`), snapshot présent dans supabase/local/snapshot/.
@@ -52,12 +52,12 @@ step() {
 }
 sqlshow() { say ""; say "▶ $1"; shift; "$PSQL_BIN" "$DB_URL" -X -v ON_ERROR_STOP=1 -P pager=off "$@" 2>&1 | tee -a "$LOG"; }
 
-# ------------------------------------------------------------------ 1. état v1 comme la prod, puis 0025 → 0030
+# ------------------------------------------------------------------ 1. état v1 comme la prod, puis 0025 → 0034
 if [[ $RESET -eq 1 ]]; then
   say "▶ Reset de la base locale + snapshot + 0001 → 0017, 0019, 0021, 0023, 0024"
   ( cd "$ROOT" && npx supabase db reset >/dev/null 2>&1 && bash "$HERE/setup.sh" --until 24 --no-verify ) >>"$LOG" 2>&1
   q -f "$HERE/rehearsal_seed_translations.sql" >>"$LOG"
-  for f in "$SUPA"/migrations/00{25,26,27,28,29,30,31,32,33}_*.sql; do step "Migration $(basename "$f" | cut -c1-4)" "$f"; done
+  for f in "$SUPA"/migrations/00{25,26,27,28,29,30,31,32,33,34}_*.sql; do step "Migration $(basename "$f" | cut -c1-4)" "$f"; done
 fi
 q -f "$HERE/rehearsal_fingerprint.sql" > "${LOG%.log}_avant.txt"
 say ""; say "▶ Empreinte « avant » : ${LOG%.log}_avant.txt"

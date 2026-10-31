@@ -134,3 +134,19 @@ describe('détails du manifeste', () => {
     for (const bad of [undefined, '', 'aa446', 'aa44667', '#aa4466', '"><script>', ['aa4466'], 123456]) expect(iconSvg(bad, false), String(bad)).toBeNull()
   })
 })
+
+describe('manifeste v2 : titre du carnet dans la langue de l\'interface (0034)', () => {
+  const withTitle = (language?: string) => source({
+    loadProfileTheme: async () => ({ theme_settings: null, active_theme_group_id: null, cookbook_title: 'Recettes des Boultons', cookbook_title_i18n: { fr: 'Recettes des Boultons', en: 'The Boultons\' Recipes' }, language })
+  })
+  it('langue de l\'interface (cookie) d\'abord, sinon langue du profil, sinon le titre d\'origine', async () => {
+    expect((await manifestFor({ v2: true, editionId: 'boultons', source: withTitle('fr'), locale: 'en' })).name).toBe('The Boultons\' Recipes')
+    expect((await manifestFor({ v2: true, editionId: 'boultons', source: withTitle('en') })).name).toBe('The Boultons\' Recipes')
+    expect((await manifestFor({ v2: true, editionId: 'boultons', source: withTitle('fr') })).name).toBe('Recettes des Boultons')
+    expect((await manifestFor({ v2: true, editionId: 'boultons', source: withTitle() })).name).toBe('Recettes des Boultons')
+  })
+  it('sans la colonne (0034 non appliquée) : le titre d\'origine', async () => {
+    const legacy = source({ loadProfileTheme: async () => ({ theme_settings: null, active_theme_group_id: null, cookbook_title: 'Chez Mamie' }) })
+    expect((await manifestFor({ v2: true, editionId: 'boultons', source: legacy, locale: 'en' })).name).toBe('Chez Mamie')
+  })
+})

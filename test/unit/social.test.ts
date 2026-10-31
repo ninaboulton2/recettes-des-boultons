@@ -59,7 +59,7 @@ function fakeClient(response: { data?: unknown, error?: unknown }) {
 describe('conversions snake_case → camelCase', () => {
   it('amis, demandes, groupes, membres', () => {
     expect(toFriend({ friendship_id: A, user_id: B, display_name: 'Eve', cookbook_title: null, since: 'x' }))
-      .toEqual({ friendshipId: A, userId: B, displayName: 'Eve', cookbookTitle: null, since: 'x' })
+      .toEqual({ friendshipId: A, userId: B, displayName: 'Eve', cookbookTitle: null, cookbookTitleI18n: {}, since: 'x' })
     expect(toFriendRequest({ friendship_id: A, direction: 'incoming', user_id: B, display_name: null, status: 'pending', created_at: 'x', retry_after: null }))
       .toMatchObject({ direction: 'incoming', status: 'pending', displayName: null, retryAfter: null })
     expect(toFriendRequest({ friendship_id: A, direction: 'zzz', user_id: B, display_name: 'Eve', status: 'declined', created_at: 'x', retry_after: 'y' }))
@@ -87,7 +87,7 @@ describe('conversions snake_case → camelCase', () => {
 
   it('profil public, blocage, réglages du profil', () => {
     const row = { user_id: A, display_name: 'Eve', cookbook_title: 'Carnet', is_self: false, friendship_status: 'friends', friendship_id: B, common_groups: [{ id: B, name: 'G' }, 'x'], readable_recipe_count: 4 }
-    expect(toUserProfile(row)).toEqual({ userId: A, displayName: 'Eve', cookbookTitle: 'Carnet', isSelf: false, friendshipStatus: 'friends', friendshipId: B, commonGroups: [{ id: B, name: 'G' }], readableRecipeCount: 4 })
+    expect(toUserProfile(row)).toEqual({ userId: A, displayName: 'Eve', cookbookTitle: 'Carnet', cookbookTitleI18n: {}, isSelf: false, friendshipStatus: 'friends', friendshipId: B, commonGroups: [{ id: B, name: 'G' }], readableRecipeCount: 4 })
     expect(toUserProfile({ ...row, friendship_status: 'bizarre', common_groups: null }).friendshipStatus).toBe('none')
     expect(toDeletionBlocker({ group_id: A, group_name: 'G', other_member_count: 2 })).toEqual({ groupId: A, groupName: 'G', otherMemberCount: 2 })
     expect(toProfileSettings({ display_name: 'Dave', cookbook_title: null, discoverable: true, theme_settings: { preset: 'x' }, active_theme_group_id: null }))

@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import type { ThemeInput } from '#shared/themes'
+import { localizedCookbookTitle } from '#shared/utils/cookbookTitle'
 import { COOKBOOK_TITLE_MAX, profileErrorKey, validateDisplayName } from '#shared/utils/profileErrors'
 
 /**
@@ -99,11 +100,12 @@ definePageMeta({ middleware: 'v2-only' })
 
 const TOTAL_STEPS = 3
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const authStore = useAuthStore()
 const categoriesStore = useCategoriesStore()
 const { save } = useProfileSettings()
+const { saveTranslation } = useCookbookTitle()
 const { $toast } = useNuxtApp()
 
 useHead({ title: () => t('onboarding.documentTitle'), meta: [{ name: 'robots', content: 'noindex' }] })
@@ -115,7 +117,7 @@ const formError = ref<string | null>(null)
 
 const displayName = ref(authStore.profile?.display_name ?? '')
 const nameError = ref<string | null>(null)
-const cookbookTitle = ref(authStore.profile?.cookbook_title ?? '')
+const cookbookTitle = ref(localizedCookbookTitle(authStore.profile?.cookbook_title, authStore.profile?.cookbook_title_i18n, locale.value) ?? '')
 const titleError = ref<string | null>(null)
 const theme = ref<ThemeInput | null>(null)
 const withSuggestions = ref(true)
@@ -151,6 +153,9 @@ async function saveStep(): Promise<boolean> {
       titleError.value = messageFor(error)
       return false
     }
+    // Traduction automatique dans l'autre langue (migration 0034) : en arrière-plan, l'accueil ne l'attend pas ;
+    // sans IA disponible le titre reste tel quel dans les deux langues.
+    void saveTranslation({ title: cookbookTitle.value.trim() })
     return true
   }
   // 3 : thème (personnel) puis fin de l'accueil

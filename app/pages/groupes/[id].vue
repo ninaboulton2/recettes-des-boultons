@@ -52,7 +52,7 @@
         <p class="text-sm text-muted">{{ rights.canEditTheme ? $t('groups.theme.creatorHelp') : $t('groups.theme.memberHelp') }}</p>
 
         <template v-if="rights.canEditTheme">
-          <ThemePicker v-model="theme" />
+          <ThemePicker v-model="theme" mode="group" />
           <div class="flex flex-wrap items-center justify-end gap-3">
             <p v-if="themeMessage" class="text-sm text-error" role="alert">{{ themeMessage }}</p>
             <UButton :loading="busy === 'theme'" :disabled="busy !== null || !theme" :label="$t('groups.theme.save')" data-testid="group-theme-save" @click="saveTheme" />

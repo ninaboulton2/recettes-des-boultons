@@ -29,7 +29,7 @@ export function socialErrorMessage(error: unknown): SocialErrorMessage {
   switch (code) {
     case '54000': return { key: 'errors.social.rate' }
     case '53400': return { key: 'errors.social.quota' }
-    case '42501': return { key: 'errors.social.forbidden' }
+    case '42501': return /boultons/i.test(message) ? { key: 'profile.errors.boultonsReserved' } : { key: 'errors.social.forbidden' }
     case 'P0002':
       return /lien d'invitation/i.test(message) ? { key: 'errors.social.invalidLink' } : { key: 'errors.social.notFound' }
     case '55000': return { key: 'errors.social.conflict' }

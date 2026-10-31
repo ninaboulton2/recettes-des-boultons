@@ -205,11 +205,12 @@ export default defineNuxtConfig({
       disable: !process.env.SENTRY_AUTH_TOKEN
     }
   },
-  // Icônes de <OfflineBanner /> embarquées dans le bundle client : affichées
+  // Icônes de <OfflineBanner /> et de la navigation embarquées dans le bundle client : affichées
   // hors ligne même si elles n'ont jamais été téléchargées.
   icon: {
     clientBundle: {
-      icons: ['lucide:wifi-off', 'lucide:square', 'lucide:square-check']
+      // + icônes de la navigation (`NAV_ICONS`, useNav.ts) : jamais chargées à la demande, donc jamais mélangées par un cache.
+      icons: ['lucide:wifi-off', 'lucide:square', 'lucide:square-check', 'lucide:book-open', 'lucide:heart', 'lucide:calendar-days', 'lucide:shopping-cart']
     }
   },
   // --- PWA (@vite-pwa/nuxt) : installable + courses hors ligne ---

@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import { localizedCookbookTitle } from '#shared/utils/cookbookTitle'
 import { COOKBOOK_PAGE_SIZE } from '#shared/schemas/cookbook'
 import { uuidSchema } from '#shared/schemas/common'
 import type { AuthorRecipe } from '#shared/utils/cookbook'
@@ -97,7 +98,7 @@ import { sharingErrorKey } from '#shared/utils/recipeRights'
  */
 definePageMeta({ middleware: 'v2-only' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const localePath = useLocalePath()
 const { $toast } = useNuxtApp()
@@ -125,7 +126,7 @@ if (profile.value?.isSelf || (authorId.value && authorId.value === authStore.cur
 }
 
 const authorName = computed(() => profile.value?.displayName ?? t('prompts.someone'))
-const heading = computed(() => profile.value?.cookbookTitle?.trim() || t('explore.defaultTitle', { author: authorName.value }))
+const heading = computed(() => (profile.value ? localizedCookbookTitle(profile.value.cookbookTitle, profile.value.cookbookTitleI18n, locale.value) : null) || t('explore.defaultTitle', { author: authorName.value }))
 
 const page = ref(1)
 const { data, status, error, refresh } = await useAsyncData(

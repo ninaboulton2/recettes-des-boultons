@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import { localizedCookbookTitle } from '#shared/utils/cookbookTitle'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Recipe } from '#shared/types'
 
@@ -85,14 +86,14 @@ import type { Recipe } from '#shared/types'
  * Mon carnet (v2, `/recettes`) : mes recettes + celles que j'ai ajoutées (`list_cookbook`), avec badge de provenance,
  * filtre par catégorie personnelle, recherche et pagination comme en v1. Créer, importer et supprimer : fiche et éditeur.
  */
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const recipesStore = useRecipesStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const cookbookTitle = computed(() => authStore.profile?.cookbook_title?.trim() || t('navigation.myCookbook'))
+const cookbookTitle = computed(() => localizedCookbookTitle(authStore.profile?.cookbook_title, authStore.profile?.cookbook_title_i18n, locale.value) || t('navigation.myCookbook'))
 
 // Paramètres d'URL : ?category= (liens de l'accueil) et ?page=
 const categoryFromUrl = route.query.category

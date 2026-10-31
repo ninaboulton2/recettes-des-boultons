@@ -16,7 +16,7 @@
         </div>
         <div class="min-w-0">
           <h1 class="truncate font-serif text-3xl font-semibold text-highlighted" data-testid="person-name">{{ name }}</h1>
-          <p v-if="profile.cookbookTitle" class="text-muted" data-testid="person-cookbook">{{ profile.cookbookTitle }}</p>
+          <p v-if="cookbookTitle" class="text-muted" data-testid="person-cookbook">{{ cookbookTitle }}</p>
           <p v-if="profile.isSelf" class="mt-1 text-sm text-muted">{{ $t('person.itsYou') }}</p>
         </div>
       </header>
@@ -72,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { localizedCookbookTitle } from '#shared/utils/cookbookTitle'
 import { uuidSchema } from '#shared/schemas/common'
 import { profileFriendAction } from '#shared/utils/socialUi'
 
@@ -82,7 +83,7 @@ import { profileFriendAction } from '#shared/utils/socialUi'
  */
 definePageMeta({ middleware: 'v2-only' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const localePath = useLocalePath()
 const { $toast } = useNuxtApp()
@@ -102,6 +103,8 @@ const { data: profile, pending, refresh } = await useAsyncData(
   { watch: [userId], default: () => null }
 )
 
+/** Titre du carnet dans la langue de l'interface (traduction si elle existe, sinon l'original). */
+const cookbookTitle = computed(() => (profile.value ? localizedCookbookTitle(profile.value.cookbookTitle, profile.value.cookbookTitleI18n, locale.value) : null))
 const name = computed(() => profile.value?.displayName ?? t('prompts.someone'))
 const action = computed(() => (profile.value ? profileFriendAction(profile.value.friendshipStatus, profile.value.isSelf) : 'none'))
 

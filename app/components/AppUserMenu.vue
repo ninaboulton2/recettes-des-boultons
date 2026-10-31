@@ -43,9 +43,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...(v2
       ? menuLinks.value.map(link => ({ label: link.label, icon: link.icon, to: localePath(link.to) }))
       : [
-          { label: t('navigation.favorites'), icon: 'i-lucide-heart', to: localePath('/favoris') },
-          { label: t('navigation.planning'), icon: 'i-lucide-calendar-days', to: localePath('/planning') },
-          { label: t('navigation.shopping'), icon: 'i-lucide-shopping-cart', to: localePath('/courses') }
+          { label: t('navigation.favorites'), icon: NAV_ICONS.favorites, to: localePath('/favoris') },
+          { label: t('navigation.planning'), icon: NAV_ICONS.planning, to: localePath('/planning') },
+          { label: t('navigation.shopping'), icon: NAV_ICONS.shopping, to: localePath('/courses') }
         ]),
     // Le traducteur reste dans le menu en v1 (admins) ; en v2 il s'ouvre depuis « Nouvelle recette » et l'accueil.
     ...(authStore.isAdmin && !v2

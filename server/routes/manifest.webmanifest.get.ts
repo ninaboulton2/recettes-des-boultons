@@ -1,7 +1,8 @@
-import { defineEventHandler, setResponseHeader } from 'h3'
+import { defineEventHandler, getCookie, setResponseHeader } from 'h3'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import type { Database } from '#shared/types/database'
 import { isV2Enabled } from '#shared/utils/v2'
+import { toTitleLocale } from '#shared/utils/cookbookTitle'
 import { manifestCacheControl, manifestFor, type ThemeSource } from '../utils/manifest'
 
 /**
@@ -21,8 +22,11 @@ export default defineEventHandler(async (event) => {
       userId,
       loadProfileTheme: async (id) => {
         const supabase = await serverSupabaseClient<Database>(event)
-        const { data } = await supabase.from('profiles').select('theme_settings, active_theme_group_id, cookbook_title').eq('id', id).maybeSingle()
-        return data
+        const { data, error } = await supabase.from('profiles').select('theme_settings, active_theme_group_id, cookbook_title, cookbook_title_i18n, language').eq('id', id).maybeSingle()
+        if (!error) return data
+        // Migration 0034 pas encore appliquée (colonne absente) : on relit sans la traduction, le titre d'origine fait foi.
+        const fallback = await supabase.from('profiles').select('theme_settings, active_theme_group_id, cookbook_title, language').eq('id', id).maybeSingle()
+        return fallback.data
       },
       loadGroupTheme: async (groupId) => {
         const supabase = await serverSupabaseClient<Database>(event)
@@ -32,7 +36,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const manifest = await manifestFor({ v2, editionId: runtime.edition, source })
+  // Langue de l'interface : cookie du sélecteur de langue ; sinon la langue préférée du profil (voir `activeProfile`).
+  const cookieLocale = getCookie(event, 'i18n_redirected')
+  const locale = cookieLocale === 'fr' || cookieLocale === 'en' ? toTitleLocale(cookieLocale) : undefined
+  const manifest = await manifestFor({ v2, editionId: runtime.edition, source, locale })
   setResponseHeader(event, 'Content-Type', 'application/manifest+json; charset=utf-8')
   setResponseHeader(event, 'Cache-Control', manifestCacheControl(v2))
   if (v2) setResponseHeader(event, 'Vary', 'Cookie')

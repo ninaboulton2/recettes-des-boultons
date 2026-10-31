@@ -2,7 +2,7 @@
  * Erreurs de `update_my_profile` / du déclencheur du pseudonyme (0023) → clé de traduction (`profile.errors.<clé>`).
  * La base répond en français ; l'interface affiche sa propre phrase dans la langue courante.
  */
-export type ProfileErrorKey = 'taken' | 'noAt' | 'forbiddenChar' | 'invisibleChar' | 'mixedScripts' | 'length' | 'titleLength' | 'notMember' | 'rate' | 'generic'
+export type ProfileErrorKey = 'taken' | 'noAt' | 'forbiddenChar' | 'invisibleChar' | 'mixedScripts' | 'length' | 'titleLength' | 'boultonsReserved' | 'notMember' | 'rate' | 'generic'
 
 interface ErrorLike { code?: unknown, message?: unknown }
 
@@ -10,7 +10,7 @@ export function profileErrorKey(error: unknown): ProfileErrorKey {
   const { code, message } = (typeof error === 'object' && error !== null ? error : {}) as ErrorLike
   const text = typeof message === 'string' ? message.toLowerCase() : ''
   if (code === '54000') return 'rate'
-  if (code === '42501') return 'notMember'
+  if (code === '42501') return text.includes('boultons') ? 'boultonsReserved' : 'notMember'
   if (code === '22023' || code === '23505') {
     if (text.includes('déjà pris')) return 'taken'
     if (text.includes('« @ »')) return 'noAt'

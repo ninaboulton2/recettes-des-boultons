@@ -72,7 +72,7 @@ test('(v2-mf5) balise canonical sur SITE_URL', async ({ page }) => {
 
 test('(v2-mf6) titre du carnet : en-tête, <title> et manifeste ; vide = Family Cookbook ; le thème ne change pas le nom', async ({ page }) => {
   const { client, userId } = await signedIn('user')
-  const { data: before } = await client.from('profiles').select('cookbook_title, theme_settings, active_theme_group_id').eq('id', userId).single()
+  const { data: before } = await client.from('profiles').select('cookbook_title, cookbook_title_i18n, theme_settings, active_theme_group_id').eq('id', userId).single()
   try {
     await loginV2(page, 'user')
     await gotoApp(page, '/reglages')
@@ -116,6 +116,7 @@ test('(v2-mf6) titre du carnet : en-tête, <title> et manifeste ; vide = Family 
   } finally {
     await client.from('profiles').update({
       cookbook_title: before?.cookbook_title ?? null,
+      cookbook_title_i18n: before?.cookbook_title_i18n ?? null,
       theme_settings: before?.theme_settings ?? null,
       active_theme_group_id: before?.active_theme_group_id ?? null
     }).eq('id', userId)

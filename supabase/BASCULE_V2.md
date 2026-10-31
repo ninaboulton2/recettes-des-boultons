@@ -137,7 +137,7 @@ Ordre complet : … → 0026 → 0027 → **0029 (migration)** → paramètres �
 
 ### Où s'insèrent 0024, 0025, 0027, 0030 et 0031 (petites migrations « sans effet pour la v1 »)
 
-Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033**
+Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033** (+ **0034**, post-bascule : voir plus bas)
 (0017, 0019, 0021, 0023, 0024 sont déjà en production ; **Nina applique 0025 → 0033 d'un coup, avant le jour J**, un fichier = un Run).
 
 * **0024** (déjà en production) : rôle `user` en dur à l'inscription. Rien à refaire.
@@ -157,6 +157,11 @@ Ordre complet des migrations de ce fichier : **0017 → 0019 → 0021 → 0023 �
   jamais dans le plafond du jour de l'auteur ni du lecteur (`DEVELOPER.md` § 20.19 et § 20.20). Sans effet v1 (colonne nullable, table nouvelle). Un Run, **avant de déployer le code v2** (sans elle, « Changer de rayon » échoue
   avec un message d'erreur, et la traduction à la demande est refusée par la base). Prérequis : 0028. Retour : `rollback/0032_feedback2_aisle_translate_budget_down.sql` (retirer d'abord le code v2).
 * **0033** `0033_export_aisle.sql` : `export_my_data()` redéfinie à l'identique avec en plus le rayon des articles et `shopping_aisle_prefs` (export « mes données »). Un Run, après 0032 (prérequis). Retour : `rollback/0033_export_aisle_down.sql`.
+* **0034** `0034_cookbook_title_i18n.sql` (**post-bascule, retours du jour J ; Nina l'applique en production AVANT de déployer le code qui l'accompagne**, un Run, prérequis 0023 et 0033) :
+  (a) colonne `profiles.cookbook_title_i18n` (titre du carnet en français et en anglais, nullable ; amorçage `The Boultons' Recipes` pour les comptes « Recettes des Boultons ») ;
+  (b) `list_friends()`, `get_user_profile()` (une colonne de plus) et `export_my_data()` redéfinies ; (c) deux déclencheurs qui réservent le préréglage de thème `boultons` aux membres de « Les Boultons »
+  (le groupe existant garde son thème ; aucune donnée existante n'est modifiée). Sans effet v1. **Le code tolère l'absence de 0034** (titre d'origine partout, route de traduction qui répond « indisponible »)
+  mais ni la traduction du titre, ni le thème réservé côté base ne fonctionnent sans elle : l'appliquer d'abord. Retour : `rollback/0034_cookbook_title_i18n_down.sql` (retirer d'abord le code).
 
 ### Où s'insère 0023 (fonctions métier côté social, phase 5B)
 

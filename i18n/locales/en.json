@@ -997,7 +997,8 @@
       "titleLength": "The cookbook title must be 80 characters or fewer.",
       "notMember": "You are not a member of this group.",
       "rate": "Too many attempts, please try again later.",
-      "generic": "Could not save, please try again."
+      "generic": "Could not save, please try again.",
+      "boultonsReserved": "This theme is reserved for the Boultons."
     }
   },
   "onboarding": {
@@ -1055,7 +1056,8 @@
       "tooDark": "This color is too dark to make a readable palette.",
       "contrast": "This color does not give enough contrast (AA).",
       "invalid": "Invalid theme."
-    }
+    },
+    "reserved": "This theme is reserved for the Boultons. Ask a family member to add you to the group."
   },
   "settings": {
     "title": "Settings",
@@ -1065,7 +1067,13 @@
       "title": "Profile",
       "displayName": "Nickname",
       "cookbookTitle": "Cookbook title",
-      "cookbookTitleHint": "Shown at the top of the site and on your cookbook. Empty: \"Family Cookbook\"."
+      "cookbookTitleHint": "Shown at the top of the site and on your cookbook. Empty: \"Family Cookbook\".",
+      "cookbookTitleOther": {
+        "fr": "Title in French (optional)",
+        "en": "Title in English (optional)"
+      },
+      "cookbookTitleOtherHint": "Translated automatically when you change the title. Edit it here to use your own wording.",
+      "translationUnavailable": "Title saved. Automatic translation isn't available right now: the original title will show in the other language."
     },
     "theme": {
       "title": "Theme",

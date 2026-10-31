@@ -285,14 +285,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "active_theme_group_id": string | null,"cookbook_title": string | null,"created_at": string | null,"discoverable": boolean,"display_name": string | null,"email": string,"id": string,"language": string | null,"name": string | null,"notifications": boolean | null,"onboarded_at": string | null,"role": string | null,"theme": string | null,"theme_settings": Json | null,"updated_at": string | null
+                    "active_theme_group_id": string | null,"cookbook_title": string | null,"cookbook_title_i18n": Json | null,"created_at": string | null,"discoverable": boolean,"display_name": string | null,"email": string,"id": string,"language": string | null,"name": string | null,"notifications": boolean | null,"onboarded_at": string | null,"role": string | null,"theme": string | null,"theme_settings": Json | null,"updated_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email": string,"id": string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
+                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"cookbook_title_i18n"?: Json | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email": string,"id": string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
                   }
                   Update: {
-                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email"?: string,"id"?: string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
+                    "active_theme_group_id"?: string | null,"cookbook_title"?: string | null,"cookbook_title_i18n"?: Json | null,"created_at"?: string | null,"discoverable"?: boolean,"display_name"?: string | null,"email"?: string,"id"?: string,"language"?: string | null,"name"?: string | null,"notifications"?: boolean | null,"onboarded_at"?: string | null,"role"?: string | null,"theme"?: string | null,"theme_settings"?: Json | null,"updated_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -705,7 +705,7 @@ isOneToOne: false
                            },
 "get_user_profile":
 { Args: { "p_user": string }; Returns: {
-              "common_groups": Json,"cookbook_title": string,"display_name": string,"friendship_id": string,"friendship_status": string,"is_self": boolean,"readable_recipe_count": number,"user_id": string
+              "common_groups": Json,"cookbook_title": string,"cookbook_title_i18n": Json,"display_name": string,"friendship_id": string,"friendship_status": string,"is_self": boolean,"readable_recipe_count": number,"user_id": string
             }[]
                            },
 "grant_recipe":
@@ -740,7 +740,7 @@ isOneToOne: false
                            },
 "list_friends":
 { Args: never; Returns: {
-              "cookbook_title": string,"display_name": string,"friendship_id": string,"since": string,"user_id": string
+              "cookbook_title": string,"cookbook_title_i18n": Json,"display_name": string,"friendship_id": string,"since": string,"user_id": string
             }[]
                            },
 "list_group_invitations":

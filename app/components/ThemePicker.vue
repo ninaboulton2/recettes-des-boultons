@@ -6,8 +6,11 @@
         <label
           v-for="preset in presets"
           :key="preset.id"
-          class="flex cursor-pointer items-center gap-2 rounded-lg border border-default bg-default p-2.5 text-sm transition has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary hover:bg-muted"
+          class="flex items-center gap-2 rounded-lg border border-default bg-default p-2.5 text-sm transition has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary"
+          :class="preset.available ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50'"
+          :title="preset.available ? undefined : $t('theme.reserved')"
           :data-testid="`theme-preset-${preset.id}`"
+          :data-unavailable="preset.available ? undefined : 'true'"
         >
           <input
             type="radio"
@@ -15,6 +18,8 @@
             class="sr-only"
             :value="preset.id"
             :checked="selection === preset.id"
+            :disabled="!preset.available"
+            :aria-describedby="preset.available ? undefined : 'theme-reserved-note'"
             @change="choosePreset(preset.id)"
           >
           <span class="size-6 shrink-0 rounded-full ring-1 ring-black/10" :style="{ backgroundColor: preset.color }" aria-hidden="true" />
@@ -30,6 +35,8 @@
           <span class="min-w-0 flex-1 truncate">{{ $t('theme.preset.custom') }}</span>
         </label>
       </div>
+      <!-- Équivalent accessible de l'infobulle (clavier, écran tactile, lecteur d'écran) : visible tant que le thème est grisé -->
+      <p v-if="hasReserved" id="theme-reserved-note" class="mt-2 text-sm text-muted" data-testid="theme-reserved-note">{{ $t('theme.reserved') }}</p>
     </fieldset>
 
     <div v-if="selection === 'custom'" class="space-y-2" data-testid="theme-custom">
@@ -69,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { GENERATED_PRESETS, hexColorSchema, THEME_PRESET_IDS, validateTheme, type ThemeInput, type ThemePresetId } from '#shared/themes'
+import { GENERATED_PRESETS, hexColorSchema, isPresetAvailable, THEME_PRESET_IDS, validateTheme, type ThemeInput, type ThemePickerMode, type ThemePresetId } from '#shared/themes'
 
 /**
  * Sélecteur de thème : préréglages + couleur libre (`#rrggbb`, refusée si le contraste AA n'est pas atteint).
@@ -77,14 +84,21 @@ import { GENERATED_PRESETS, hexColorSchema, THEME_PRESET_IDS, validateTheme, typ
  * (`useThemeStore().setPreview`) ; l'aperçu est retiré quand le sélecteur disparaît (le parent enregistre ou non).
  */
 const model = defineModel<ThemeInput | null>({ default: null })
+// `mode` : thème personnel (défaut) ou d'un groupe. Le préréglage « Boultons » est réservé (voir shared/themes/availability.ts).
+const props = withDefaults(defineProps<{ mode?: ThemePickerMode }>(), { mode: 'personal' })
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
 
+// Préréglage déjà enregistré à l'ouverture : une personne (ou un groupe) qui a déjà le thème réservé le garde.
+const initialPreset = model.value?.preset ?? null
+if (import.meta.client) void themeStore.loadGroupThemes()
 const presets = computed(() => THEME_PRESET_IDS.map((id) => {
   const result = validateTheme({ preset: id })
-  return { id, color: result.ok ? result.theme.edition.theme.primary[500] : '#888888' }
+  const available = isPresetAvailable(id, { mode: props.mode, memberGroupThemes: Object.values(themeStore.groupThemes), currentPreset: initialPreset })
+  return { id, color: result.ok ? result.theme.edition.theme.primary[500] : '#888888', available }
 }))
+const hasReserved = computed(() => presets.value.some(preset => !preset.available))
 
 const selection = ref<ThemePresetId | 'custom'>(model.value?.preset ?? 'terracotta')
 const customColor = ref(model.value?.preset === 'custom' && model.value.primary ? model.value.primary : (GENERATED_PRESETS[0]?.primary ?? '#6f8a3a'))

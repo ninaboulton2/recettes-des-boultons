@@ -2,14 +2,14 @@ import { EDITIONS, getEdition, localize, type EditionConfig } from '../../shared
 import { BRAND_NAME } from '../../shared/brand'
 import { HEX_COLOR_PATTERN } from '../../shared/themes/schema'
 import { DEFAULT_THEME, resolveTheme } from '../../shared/themes'
-import { cleanCookbookTitle } from '../../shared/utils/siteName'
+import { localizedCookbookTitle, toTitleLocale, type TitleLocale } from '../../shared/utils/cookbookTitle'
 
 /**
  * Manifeste PWA (`/manifest.webmanifest`, DEVELOPER.md § 20.18).
  *
  * - v1 : le manifeste de l'édition (`NUXT_PUBLIC_EDITION`), identique à l'ancien manifeste figé au build.
  * - v2 : le LOOK du THÈME ACTIF de la personne connectée (thème personnel ou d'un de ses groupes ; visiteur : thème par défaut)
- *   et, comme nom, son « Titre du carnet » (`profiles.cookbook_title`), sinon « Family Cookbook ». Jamais le nom d'un groupe.
+ *   et, comme nom, son « Titre du carnet » dans la langue de l'interface (`profiles.cookbook_title`, traduction `cookbook_title_i18n` si elle existe), sinon « Family Cookbook ». Jamais le nom d'un groupe.
  *   Le thème est une entrée non fiable : il passe par `resolveTheme` (liste blanche) ; le titre n'est que du texte JSON.
  *
  * Icônes : cocotte pour le préréglage Boultons, toque terracotta pour le thème par défaut, toque SVG à la couleur du thème pour
@@ -84,17 +84,18 @@ export function buildManifest(edition: EditionConfig, name?: string): WebManifes
 export interface ThemeSource {
   /** Identifiant de la personne connectée, ou `null` (visiteur, session invalide). */
   userId: string | null
-  loadProfileTheme: (userId: string) => Promise<{ theme_settings: unknown, active_theme_group_id: string | null, cookbook_title?: string | null } | null>
+  loadProfileTheme: (userId: string) => Promise<{ theme_settings: unknown, active_theme_group_id: string | null, cookbook_title?: string | null, cookbook_title_i18n?: unknown, language?: string | null } | null>
   loadGroupTheme: (groupId: string) => Promise<unknown>
 }
 
 /** Thème brut actif de la personne (même règle que `useThemeStore`) et titre de son carnet. Ne lève jamais : défaut. */
-export async function activeProfile(source: ThemeSource): Promise<{ rawTheme: unknown, cookbookTitle: string | null }> {
+/** `locale` : langue de l'interface (cookie), sinon la langue préférée du profil. */
+export async function activeProfile(source: ThemeSource, locale?: TitleLocale): Promise<{ rawTheme: unknown, cookbookTitle: string | null }> {
   if (!source.userId) return { rawTheme: null, cookbookTitle: null }
   try {
     const profile = await source.loadProfileTheme(source.userId)
     if (!profile) return { rawTheme: null, cookbookTitle: null }
-    const cookbookTitle = cleanCookbookTitle(profile.cookbook_title)
+    const cookbookTitle = localizedCookbookTitle(profile.cookbook_title, profile.cookbook_title_i18n, locale ?? toTitleLocale(profile.language))
     if (profile.active_theme_group_id) return { rawTheme: (await source.loadGroupTheme(profile.active_theme_group_id)) ?? null, cookbookTitle }
     return { rawTheme: profile.theme_settings ?? null, cookbookTitle }
   } catch {
@@ -102,9 +103,9 @@ export async function activeProfile(source: ThemeSource): Promise<{ rawTheme: un
   }
 }
 
-export async function manifestFor(options: { v2: boolean, editionId: unknown, source?: ThemeSource }): Promise<WebManifest> {
+export async function manifestFor(options: { v2: boolean, editionId: unknown, source?: ThemeSource, locale?: TitleLocale }): Promise<WebManifest> {
   if (!options.v2 || !options.source) return buildManifest(getEdition(options.editionId))
-  const { rawTheme, cookbookTitle } = await activeProfile(options.source)
+  const { rawTheme, cookbookTitle } = await activeProfile(options.source, options.locale)
   return buildManifest(resolveTheme(rawTheme ?? DEFAULT_THEME).edition, cookbookTitle ?? BRAND_NAME)
 }
 

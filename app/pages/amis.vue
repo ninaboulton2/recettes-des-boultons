@@ -61,7 +61,7 @@
           <UIcon name="i-lucide-user-round" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
           <div class="min-w-0 flex-1">
             <NuxtLink :to="localePath(`/personnes/${friend.userId}`)" class="block truncate font-medium text-highlighted hover:text-primary" data-testid="friend-profile-link">{{ nameOf(friend.displayName) }}</NuxtLink>
-            <p v-if="friend.cookbookTitle" class="truncate text-xs text-muted">{{ friend.cookbookTitle }}</p>
+            <p v-if="titleOf(friend)" class="truncate text-xs text-muted">{{ titleOf(friend) }}</p>
           </div>
           <UButton size="sm" color="neutral" variant="ghost" icon="i-lucide-user-minus" :label="$t('friends.list.remove')" data-testid="friend-remove" @click="toRemove = friend" />
         </li>
@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import { localizedCookbookTitle, type CookbookTitleI18n } from '#shared/utils/cookbookTitle'
 import { canRetryRequest } from '#shared/utils/socialUi'
 import type { Friend, FriendRequest } from '#shared/utils/social'
 
@@ -135,6 +136,8 @@ import type { Friend, FriendRequest } from '#shared/utils/social'
 definePageMeta({ middleware: 'v2-only' })
 
 const { t, locale } = useI18n()
+/** Titre du carnet d'un ami dans la langue de l'interface. */
+const titleOf = (friend: { cookbookTitle: string | null, cookbookTitleI18n: CookbookTitleI18n }) => localizedCookbookTitle(friend.cookbookTitle, friend.cookbookTitleI18n, locale.value)
 const localePath = useLocalePath()
 const { $toast } = useNuxtApp()
 const { errorText } = useSocialError()
