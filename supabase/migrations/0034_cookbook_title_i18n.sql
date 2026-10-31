@@ -38,7 +38,7 @@ alter table public.profiles add constraint profiles_cookbook_title_i18n_check ch
   or (jsonb_typeof(cookbook_title_i18n) = 'object'
       and (cookbook_title_i18n - 'fr' - 'en') = '{}'::jsonb
       and (cookbook_title_i18n->'fr' is null or (jsonb_typeof(cookbook_title_i18n->'fr') = 'string' and char_length(btrim(cookbook_title_i18n->>'fr')) between 1 and 80))
-      and (cookbook_title_i18n->'en' is null or (jsonb_typeof(cookbook_title_i18n->'en') = 'string' and char_length(btrim(cookbook_title_i18n->>'en')) between 1 and 80)));
+      and (cookbook_title_i18n->'en' is null or (jsonb_typeof(cookbook_title_i18n->'en') = 'string' and char_length(btrim(cookbook_title_i18n->>'en')) between 1 and 80))));
 comment on column public.profiles.cookbook_title_i18n is
   'Titre du carnet par langue {"fr": "…", "en": "…"} (traduction automatique ou saisie à la main) ; cookbook_title reste le repli. 0034.';
 
