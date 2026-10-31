@@ -1018,7 +1018,7 @@
       "title": "Name your cookbook",
       "description": "A title for your recipes. You can change it later in settings.",
       "label": "Cookbook title",
-      "hint": "Optional, 80 characters or fewer.",
+      "hint": "Shown at the top of the site and on your cookbook. Optional, 80 characters or fewer.",
       "suggestion": "{name}'s recipes"
     },
     "step3": {
@@ -1031,12 +1031,6 @@
   },
   "theme": {
     "presets": "Suggested themes",
-    "name": {
-      "label": "Display name",
-      "hint": "Shown in the header, page titles and the home-screen icon. Empty: \"{default}\".",
-      "invalid": "Letters, digits, spaces and . , ' & ! ( ) - only (60 characters at most).",
-      "useGroup": "Use the group name"
-    },
     "customColor": "Main color",
     "colorPicker": "Choose a color",
     "customHint": "A #rrggbb code. Text must stay readable: a color that is too light is refused.",
@@ -1070,7 +1064,8 @@
     "profile": {
       "title": "Profile",
       "displayName": "Nickname",
-      "cookbookTitle": "Cookbook title"
+      "cookbookTitle": "Cookbook title",
+      "cookbookTitleHint": "Shown at the top of the site and on your cookbook. Empty: \"Family Cookbook\"."
     },
     "theme": {
       "title": "Theme",

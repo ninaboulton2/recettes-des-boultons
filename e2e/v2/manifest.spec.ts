@@ -70,22 +70,26 @@ test('(v2-mf5) balise canonical sur SITE_URL', async ({ page }) => {
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `${SITE_URL}/recettes`)
 })
 
-test('(v2-mf6) nom personnalisé : en-tête, <title> et manifeste ; vide = Family Cookbook', async ({ page }) => {
+test('(v2-mf6) titre du carnet : en-tête, <title> et manifeste ; vide = Family Cookbook ; le thème ne change pas le nom', async ({ page }) => {
   const { client, userId } = await signedIn('user')
-  const { data: before } = await client.from('profiles').select('theme_settings, active_theme_group_id').eq('id', userId).single()
+  const { data: before } = await client.from('profiles').select('cookbook_title, theme_settings, active_theme_group_id').eq('id', userId).single()
   try {
     await loginV2(page, 'user')
     await gotoApp(page, '/reglages')
+    // Un thème personnel coloré : le look change, pas le nom. L'ancien « Nom affiché » n'existe plus dans le sélecteur.
     const section = page.getByTestId('settings-theme')
     await section.getByTestId('theme-source-personal').check()
     await section.getByTestId('theme-preset-olive').click()
-    await section.locator('#theme-name-input').fill('Chez Mamie')
-    await expect(page.getByTestId('site-name')).toHaveText('Chez Mamie')
+    await expect(section.locator('#theme-name-input')).toHaveCount(0)
     await section.getByTestId('theme-save').click()
     await expect.poll(async () => {
       const { data } = await client.from('profiles').select('theme_settings').eq('id', userId).single()
       return data?.theme_settings
-    }).toEqual({ preset: 'olive', name: 'Chez Mamie' })
+    }).toEqual({ preset: 'olive' })
+
+    await page.getByTestId('settings-cookbook-title').fill('Chez Mamie')
+    await page.getByTestId('profile-save').click()
+    await expect(page.getByTestId('site-name')).toHaveText('Chez Mamie')
 
     await gotoApp(page, '/')
     await expect(page).toHaveTitle(/Chez Mamie/)
@@ -104,13 +108,17 @@ test('(v2-mf6) nom personnalisé : en-tête, <title> et manifeste ; vide = Famil
     expect(manifest.short_name).toBe('Chez Mamie')
     expect(manifest.icons[0].src).toContain('/pwa-icon.svg?c=')
 
-    // Nom refusé : message, rien d'enregistré avec ce nom
+    // Titre vidé : retour à Family Cookbook
     await gotoApp(page, '/reglages')
-    await section.locator('#theme-name-input').fill('<script>')
-    await expect(section.getByTestId('theme-name')).toContainText('Lettres, chiffres')
+    await page.getByTestId('settings-cookbook-title').fill('')
+    await page.getByTestId('profile-save').click()
     await expect(page.getByTestId('site-name')).toHaveText('Family Cookbook')
   } finally {
-    await client.from('profiles').update({ theme_settings: before?.theme_settings ?? null, active_theme_group_id: before?.active_theme_group_id ?? null }).eq('id', userId)
+    await client.from('profiles').update({
+      cookbook_title: before?.cookbook_title ?? null,
+      theme_settings: before?.theme_settings ?? null,
+      active_theme_group_id: before?.active_theme_group_id ?? null
+    }).eq('id', userId)
   }
 })
 

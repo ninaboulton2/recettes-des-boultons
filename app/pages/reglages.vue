@@ -16,10 +16,11 @@
         </div>
         <div class="space-y-1.5">
           <label for="settings-cookbook-title" class="block text-sm font-medium text-default">{{ $t('settings.profile.cookbookTitle') }}</label>
-          <UInput id="settings-cookbook-title" v-model="cookbookTitle" :maxlength="COOKBOOK_TITLE_MAX" class="w-full" />
+          <UInput id="settings-cookbook-title" v-model="cookbookTitle" :maxlength="COOKBOOK_TITLE_MAX" class="w-full" aria-describedby="settings-cookbook-title-help" data-testid="settings-cookbook-title" />
+          <p id="settings-cookbook-title-help" class="text-sm text-muted">{{ $t('settings.profile.cookbookTitleHint') }}</p>
         </div>
         <div class="flex justify-end">
-          <UButton type="submit" :loading="saving === 'profile'" :label="$t('ui.common.save')" />
+          <UButton type="submit" :loading="saving === 'profile'" :label="$t('ui.common.save')" data-testid="profile-save" />
         </div>
       </form>
     </section>

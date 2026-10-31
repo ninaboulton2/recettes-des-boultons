@@ -5,7 +5,7 @@ import { genericEdition } from '../../shared/editions/generic'
 import { resolveTheme } from '../../shared/themes'
 import { displaySiteName, isNeutralSitePath } from '../../shared/utils/siteName'
 
-/** Nom du site (v2) : « Nom affiché » du thème partout, « Family Cookbook » sur les pages neutres. */
+/** Nom du site (v2) : « Titre du carnet » du profil partout, « Family Cookbook » sur les pages neutres. */
 describe('isNeutralSitePath', () => {
   it('lien public de partage, avec ou sans préfixe de langue', () => {
     expect(isNeutralSitePath('/r/0b1c2d3e-0000-4000-8000-000000000000')).toBe(true)
@@ -32,35 +32,39 @@ describe('isNeutralSitePath', () => {
 })
 
 describe('displaySiteName', () => {
-  it('v2 : le nom du thème sur les pages normales, Family Cookbook sur les pages neutres', () => {
-    expect(displaySiteName({ v2: true, path: '/', themeName: 'Chez Mamie' })).toBe('Chez Mamie')
-    expect(displaySiteName({ v2: true, path: '/recettes/x', themeName: 'Chez Mamie' })).toBe('Chez Mamie')
-    expect(displaySiteName({ v2: true, path: '/r/x', themeName: 'Chez Mamie' })).toBe(BRAND_NAME)
-    expect(displaySiteName({ v2: true, path: '/en/mentions-legales', themeName: 'Chez Mamie' })).toBe(BRAND_NAME)
+  const base = { v2: true, editionName: 'Recettes des Boultons' }
+
+  it('v2 : le titre du carnet sur les pages normales, Family Cookbook sur les pages neutres', () => {
+    expect(displaySiteName({ ...base, path: '/', cookbookTitle: 'Chez Mamie' })).toBe('Chez Mamie')
+    expect(displaySiteName({ ...base, path: '/recettes/x', cookbookTitle: '  Chez Mamie ' })).toBe('Chez Mamie')
+    expect(displaySiteName({ ...base, path: '/r/x', cookbookTitle: 'Chez Mamie' })).toBe(BRAND_NAME)
+    expect(displaySiteName({ ...base, path: '/en/mentions-legales', cookbookTitle: 'Chez Mamie' })).toBe(BRAND_NAME)
+  })
+
+  it('v2 : sans titre (vide, espaces, null, visiteur), Family Cookbook, même avec le thème Boultons', () => {
+    for (const cookbookTitle of ['', '   ', null, undefined]) {
+      expect(displaySiteName({ ...base, path: '/', cookbookTitle })).toBe(BRAND_NAME)
+    }
   })
 
   it('v1 : rien ne change, même sur un chemin « neutre »', () => {
-    expect(displaySiteName({ v2: false, path: '/r/x', themeName: 'Recettes des Boultons' })).toBe('Recettes des Boultons')
+    expect(displaySiteName({ v2: false, path: '/r/x', cookbookTitle: 'Chez Mamie', editionName: 'Recettes des Boultons' })).toBe('Recettes des Boultons')
   })
 })
 
-describe('nom du thème → nom de l\'édition', () => {
+describe('le thème ne porte plus le nom', () => {
   const nameOf = (theme: unknown) => resolveTheme(theme).edition.brand.name
 
-  it('sans nom : Family Cookbook (thème par défaut) et Recettes des Boultons (préréglage Boultons)', () => {
+  it('un ancien « name » dans le JSON du thème est ignoré, quel que soit le préréglage', () => {
+    for (const preset of ['terracotta', 'olive', 'boultons']) {
+      expect(nameOf({ preset, name: 'Chez Mamie' }), preset).toEqual(nameOf({ preset }))
+    }
+    expect(nameOf({ preset: 'custom', primary: '#aa4466', name: 'Chez Mamie' }).fr).toBe(BRAND_NAME)
+  })
+
+  it('noms de repli des préréglages (v1 et valeur par défaut)', () => {
     expect(nameOf({ preset: 'terracotta' })).toEqual({ fr: BRAND_NAME, en: BRAND_NAME })
     expect(nameOf({ preset: 'boultons' }).fr).toBe('Recettes des Boultons')
-  })
-
-  it('« Nom affiché » remplace le nom, quel que soit le préréglage', () => {
-    for (const preset of ['terracotta', 'olive', 'boultons']) {
-      expect(nameOf({ preset, name: 'Chez Mamie' }), preset).toEqual({ fr: 'Chez Mamie', en: 'Chez Mamie' })
-    }
-    expect(nameOf({ preset: 'custom', primary: '#aa4466', name: 'Chez Mamie' }).fr).toBe('Chez Mamie')
-  })
-
-  it('un nom refusé par la liste blanche laisse le nom du produit', () => {
-    expect(nameOf({ preset: 'olive', name: '<script>' }).fr).toBe(BRAND_NAME)
   })
 })
 

@@ -8,8 +8,8 @@ import { z } from 'zod'
  *   - `preset` parmi les valeurs connues (ou `custom`) ;
  *   - `primary` : `#rrggbb` exactement (jamais `rgb()`, `url()`, nom de couleur, ni `;` ou `}`) ;
  *   - `neutral` parmi cinq valeurs ; `home` parmi deux ;
- *   - `name` : lettres, chiffres, espaces et quelques signes ; il ne sert que de TEXTE (interpolation Vue, échappée),
- *     jamais de HTML ni de CSS ;
+ *   - `name` : ancienne clé (« Nom affiché »), tolérée pour que les anciennes données restent valides mais IGNORÉE : le nom du
+ *     site est le « Titre du carnet » du profil, le thème ne porte que le look ;
  *   - toute autre clé est supprimée (`strip`) : rien d'autre n'est rendu.
  * Les couleurs du CSS final sont générées à partir de ces seules valeurs (voir `resolve.ts`).
  */
@@ -23,7 +23,7 @@ export const THEME_HOMES = ['boultons', 'generic'] as const
 export const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i
 export const hexColorSchema = z.string().regex(HEX_COLOR_PATTERN, 'couleur au format #rrggbb').transform(value => value.toLowerCase())
 
-/** Nom du site pour ce thème : lettres (toutes langues), chiffres, espace et . , ' ’ & ! ( ) - */
+/** Ancien « Nom affiché » (ignoré, voir plus haut) : lettres (toutes langues), chiffres, espace et . , ' ’ & ! ( ) - */
 export const THEME_NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} .,'’&!()-]*$/u
 export const themeNameSchema = z.string().trim().min(1).max(60).regex(THEME_NAME_PATTERN, 'caractères non autorisés')
 

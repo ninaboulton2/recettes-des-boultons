@@ -31,7 +31,8 @@
 --   4. Carnets : `cookbook_entries` = les favoris actuels de chaque membre qui
 --      portent sur une recette qui n'est pas la sienne (CHOIX n° 4).
 --   5. Profils : `display_name` (paramètre, obligatoire), `cookbook_title`
---      (paramètre, facultatif), `active_theme_group_id` = le groupe,
+--      (paramètre, facultatif ; à défaut, « Recettes des Boultons » pour tout compte migré sans titre :
+--      c'est le nom du site que la personne voit en haut, le thème du groupe ne portant que le look), `active_theme_group_id` = le groupe,
 --      `onboarded_at` = maintenant, rôle : Nina reste `admin` (= « support »,
 --      voir 0019 CHOIX n° 5), les autres admins repassent `user` (CHOIX n° 5).
 --   6. Contrôles finaux (assertions) : voir la section 9. Se terminent par la
@@ -45,7 +46,7 @@
 --      group_name                  facultatif (défaut : Les Boultons)
 --      display_name:<e-mail>       OBLIGATOIRE pour chaque compte sans pseudonyme. Pas de repli
 --                                  sur l'e-mail (`profiles.name` contient l'e-mail).
---      cookbook_title:<e-mail>     facultatif
+--      cookbook_title:<e-mail>     facultatif (défaut : « Recettes des Boultons » si le compte n'a pas de titre)
 --  Un paramètre qui vise un e-mail inconnu, une clé inconnue, un pseudonyme contenant « @ »
 --  ou en double : arrêt avec un message clair (rien n'est modifié : tout est dans une transaction).
 --
@@ -56,7 +57,7 @@
 --      (copie dans `private.backup_0018_profiles`) : un compte créé plus tard n'est
 --      jamais rattaché au groupe par un rejeu.
 --   2. Thème du groupe = jsonb `{"preset":"boultons","primary":"#64b9c3","neutral":"slate",
---      "name":"Recettes des Boultons","home":"boultons"}` : clés du dossier §5.2 ; le préréglage
+--      "home":"boultons"}` (pas de `name` : le thème ne porte que le look, le nom affiché est le titre du carnet) ; le préréglage
 --      `boultons` (shared/editions/boultons.ts : palette bleu-vert 50→950, neutre `slate`, héros
 --      diagonal, nom lavande) fait foi, `primary` = nuance 500 de cette palette. Les polices
 --      (Inter, Fraunces, Lobster) sont communes à toutes les éditions (app/assets/css/main.css) :
@@ -265,8 +266,7 @@ with c as (select * from private.tmp_0018_ctx),
 ins as (
   insert into public.groups (name, created_by, theme)
   select c.group_name, c.owner_id,
-         jsonb_build_object('preset', 'boultons', 'primary', '#64b9c3', 'neutral', 'slate',
-                            'name', 'Recettes des Boultons', 'home', 'boultons')
+         jsonb_build_object('preset', 'boultons', 'primary', '#64b9c3', 'neutral', 'slate', 'home', 'boultons')
     from c
    where not exists (select 1 from public.groups g where g.created_by = c.owner_id and g.name = c.group_name)
   returning id)
@@ -294,6 +294,13 @@ update public.profiles p
    set cookbook_title = (select btrim(k.value) from private.v2_fill_params k where k.key = 'cookbook_title:' || lower(p.email))
  where p.id in (select id from private.backup_0018_profiles) and p.cookbook_title is null
    and exists (select 1 from private.v2_fill_params k where k.key = 'cookbook_title:' || lower(p.email));
+
+-- Le nom du site affiché en haut est le « Titre du carnet » de chaque personne (le thème du groupe ne porte que le look) :
+-- les membres migrés sans titre reçoivent « Recettes des Boultons ». Un titre déjà saisi (ou donné en paramètre) n'est jamais
+-- écrasé. L'ancienne valeur (null ou vide) est dans `private.backup_0018_profiles` : le retour arrière la restaure.
+update public.profiles p
+   set cookbook_title = 'Recettes des Boultons'
+ where p.id in (select id from private.backup_0018_profiles) and nullif(btrim(p.cookbook_title), '') is null;
 
 update public.profiles p
    set active_theme_group_id = g.id
@@ -480,6 +487,13 @@ begin
   assert not exists (select 1 from public.profiles p join private.backup_0018_profiles bp on bp.id = p.id
                       where p.active_theme_group_id is distinct from (select g.id from public.groups g where g.created_by = c.owner_id and g.name = c.group_name)),
     '[0018] thème actif : un compte ne pointe pas sur le groupe';
+  assert not exists (select 1 from public.profiles p join private.backup_0018_profiles bp on bp.id = p.id
+                      where nullif(btrim(p.cookbook_title), '') is null),
+    '[0018] un compte n''a pas de titre de carnet (nom du site affiché)';
+  assert not exists (select 1 from public.profiles p join private.backup_0018_profiles bp on bp.id = p.id
+                      where p.cookbook_title is distinct from bp.cookbook_title and nullif(btrim(bp.cookbook_title), '') is not null
+                        and not exists (select 1 from private.v2_fill_params k where k.key = 'cookbook_title:' || lower(p.email) and btrim(k.value) = p.cookbook_title)),
+    '[0018] un titre de carnet existant a été écrasé';
   assert (select role from public.profiles where id = c.owner_id) = 'admin', '[0018] le propriétaire n''est plus admin';
   assert (select count(*) from public.profiles p join private.backup_0018_profiles bp on bp.id = p.id where p.role = 'admin') = 1,
     '[0018] il doit rester exactement 1 compte admin (support) parmi les comptes concernés';

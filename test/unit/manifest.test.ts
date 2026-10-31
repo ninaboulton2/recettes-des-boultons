@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EDITIONS } from '../../shared/editions'
 import { resolveTheme } from '../../shared/themes'
-import { activeRawTheme, buildManifest, coloredIconUrl, iconSvg, manifestCacheControl, manifestFor, shortNameFor, type ThemeSource } from '../../server/utils/manifest'
+import { activeProfile, buildManifest, coloredIconUrl, iconSvg, manifestCacheControl, manifestFor, shortNameFor, type ThemeSource } from '../../server/utils/manifest'
 
 const GROUP = '11111111-1111-4111-8111-111111111111'
 const source = (over: Partial<ThemeSource> = {}): ThemeSource => ({
@@ -35,7 +35,7 @@ describe('manifeste v1 (édition)', () => {
   })
 })
 
-describe('manifeste v2 (thème actif)', () => {
+describe('manifeste v2 (look du thème actif, nom = titre du carnet)', () => {
   it('visiteur : thème par défaut (Family Cookbook, toque terracotta), sans lecture', async () => {
     const m = await manifestFor({ v2: true, editionId: 'boultons', source: source({ userId: null, loadProfileTheme: async () => { throw new Error('non') } }) })
     expect(m.name).toBe('Family Cookbook')
@@ -43,24 +43,29 @@ describe('manifeste v2 (thème actif)', () => {
     expect(m.theme_color).toBe('#c2603e')
     expect(m.icons[0]?.src).toBe('/pwa-192x192.png')
   })
-  it('thème de groupe Boultons : nom et cocotte des Boultons', async () => {
-    const m = await manifestFor({
-      v2: true,
-      editionId: 'generic',
-      source: source({
-        loadProfileTheme: async () => ({ theme_settings: { preset: 'olive' }, active_theme_group_id: GROUP }),
-        loadGroupTheme: async id => (id === GROUP ? { preset: 'boultons' } : null)
-      })
+  it('thème de groupe Boultons : cocotte des Boultons, mais le nom est le titre du carnet (jamais le nom du groupe)', async () => {
+    const groupSource = (cookbook_title: string | null) => source({
+      loadProfileTheme: async () => ({ theme_settings: { preset: 'olive' }, active_theme_group_id: GROUP, cookbook_title }),
+      loadGroupTheme: async id => (id === GROUP ? { preset: 'boultons', name: 'Les Boultons (nom du groupe)' } : null)
     })
+    const own = await manifestFor({ v2: true, editionId: 'generic', source: groupSource('Recettes de Léa') })
+    expect(own.name).toBe('Recettes de Léa')
+    expect(own.icons[0]?.src).toBe('/editions/boultons/pwa-192x192.png')
+    const none = await manifestFor({ v2: true, editionId: 'generic', source: groupSource('  ') })
+    expect(none.name).toBe('Family Cookbook')
+    expect(none.short_name).toBe('Cookbook')
+    expect(JSON.stringify(none)).not.toContain('nom du groupe')
+  })
+  it('titre « Recettes des Boultons » : nom court du préréglage', async () => {
+    const m = await manifestFor({ v2: true, editionId: 'generic', source: source({ loadProfileTheme: async () => ({ theme_settings: { preset: 'boultons' }, active_theme_group_id: null, cookbook_title: 'Recettes des Boultons' }) }) })
     expect(m.name).toBe('Recettes des Boultons')
     expect(m.short_name).toBe('Boultons')
-    expect(m.icons[0]?.src).toBe('/editions/boultons/pwa-192x192.png')
   })
-  it('thème personnel libre : nom, couleur et toque SVG à cette couleur', async () => {
+  it('thème personnel libre : titre du carnet, couleur et toque SVG à cette couleur (l\'ancien « name » du thème est ignoré)', async () => {
     const m = await manifestFor({
       v2: true,
       editionId: 'boultons',
-      source: source({ loadProfileTheme: async () => ({ theme_settings: { preset: 'custom', primary: '#aa4466', neutral: 'stone', name: 'Recettes de Mamie Jeanne' }, active_theme_group_id: null }) })
+      source: source({ loadProfileTheme: async () => ({ theme_settings: { preset: 'custom', primary: '#aa4466', neutral: 'stone', name: 'Ancien nom du thème' }, active_theme_group_id: null, cookbook_title: 'Recettes de Mamie Jeanne' }) })
     })
     expect(m.name).toBe('Recettes de Mamie Jeanne')
     expect(m.short_name.length).toBeLessThanOrEqual(12)
@@ -82,7 +87,7 @@ describe('manifeste v2 (thème actif)', () => {
     expect((await manifestFor({ v2: true, editionId: 'boultons', source: source({ loadProfileTheme: async () => ({ theme_settings: { preset: 'custom', primary: 'red;}' }, active_theme_group_id: null }) }) })).name).toBe(generic)
     expect((await manifestFor({ v2: true, editionId: 'boultons', source: source({ loadProfileTheme: async () => ({ theme_settings: null, active_theme_group_id: GROUP }) }) })).name).toBe(generic)
     expect((await manifestFor({ v2: true, editionId: 'boultons', source: source({ loadProfileTheme: async () => { throw new Error('base indisponible') } }) })).name).toBe(generic)
-    expect(await activeRawTheme(source({ loadProfileTheme: async () => null }))).toBeNull()
+    expect(await activeProfile(source({ loadProfileTheme: async () => null }))).toEqual({ rawTheme: null, cookbookTitle: null })
   })
   it('le contenu ne dépend que du thème : aucun identifiant de personne ni de groupe dans la réponse', async () => {
     const m = await manifestFor({
@@ -96,26 +101,20 @@ describe('manifeste v2 (thème actif)', () => {
   })
 })
 
-describe('nom choisi dans le thème (en-tête, titre, manifeste)', () => {
-  it('le nom du thème devient le nom du site ; sans nom, repli sur Family Cookbook', () => {
-    expect(resolveTheme({ preset: 'olive', name: 'Chez Mamie' }).edition.brand.name).toEqual({ fr: 'Chez Mamie', en: 'Chez Mamie' })
-    expect(resolveTheme({ preset: 'olive' }).edition.brand.name).toEqual({ fr: 'Family Cookbook', en: 'Family Cookbook' })
-    expect(resolveTheme({ preset: 'boultons', name: 'Les Boultons 2' }).edition.brand.name.fr).toBe('Les Boultons 2')
-    expect(resolveTheme({ preset: 'olive', name: '<b>x</b>' }).edition.brand.name.fr).toBe('Family Cookbook')
-  })
-  it('manifeste : name et short_name suivent le nom, icône de la couleur du thème', () => {
-    const m = buildManifest(resolveTheme({ preset: 'prune', name: 'Chez Mamie' }).edition)
-    expect(m.name).toBe('Chez Mamie')
-    expect(m.short_name).toBe('Chez Mamie')
-    expect(m.icons[0]?.src).toMatch(/^\/pwa-icon\.svg\?c=/)
+describe('nom du site dans le manifeste', () => {
+  it('le thème ne change jamais le nom : seul le nom passé (titre du carnet) compte', () => {
+    expect(buildManifest(resolveTheme({ preset: 'olive', name: 'Chez Mamie' }).edition).name).toBe('Family Cookbook')
+    expect(buildManifest(resolveTheme({ preset: 'prune' }).edition, 'Chez Mamie').name).toBe('Chez Mamie')
+    expect(buildManifest(resolveTheme({ preset: 'prune' }).edition, 'Chez Mamie').icons[0]?.src).toMatch(/^\/pwa-icon\.svg\?c=/)
   })
 })
 
 describe('détails du manifeste', () => {
   it('shortNameFor : préréglage inchangé, nom court gardé, nom long coupé au mot', () => {
     expect(shortNameFor(EDITIONS.boultons)).toBe('Boultons')
-    expect(shortNameFor(resolveTheme({ preset: 'terracotta', name: 'Chez Léa' }).edition)).toBe('Chez Léa')
-    expect(shortNameFor(resolveTheme({ preset: 'terracotta', name: 'Supercalifragilistic' }).edition)).toBe('Supercalifra')
+    expect(shortNameFor(EDITIONS.generic, 'Chez Léa')).toBe('Chez Léa')
+    expect(shortNameFor(EDITIONS.generic, 'Supercalifragilistic')).toBe('Supercalifra')
+    expect(shortNameFor(EDITIONS.boultons, 'Family Cookbook')).toBe('Cookbook')
   })
   it('buildManifest : cohérent avec l\'édition', () => {
     expect(buildManifest(EDITIONS.generic).theme_color).toBe('#c2603e')

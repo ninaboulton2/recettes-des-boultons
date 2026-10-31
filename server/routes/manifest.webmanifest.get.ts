@@ -6,7 +6,7 @@ import { manifestCacheControl, manifestFor, type ThemeSource } from '../utils/ma
 
 /**
  * GET /manifest.webmanifest — manifeste PWA selon le thème actif (v2) ou l'édition (v1). Voir `server/utils/manifest.ts`.
- * Aucune donnée personnelle : seulement un nom, des couleurs et des icônes du thème ; visiteur : thème par défaut.
+ * Seulement le titre du carnet de la personne (son nom de site), des couleurs et des icônes du thème ; visiteur : thème par défaut.
  * La lecture passe par le RLS (client de la session) : le thème d'un groupe n'est lu que si la personne en fait partie.
  */
 export default defineEventHandler(async (event) => {
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
       userId,
       loadProfileTheme: async (id) => {
         const supabase = await serverSupabaseClient<Database>(event)
-        const { data } = await supabase.from('profiles').select('theme_settings, active_theme_group_id').eq('id', id).maybeSingle()
+        const { data } = await supabase.from('profiles').select('theme_settings, active_theme_group_id, cookbook_title').eq('id', id).maybeSingle()
         return data
       },
       loadGroupTheme: async (groupId) => {

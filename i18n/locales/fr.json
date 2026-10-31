@@ -1018,7 +1018,7 @@
       "title": "Le nom de votre carnet",
       "description": "Un titre pour vos recettes. Vous pourrez le changer plus tard dans les réglages.",
       "label": "Titre du carnet",
-      "hint": "Facultatif, 80 caractères au plus.",
+      "hint": "Affiché en haut du site et sur votre carnet. Facultatif, 80 caractères au plus.",
       "suggestion": "Recettes de {name}"
     },
     "step3": {
@@ -1031,12 +1031,6 @@
   },
   "theme": {
     "presets": "Thèmes proposés",
-    "name": {
-      "label": "Nom affiché",
-      "hint": "Affiché dans l'en-tête, le titre des pages et l'icône de l'écran d'accueil. Vide : « {default} ».",
-      "invalid": "Lettres, chiffres, espaces et . , ' & ! ( ) - seulement (60 caractères au plus).",
-      "useGroup": "Utiliser le nom du groupe"
-    },
     "customColor": "Couleur principale",
     "colorPicker": "Choisir une couleur",
     "customHint": "Un code #rrggbb. Les textes restent lisibles : une couleur trop claire est refusée.",
@@ -1070,7 +1064,8 @@
     "profile": {
       "title": "Profil",
       "displayName": "Pseudonyme",
-      "cookbookTitle": "Titre du carnet"
+      "cookbookTitle": "Titre du carnet",
+      "cookbookTitleHint": "Affiché en haut du site et sur votre carnet. Vide : « Family Cookbook »."
     },
     "theme": {
       "title": "Thème",

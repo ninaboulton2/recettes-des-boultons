@@ -246,6 +246,7 @@ insert into private.v2_fill_params (key, value) values
   ('display_name:autre-compte-2@exemple.fr',   'Pseudo 2'),
   ('display_name:autre-compte-3@exemple.fr',   'Pseudo 3')
   -- facultatif : ('cookbook_title:adresse-de-nina@exemple.fr', 'Recettes de Nina'), ('group_name', 'Les Boultons')
+  -- (sans titre, un compte migré reçoit « Recettes des Boultons » : c'est le nom du site qu'il verra en haut)
 on conflict (key) do update set value = excluded.value;
 ```
 
@@ -275,7 +276,7 @@ sections / ingrédients / étapes / traductions / favoris / planning / courses i
 Si `owner_email` est absent, une NOTICE `[0018] owner_email absent : propriétaire = le compte admin le plus ancien …
 À VÉRIFIER` s'ajoute avant.
 
-Ce que 0018 a fait : groupe + membres (Nina `creator`) · thème du groupe = préréglage Boultons · `owner_id` = Nina
+Ce que 0018 a fait : groupe + membres (Nina `creator`) · thème du groupe = préréglage Boultons (le look seulement) · titre du carnet « Recettes des Boultons » pour les comptes qui n'en avaient pas · `owner_id` = Nina
 sur toutes les recettes, `visibility = groups` · un droit `edit_original` du **groupe** par recette · 9 catégories par
 compte et `category_id` relié · favoris actuels des autres comptes → leur carnet · pseudonyme, thème actif = groupe,
 accueil déjà fait · le 2ᵉ admin repasse `user` (Nina reste `admin` = support).

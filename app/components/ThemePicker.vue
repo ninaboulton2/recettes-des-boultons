@@ -59,35 +59,6 @@
       </p>
     </div>
 
-    <div class="space-y-2" data-testid="theme-name">
-      <label for="theme-name-input" class="block text-sm font-medium text-default">{{ $t('theme.name.label') }}</label>
-      <div class="flex flex-wrap items-center gap-2">
-        <UInput
-          id="theme-name-input"
-          :model-value="nameText"
-          maxlength="60"
-          :placeholder="nameSuggestion || BRAND_NAME"
-          class="w-full max-w-sm"
-          :color="nameError ? 'error' : undefined"
-          :aria-invalid="nameError ? 'true' : undefined"
-          aria-describedby="theme-name-hint"
-          @update:model-value="onNameInput(String($event ?? ''))"
-        />
-        <UButton
-          v-if="nameSuggestion && nameText !== nameSuggestion"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          :label="$t('theme.name.useGroup')"
-          data-testid="theme-name-use-group"
-          @click="onNameInput(nameSuggestion)"
-        />
-      </div>
-      <p id="theme-name-hint" class="text-sm" :class="nameError ? 'text-error' : 'text-muted'" :role="nameError ? 'alert' : undefined">
-        {{ nameError ?? $t('theme.name.hint', { default: BRAND_NAME }) }}
-      </p>
-    </div>
-
     <!-- Aperçu : l'interface entière suit en direct (le thème est déjà appliqué) ; ici, des échantillons lisibles. -->
     <div class="flex flex-wrap items-center gap-3 rounded-xl border border-default bg-muted/40 p-3" aria-hidden="true">
       <UButton :label="$t('theme.sample.button')" tabindex="-1" />
@@ -98,8 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { BRAND_NAME } from '#shared/brand'
-import { GENERATED_PRESETS, hexColorSchema, THEME_PRESET_IDS, themeNameSchema, validateTheme, type ThemeInput, type ThemePresetId } from '#shared/themes'
+import { GENERATED_PRESETS, hexColorSchema, THEME_PRESET_IDS, validateTheme, type ThemeInput, type ThemePresetId } from '#shared/themes'
 
 /**
  * Sélecteur de thème : préréglages + couleur libre (`#rrggbb`, refusée si le contraste AA n'est pas atteint).
@@ -107,8 +77,6 @@ import { GENERATED_PRESETS, hexColorSchema, THEME_PRESET_IDS, themeNameSchema, v
  * (`useThemeStore().setPreview`) ; l'aperçu est retiré quand le sélecteur disparaît (le parent enregistre ou non).
  */
 const model = defineModel<ThemeInput | null>({ default: null })
-/** Nom proposé (page d'un groupe : le nom du groupe) ; sert d'exemple et de bouton « utiliser ». */
-defineProps<{ nameSuggestion?: string }>()
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
@@ -122,34 +90,11 @@ const selection = ref<ThemePresetId | 'custom'>(model.value?.preset ?? 'terracot
 const customColor = ref(model.value?.preset === 'custom' && model.value.primary ? model.value.primary : (GENERATED_PRESETS[0]?.primary ?? '#6f8a3a'))
 const hexText = ref(customColor.value)
 const customError = ref<string | null>(null)
-// Nom affiché (en-tête, titre des pages, manifeste PWA) : facultatif, vide = nom du produit.
-const nameText = ref(model.value?.name ?? '')
-const nameError = ref<string | null>(null)
-const themeName = computed(() => {
-  const parsed = themeNameSchema.safeParse(nameText.value)
-  return nameText.value.trim() !== '' && parsed.success ? parsed.data : undefined
-})
-
-let lastBase: ThemeInput | null = model.value
-
 function publish(value: ThemeInput): void {
+  // Le thème ne porte que le look : un éventuel ancien `name` (données antérieures) est abandonné à l'enregistrement.
   const { name: _ignored, ...rest } = value
-  lastBase = rest
-  const withName: ThemeInput = themeName.value ? { ...rest, name: themeName.value } : rest
-  model.value = withName
-  themeStore.setPreview(withName)
-}
-
-function onNameInput(value: string): void {
-  nameText.value = value
-  if (value.trim() === '') {
-    nameError.value = null
-  } else {
-    const parsed = themeNameSchema.safeParse(value)
-    nameError.value = parsed.success ? null : t('theme.name.invalid')
-  }
-  // Nom refusé : on garde le thème sans nom plutôt que d'enregistrer un nom invalide.
-  publish(lastBase ?? { preset: selection.value === 'custom' ? 'custom' : selection.value, ...(selection.value === 'custom' ? { primary: customColor.value, neutral: 'stone' as const } : {}) })
+  model.value = rest
+  themeStore.setPreview(rest)
 }
 
 function choosePreset(id: ThemePresetId): void {

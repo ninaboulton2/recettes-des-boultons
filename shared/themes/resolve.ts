@@ -12,7 +12,8 @@ import { parseThemeInput, type ThemeInput, type ThemePresetId } from './schema'
  *   - `boultons`   → `boultonsEdition` tel quel (palette bleu-vert, `slate`, illustrations, héros, cocotte) ;
  *   - `terracotta` → `genericEdition` tel quel (thème par défaut du produit) ;
  *   - autre préréglage ou `custom` → `genericEdition` avec la palette générée (nuance 500 = la couleur choisie).
- * `name` (si présent) remplace le nom du site. `home` est accepté mais ignoré : l'accueil suit le préréglage.
+ * Le thème ne porte que le look : `name` et `home` sont acceptés (anciennes données) mais ignorés. Le nom du site est le
+ * « Titre du carnet » du profil (`useSiteName`), jamais celui du thème.
  */
 
 /** Thème par défaut (personne sans thème, visiteur) : le thème générique du produit. */
@@ -29,14 +30,9 @@ export type ThemeValidation =
   | { ok: true, theme: ResolvedTheme }
   | { ok: false, reason: 'invalid' | PrimaryRejection }
 
-function withTheme(base: EditionConfig, theme: EditionTheme, name: string | undefined): EditionConfig {
-  // Un nom identique à celui du préréglage ne change rien : on rend la configuration d'origine telle quelle.
-  if (theme === base.theme && (!name || (name === base.brand.name.fr && name === base.brand.name.en))) return base
-  return {
-    ...base,
-    brand: name ? { ...base.brand, name: { fr: name, en: name } } : base.brand,
-    theme
-  }
+function withTheme(base: EditionConfig, theme: EditionTheme): EditionConfig {
+  if (theme === base.theme) return base
+  return { ...base, theme }
 }
 
 function generatedTheme(primary: string, neutral: NeutralColor): { ok: true, theme: EditionTheme } | { ok: false, reason: PrimaryRejection } {
@@ -59,13 +55,12 @@ function generatedTheme(primary: string, neutral: NeutralColor): { ok: true, the
 export function validateTheme(raw: unknown): ThemeValidation {
   const input = parseThemeInput(raw)
   if (!input) return { ok: false, reason: 'invalid' }
-  const name = input.name
 
   if (input.preset === 'boultons') {
-    return { ok: true, theme: { input, preset: 'boultons', edition: withTheme(boultonsEdition, boultonsEdition.theme, name) } }
+    return { ok: true, theme: { input, preset: 'boultons', edition: withTheme(boultonsEdition, boultonsEdition.theme) } }
   }
   if (input.preset === 'terracotta') {
-    return { ok: true, theme: { input, preset: 'terracotta', edition: withTheme(genericEdition, genericEdition.theme, name) } }
+    return { ok: true, theme: { input, preset: 'terracotta', edition: withTheme(genericEdition, genericEdition.theme) } }
   }
 
   const generated = input.preset === 'custom'
@@ -75,7 +70,7 @@ export function validateTheme(raw: unknown): ThemeValidation {
         return preset ? generatedTheme(preset.primary, preset.neutral) : { ok: false as const, reason: 'invalid' as const }
       })()
   if (!generated.ok) return generated
-  return { ok: true, theme: { input, preset: input.preset, edition: withTheme(genericEdition, generated.theme, name) } }
+  return { ok: true, theme: { input, preset: input.preset, edition: withTheme(genericEdition, generated.theme) } }
 }
 
 /** Thème utilisable dans tous les cas : le thème demandé s'il est valide, sinon le thème par défaut. */

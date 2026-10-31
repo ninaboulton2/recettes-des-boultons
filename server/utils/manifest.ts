@@ -1,13 +1,16 @@
 import { EDITIONS, getEdition, localize, type EditionConfig } from '../../shared/editions'
+import { BRAND_NAME } from '../../shared/brand'
 import { HEX_COLOR_PATTERN } from '../../shared/themes/schema'
 import { DEFAULT_THEME, resolveTheme } from '../../shared/themes'
+import { cleanCookbookTitle } from '../../shared/utils/siteName'
 
 /**
  * Manifeste PWA (`/manifest.webmanifest`, DEVELOPER.md § 20.18).
  *
  * - v1 : le manifeste de l'édition (`NUXT_PUBLIC_EDITION`), identique à l'ancien manifeste figé au build.
- * - v2 : celui du THÈME ACTIF de la personne connectée (thème personnel ou d'un de ses groupes), visiteur : thème par défaut.
- *   Le thème est une entrée non fiable : il passe par `resolveTheme` (liste blanche) ; le nom n'est que du texte JSON.
+ * - v2 : le LOOK du THÈME ACTIF de la personne connectée (thème personnel ou d'un de ses groupes ; visiteur : thème par défaut)
+ *   et, comme nom, son « Titre du carnet » (`profiles.cookbook_title`), sinon « Family Cookbook ». Jamais le nom d'un groupe.
+ *   Le thème est une entrée non fiable : il passe par `resolveTheme` (liste blanche) ; le titre n'est que du texte JSON.
  *
  * Icônes : cocotte pour le préréglage Boultons, toque terracotta pour le thème par défaut, toque SVG à la couleur du thème pour
  * les autres (`/pwa-icon.svg`, couleur validée `#rrggbb`).
@@ -26,13 +29,13 @@ export interface WebManifest {
   icons: Array<{ src: string, sizes: string, type: string, purpose?: string }>
 }
 
-/** Nom court : celui du préréglage s'il n'a pas été renommé, sinon le nom personnalisé raccourci (12 caractères au plus, au mot). */
-export function shortNameFor(edition: EditionConfig): string {
-  const base = EDITIONS[edition.id]
-  if (edition.brand.name.fr === base.brand.name.fr) return base.brand.shortName
-  const name = edition.brand.name.fr
-  if (name.length <= 12) return name
-  const cut = name.slice(0, 12)
+/** Nom court : celui du préréglage si le nom est le sien, sinon le nom raccourci (12 caractères au plus, au mot). */
+export function shortNameFor(edition: EditionConfig, fullName: string = edition.brand.name.fr): string {
+  for (const base of Object.values(EDITIONS)) {
+    if (fullName === base.brand.name.fr) return base.brand.shortName
+  }
+  if (fullName.length <= 12) return fullName
+  const cut = fullName.slice(0, 12)
   const lastSpace = cut.lastIndexOf(' ')
   return (lastSpace >= 4 ? cut.slice(0, lastSpace) : cut).trim()
 }
@@ -43,8 +46,10 @@ export function coloredIconUrl(color: string, maskable: boolean): string | null 
   return `/pwa-icon.svg?c=${color.slice(1).toLowerCase()}${maskable ? '&m=1' : ''}`
 }
 
-export function buildManifest(edition: EditionConfig): WebManifest {
+/** `name` : nom du site (v2 : titre du carnet) ; absent, celui de l'édition (v1). */
+export function buildManifest(edition: EditionConfig, name?: string): WebManifest {
   const { brand, theme } = edition
+  const fullName = name ?? localize(brand.name, 'fr')
   const defaultColor = EDITIONS.generic.theme.themeColor.light
   const useStaticIcons = edition.id === 'boultons' || theme.themeColor.light === defaultColor
   const anyIcon = coloredIconUrl(theme.themeColor.light, false)
@@ -62,8 +67,8 @@ export function buildManifest(edition: EditionConfig): WebManifest {
       ]
 
   return {
-    name: localize(brand.name, 'fr'),
-    short_name: shortNameFor(edition),
+    name: fullName,
+    short_name: shortNameFor(edition, fullName),
     description: localize(brand.tagline, 'fr'),
     lang: 'fr',
     start_url: '/',
@@ -79,27 +84,28 @@ export function buildManifest(edition: EditionConfig): WebManifest {
 export interface ThemeSource {
   /** Identifiant de la personne connectée, ou `null` (visiteur, session invalide). */
   userId: string | null
-  loadProfileTheme: (userId: string) => Promise<{ theme_settings: unknown, active_theme_group_id: string | null } | null>
+  loadProfileTheme: (userId: string) => Promise<{ theme_settings: unknown, active_theme_group_id: string | null, cookbook_title?: string | null } | null>
   loadGroupTheme: (groupId: string) => Promise<unknown>
 }
 
-/** Thème brut actif de la personne (même règle que `useThemeStore`) ; `null` = thème par défaut. Ne lève jamais. */
-export async function activeRawTheme(source: ThemeSource): Promise<unknown> {
-  if (!source.userId) return null
+/** Thème brut actif de la personne (même règle que `useThemeStore`) et titre de son carnet. Ne lève jamais : défaut. */
+export async function activeProfile(source: ThemeSource): Promise<{ rawTheme: unknown, cookbookTitle: string | null }> {
+  if (!source.userId) return { rawTheme: null, cookbookTitle: null }
   try {
     const profile = await source.loadProfileTheme(source.userId)
-    if (!profile) return null
-    if (profile.active_theme_group_id) return (await source.loadGroupTheme(profile.active_theme_group_id)) ?? null
-    return profile.theme_settings ?? null
+    if (!profile) return { rawTheme: null, cookbookTitle: null }
+    const cookbookTitle = cleanCookbookTitle(profile.cookbook_title)
+    if (profile.active_theme_group_id) return { rawTheme: (await source.loadGroupTheme(profile.active_theme_group_id)) ?? null, cookbookTitle }
+    return { rawTheme: profile.theme_settings ?? null, cookbookTitle }
   } catch {
-    return null
+    return { rawTheme: null, cookbookTitle: null }
   }
 }
 
 export async function manifestFor(options: { v2: boolean, editionId: unknown, source?: ThemeSource }): Promise<WebManifest> {
   if (!options.v2 || !options.source) return buildManifest(getEdition(options.editionId))
-  const raw = await activeRawTheme(options.source)
-  return buildManifest(resolveTheme(raw ?? DEFAULT_THEME).edition)
+  const { rawTheme, cookbookTitle } = await activeProfile(options.source)
+  return buildManifest(resolveTheme(rawTheme ?? DEFAULT_THEME).edition, cookbookTitle ?? BRAND_NAME)
 }
 
 /** `Cache-Control` : v1 public et court ; v2 privé (dépend du cookie de session), jamais partagé entre personnes. */

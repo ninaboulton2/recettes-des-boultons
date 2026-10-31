@@ -135,11 +135,13 @@ describe('résolution du thème actif', () => {
     }
   })
 
-  it('le nom du thème devient le nom du site (texte), sans toucher au reste', () => {
+  it('l\'ancienne clé « name » est tolérée mais sans effet : le thème ne porte que le look', () => {
     const resolved = resolveTheme({ preset: 'olive', name: 'Recettes de Mamie' })
-    expect(resolved.edition.brand.name).toEqual({ fr: 'Recettes de Mamie', en: 'Recettes de Mamie' })
+    expect(resolved.edition.brand.name).toEqual(genericEdition.brand.name)
     expect(resolved.edition.id).toBe('generic')
     expect(resolved.edition.home.variant).toBe('generic')
+    expect(resolveTheme({ preset: 'boultons', name: 'Autre nom' }).edition).toBe(boultonsEdition)
+    expect(resolveTheme({ preset: 'terracotta', name: 'Autre nom' }).edition).toBe(genericEdition)
   })
 
   it('le CSS généré ne contient que des variables CSS aux valeurs sûres, quelle que soit l\'entrée', () => {

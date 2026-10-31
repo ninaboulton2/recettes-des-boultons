@@ -4,9 +4,10 @@ import { BRAND_NAME } from '../brand'
 /**
  * Nom du site affiché (v2).
  *
- * - Partout où la personne est chez elle (accueil, carnet, recettes, réglages…) : le nom de son thème (« Nom affiché »), sinon
- *   « Family Cookbook » (`BRAND_NAME`).
- * - Pages « neutres » : toujours « Family Cookbook », quel que soit le thème de la personne connectée. Ce sont les pages
+ * - Partout où la personne est chez elle (accueil, carnet, recettes, réglages…) : le « Titre du carnet » de son profil
+ *   (`profiles.cookbook_title`), sinon « Family Cookbook » (`BRAND_NAME`). Le thème (personnel ou de groupe) ne porte que le look :
+ *   le nom d'un groupe n'est jamais le nom du site.
+ * - Pages « neutres » : toujours « Family Cookbook », quel que soit le carnet de la personne connectée. Ce sont les pages
  *   publiques de partage (`/r/<jeton>`, vues par des gens qui n'ont pas ce thème) et les pages légales (identité juridique du service).
  * - E-mails : toujours « Family Cookbook » (`EMAIL_APP_NAME`), un e-mail venant du service et non du carnet d'une personne.
  */
@@ -26,7 +27,18 @@ export function isNeutralSitePath(path: string): boolean {
   return LEGAL_SEGMENTS.some(segment => local === segment || local === `${segment}/`)
 }
 
-/** Nom à afficher : `themeName` (déjà résolu depuis le thème actif) sauf sur une page neutre, en v2. En v1, rien ne change. */
-export function displaySiteName(options: { v2: boolean, path: string, themeName: string }): string {
-  return options.v2 && isNeutralSitePath(options.path) ? BRAND_NAME : options.themeName
+/** Titre du carnet nettoyé : `null` s'il est absent ou vide. */
+export function cleanCookbookTitle(title: string | null | undefined): string | null {
+  const clean = title?.trim()
+  return clean || null
+}
+
+/**
+ * Nom à afficher. v2 : le titre du carnet (sinon « Family Cookbook »), sauf sur une page neutre.
+ * v1 : `editionName` (le nom de l'édition figée), rien ne change.
+ */
+export function displaySiteName(options: { v2: boolean, path: string, cookbookTitle: string | null | undefined, editionName: string }): string {
+  if (!options.v2) return options.editionName
+  if (isNeutralSitePath(options.path)) return BRAND_NAME
+  return cleanCookbookTitle(options.cookbookTitle) ?? BRAND_NAME
 }
